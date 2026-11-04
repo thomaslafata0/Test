@@ -152,7 +152,7 @@ export function makeEnemy(sector, boss, rng) {
   }
   const hp = Math.round(base.hp * growth(lvl, TUNE.hpLin, TUNE.hpQuad) * (boss ? TUNE.bossHp : 1));
   const e = {
-    id: base.id, name: base.name, tags: base.tags || [], line: base.line, boss,
+    id: base.id, name: base.name, tags: base.tags || [], line: base.line, portrait: base.portrait || null, boss,
     hp, maxHp: hp,
     atk: Math.round(base.atk * growth(lvl, TUNE.atkLin, TUNE.atkQuad) * (boss ? TUNE.bossAtk : 1)),
     def: base.def + Math.floor(lvl / 2),
@@ -282,7 +282,7 @@ function enemyTurn(s, rng) {
     e.hp += amt;
     log(s, `${e.name} runs a repair cycle. +${amt} HP.`, 'hurt');
   }
-  if (c.hp <= 0) return die(s, e.name);
+  if (c.hp <= 0) return die(s, e);
   e.intent = chooseIntent(e, rng);
 }
 
@@ -301,7 +301,7 @@ function winFight(s, rng) {
   const r = s.run, e = r.enemy, c = s.char;
   const credits = Math.round(randInt(rng, e.cr[0], e.cr[1]) * (has(c, 'fence') ? 1.25 : 1));
   c.credits += credits; r.sectorCredits += credits;
-  const out = { enemy: e.name, credits, xp: e.xp, levelUps: [], healed: 0, boss: e.boss, resolve: 0 };
+  const out = { enemy: e.name, id: e.id, portrait: e.portrait, credits, xp: e.xp, levelUps: [], healed: 0, boss: e.boss, resolve: 0 };
   log(s, `${e.name} goes down. +${credits} ${D.SETTING.cur}, +${e.xp} XP.`, 'reward');
   gainXp(s, e.xp, out);
   if (has(c, 'medic')) {
@@ -403,9 +403,9 @@ export function endRun(s, how) {
   s.tab = 'medbay';
 }
 
-function die(s, killer) {
+function die(s, foe) {
   const c = s.char, r = s.run;
-  const record = { name: c.name, number: c.number, level: c.level, sector: r.sector, killer, credits: c.credits };
+  const record = { name: c.name, number: c.number, level: c.level, sector: r.sector, killer: foe.name, killerId: foe.id, killerPortrait: foe.portrait, credits: c.credits };
   s.meta.fallen.unshift(record);
   s.meta.fallen = s.meta.fallen.slice(0, 12);
   s.outcome = record;

@@ -39,6 +39,7 @@ export const TRAINING = {
   spd: { label: 'Reflexes',     stat: 'SPD',    per: 1, max: 15, note: 'Dodge, crit and escape odds.' },
 };
 
+// portrait (optional): path to a PNG, e.g. 'portraits/patrol.png', to replace the built-in pixel art.
 // intents: weights for what the enemy does next. attack / heavy (telegraphed, x2.2) / guard / repair
 export const ENEMIES = [
   { id: 'patrol', name: 'Patrol Trooper', min: 1, hp: 18, atk: 6, def: 1, spd: 4, cr: [6, 10], xp: 6,

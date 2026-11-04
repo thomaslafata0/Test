@@ -86,7 +86,16 @@ p { margin: 0; }
 @media (max-width: 820px) { .columns { grid-template-columns: minmax(0, 1fr); } }
 
 /* combat */
-.foe { display: grid; gap: 10px; padding: 18px; background: var(--panel-2); border: 1px solid var(--line); }
+.foe { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; padding: 18px; background: var(--panel-2); border: 1px solid var(--line); align-items: start; }
+.foe-info { display: grid; gap: 10px; min-width: 0; }
+.portrait { width: 160px; aspect-ratio: 1; max-width: 100%; image-rendering: pixelated; background: radial-gradient(circle at 50% 35%, #e8973a26, transparent 65%), var(--panel); border: 1px solid var(--line); display: block; }
+.foe.boss .portrait { background: radial-gradient(circle at 50% 35%, #d4483a33, transparent 65%), var(--panel); border-color: var(--danger); }
+.portrait.hit { animation: hit .35s steps(2) 1; }
+.portrait.down { filter: grayscale(1) brightness(.5); }
+@keyframes hit { 0% { transform: translateX(-4px); filter: brightness(2.2) saturate(0); } 50% { transform: translateX(4px); } 100% { transform: none; filter: none; } }
+.killer { display: flex; gap: 16px; align-items: center; }
+.killer img { width: 96px; height: 96px; image-rendering: pixelated; border: 1px solid var(--danger); background: var(--panel-2); }
+@media (max-width: 520px) { .foe { grid-template-columns: minmax(0, 1fr); } .portrait { width: 128px; } }
 .foe.boss { border-color: var(--danger); box-shadow: inset 0 0 0 1px var(--danger-dim); }
 .foe .title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
 .foe h2 { font-size: 2rem; }
@@ -142,6 +151,7 @@ p { margin: 0; }
 <script type="module">
 import * as D from './data.js';
 import * as E from './engine.js';
+import { portraitURL } from './portraits.js';
 
 const SAVE_KEY = 'cinder-cell-save-v1';
 const rng = Math.random;
@@ -265,17 +275,28 @@ function gate() {
     ${ins.length === 1 ? '<p class="muted" style="font-size:.9rem">Beat a boss to unlock a deeper insertion point for this operative.</p>' : ''}`;
 }
 
+function portraitImg(e, cls = '') {
+  const src = e.portrait || portraitURL(e.id);
+  return src ? `<img class="portrait ${cls}" src="${src}" alt="Portrait of ${esc(e.name)}" width="160" height="160">` : '';
+}
+
+let lastFoe = null;
 function combatScreen() {
   const r = state.run, e = r.enemy, c = state.char, st = E.stats(state);
+  const hitClass = lastFoe && lastFoe.ref === e && e.hp < lastFoe.hp ? 'hit' : '';
+  lastFoe = { ref: e, hp: e.hp };
   const intent = e.stun > 0 ? { label: `Stunned \u00B7 ${e.stun} turn${e.stun > 1 ? 's' : ''}`, tone: 'calm', tip: 'Free hits.' } : D.INTENTS[e.intent];
   const items = Object.entries(D.ITEMS).map(([id, it], i) => `<button class="btn" data-a="act" data-v="${id}" ${c.items[id] ? '' : 'disabled'}>${esc(it.name)} \u00D7${c.items[id]}<span class="k">${i + 1}</span></button>`).join('');
   return `<div class="columns"><section class="panel">
     <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px"><span class="label">Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector))}</span><span class="label">Fight ${r.fight} / ${E.FIGHTS_PER_SECTOR}</span></div>
     <div class="foe ${e.boss ? 'boss' : ''}">
+      ${portraitImg(e, hitClass)}
+      <div class="foe-info">
       <div class="title"><h2>${esc(e.name)}</h2>${e.tags.map((t) => `<span class="tag ${t}">${t}</span>`).join('')}</div>
       <div style="display:grid;gap:4px"><span class="num" style="font-size:.85rem">${Math.max(0, e.hp)} / ${e.maxHp}</span>${bar(e.hp, e.maxHp, 'enemy')}</div>
       <div class="statline"><span>ATK <b>${e.atk}</b></span><span>DEF <b>${e.def}</b></span><span>SPD <b>${e.spd}</b></span><span>Run <b>${Math.round(E.runChance(state) * 100)}%</b></span><span>Dodge <b>${Math.round(E.dodgeChance(st, e) * 100)}%</b></span></div>
       <div class="intent ${intent.tone}"><span class="dot"></span><b>${esc(intent.label)}</b><span class="tip">${esc(intent.tip)}</span></div>
+      </div>
     </div>
     ${r.ready ? '<div class="notice">Aim steadied: your next attack deals +50%.</div>' : ''}
     <div class="actions">
@@ -292,7 +313,7 @@ function combatScreen() {
 function victoryScreen() {
   const o = state.outcome;
   return `<div class="columns"><section class="panel">
-    <span class="label">Target down</span><h2>${esc(o.enemy)}</h2>
+    <div class="killer">${o.id ? portraitImg({ id: o.id, name: o.enemy, portrait: o.portrait }, 'down') : ''}<div style="display:grid;gap:4px"><span class="label">Target down</span><h2>${esc(o.enemy)}</h2></div></div>
     <dl class="kv"><dt>${esc(S.currency)}</dt><dd style="color:var(--sodium)">+${o.credits}</dd><dt>XP</dt><dd>+${o.xp}</dd>
     ${o.levelUps.length ? `<dt>Level up</dt><dd class="ok-text">Now level ${o.levelUps[o.levelUps.length - 1]}</dd>` : ''}
     ${o.healed ? `<dt>Field medic</dt><dd class="ok-text">+${o.healed} HP</dd>` : ''}
@@ -330,6 +351,7 @@ function deathScreen() {
   return `<section class="panel" style="padding:32px">
     <span class="label">Signal lost \u00B7 Sector ${o.sector}</span>
     <h1 class="big-title" style="color:var(--danger)">${esc(o.name)}</h1>
+    ${o.killerId ? `<div class="killer">${portraitImg({ id: o.killerId, name: o.killer, portrait: o.killerPortrait })}<span class="label">Last seen<br>engaging a ${esc(o.killer)}</span></div>` : ''}
     <p class="story">Operative ${o.number} went down in the ${esc(E.sectorName(o.sector))}, killed by a ${esc(o.killer)}. The ${o.credits.toLocaleString()} ${S.currency}, the gear and level ${o.level} went with them.</p>
     <dl class="kv"><dt>${esc(S.meta)} to spend</dt><dd style="color:var(--sodium)">${state.meta.resolve}</dd><dt>Deepest ever</dt><dd>Sector ${state.meta.bestSector}</dd></dl>
     <div><button class="btn primary big" data-a="recruit">Recruit the next operative</button></div>
