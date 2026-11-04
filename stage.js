@@ -28,6 +28,25 @@ export async function loadSheets(base = 'sprites/') {
   return Object.keys(sheets).length;
 }
 
+// First idle frame of a character's sheet, cropped to the figure, as a data URL (for victory/death screens).
+const stills = {};
+export function sheetStill(id) {
+  if (stills[id] !== undefined) return stills[id];
+  const sh = sheets[id];
+  if (!sh || !sh.anims.idle) return null;
+  const a = sh.anims.idle, fw = a.img.width / a.frames, fh = a.img.height;
+  const c = document.createElement('canvas'); c.width = fw; c.height = fh;
+  const g = c.getContext('2d'); g.drawImage(a.img, 0, 0, fw, fh, 0, 0, fw, fh);
+  const px = g.getImageData(0, 0, fw, fh).data;
+  let x0 = fw, y0 = fh, x1 = 0, y1 = 0;
+  for (let y = 0; y < fh; y++) for (let x = 0; x < fw; x++) if (px[(y * fw + x) * 4 + 3]) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  if (x1 < x0) return (stills[id] = null);
+  const side = Math.max(x1 - x0, y1 - y0) + 4, out = document.createElement('canvas');
+  out.width = out.height = side;
+  out.getContext('2d').drawImage(c, x0, y0, x1 - x0 + 1, y1 - y0 + 1, Math.round((side - (x1 - x0)) / 2), Math.round((side - (y1 - y0)) / 2), x1 - x0 + 1, y1 - y0 + 1);
+  return (stills[id] = out.toDataURL('image/png'));
+}
+
 // ---------- helpers ----------
 const ease = (p) => 1 - Math.pow(1 - p, 3);
 function seeded(seed) { let a = seed >>> 0; return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -41,7 +60,8 @@ class Actor {
     this.anim = 'idle'; this.animStart = 0; this.rest = 'idle';
   }
   get scale() {
-    if (this.sheet) return this.side === 'player' ? 1.5 : 1;
+    // Sheet characters fill about half their frame, so they're drawn larger than the frame size.
+    if (this.sheet) return this.side === 'player' ? 2 : this.sheet.size >= 128 ? 1.1 : 1.6;
     return this.side === 'player' ? 3 : this.boss ? 2.5 : 2;
   }
   get size() { return (this.sheet ? this.sheet.size : 40) * this.scale; }
@@ -106,13 +126,22 @@ export class Stage {
   move(actor, x, y, ms) { const x0 = actor.ox, y0 = actor.oy; return this.tween(ms, (p) => { const e = ease(p); actor.ox = x0 + (x - x0) * e; actor.oy = y0 + (y - y0) * e; }); }
 
   // ---------- scene ----------
-  anchor(side) { return side === 'enemy' ? { x: 290, y: 122 } : { x: 98, y: 228 }; }
+  // Drawn busts sit on the pad cut off at the bottom; full-body sheets stand on it.
+  anchor(side, actor) {
+    const sheet = actor ? actor.sheet : (side === 'enemy' ? this.enemy : this.player)?.sheet;
+    if (side === 'enemy') return { x: 290, y: sheet ? 126 : 122 };
+    return sheet ? { x: 104, y: 206 } : { x: 98, y: 228 };
+  }
+  // Pixels from the frame's bottom edge to the character's feet (8px in the source sheet).
+  footPad(actor) { return actor.sheet ? 8 * actor.scale : 0; }
   center(actor) {
-    const a = this.anchor(actor.side);
+    const a = this.anchor(actor.side, actor);
+    if (actor.sheet) return { x: a.x + actor.ox, y: a.y + actor.oy - actor.size * 0.3 };
     return { x: a.x + actor.ox, y: a.y + actor.oy - actor.size * (actor.side === 'player' ? 0.45 : 0.5) };
   }
   muzzle(actor) {
-    const a = this.anchor(actor.side), s = actor.size, m = !actor.sheet && MUZZLE[actor.id];
+    const a = this.anchor(actor.side, actor), s = actor.size, m = !actor.sheet && MUZZLE[actor.id];
+    if (actor.sheet) return actor.side === 'player' ? { x: a.x + actor.ox + s * 0.18, y: a.y + actor.oy - s * 0.36 } : { x: a.x + actor.ox - s * 0.18, y: a.y + actor.oy - s * 0.36 };
     if (m) return { x: a.x + actor.ox - s / 2 + (m[0] / 40) * s, y: a.y + actor.oy - s + (m[1] / 40) * s };
     return actor.side === 'player' ? { x: a.x + actor.ox + s * 0.35, y: a.y + actor.oy - s * 0.6 } : { x: a.x + actor.ox - s * 0.3, y: a.y + actor.oy - s * 0.5 };
   }
@@ -526,11 +555,11 @@ export class Stage {
 
   drawActor(actor, t) {
     if (!actor || actor.alpha <= 0) return;
-    const g = this.ctx, a = this.anchor(actor.side), f = actor.frame(t), s = actor.scale;
+    const g = this.ctx, a = this.anchor(actor.side, actor), f = actor.frame(t), s = actor.scale;
     const w = Math.round(f.sw * s), h = Math.round(f.sh * s);
     let bob = 0;
     if (!reduceMotion) bob = actor.side === 'enemy' ? Math.sin(t / (HOVER.has(actor.id) ? 380 : 650)) * (HOVER.has(actor.id) ? 3 : 1) : Math.sin(t / 720) * 1.2;
-    const x = Math.round(a.x + actor.ox - w / 2), y = Math.round(a.y + actor.oy - h + bob);
+    const x = Math.round(a.x + actor.ox - w / 2), y = Math.round(a.y + actor.oy - h + this.footPad(actor) + bob);
     g.globalAlpha = actor.alpha;
     if (actor.flash > t) {
       const b = this.buf; b.width = f.sw; b.height = f.sh;
@@ -578,7 +607,7 @@ export class Stage {
     }
 
     const pa = this.anchor('player');
-    this.pad(pa.x, pa.y - 16, 84, 16);
+    this.pad(pa.x, this.player && this.player.sheet ? pa.y - 2 : pa.y - 16, 84, 16);
     if (this.allies && this.allySprite && this.player && this.player.alpha > 0) {
       for (let i = 0; i < this.allies; i++) {
         const x = 2 + i * 34, y = 216 - 70 + Math.round(Math.sin(t / 650 + i) * 1);
