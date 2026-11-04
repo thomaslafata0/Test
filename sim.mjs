@@ -42,6 +42,7 @@ function combatBot(s) {
   if (e.boss && c.items.thermal > 0) return 'thermal';
   if (E.mechanicOf(s.run) === 'vents' && s.run.vent === 1 && !e.tags.includes('droid')) return 'defend';
   if (e.intent === 'heavy' && e.stun === 0) return 'defend';
+  if (e.intent === 'special' && e.stun === 0 && D.SPECIALS[e.id].status) return 'defend';
   if (e.intent === 'guard' && e.stun === 0) return 'defend';
   for (const k of ['overload', 'smash', 'aimed', 'blast', 'burst']) if (E.canUse(s, k)) return k;
   return 'attack';
@@ -59,6 +60,7 @@ function playLife(s, rng, stats) {
     while (s.run && s.screen !== 'death' && steps++ < 5000) {
       if (s.screen === 'combat') E.playerAct(s, combatBot(s), rng);
       else if (s.screen === 'victory') E.continueAfterVictory(s, rng);
+      else if (s.screen === 'perk') E.choosePerk(s, s.run.perkOffer[0], rng);
       else if (s.screen === 'event') {
         const ev = E.eventById(s.event);
         let best = 0, bestCh = -1;

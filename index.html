@@ -232,6 +232,99 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .door .desc { color: var(--muted); font-size: .92rem; }
 .door-fight { --door: var(--fg); } .door-elite { --door: var(--danger); } .door-boss { --door: var(--danger); background: var(--danger-dim); }
 .door-event { --door: var(--ion); } .door-supply, .door-cargo { --door: var(--sodium); } .door-rest { --door: var(--ok); } .door-cells { --door: var(--ion); }
+
+/* ---------- overhaul: header tools, dialogs, tips ---------- */
+.status { display: grid; gap: 10px; }
+.head-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.head-stats { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 28px; }
+.tools { display: flex; gap: 4px; flex-wrap: wrap; }
+.stage:has(.cine.on:not(.out)) .hud { opacity: 0; transition: opacity .3s; }
+.status .brand { margin-right: 8px; }
+.tool { background: none; border: 1px solid var(--line); color: var(--muted); font-family: var(--mono); font-size: .64rem; letter-spacing: .1em; text-transform: uppercase; padding: 6px 9px; }
+.tool:hover { color: var(--fg); border-color: var(--sodium); }
+.tool[aria-pressed="false"] { color: #6b6f6a; text-decoration: line-through; }
+.tipbox { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 14px; align-items: center; padding: 10px 14px; border: 1px dashed #73b6d466; background: #73b6d40f; }
+.tipbox .label { grid-column: 1 / -1; color: var(--ion); }
+.tipbox p { font-size: .92rem; }
+.howto { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; max-width: 62ch; }
+.howto b { color: var(--sodium); font-weight: 600; }
+.modal-wrap { position: fixed; inset: 0; z-index: 50; background: #07080acc; display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.modal { position: relative; width: min(760px, 100%); max-height: 86vh; overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--sodium); padding: 24px; display: grid; gap: 16px; }
+.modal .close { position: absolute; right: 12px; top: 12px; }
+.manual { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 28px; }
+@media (max-width: 640px) { .manual { grid-template-columns: minmax(0, 1fr); } }
+.manual section { display: grid; gap: 6px; align-content: start; }
+.manual h3 { font-size: 1.05rem; color: var(--sodium); }
+.manual p, .manual li { font-size: .92rem; }
+.manual ul { margin: 0; padding-left: 1.1em; display: grid; gap: 3px; }
+.manual .keys { display: flex; flex-wrap: wrap; gap: 6px 14px; font-family: var(--mono); font-size: .7rem; }
+.keys b { color: var(--fg); border: 1px solid var(--line); padding: 1px 5px; margin-right: 4px; }
+.settings { display: grid; gap: 10px; }
+.set-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.set-row input[type=range] { width: min(240px, 50%); accent-color: var(--sodium); }
+.btn.danger { border-color: var(--danger); color: var(--danger); }
+.toast { position: fixed; left: 50%; bottom: max(20px, env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 40; background: var(--panel-2); border: 1px solid var(--ok); color: var(--fg); padding: 10px 16px; font-size: .92rem; max-width: calc(100% - 32px); animation: toast 4s ease forwards; }
+@keyframes toast { 0% { opacity: 0; transform: translate(-50%, 10px); } 8%, 85% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; } }
+
+/* ---------- combat ---------- */
+.combat-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+.combat .intent { grid-template-columns: auto minmax(0, 1fr) auto; }
+.combat .intent .tip { grid-column: 2; }
+.intent-side { grid-column: 3; grid-row: 1 / span 2; display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; align-self: center; }
+@media (max-width: 560px) { .combat .intent { grid-template-columns: auto minmax(0, 1fr); } .intent-side { grid-column: 1 / -1; grid-row: auto; justify-content: flex-start; } }
+.statline { font-size: .74rem; gap: 6px 14px; align-items: center; }
+.skill.ready { border-color: var(--sodium); }
+.items .btn .num, .actions .btn .num { font-size: .8em; opacity: .8; }
+.items { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.hud-st { display: flex; flex-wrap: wrap; gap: 3px; min-height: 0; }
+.st { font-style: normal; font-family: var(--mono); font-size: .54rem; letter-spacing: .06em; padding: 1px 4px; border: 1px solid var(--line); color: var(--fg); }
+.st-bleed { border-color: var(--danger); color: #ff7a64; }
+.st-burn { border-color: #e0602a; color: #ff9a55; }
+.st-shaken { border-color: #9aa3ad; color: #c6ccd2; }
+.st-exposed { border-color: #e6d36a; color: #f0de78; }
+.st.affix { border-color: var(--danger); background: var(--danger-dim); color: var(--fg); }
+.pop.st-bleed { color: #ff7a64; } .pop.st-burn { color: #ff9a55; } .pop.st-shaken { color: #c6ccd2; } .pop.st-exposed { color: #f0de78; }
+.pop.st-bleed, .pop.st-burn, .pop.st-shaken, .pop.st-exposed { font-family: var(--mono); font-size: clamp(.7rem, 2vw, .95rem); letter-spacing: .12em; margin-top: 1.6em; }
+
+/* boss intro */
+.cine { position: absolute; inset: 0; pointer-events: auto; overflow: hidden; z-index: 5; cursor: pointer; }
+.cine i { position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height .45s ease; }
+.cine .bar-top { top: 0; } .cine .bar-bot { bottom: 0; }
+.cine.on i { height: 13%; }
+.cine.out i { height: 0; }
+.cine-card { position: absolute; left: 4%; bottom: 17%; display: grid; gap: 2px; opacity: 0; transform: translateX(-30px); transition: opacity .35s ease, transform .35s ease; border-left: 3px solid var(--danger); padding: 4px 0 4px 12px; background: linear-gradient(90deg, #000000b0, transparent); max-width: 70%; }
+.cine.card .cine-card { opacity: 1; transform: none; }
+.cine.out .cine-card { opacity: 0; }
+.cine-label { font-family: var(--mono); font-size: clamp(.5rem, 1.6vw, .7rem); letter-spacing: .2em; text-transform: uppercase; color: var(--danger); }
+.cine-name { font-family: var(--display); font-weight: 800; font-size: clamp(1.3rem, 5vw, 2.6rem); line-height: 1; text-transform: uppercase; color: #fff; }
+.cine-epithet { font-family: var(--body); font-style: italic; font-size: clamp(.75rem, 2vw, 1rem); color: var(--fg); }
+.cine-skip { position: absolute; right: 2%; bottom: 3%; font-family: var(--mono); font-size: .55rem; letter-spacing: .1em; color: #ffffff77; text-transform: uppercase; z-index: 2; }
+
+/* contraband */
+.perks { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.perk { text-align: left; display: grid; gap: 8px; align-content: start; padding: 18px; min-height: 160px; background: var(--panel-2); border: 1px solid var(--line); border-top: 4px solid var(--sodium); }
+.perk:hover { border-color: var(--sodium); transform: translateY(-2px); }
+.perk.rare { border-top-color: var(--ion); background: linear-gradient(180deg, #73b6d414, var(--panel-2)); }
+.perk.rare:hover { border-color: var(--ion); }
+.perk b { font-family: var(--display); font-size: 1.5rem; font-weight: 800; text-transform: uppercase; letter-spacing: .02em; }
+.perk .desc { color: var(--muted); }
+.perk-list { display: grid; gap: 6px; }
+.perk-mini { display: grid; gap: 2px; padding: 8px 12px; border-left: 3px solid var(--sodium); background: var(--panel-2); font-size: .88rem; }
+.perk-mini.rare { border-left-color: var(--ion); }
+.perk-mini span { color: var(--muted); }
+
+/* targets */
+.lib { color: var(--ok); }
+.liberated { display: grid; gap: 4px; padding: 14px 16px; border: 1px solid var(--ok); background: #8db57d1a; }
+.liberated b { font-family: var(--display); font-size: 1.8rem; text-transform: uppercase; color: var(--ok); }
+.threat { display: grid; gap: 8px; }
+.deploy-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 820px) { .deploy-row { grid-template-columns: minmax(0, 1fr); } }
+.contracts { display: grid; gap: 6px; }
+.contract { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; align-items: center; padding: 8px 12px; background: var(--panel-2); border-left: 3px solid var(--line); font-size: .9rem; }
+.contract b { font-weight: 600; }
+.contract.done { border-left-color: var(--ok); opacity: .75; }
+.ending .big-title { color: var(--ok); }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 
@@ -242,12 +335,15 @@ import * as D from './data.js';
 import * as E from './engine.js';
 import { portraitURL } from './portraits.js';
 import { Stage, loadSheets, sheetStill } from './stage.js';
+import * as A from './audio.js';
 
 const SAVE_KEY = 'cinder-cell-save-v1';
 const rng = Math.random;
 const S = D.SETTING;
 let state;
 let confirmReset = false;
+let modal = null; // 'manual' | 'settings' | null
+let toast = null;
 
 function load() {
   try { const raw = localStorage.getItem(SAVE_KEY); if (raw) return JSON.parse(raw); } catch (e) {}
@@ -261,19 +357,38 @@ const cr = (n) => `${n.toLocaleString()} ${S.cur}`;
 const pct = (x) => `${Math.round(x * 100)}%`;
 const SKILL_KEYS = ['q', 'w', 'e'];
 
+function headerTools() {
+  const p = A.getPrefs();
+  return `<div class="tools"><button class="tool" data-a="modal" data-v="manual" aria-label="Field manual">Manual</button>
+    <button class="tool" data-a="sound" aria-pressed="${p.sfx}" aria-label="Toggle sound">${p.sfx ? 'Sound on' : 'Sound off'}</button>
+    <button class="tool" data-a="modal" data-v="settings" aria-label="Settings">Settings</button></div>`;
+}
 function statusStrip() {
   const c = state.char;
-  if (!c) return `<header class="status"><div class="brand">${esc(S.title)}</div><div class="stat"><span class="label">${esc(S.meta)}</span><span class="v" style="color:var(--sodium)">${state.meta.resolve}</span></div></header>`;
+  if (!c) return `<header class="status"><div class="head-top"><div class="brand">${esc(S.title)}</div>${headerTools()}</div><div class="head-stats"><div class="stat"><span class="label">${esc(S.meta)}</span><span class="v" style="color:var(--sodium)">${state.meta.resolve}</span></div></div></header>`;
   const st = E.stats(state);
   return `<header class="status">
-    <div class="brand">${esc(S.title)}</div>
-    <div class="stat"><span class="label">Operative ${c.number}</span><span class="v">${esc(c.name)} \u00B7 Lv ${c.level}</span></div>
+    <div class="head-top"><div class="brand">${esc(S.title)}</div>${headerTools()}</div>
+    <div class="head-stats">
+    <div class="stat"><span class="label">Operative ${c.number} \u00B7 Lv ${c.level}</span><span class="v">${esc(c.name)}</span></div>
     <div class="stat hp"><span class="label">HP</span><span class="v">${Math.max(0, c.hp)} / ${st.maxHp}</span>${bar(c.hp, st.maxHp)}</div>
     <div class="stat"><span class="label">ATK \u00B7 DEF \u00B7 SPD</span><span class="v">${st.atk} \u00B7 ${st.def} \u00B7 ${st.spd}</span></div>
-    <div class="stat"><span class="label">${Object.values(D.ATTRS).map((a) => a.short).join(' \u00B7 ')}</span><span class="v">${Object.keys(D.ATTRS).map((k) => E.attr(c, k)).join(' \u00B7 ')}</span></div>
     <div class="stat"><span class="label">${esc(S.currency)}</span><span class="v">${c.credits.toLocaleString()}</span></div>
     <div class="stat"><span class="label">${esc(S.meta)}</span><span class="v" style="color:var(--sodium)">${state.meta.resolve}</span></div>
+    </div>
   </header>`;
+}
+
+// ---------- one-time tips ----------
+const TIPS = {
+  town: 'Start on the Targets tab. When you come back with credits, gear up at the Black Market and Clinic. Resolve is spent in the Safehouse and is never lost.',
+  route: 'Pick a door. Each sector has three rooms, and at least two of them will be fights. A boss waits at the end of every fifth sector.',
+  combat: 'Read the enemy\u2019s intent below the battle scene. Defend against heavy strikes and signature moves; it also steadies your next shot.',
+  perk: 'Contraband stays with this operative until they die. Elites and bosses always drop some.',
+};
+function tip(id) {
+  if (state.meta.tips[id] || !TIPS[id]) return '';
+  return `<div class="tipbox"><span class="label">Field note</span><p>${esc(TIPS[id])}</p><button class="btn" data-a="tip" data-v="${id}">Got it</button></div>`;
 }
 
 function logPanel() {
@@ -284,16 +399,17 @@ const notice = () => state.notice ? `<div class="notice">${esc(state.notice)}</d
 
 // ---------- screens ----------
 function introScreen() {
-  return `<section class="panel" style="padding:32px">
+  return `<section class="panel intro" style="padding:32px">
     <span class="label">${esc(S.town)} \u00B7 after curfew</span>
     <h1 class="big-title">${esc(S.title)}</h1>
     <div class="story">${S.intro.map((p) => `<p>${esc(p)}</p>`).join('')}</div>
-    <div class="kv" style="max-width:560px">
-      <dt>Death</dt><dd class="danger-text">Lose the operative: ${S.currency}, gear, implants, attributes, level</dd>
-      <dt>Survives</dt><dd style="color:var(--sodium)">${S.meta}, training and cell upgrades bought with it</dd>
-      <dt>Earn ${S.meta}</dt><dd>+1 per sector cleared, +3 per boss, more for brave choices</dd>
-    </div>
-    <div><button class="btn primary big" data-a="begin">Build your first operative</button></div>
+    <ol class="howto">
+      <li><b>Raid</b> one of four Directorate districts. Pick your doors, fight, push deeper or slip out with the credits.</li>
+      <li><b>Die</b> and you lose the operative: level, gear, implants, contraband, credits.</li>
+      <li><b>Resolve</b> survives. Spend it on training that every future operative keeps.</li>
+      <li><b>Liberate</b> all four districts by beating their sector-15 bosses.</li>
+    </ol>
+    <div class="btnrow"><button class="btn primary big" data-a="begin">Build your first operative</button><button class="btn big" data-a="modal" data-v="manual">Field manual</button></div>
   </section>`;
 }
 
@@ -337,11 +453,11 @@ function createScreen() {
 
 function townScreen() {
   const c = state.char;
-  const tabs = [['market', 'Black Market'], ['clinic', 'Clinic'], ['safehouse', 'Safehouse'], ['gate', 'Targets']];
+  const tabs = [['gate', 'Targets'], ['market', 'Black Market'], ['clinic', 'Clinic'], ['safehouse', 'Safehouse']];
   const body = { market, clinic, safehouse, gate }[state.tab] || gate;
   return `<section class="panel">
     <div style="display:grid;gap:4px"><span class="label">Town \u00B7 curfew in effect</span><h2>${esc(S.town)}</h2></div>
-    ${notice()}
+    ${tip('town')}${notice()}
     <nav class="tabs" role="tablist">${tabs.map(([id, l]) => `<button class="tab" role="tab" aria-selected="${state.tab === id}" data-a="tab" data-v="${id}">${l}${id === 'safehouse' && c.attrPoints ? ` <span class="badge">${c.attrPoints}</span>` : ''}</button>`).join('')}</nav>
     ${body()}
   </section>`;
@@ -421,6 +537,7 @@ function safehouse() {
         <p class="muted" style="font-size:.9rem">${esc(bg.perk)}${c.attrPoints ? ` <b style="color:var(--sodium)">${c.attrPoints} attribute point${c.attrPoints > 1 ? 's' : ''} to spend.</b>` : ' Level up to earn attribute points.'}</p>
         <div class="rows">${attrRows}</div>
         <span class="label">Skills</span><div class="rows">${skills}</div>
+        <span class="label">Contraband</span>${c.perks.length ? `<div class="perk-list">${c.perks.map((id) => { const pk = E.perkById(id); return `<div class="perk-mini ${pk.rare ? 'rare' : ''}"><b>${esc(pk.name)}</b><span>${esc(pk.desc)}</span></div>`; }).join('')}</div>` : '<p class="muted">None yet. Elites and bosses carry it.</p>'}
         <span class="label">Choices that changed you</span><div class="wall">${history}</div>
       </div>
       <div style="display:grid;gap:14px;align-content:start;min-width:0">
@@ -429,35 +546,39 @@ function safehouse() {
         <span class="label">Training</span><div class="rows">${rows}</div>
         <span class="label">Cell upgrades</span><div class="rows">${cell}</div>
         <span class="label">The wall</span><div class="wall">${wall}</div>
-        <div class="btnrow"><button class="btn" data-a="reset">${confirmReset ? 'Click again to wipe all progress' : 'Reset save'}</button></div>
       </div>
     </div>`;
 }
 
 function gate() {
-  const c = state.char, st = E.stats(state);
+  const c = state.char, st = E.stats(state), m = state.meta;
   const sel = E.mapById(state.gateMap || 'garrison');
-  const cards = D.MAPS.map((m) => {
-    const open = E.mapUnlocked(state, m), prog = c.maps[m.id];
-    const traits = [m.credits !== 1 ? `${m.credits > 1 ? '+' : ''}${pct(m.credits - 1)} credits` : null, m.level ? `enemies +${m.level} lv` : null, m.events > 0.3 ? 'more events' : null].filter(Boolean);
-    return `<button class="map-card ${m.id === sel.id ? 'on' : ''} theme-${m.theme}" data-a="pickmap" data-v="${m.id}" ${open ? '' : 'disabled'} aria-pressed="${m.id === sel.id}">
-      <span class="label">${open ? `Best: sector ${state.meta.bestByMap[m.id] || 0}` : `Locked \u00B7 reach sector ${m.unlock} anywhere`}</span>
-      <b>${esc(m.name)}</b><span class="desc">${esc(m.desc)}</span>
-      <span class="mech-line"><b>${esc(m.mechanic.name)}.</b> ${esc(m.mechanic.desc)}</span>
-      <span class="label">Rooms: ${Object.keys(m.rooms).filter((k) => k !== 'fight').map((k) => esc(m.roomNames[k])).join(' \u00B7 ')}</span>
+  const cards = D.MAPS.map((mp) => {
+    const open = E.mapUnlocked(state, mp), prog = c.maps[mp.id], lib = m.liberated[mp.id];
+    const traits = [mp.credits !== 1 ? `${mp.credits > 1 ? '+' : ''}${pct(mp.credits - 1)} credits` : null, mp.level ? `enemies +${mp.level} lv` : null].filter(Boolean);
+    return `<button class="map-card ${mp.id === sel.id ? 'on' : ''} theme-${mp.theme}" data-a="pickmap" data-v="${mp.id}" ${open ? '' : 'disabled'} aria-pressed="${mp.id === sel.id}">
+      <span class="label">${!open ? `Locked \u00B7 reach sector ${mp.unlock} anywhere` : lib ? '<span class="lib">Liberated</span>' : `Best: sector ${m.bestByMap[mp.id] || 0} / 15`}</span>
+      <b>${esc(mp.name)}</b><span class="desc">${esc(mp.desc)}</span>
+      <span class="mech-line"><b>${esc(mp.mechanic.name)}.</b> ${esc(mp.mechanic.desc)}</span>
       ${traits.length ? `<span class="chips">${traits.map((t) => `<span class="chip">${t}</span>`).join('')}</span>` : ''}
       ${prog && prog.deepest ? `<span class="label">This operative: sector ${prog.deepest}</span>` : ''}</button>`;
   }).join('');
   const ins = [...(c.maps[sel.id]?.insertions || [1])].sort((a, b) => a - b);
   const warn = c.hp < st.maxHp * 0.6 ? `<p class="danger-text">You\u2019re going in at ${c.hp}/${st.maxHp} HP. The clinic is right there.</p>` : '';
-  return `<p class="muted">Pick a target. Three fights per sector, a boss every fifth. After each sector: push deeper or slip out with what you\u2019re carrying.</p>
-    <div class="maps">${cards}</div>
-    <div class="kv"><dt>Carrying</dt><dd>${cr(c.credits)} \u00B7 ${Object.entries(c.items).filter(([, n]) => n).map(([k, n]) => `${n}\u00D7 ${D.ITEMS[k].name}`).join(', ') || 'no supplies'}</dd>
-    <dt>If you die</dt><dd class="danger-text">All of it is gone, including level ${c.level}, your attributes and implants</dd></div>
-    ${warn}
-    <span class="label">Insertion point \u00B7 ${esc(sel.name)}</span>
-    <div class="ins">${ins.map((n) => `<button class="btn ${n === ins[ins.length - 1] ? 'primary' : ''}" data-a="deploy" data-v="${n}">Sector ${n} \u00B7 ${esc(E.sectorName(n, sel.id))}</button>`).join('')}</div>
-    ${ins.length === 1 ? '<p class="muted" style="font-size:.9rem">Beat a boss to unlock a deeper insertion point on that map for this operative.</p>' : ''}`;
+  const mt = E.maxThreat(state);
+  const threat = mt > 0 ? `<div class="threat"><span class="label">Threat level</span><div class="btnrow">${D.THREAT.slice(0, mt + 1).map((t, i) => `<button class="btn ${m.threat === i ? 'primary' : ''}" data-a="threat" data-v="${i}" title="${esc(t.desc)}">${esc(t.name)}</button>`).join('')}</div><p class="muted" style="font-size:.88rem">${esc(D.THREAT[m.threat].desc)}</p></div>` : '';
+  const contracts = (m.contracts || []).map((k) => `<div class="contract ${k.done ? 'done' : ''}"><div><b>${esc(k.text)}</b><span class="muted"> ${k.done ? 'Complete' : `${Math.min(k.progress, k.n)} / ${k.n}`}</span></div><span class="chip ${k.done ? 'good' : ''}">+${k.resolve} ${esc(S.meta)} \u00B7 +${k.credits} ${S.cur}</span></div>`).join('');
+  return `<div class="maps">${cards}</div>
+    ${threat}
+    <div class="deploy-row">
+      <div style="display:grid;gap:8px;min-width:0">
+        <span class="label">Insertion point \u00B7 ${esc(sel.name)}</span>
+        <div class="ins">${ins.map((n) => `<button class="btn ${n === ins[ins.length - 1] ? 'primary' : ''}" data-a="deploy" data-v="${n}">Sector ${n} \u00B7 ${esc(E.sectorName(n, sel.id))}</button>`).join('')}</div>
+        ${ins.length === 1 ? '<p class="muted" style="font-size:.88rem">Beat a boss to unlock a deeper insertion point on that map for this operative.</p>' : ''}
+        ${warn}
+      </div>
+      <div style="display:grid;gap:8px;min-width:0"><span class="label">Contracts from the cell</span><div class="contracts">${contracts || '<p class="muted">No jobs right now.</p>'}</div></div>
+    </div>`;
 }
 
 function portraitImg(e, cls = '') {
@@ -465,33 +586,37 @@ function portraitImg(e, cls = '') {
   return src ? `<img class="portrait ${cls}" src="${src}" alt="Portrait of ${esc(e.name)}" width="160" height="160">` : '';
 }
 
+function intentInfo(e) {
+  if (e.stun > 0) return { label: `Stunned \u00B7 ${e.stun} turn${e.stun > 1 ? 's' : ''}`, tone: 'calm', tip: 'It can\u2019t act. Free hits.' };
+  if (e.intent === 'special') { const sp = D.SPECIALS[e.id]; return { label: sp.name, tone: 'danger', tip: sp.tip }; }
+  return D.INTENTS[e.intent];
+}
 function combatScreen() {
   const r = state.run, e = r.enemy, c = state.char, st = E.stats(state);
-  const intent = e.stun > 0 ? { label: `Stunned \u00B7 ${e.stun} turn${e.stun > 1 ? 's' : ''}`, tone: 'calm', tip: 'Free hits.' } : D.INTENTS[e.intent];
-  const items = Object.entries(D.ITEMS).map(([id, it], i) => `<button class="btn" data-a="act" data-v="${id}" ${c.items[id] ? '' : 'disabled'}>${esc(it.name)} \u00D7${c.items[id]}<span class="k">${i + 1}</span></button>`).join('');
+  const intent = intentInfo(e);
+  const items = ['thermal', 'ion', 'smoke'].map((id, i) => `<button class="btn" data-a="act" data-v="${id}" title="${esc(D.ITEMS[id].desc)}" ${c.items[id] ? '' : 'disabled'}>${esc(D.ITEMS[id].name)} <span class="num">\u00D7${c.items[id]}</span><span class="k">${i + 2}</span></button>`).join('');
   const skills = E.skillsOf(c).slice(0, 3).map((k, i) => {
     const cd = r.cooldowns[k] || 0, sk = D.SKILLS[k];
-    const note = k === 'intimidate' ? (cd ? 'used this sector' : e.tags.includes('human') ? `${pct(E.intimidateChance(state))} to break` : 'humans only') : cd ? `ready in ${cd} turn${cd > 1 ? 's' : ''}` : `cooldown ${E.skillCd(c, k)}`;
-    return `<button class="btn skill" data-a="act" data-v="${k}" title="${esc(sk.desc)}" ${E.canUse(state, k) && !(k === 'intimidate' && !e.tags.includes('human')) ? '' : 'disabled'}>
+    const note = k === 'intimidate' ? (cd ? 'used this sector' : e.tags.includes('human') ? `${pct(E.intimidateChance(state))} to break` : 'humans only') : cd ? `ready in ${cd}` : 'ready';
+    return `<button class="btn skill ${cd ? '' : 'ready'}" data-a="act" data-v="${k}" title="${esc(sk.desc)}" ${E.canUse(state, k) && !(k === 'intimidate' && !e.tags.includes('human')) ? '' : 'disabled'}>
       <span class="sk-name">${esc(sk.name)}<span class="k">${SKILL_KEYS[i].toUpperCase()}</span></span><span class="sk-note">${note}</span></button>`;
   }).join('');
-  return `<div class="columns"><section class="panel">
-    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px"><span class="label">${esc(E.mapById(r.map).name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${roomPips(r)}</div>
+  const meta = [...e.tags.filter((t) => t !== 'boss').map((t) => `<span class="tag ${t}">${t}</span>`),
+    `<span>ATK <b>${e.atk}</b></span>`, `<span>DEF <b>${e.def}</b></span>`, `<span>SPD <b>${e.spd}</b></span>`,
+    `<span>Dodge <b>${pct(E.dodgeChance(st, e))}</b></span>`, `<span>Run <b>${pct(E.runChance(state))}</b></span>`].join('');
+  return `<div class="columns"><section class="panel combat">
+    <div class="combat-head"><span class="label">${esc(E.mapById(r.map).name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${roomPips(r)}</div>
     <div id="stage-slot"></div>
-    <div class="mech-row">${mechanicChip(r)}${r.enemy.elite ? '<span class="chip bad">elite</span>' : ''}</div>
-    <div class="foe-info">
-      <div class="title">${e.tags.map((t) => `<span class="tag ${t}">${t}</span>`).join('')}<div class="statline"><span>ATK <b>${e.atk}</b></span><span>DEF <b>${e.def}</b></span><span>SPD <b>${e.spd}</b></span><span>Run <b>${pct(E.runChance(state))}</b></span><span>Dodge <b>${pct(E.dodgeChance(st, e))}</b></span></div></div>
-      <div class="intent ${intent.tone}"><span class="dot"></span><b>${esc(e.name)}: ${esc(intent.label)}</b><span class="tip">${esc(intent.tip)}</span></div>
-    </div>
-    ${r.ready ? '<div class="notice">Aim steadied: your next attack deals +50%.</div>' : ''}
+    <div class="intent ${intent.tone}"><span class="dot"></span><b>${esc(intent.label)}</b><span class="tip">${esc(intent.tip)}</span><span class="intent-side">${mechanicChip(r)}${r.ready ? `<span class="chip good">Aim +${E.hasPerk(c, 'steady') ? 100 : 50}%</span>` : ''}</span></div>
+    <div class="statline">${meta}</div>
+    ${tip('combat')}
     <div class="actions">
       <button class="btn primary" data-a="act" data-v="attack">Attack<span class="k">A</span></button>
       <button class="btn" data-a="act" data-v="defend">Defend<span class="k">D</span></button>
+      <button class="btn" data-a="act" data-v="stim" ${c.items.stim ? '' : 'disabled'}>Stim <span class="num">\u00D7${c.items.stim}</span><span class="k">S</span></button>
       <button class="btn" data-a="act" data-v="run">Run<span class="k">R</span></button>
-      <button class="btn" data-a="act" data-v="stim" ${c.items.stim ? '' : 'disabled'}>Stim \u00D7${c.items.stim}<span class="k">S</span></button>
     </div>
-    ${skills ? `<span class="label">Skills</span><div class="skills">${skills}</div>` : ''}
-    <span class="label">Gear</span>
+    ${skills ? `<div class="skills">${skills}</div>` : ''}
     <div class="items">${items}</div>
   </section>${logPanel()}</div>`;
 }
@@ -520,6 +645,7 @@ function routeScreen() {
   return `<div class="columns"><section class="panel">
     <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center"><span class="label">${esc(map.name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${roomPips(r)}</div>
     <h2>${r.choices[0] === 'boss' ? 'No way around it' : r.room === 0 ? 'Which way in?' : 'Two doors'}</h2>
+    ${tip('route')}
     ${r.forced ? '<p class="muted" style="font-size:.9rem">Every sector takes at least two fights. Both doors are hot.</p>' : ''}
     <div class="mech-row">${mechanicChip(r)}<span class="muted" style="font-size:.9rem">${esc(map.mechanic.desc)}</span></div>
     <div class="doors">${doors}</div>
@@ -541,16 +667,75 @@ function roomScreen() {
 }
 
 function victoryScreen() {
-  const o = state.outcome, c = state.char;
+  const o = state.outcome, c = state.char, r = state.run;
   return `<div class="columns"><section class="panel">
+    ${o.liberated ? `<div class="liberated"><span class="label">District liberated</span><b>${esc(o.liberated)}</b><span>The Directorate has lost its grip here. Threat levels are now available on the Targets tab.</span></div>` : ''}
     <div class="killer">${o.id ? portraitImg({ id: o.id, name: o.enemy, portrait: o.portrait }, 'down') : ''}<div style="display:grid;gap:4px"><span class="label">${o.fled ? 'Target fled' : 'Target down'}</span><h2>${esc(o.enemy)}</h2></div></div>
-    <dl class="kv"><dt>${esc(S.currency)}</dt><dd style="color:var(--sodium)">+${o.credits}</dd><dt>XP</dt><dd>+${o.xp}</dd>
+    <dl class="kv"><dt>Credits</dt><dd style="color:var(--sodium)">+${o.credits}</dd><dt>XP</dt><dd>+${o.xp}</dd>
     ${o.levelUps.length ? `<dt>Level up</dt><dd class="ok-text">Now level ${o.levelUps[o.levelUps.length - 1]} \u00B7 +${o.levelUps.length} attribute point${o.levelUps.length > 1 ? 's' : ''}</dd>` : ''}
     ${o.healed ? `<dt>Field medic</dt><dd class="ok-text">+${o.healed} HP</dd>` : ''}
+    ${o.items && o.items.length ? `<dt>Scavenged</dt><dd class="ok-text">${o.items.map(esc).join(', ')}</dd>` : ''}
+    ${(o.notes || []).map((n) => `<dt>Note</dt><dd>${esc(n)}</dd>`).join('')}
     ${o.resolve ? `<dt>${esc(S.meta)}</dt><dd style="color:var(--sodium)">+${o.resolve}, and a deeper insertion point</dd>` : ''}</dl>
-    ${c.attrPoints ? `<div class="spend-inline"><span class="label">Spend ${c.attrPoints} attribute point${c.attrPoints > 1 ? 's' : ''}</span><div class="btnrow">${Object.entries(D.ATTRS).map(([k, a]) => `<button class="btn" data-a="spend" data-v="${k}">${a.short} ${c.attrs[k]} \u2192 ${c.attrs[k] + 1}</button>`).join('')}</div></div>` : ''}
-    <div><button class="btn primary big" data-a="continue">Keep moving<span class="k">\u21B5</span></button></div>
+    ${c.attrPoints ? `<div class="spend-inline"><span class="label">Spend ${c.attrPoints} attribute point${c.attrPoints > 1 ? 's' : ''}</span><div class="btnrow">${Object.entries(D.ATTRS).map(([k, a]) => `<button class="btn" data-a="spend" data-v="${k}" title="${esc(a.desc)}">${a.short} ${c.attrs[k]} \u2192 ${c.attrs[k] + 1}</button>`).join('')}</div></div>` : ''}
+    <div><button class="btn primary big" data-a="continue">${r && r.perkOffer ? 'Search the body' : 'Keep moving'}<span class="k">\u21B5</span></button></div>
   </section>${logPanel()}</div>`;
+}
+
+function perkScreen() {
+  const r = state.run;
+  const cards = r.perkOffer.map((id, i) => { const pk = E.perkById(id); return `<button class="perk ${pk.rare ? 'rare' : ''}" data-a="perk" data-v="${id}"><span class="label">${pk.rare ? 'Rare contraband' : 'Contraband'} <span class="k">${i + 1}</span></span><b>${esc(pk.name)}</b><span class="desc">${esc(pk.desc)}</span></button>`; }).join('');
+  return `<div class="columns"><section class="panel">
+    <span class="label">Contraband \u00B7 pick one</span><h2>What they were carrying</h2>
+    ${tip('perk')}
+    <div class="perks">${cards}</div>
+    <div><button class="btn" data-a="perk" data-v="">Leave it all</button></div>
+  </section>${logPanel()}</div>`;
+}
+
+function endingScreen() {
+  const m = state.meta;
+  return `<section class="panel ending" style="padding:36px">
+    <span class="label">${esc(S.town)} \u00B7 dawn</span>
+    <h1 class="big-title">The yard rises</h1>
+    <div class="story"><p>The garrison gate stands open. The furnaces are cold, the cells are empty, and the lift to orbit has stopped running. For the first time in three years, nobody in ${esc(S.town)} is working a Directorate shift.</p>
+    <p>${m.operatives === 1 ? 'One operative' : `${m.operatives} operatives`} walked through the gate to get here. ${m.operatives === 1 ? 'Their name is' : 'Their names are'} on the wall in the safehouse.</p></div>
+    <dl class="kv"><dt>Operatives</dt><dd>${m.operatives}</dd><dt>Raids</dt><dd>${m.stats.raids}</dd><dt>Enemies down</dt><dd>${m.stats.kills}</dd><dt>Bosses</dt><dd>${m.stats.bosses}</dd><dt>Resolve earned</dt><dd>${m.totalResolve}</dd></dl>
+    <p class="muted">The Directorate will send more. Threat levels are open on the Targets tab for anyone who wants to keep going.</p>
+    <div><button class="btn primary big" data-a="ending">Back to the yard</button></div>
+  </section>`;
+}
+
+function modalView() {
+  if (!modal) return '';
+  const p = A.getPrefs();
+  const body = modal === 'manual' ? `
+    <h2>Field manual</h2>
+    <div class="manual">
+      <section><h3>The goal</h3><p>Four districts are under Directorate control. Beat the boss at the end of sector 15 in each to liberate it. Operatives die; the cell remembers.</p></section>
+      <section><h3>A raid</h3><p>Pick a target and an insertion point. Each sector is three rooms: you choose one of two doors each time, and at least two rooms will be fights. Every fifth sector ends in a boss. After a sector you push deeper or extract with what you\u2019re carrying.</p></section>
+      <section><h3>Reading the enemy</h3><ul>
+        <li><b>Taking aim</b>: a normal attack.</li>
+        <li><b>Heavy strike</b>: x2.2 damage. Defend to take a quarter.</li>
+        <li><b>Signature move</b>: every enemy has one, usually with a status effect. Defend halves it and blocks the status.</li>
+        <li><b>Cover</b>: your attacks deal half. Heal or set up instead.</li>
+        <li><b>Repair</b>: hit it hard before it heals.</li></ul></section>
+      <section><h3>Your turn</h3><p><b>Defend</b> also steadies your aim: your next shot deals +50%. <b>Skills</b> come from your weapon and high attributes; their cooldowns last for the whole sector, so choose your moment. <b>Stims</b> heal and stop bleeding and burning.</p></section>
+      <section><h3>Status effects</h3><ul>${Object.values(D.STATUSES).map((x) => `<li><b>${esc(x.name)}</b>: ${esc(x.desc)}</li>`).join('')}</ul></section>
+      <section><h3>Elites and bosses</h3><p>Elites (veterans) carry a modifier, such as Regenerating or Volatile. Bosses enrage at half health. Both drop <b>contraband</b>: pick one of three perks that last until your operative dies.</p></section>
+      <section><h3>Getting stronger</h3><p><b>This operative</b>: levels (attribute points), gear, implants and contraband. All lost on death. <b>The cell</b>: Resolve buys permanent training and upgrades. Earn it from sectors, bosses, brave choices and contracts.</p></section>
+      <section><h3>Controls</h3><p class="keys"><span><b>A</b> attack</span><span><b>D</b> defend</span><span><b>S</b> stim</span><span><b>R</b> run</span><span><b>Q W E</b> skills</span><span><b>2 3 4</b> items</span><span><b>1 2</b> doors</span><span><b>Enter</b> continue</span></p></section>
+    </div>` : `
+    <h2>Settings</h2>
+    <div class="settings">
+      <label class="set-row"><span>Sound effects</span><button class="btn" data-a="setpref" data-v="sfx" aria-pressed="${p.sfx}">${p.sfx ? 'On' : 'Off'}</button></label>
+      <label class="set-row"><span>Ambience (rain and drone)</span><button class="btn" data-a="setpref" data-v="ambience" aria-pressed="${p.ambience}">${p.ambience ? 'On' : 'Off'}</button></label>
+      <label class="set-row" for="vol"><span>Volume</span><input id="vol" type="range" min="0" max="1" step="0.05" value="${p.volume}"></label>
+      <p class="muted" style="font-size:.88rem">Battle speed (1\u00D7, 2\u00D7, Skip) is in the corner of the battle scene.</p>
+      <div class="set-row"><span>Erase all progress, including Resolve and training</span><button class="btn danger" data-a="reset">${confirmReset ? 'Click again to confirm' : 'Reset save'}</button></div>
+    </div>`;
+  return `<div class="modal-wrap" data-a="closemodal"><div class="modal" role="dialog" aria-modal="true" aria-label="${modal === 'manual' ? 'Field manual' : 'Settings'}">
+    <button class="tool close" data-a="closemodal" aria-label="Close">Close</button>${body}</div></div>`;
 }
 
 function eventScreen() {
@@ -574,7 +759,7 @@ function sectorClearScreen() {
   const r = state.run, o = state.outcome, c = state.char, st = E.stats(state), next = r.sector + 1;
   return `<div class="columns"><section class="panel">
     <span class="label">Sector ${r.sector} secured \u00B7 ${esc(E.mapById(r.map).name)}</span><h2>${esc(E.sectorName(r.sector, r.map))}</h2>
-    <dl class="kv"><dt>Sector haul</dt><dd style="color:var(--sodium)">+${cr(o.credits)}</dd><dt>Carrying</dt><dd>${cr(c.credits)}</dd><dt>Condition</dt><dd class="${c.hp < st.maxHp * 0.4 ? 'danger-text' : ''}">${c.hp} / ${st.maxHp} HP \u00B7 ${c.items.stim} stims</dd><dt>${esc(S.meta)}</dt><dd style="color:var(--sodium)">+1 (banked)</dd></dl>
+    <dl class="kv"><dt>Sector haul</dt><dd style="color:var(--sodium)">+${cr(o.credits)}</dd><dt>Carrying</dt><dd>${cr(c.credits)}</dd><dt>Condition</dt><dd class="${c.hp < st.maxHp * 0.4 ? 'danger-text' : ''}">${c.hp} / ${st.maxHp} HP \u00B7 ${c.items.stim} stims</dd><dt>${esc(S.meta)}</dt><dd style="color:var(--sodium)">+${o.resolve || 1} (banked)</dd></dl>
     ${E.isBossSector(next) ? `<div class="notice" style="border-color:var(--danger);background:var(--danger-dim)">Sector ${next} is a boss sector. Something worse than troopers is waiting.</div>` : ''}
     <div class="btnrow">
       <button class="btn primary big" data-a="deeper">Push to sector ${next}</button>
@@ -589,28 +774,41 @@ function deathScreen() {
     <span class="label">Signal lost \u00B7 ${esc(E.mapById(o.map).name)} \u00B7 Sector ${o.sector}</span>
     <h1 class="big-title" style="color:var(--danger)">${esc(o.name)}</h1>
     ${o.killerId ? `<div class="killer">${portraitImg({ id: o.killerId, name: o.killer, portrait: o.killerPortrait })}<span class="label">Last seen<br>engaging a ${esc(o.killer)}</span></div>` : ''}
-    <p class="story">Operative ${o.number} went down in the ${esc(E.sectorName(o.sector, o.map))}, killed by a ${esc(o.killer)}. The ${o.credits.toLocaleString()} ${S.currency}, the gear, the implants and level ${o.level} went with them.</p>
+    <p class="story">Operative ${o.number} went down in the ${esc(E.sectorName(o.sector, o.map))}${o.killerId ? `, killed by a ${esc(o.killer)}` : `, taken by ${esc(o.killer)}`}. The ${o.credits.toLocaleString()} ${S.currency}, the gear, ${o.perks ? `${o.perks} piece${o.perks > 1 ? 's' : ''} of contraband, ` : ''}the implants and level ${o.level} went with them.</p>
     <dl class="kv"><dt>${esc(S.meta)} to spend</dt><dd style="color:var(--sodium)">${state.meta.resolve}</dd><dt>Deepest ever</dt><dd>Sector ${state.meta.bestSector}</dd></dl>
+    <p class="muted">Spend the Resolve in the Safehouse once your next operative is in town. Training and cell upgrades carry over.</p>
     <div><button class="btn primary big" data-a="recruit">Build the next operative</button></div>
   </section>`;
 }
 
 function render() {
-  const screens = { route: routeScreen, room: roomScreen, intro: introScreen, create: createScreen, town: townScreen, combat: combatScreen, victory: victoryScreen, event: eventScreen, sectorClear: sectorClearScreen, death: deathScreen };
+  const screens = { route: routeScreen, room: roomScreen, intro: introScreen, create: createScreen, town: townScreen, combat: combatScreen, victory: victoryScreen, event: eventScreen, sectorClear: sectorClearScreen, death: deathScreen, perk: perkScreen, ending: endingScreen };
   // Recover from inconsistent saves instead of rendering a blank page.
   if (!state.char && !['intro', 'create'].includes(state.screen)) { state.screen = 'create'; if (!state.draft) state.draft = E.newDraft(state.meta, rng); }
-  if (!state.run && ['combat', 'victory', 'event', 'sectorClear', 'route', 'room'].includes(state.screen)) state.screen = 'town';
+  if (!state.run && ['combat', 'victory', 'event', 'sectorClear', 'route', 'room', 'perk'].includes(state.screen)) state.screen = 'town';
   if (state.screen === 'route' && !(state.run.choices && state.run.choices.length)) E.offerRoute(state, rng);
   if (state.screen === 'room' && !state.roomResult) E.offerRoute(state, rng);
   if (state.screen === 'combat' && !state.run.enemy) E.offerRoute(state, rng);
+  if (state.screen === 'perk' && !state.run.perkOffer) E.offerRoute(state, rng);
   if (state.screen === 'event' && !E.eventById(state.event)) state.screen = 'combat';
   const showStatus = state.screen !== 'intro';
-  document.getElementById('app').innerHTML = (showStatus ? statusStrip() : '') + screens[state.screen]();
+  if (state.contractDone) { toast = `Contract complete: ${state.contractDone}`; state.contractDone = null; A.play('perk'); }
+  document.getElementById('app').innerHTML = (showStatus ? statusStrip() : '') + screens[state.screen]() + modalView() +
+    (toast ? `<div class="toast" role="status">${esc(toast)}</div>` : '');
+  toast = null;
+  A.setAmbience(state.run ? E.mapById(state.run.map).theme : 'town');
   const slot = document.getElementById('stage-slot');
   if (slot) {
     slot.replaceWith(stage.el);
-    const r = state.run, st = E.stats(state);
-    stage.sync({ run: r, enemy: r.enemy, sector: r.sector, boss: r.enemy.boss, theme: E.mapById(r.map).theme, allies: r.allies, player: { name: state.char.name, level: state.char.level, hp: state.char.hp, maxHp: st.maxHp } });
+    const r = state.run, st = E.stats(state), map = E.mapById(r.map);
+    const res = stage.sync({ run: r, enemy: r.enemy, sector: r.sector, boss: r.enemy.boss, theme: map.theme, allies: r.allies,
+      pst: r.pst, est: r.enemy.st, affix: r.enemy.affix ? D.AFFIXES[r.enemy.affix].name : null,
+      player: { name: state.char.name, level: state.char.level, hp: state.char.hp, maxHp: st.maxHp } });
+    if (res && res.isNewBoss) {
+      busy = true; document.getElementById('app').classList.add('busy');
+      const info = D.BOSS_INFO[r.enemy.id] || {};
+      stage.bossIntro({ name: r.enemy.name, epithet: info.epithet, label: `${map.name} \u00B7 Sector ${r.sector}` }).then(() => { busy = false; document.getElementById('app').classList.remove('busy'); });
+    }
   }
   const log = document.getElementById('log');
   if (log) log.scrollTop = log.scrollHeight;
@@ -625,6 +823,7 @@ async function fight(v) {
   if (busy || !E.canUse(state, v)) return;
   busy = true;
   document.getElementById('app').classList.add('busy');
+  const alertBefore = state.run.alert;
   state.events = [];
   E.playerAct(state, v, rng);
   const events = state.events;
@@ -633,30 +832,43 @@ async function fight(v) {
   try { await stage.play(events); } finally {
     busy = false;
     document.getElementById('app').classList.remove('busy');
+    if (state.run && state.run.alert > alertBefore) A.play('alarm');
+    if (state.screen === 'victory') A.play(state.outcome.liberated ? 'liberate' : 'coin');
     render();
   }
 }
 
+const BUY = new Set(['gear', 'item', 'upgrade', 'implant', 'heal', 'train', 'cell', 'spend']);
 function act(a, v, k) {
-  if (busy) return;
+  A.unlock();
+  if (a === 'closemodal') { modal = null; confirmReset = false; render(); return; }
+  if (busy && !modal) return;
   if (a === 'act') return fight(v);
   if (a !== 'reset') confirmReset = false;
+  let ok = true;
   switch (a) {
+    case 'modal': modal = v; A.play('click'); break;
+    case 'sound': A.setPref('sfx', !A.getPrefs().sfx); A.play('click'); break;
+    case 'setpref': A.setPref(v, !A.getPrefs()[v]); A.play('click'); break;
+    case 'tip': state.meta.tips[v] = true; A.play('click'); break;
+    case 'threat': state.meta.threat = +v; A.play('click'); break;
+    case 'perk': E.choosePerk(state, v, rng); if (v) A.play('perk'); break;
+    case 'ending': state.meta.endingSeen = true; state.screen = 'town'; break;
     case 'begin': state.screen = 'create'; if (!state.draft) state.draft = E.newDraft(state.meta, rng); break;
     case 'bg': state.draft.background = v; { for (const key of Object.keys(D.ATTRS)) while (E.draftAttr(state.draft, key) > D.ATTR_CREATE_MAX) E.draftAdjust(state.draft, key, -1); } break;
     case 'attr': E.draftAdjust(state.draft, v, +k); break;
     case 'randname': state.draft.name = D.OPERATIVE_NAMES[Math.floor(rng() * D.OPERATIVE_NAMES.length)]; break;
     case 'create': E.createChar(state, rng); state.gateMap = 'garrison'; break;
     case 'tab': state.tab = v; state.notice = null; break;
-    case 'gear': E.buyGear(state, k, v); break;
-    case 'item': E.buyItem(state, v); break;
-    case 'upgrade': E.buyUpgrade(state, v); break;
-    case 'implant': E.installImplant(state, v); break;
+    case 'gear': ok = E.buyGear(state, k, v); break;
+    case 'item': ok = E.buyItem(state, v); break;
+    case 'upgrade': ok = E.buyUpgrade(state, v); break;
+    case 'implant': ok = E.installImplant(state, v); break;
     case 'unimplant': E.removeImplant(state, v); break;
-    case 'heal': E.heal(state); break;
-    case 'train': E.train(state, v); break;
-    case 'cell': E.buyCell(state, v); break;
-    case 'spend': E.spendAttr(state, v); break;
+    case 'heal': ok = E.heal(state); break;
+    case 'train': ok = E.train(state, v); break;
+    case 'cell': ok = E.buyCell(state, v); break;
+    case 'spend': ok = E.spendAttr(state, v); break;
     case 'pickmap': state.gateMap = v; break;
     case 'deploy': E.deploy(state, state.gateMap || 'garrison', +v, rng); break;
     case 'continue': E.continueAfterVictory(state, rng); break;
@@ -669,29 +881,39 @@ function act(a, v, k) {
     case 'recruit': E.recruit(state, rng); break;
     case 'reset':
       if (!confirmReset) { confirmReset = true; break; }
-      confirmReset = false; state = E.newGame(rng); break;
+      confirmReset = false; modal = null; state = E.newGame(rng); break;
   }
+  if (BUY.has(a)) A.play(ok ? 'buy' : 'denied');
+  else if (['deploy', 'room', 'deeper'].includes(a)) A.play('door');
+  else if (['tab', 'pickmap', 'continue', 'roomDone', 'eventDone', 'event', 'bg', 'attr', 'create', 'begin', 'recruit', 'extract'].includes(a)) A.play('click');
   render();
 }
 
 document.addEventListener('click', (ev) => {
+  if (ev.target.classList && ev.target.classList.contains('modal-wrap')) { act('closemodal'); return; }
   const b = ev.target.closest('button[data-a]');
   if (!b || b.disabled) return;
   act(b.dataset.a, b.dataset.v, b.dataset.k);
 });
 document.addEventListener('input', (ev) => {
   if (ev.target.id === 'op-name' && state.draft) { state.draft.name = ev.target.value; save(); }
+  if (ev.target.id === 'vol') A.setPref('volume', +ev.target.value);
 });
+document.addEventListener('change', (ev) => { if (ev.target.id === 'vol') A.play('click'); });
 
 document.addEventListener('keydown', (ev) => {
-  if (ev.metaKey || ev.ctrlKey || ev.altKey || busy || ev.target.tagName === 'INPUT') return;
+  if (ev.key === 'Escape' && modal) { act('closemodal'); return; }
+  if (ev.metaKey || ev.ctrlKey || ev.altKey || busy || modal || ev.target.tagName === 'INPUT') return;
+  A.unlock();
   const key = ev.key.toLowerCase();
   if (state.screen === 'combat') {
-    const map = { a: 'attack', d: 'defend', r: 'run', s: 'stim', 1: 'stim', 2: 'thermal', 3: 'ion', 4: 'smoke' };
+    const map = { a: 'attack', d: 'defend', r: 'run', s: 'stim', 2: 'thermal', 3: 'ion', 4: 'smoke' };
     E.skillsOf(state.char).slice(0, 3).forEach((sk, i) => { map[SKILL_KEYS[i]] = sk; });
     if (map[key] && E.canUse(state, map[key])) { ev.preventDefault(); act('act', map[key]); }
   } else if (state.screen === 'route' && (key === '1' || key === '2') && state.run.choices[+key - 1]) {
     ev.preventDefault(); act('room', String(+key - 1));
+  } else if (state.screen === 'perk' && ['1', '2', '3'].includes(key) && state.run.perkOffer[+key - 1]) {
+    ev.preventDefault(); act('perk', state.run.perkOffer[+key - 1]);
   } else if (key === 'enter') {
     if (state.screen === 'victory') { ev.preventDefault(); act('continue'); }
     else if (state.screen === 'room') { ev.preventDefault(); act('roomDone'); }

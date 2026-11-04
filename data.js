@@ -112,10 +112,10 @@ export const UPGRADES = [
 
 // ---------- permanent progression (Resolve; survives death) ----------
 export const TRAINING = {
-  hp:  { label: 'Endurance',    stat: 'Max HP', per: 8, max: 15, note: 'Scar tissue and stubbornness.' },
-  atk: { label: 'Marksmanship', stat: 'ATK',    per: 2, max: 15, note: 'Range time behind the slag heaps.' },
-  def: { label: 'Grit',         stat: 'DEF',    per: 1, max: 15, note: 'Knowing which cover holds.' },
-  spd: { label: 'Reflexes',     stat: 'SPD',    per: 1, max: 15, note: 'Dodge, crit and escape odds.' },
+  hp:  { label: 'Endurance',    stat: 'Max HP', per: 8, max: 20, note: 'Scar tissue and stubbornness.' },
+  atk: { label: 'Marksmanship', stat: 'ATK',    per: 2, max: 20, note: 'Range time behind the slag heaps.' },
+  def: { label: 'Grit',         stat: 'DEF',    per: 1, max: 20, note: 'Knowing which cover holds.' },
+  spd: { label: 'Reflexes',     stat: 'SPD',    per: 1, max: 20, note: 'Dodge, crit and escape odds.' },
 };
 export const CELL = [
   { id: 'stash',  name: 'Hidden Stash',   cost: 6,  desc: 'New operatives start with +60 credits.' },
@@ -228,7 +228,7 @@ export const MAPS = [
     sectors: ['Intake', 'Holding Pens', 'Processing', 'Cell Block A', 'Warden\u2019s Office', 'Isolation Wing', 'Infirmary', 'Cell Block C', 'Records Room', 'Interrogation Suite', 'Yard Gallery', 'Solitary', 'Transfer Dock', 'Deep Cells', 'Warden\u2019s Tower'],
     pool: [['jailer', 1], ['officer', 1], ['hound', 1], ['sedation', 2], ['riot', 3], ['interrogator', 4], ['marksman', 6], ['shock', 8], ['sentinel', 11]],
     bosses: ['kell', 'crawler', 'ostrane'] },
-  { id: 'port', name: 'Orbital Lift Port', unlock: 10, level: 3, credits: 1.5, xp: 1.2, events: 0.25, theme: 'port',
+  { id: 'port', name: 'Orbital Lift Port', unlock: 10, level: 0, credits: 1.5, xp: 1.2, events: 0.25, theme: 'port',
     mechanic: { id: 'snipers', name: 'Tower snipers', desc: 'Open landing pads. Each turn there is a 20% chance a tower sniper hits you for 8% of max HP unless you Defend.' },
     rooms: { fight: 4, elite: 3, event: 1, cargo: 3, rest: 1 },
     roomNames: { fight: 'Checkpoint', elite: 'Security Office', event: 'Crew Lounge', cargo: 'Cargo Stack', rest: 'Maintenance Bay' },
@@ -335,4 +335,104 @@ export const EVENTS = [
         win: { items: { stim: 1, ion: 1 }, text: '\u201CFor the yard, then. Just this once.\u201D' }, lose: { text: '\u201CNice try.\u201D The vent cover slides shut.' } },
       { label: 'Wave them off', win: { text: 'You don\u2019t need more friends like that.' } },
     ] },
+];
+
+// ---------- status effects (on you or the enemy) ----------
+export const STATUSES = {
+  bleed:   { name: 'Bleeding', short: 'BLEED', desc: 'Loses 6% of max HP at the end of each round.', bad: true },
+  burn:    { name: 'Burning',  short: 'BURN',  desc: 'Loses 8% of max HP at the end of each round.', bad: true },
+  shaken:  { name: 'Shaken',   short: 'SHAKEN', desc: 'Deals 25% less damage.', bad: true },
+  exposed: { name: 'Exposed',  short: 'EXPOSED', desc: 'Takes 25% more damage.', bad: true },
+};
+
+// ---------- enemy signature moves ----------
+// Shown as the enemy's intent before it happens. Defending halves the damage and blocks the status.
+export const SPECIALS = {
+  patrol:   { name: 'Flashbang',      mult: 0.6, status: { exposed: 2 }, tip: 'Light damage and leaves you Exposed. Defend to block it.' },
+  probe:    { name: 'Target lock',    mult: 0.3, status: { exposed: 2 }, tip: 'Marks you: Exposed for 2 turns. Defend to block it.' },
+  officer:  { name: 'Citation',       mult: 0.4, status: { shaken: 2 }, tip: '\u201CYou\u2019re under arrest.\u201D Leaves you Shaken. Defend to block it.' },
+  hound:    { name: 'Savage bite',    mult: 1.1, status: { bleed: 3 }, tip: 'A real bite. Bleeding for 3 turns. Defend to block it.' },
+  riot:     { name: 'Shield bash',    mult: 0.9, status: { shaken: 2 }, tip: 'Leaves you Shaken. Defend to block it.' },
+  loader:   { name: 'Crush',          mult: 1.6, status: { shaken: 1 }, tip: 'Heavy crushing grip. Defend.' },
+  marksman: { name: 'Called shot',    mult: 1.5, status: { bleed: 2 }, tip: 'Aimed at an artery. Defend to block the bleed.' },
+  interrogator: { name: 'Pressure',   mult: 0.5, status: { shaken: 2, exposed: 2 }, tip: 'Knows exactly where to push. Shaken and Exposed. Defend.' },
+  shock:    { name: 'Incendiary grenade', mult: 1.0, status: { burn: 2 }, tip: 'Sets you Burning. Defend to block it.' },
+  sentinel: { name: 'Lockdown beam',  mult: 0.8, status: { exposed: 3 }, tip: 'Exposed for 3 turns. Defend to block it.' },
+  welder:   { name: 'Torch sweep',    mult: 0.8, status: { burn: 2 }, tip: 'Sets you Burning. Defend to block it.' },
+  foreman:  { name: 'Shock prod',     mult: 0.7, status: { shaken: 2 }, tip: 'Leaves you Shaken. Defend to block it.' },
+  slagger:  { name: 'Slag spit',      mult: 0.9, status: { burn: 3 }, tip: 'Molten slag. Burning for 3 turns. Defend to block it.' },
+  jailer:   { name: 'Baton strike',   mult: 0.8, status: { shaken: 2 }, tip: 'Leaves you Shaken. Defend to block it.' },
+  sedation: { name: 'Sedative',       mult: 0.4, status: { shaken: 3 }, tip: 'Shaken for 3 turns. Defend to block it.' },
+  dockguard:{ name: 'Mag-flare',      mult: 0.5, status: { exposed: 2 }, tip: 'Leaves you Exposed. Defend to block it.' },
+  gunner:   { name: 'Shrapnel round', mult: 1.0, status: { bleed: 3 }, tip: 'Bleeding for 3 turns. Defend to block it.' },
+  halvek:   { name: 'Execution order', mult: 1.2, status: { shaken: 2 }, tip: 'Halvek signals the guns. Defend.' },
+  crawler:  { name: 'Flame sweep',    mult: 1.0, status: { burn: 3 }, tip: 'Burning for 3 turns. Defend to block it.' },
+  ostrane:  { name: 'Your file',      mult: 0.6, status: { shaken: 3, exposed: 2 }, tip: 'She reads your weaknesses aloud. Defend.' },
+  brask:    { name: 'Hammer fist',    mult: 1.3, status: { shaken: 2 }, tip: 'Leaves you Shaken. Defend.' },
+  crucible: { name: 'Slag torrent',   mult: 1.0, status: { burn: 3 }, tip: 'Burning for 3 turns. Defend to block it.' },
+  kell:     { name: 'Solitary',       mult: 0.7, status: { exposed: 3 }, tip: 'Exposed for 3 turns. Defend to block it.' },
+  vane:     { name: 'Orbital spotter', mult: 1.3, status: { exposed: 2 }, tip: 'A spotter drone paints you. Defend.' },
+};
+
+// ---------- elite modifiers (one per elite) ----------
+export const AFFIXES = {
+  armoured:   { name: 'Armoured',   desc: '+4 DEF.' },
+  berserk:    { name: 'Berserk',    desc: '+25% ATK, but 15% less HP.' },
+  regenerating: { name: 'Regenerating', desc: 'Heals 6% of max HP each round.' },
+  vampiric:   { name: 'Vampiric',   desc: 'Heals half the damage it deals.' },
+  volatile:   { name: 'Volatile',   desc: 'Explodes when it dies: 15% of your max HP unless you Defended.' },
+  relentless: { name: 'Relentless', desc: 'Never takes cover. Uses its signature move twice as often.' },
+};
+
+// ---------- bosses ----------
+export const BOSS_INFO = {
+  halvek:   { epithet: 'Keeper of the Gate',        phase2: 'Halvek tears off his gloves. \u201CEnough paperwork.\u201D' },
+  crawler:  { epithet: 'Siege Engine, Mark IV',      phase2: 'The crawler vents its coolant and redlines every gun.' },
+  ostrane:  { epithet: 'Supervisor of Kessa Yard',  phase2: 'Ostrane finally puts the datapad down.' },
+  brask:    { epithet: 'Overseer of the Casting Floor', phase2: 'Brask roars and wades in swinging.' },
+  crucible: { epithet: 'The Furnace Walks',          phase2: 'The Crucible\u2019s core goes white-hot.' },
+  kell:     { epithet: 'Warden of the Deep Cells',   phase2: 'Kell takes off her glasses. Her eyes are worse.' },
+  vane:     { epithet: 'Master of the Lift',         phase2: 'Vane calls in the tower guns.' },
+};
+
+// ---------- contraband: run perks drafted after elites and bosses. Kept until the operative dies. ----------
+export const PERKS = [
+  { id: 'hollow',    name: 'Hollow-Points',      rare: false, desc: 'Critical hits deal x2.2 instead of x1.6.' },
+  { id: 'dressing',  name: 'Field Dressing',     rare: false, desc: 'Heal 6% of max HP at the start of every fight.' },
+  { id: 'chit',      name: 'Lucky Chit',         rare: false, desc: '+20% credits from everything.' },
+  { id: 'serrated',  name: 'Serrated Rounds',    rare: false, desc: 'Your attacks have a 30% chance to cause Bleeding.' },
+  { id: 'incendiary',name: 'Incendiary Mix',     rare: false, desc: 'Thermal charges also set the target Burning for 3 turns.' },
+  { id: 'steady',    name: 'Steady Hands',       rare: false, desc: 'Defending boosts your next shot by +100% instead of +50%.' },
+  { id: 'secondwind',name: 'Second Wind',        rare: false, desc: 'Defending also heals 5% of max HP.' },
+  { id: 'scavenger', name: 'Scavenger',          rare: false, desc: '35% chance to find an item after each fight.' },
+  { id: 'spotter',   name: 'Spotter',            rare: false, desc: 'Enemies start every fight Exposed for 2 turns.' },
+  { id: 'thick',     name: 'Thick Skin',         rare: false, desc: 'Status effects on you last 1 turn less.' },
+  { id: 'ambush',    name: 'Ambusher',           rare: true,  desc: 'Your first attack in every fight deals double damage.' },
+  { id: 'deadman',   name: 'Dead Man\u2019s Switch', rare: true, desc: 'Once per raid, survive a killing blow with 1 HP.' },
+  { id: 'grudge',    name: 'Grudge',             rare: true,  desc: '+30% damage against elites and bosses.' },
+  { id: 'quickdraw', name: 'Quickdraw',          rare: true,  desc: 'Killing an enemy cuts all skill cooldowns by 2.' },
+  { id: 'capacitor', name: 'Ion Capacitor',      rare: true,  desc: 'Ion pulses stun 1 turn longer. Overload deals +30%.' },
+  { id: 'reputation',name: 'Reputation',         rare: true,  desc: 'Human enemies start every fight Shaken for 2 turns.' },
+];
+
+// ---------- contracts: optional jobs from the cell. Rewards are permanent Resolve and credits. ----------
+// kind: kill (tag on map), sector (reach sector on map), boss (beat any boss on map), allies (bring prisoners home), haul (extract carrying credits)
+export const CONTRACTS = [
+  { kind: 'kill',   tag: 'droid', n: 6,  text: 'Scrap {n} droids in the {map}' },
+  { kind: 'kill',   tag: 'human', n: 6,  text: 'Take down {n} Directorate personnel in the {map}' },
+  { kind: 'kill',   tag: 'elite', n: 2,  text: 'Defeat {n} veterans in the {map}' },
+  { kind: 'sector', n: 4,           text: 'Reach sector {n} in the {map}' },
+  { kind: 'sector', n: 7,           text: 'Reach sector {n} in the {map}' },
+  { kind: 'boss',   n: 1,           text: 'Bring down a boss in the {map}' },
+  { kind: 'allies', n: 2,           text: 'Bring {n} freed prisoners home', map: 'detention' },
+  { kind: 'haul',   n: 300,         text: 'Extract carrying at least {n} credits' },
+];
+
+// ---------- threat levels: unlocked by liberating maps (beating their sector 15 boss) ----------
+export const THREAT = [
+  { name: 'Standard',  desc: 'The Directorate as it is.' },
+  { name: 'Threat I',  desc: 'Enemies +12% HP and ATK. +15% credits.' },
+  { name: 'Threat II', desc: 'Enemies +24% HP and ATK. +30% credits. +1 Resolve per boss.' },
+  { name: 'Threat III',desc: 'Enemies +36% HP and ATK. +45% credits. +1 Resolve per boss and per 5 sectors.' },
+  { name: 'Threat IV', desc: 'Enemies +48% HP and ATK, elites everywhere. +60% credits. +2 Resolve per boss.' },
 ];

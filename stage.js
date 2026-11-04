@@ -3,9 +3,10 @@
 // Characters come from PixelLab-style sprite sheets (sprites/manifest.json) when present, otherwise from the
 // code-drawn portraits.
 import { portraitCanvas, MUZZLE } from './portraits.js';
+import { play } from './audio.js';
 
 export const W = 384, H = 216;
-const MELEE = new Set(['hound', 'riot', 'loader']);
+const MELEE = new Set(['hound', 'riot', 'loader', 'brask', 'foreman', 'slagger', 'jailer', 'sedation']);
 const HOVER = new Set(['probe']);
 const reduceMotion = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const C = { amber: '#ffb35a', crit: '#fff1c9', red: '#ff5a44', ion: '#8fdcff', heal: '#9be08a', smoke: '#8b949c', spark: '#ffd27a' };
@@ -85,8 +86,9 @@ export class Stage {
     this.el = document.createElement('div');
     this.el.className = 'stage';
     this.el.innerHTML = `<canvas width="${W}" height="${H}" aria-hidden="true"></canvas>
-      <div class="hud hud-enemy"><div class="hud-row"><b class="hud-name"></b><span class="hud-tag"></span></div><div class="bar enemy"><i></i></div><span class="hud-hp num"></span></div>
-      <div class="hud hud-player"><div class="hud-row"><b class="hud-name"></b><span class="hud-tag"></span></div><div class="bar"><i></i></div><span class="hud-hp num"></span></div>
+      <div class="hud hud-enemy"><div class="hud-row"><b class="hud-name"></b><span class="hud-tag"></span></div><div class="bar enemy"><i></i></div><div class="hud-row"><span class="hud-st"></span><span class="hud-hp num"></span></div></div>
+      <div class="hud hud-player"><div class="hud-row"><b class="hud-name"></b><span class="hud-tag"></span></div><div class="bar"><i></i></div><div class="hud-row"><span class="hud-st"></span><span class="hud-hp num"></span></div></div>
+      <div class="cine" hidden><i class="bar-top"></i><i class="bar-bot"></i><div class="cine-card"><span class="cine-label"></span><b class="cine-name"></b><span class="cine-epithet"></span></div><span class="cine-skip">Click to skip</span></div>
       <div class="pops" aria-hidden="true"></div>
       <div class="speed" role="group" aria-label="Battle speed"><button data-speed="1">1\u00D7</button><button data-speed="2">2\u00D7</button><button data-speed="skip">Skip</button></div>`;
     this.canvas = this.el.querySelector('canvas');
@@ -112,7 +114,7 @@ export class Stage {
       this.syncSpeed();
     });
     this.syncSpeed();
-    const loop = (t) => { this.draw(t); requestAnimationFrame(loop); };
+    const loop = (t) => { try { this.draw(performance.now()); } catch (e) { console.warn('stage draw', e); } requestAnimationFrame(loop); };
     requestAnimationFrame(loop);
   }
 
@@ -147,14 +149,18 @@ export class Stage {
   }
 
   // Called after every render of the combat screen.
-  sync({ run, enemy, player, sector, boss, theme = 'garrison', allies = 0 }) {
+  sync({ run, enemy, player, sector, boss, theme = 'garrison', allies = 0, pst = {}, est = {}, affix = null, label = '' }) {
     const now = performance.now();
     this.sector = sector; this.boss = boss; this.theme = theme; this.allies = allies;
     if (!this.allySprite) this.allySprite = portraitCanvas('prisoner');
     this.intent = enemy.intent; this.stun = enemy.stun;
     this.max.enemy = enemy.maxHp; this.max.player = player.maxHp;
-    this.setHud('enemy', enemy.name, enemy.boss ? 'BOSS' : `SECTOR ${sector}`, enemy.hp);
+    this.setHud('enemy', enemy.name, enemy.boss ? (enemy.phase2 ? 'ENRAGED' : 'BOSS') : enemy.elite ? 'ELITE' : `SECTOR ${sector}`, enemy.hp);
     this.setHud('player', player.name, `LV ${player.level}`, player.hp);
+    this.setStatuses('player', pst);
+    this.setStatuses('enemy', est, affix);
+    this.label = label;
+    let isNewBoss = false;
     if (this.runRef !== run || !this.player) {
       this.runRef = run;
       this.player = new Actor('player', 'player', false);
@@ -166,11 +172,57 @@ export class Stage {
       this.enemy = new Actor(enemy.id, 'enemy', enemy.boss);
       this.enemy.ox = 140; this.enemy.alpha = 0;
       this.tween(enemy.boss ? 800 : 450, (p) => { this.enemy.ox = 140 * (1 - ease(p)); this.enemy.alpha = p; });
-      if (enemy.boss) this.shake(3, 600);
+      if (enemy.boss) { isNewBoss = true; this.enemy.alpha = 0; this.enemy.ox = 0; }
+      else play('door');
     }
     this.enemy.rest = enemy.intent === 'heavy' && !enemy.stun ? 'charge' : 'idle';
     if (this.enemy.anim === 'idle' && this.enemy.rest === 'charge') this.enemy.setAnim('charge', now);
     this.playerShield = false;
+    return { isNewBoss };
+  }
+
+  setStatuses(side, st = {}, affix = null) {
+    const el = this.hud[side].querySelector('.hud-st');
+    const names = { bleed: 'BLEED', burn: 'BURN', shaken: 'SHAKEN', exposed: 'EXPOSED' };
+    el.innerHTML = (affix ? `<i class="st affix">${affix.toUpperCase()}</i>` : '') +
+      Object.entries(st).filter(([, n]) => n > 0).map(([k, n]) => `<i class="st st-${k}">${names[k] || k} ${n}</i>`).join('');
+  }
+
+  // Cinematic boss entrance: letterbox, silhouette, reveal, name card. Click skips.
+  bossIntro({ name, epithet, label }) {
+    const E = this.enemy, cine = this.el.querySelector('.cine');
+    if (!E) return Promise.resolve();
+    if (this.skip) { E.alpha = 1; E.ox = 0; return Promise.resolve(); }
+    return new Promise((done) => {
+      let finished = false;
+      const timers = [];
+      const at = (ms, fn) => timers.push(setTimeout(fn, ms / this.speed));
+      const finish = () => {
+        if (finished) return; finished = true;
+        timers.forEach(clearTimeout);
+        cine.hidden = true; cine.className = 'cine';
+        this.dim = 0; E.alpha = 1; E.ox = 0; E.oy = 0; E.flash = 0;
+        this.el.removeEventListener('click', finish);
+        done();
+      };
+      cine.querySelector('.cine-label').textContent = label;
+      cine.querySelector('.cine-name').textContent = name;
+      cine.querySelector('.cine-epithet').textContent = epithet || '';
+      cine.hidden = false; cine.className = 'cine';
+      void cine.offsetWidth;
+      cine.classList.add('on');
+      this.dim = 0.75;
+      E.alpha = 1; E.oy = -70; E.ox = 0;
+      this.flash(E, '#000000', 1500);
+      play('bossSting');
+      this.tween(420, (p) => { E.oy = -70 * (1 - p * p); });
+      at(420, () => { this.shake(6, 500); const c = this.center(E); this.burst(c.x, c.y + 40, 30, '#8b949c', 2.5, 700, 0.02, 3); });
+      at(1300, () => { this.flash(E, '#ffffff', 160); this.tween(500, (p) => { this.dim = 0.75 * (1 - p) + 0.25 * p; }); });
+      at(1500, () => { cine.classList.add('card'); play('bossName'); });
+      at(3000, () => { cine.classList.add('out'); this.tween(400, (p) => { this.dim = 0.25 * (1 - p); }); });
+      at(3450, finish);
+      setTimeout(() => this.el.addEventListener('click', finish), 250);
+    });
   }
 
   setHud(side, name, tag, hp) {
@@ -218,6 +270,7 @@ export class Stage {
 
   async hit(actor, dmg, { crit = false, note = '', heavy = false } = {}) {
     const c = this.center(actor), dir = actor.side === 'enemy' ? 1 : -1;
+    play(crit ? 'crit' : heavy ? 'heavy' : actor.side === 'player' ? 'hurt' : 'hit');
     actor.setAnim('hit', performance.now());
     this.flash(actor);
     this.burst(c.x, c.y, crit || heavy ? 18 : 9, crit ? C.crit : C.spark, crit ? 3 : 2);
@@ -243,6 +296,14 @@ export class Stage {
 
   async handle(ev) {
     const P = this.player, E = this.enemy, now = () => performance.now();
+    const START = { 'player:shoot': 'shot', 'player:burst': 'burst', 'player:blast': 'blast', 'player:smash': 'whoosh', 'player:overload': 'zap',
+      'player:intimidate': 'status', 'player:defend': 'shield', 'player:stim': 'heal', 'player:thermal': 'throw', 'player:ion': 'zap',
+      'player:smoke': 'smoke', 'player:run': 'whoosh', 'player:levelup': 'levelup', 'player:down': 'death', 'ally:shoot': 'shot',
+      'enemy:repair': 'repair', 'enemy:down': 'enemyDown', 'enemy:flee': 'whoosh', 'enemy:stunned': 'zap', 'env:vent': 'vent', 'env:sniper': 'sniper',
+      'enemy:phase': 'enrage', 'player:deadman': 'heal', 'env:explode': 'explosion' };
+    const k = `${ev.who}:${ev.type}`;
+    if (START[k]) play(START[k]);
+    if (k === 'enemy:attack' || k === 'enemy:heavy') play(ev.type === 'heavy' ? 'heavyCharge' : MELEE.has(E.id) ? 'whoosh' : 'enemyShot');
     switch (`${ev.who}:${ev.type}`) {
       case 'player:shoot': {
         P.setAnim('attack', now());
@@ -379,6 +440,7 @@ export class Stage {
         await this.tween(420, (p) => { pr.x = from.x + (to.x - from.x) * p; pr.y = from.y + (to.y - from.y) * p - Math.sin(p * Math.PI) * 50; });
         this.projectiles.splice(this.projectiles.indexOf(pr), 1);
         this.ring(to.x, to.y, 46, C.amber, 380, 3);
+        play('explosion');
         this.burst(to.x, to.y, 40, C.amber, 3.5, 500, 0.06, 2);
         this.burst(to.x, to.y, 16, C.smoke, 1.2, 800, -0.01, 3);
         this.shake(6, 350);
@@ -440,10 +502,10 @@ export class Stage {
           this.allies = Math.max(0, this.allies - 1);
         } else if (ev.dodged) {
           const x0 = P.ox;
-          this.popup('player', 'Dodged', 'info');
+          this.popup('player', 'Dodged', 'info'); play('dodge');
           await this.move(P, x0 - 16, 0, 90); await this.move(P, x0, 0, 160);
         } else {
-          if (ev.blocked) { const c = this.center(P); this.ring(c.x + 18, c.y - 10, 30, C.ion, 260, 2); }
+          if (ev.blocked) { const c = this.center(P); this.ring(c.x + 18, c.y - 10, 30, C.ion, 260, 2); play('block'); }
           this.setHp('player', ev.php);
           await this.hit(P, ev.dmg, { heavy, note: ev.blocked ? '(blocked)' : '' });
         }
@@ -471,11 +533,62 @@ export class Stage {
         await this.wait(450);
         break;
       }
+      case 'enemy:special': {
+        const col = (ev.statuses || []).includes('burn') ? '#ff8a3c' : (ev.statuses || []).includes('bleed') ? C.red : '#e6d36a';
+        this.flash(E, col, 300);
+        this.popup('enemy', ev.name, 'info');
+        play('heavyCharge');
+        await this.wait(380);
+        E.setAnim('attack', now());
+        if (MELEE.has(E.id)) { play('whoosh'); await this.move(E, -80, 50, 170); }
+        else { const m = this.muzzle(E); play('enemyShot'); this.burst(m.x, m.y, 8, col, 1.5, 150, 0); await this.bolt(m, this.center(P), col, 3, 200); }
+        if (ev.blocked) { const c = this.center(P); this.ring(c.x + 18, c.y - 10, 30, C.ion, 260, 2); play('block'); this.popup('player', 'Blocked', 'info'); }
+        if (ev.dmg) { this.setHp('player', ev.php); await this.hit(P, ev.dmg, { note: ev.blocked ? '(blocked)' : '' }); }
+        for (const st of ev.statuses || []) { play('status'); this.popup('player', st.toUpperCase(), `st-${st}`); this.flash(P, col, 300); }
+        if (MELEE.has(E.id)) await this.move(E, 0, 0, 220);
+        await this.wait(200);
+        break;
+      }
+      case 'enemy:phase': {
+        this.flash(E, C.red, 900);
+        this.shake(6, 600);
+        this.ring(this.center(E).x, this.center(E).y, 60, C.red, 600, 3);
+        this.popup('enemy', 'ENRAGED', 'heavy');
+        this.tween(700, (p) => { this.dim = 0.4 * Math.sin(p * Math.PI); });
+        await this.wait(900);
+        break;
+      }
+      case 'status:tick':
+      case 'status:undefined': {
+        if (ev.pdmg) { play('bleed'); this.flash(P, C.red, 200); this.popup('player', `\u2212${ev.pdmg}`, 'st-bleed'); this.setHp('player', ev.php); }
+        if (ev.edmg) { play('burn'); this.flash(E, '#ff8a3c', 200); this.popup('enemy', `\u2212${ev.edmg}`, 'st-burn'); this.setHp('enemy', ev.ehp); }
+        if (ev.regen) { play('repair'); this.popup('enemy', `+${ev.regen}`, 'heal'); this.setHp('enemy', ev.ehp); }
+        await this.wait(350);
+        break;
+      }
+      case 'player:deadman':
+        this.flash(P, '#ffffff', 500);
+        this.popup('player', 'NOT TODAY', 'level');
+        this.setHp('player', ev.php);
+        await this.wait(400);
+        break;
+      case 'env:explode': {
+        const c = this.center(E);
+        this.ring(c.x, c.y, 60, '#ff8a3c', 450, 3);
+        this.burst(c.x, c.y, 40, '#ff8a3c', 3.5, 600, 0.05, 2);
+        this.shake(7, 400);
+        if (ev.pdmg) { this.flash(P, '#ff8a3c', 250); this.popup('player', `\u2212${ev.pdmg}`, 'heavy'); }
+        else this.popup('player', 'Behind cover', 'info');
+        this.setHp('player', ev.php);
+        await this.wait(500);
+        break;
+      }
       case 'enemy:down': {
         E.setAnim('death', now());
         const c = this.center(E);
         if (E.id === 'probe' || E.id === 'loader' || E.id === 'sentinel' || E.id === 'crawler') this.burst(c.x, c.y, 24, C.spark, 2.5, 600, 0.08);
-        await this.tween(450, (p) => { E.alpha = Math.floor(p * 9) % 2 ? 0.3 : 1; });
+        if (ev.boss) { this.shake(6, 900); this.burst(c.x, c.y, 50, C.spark, 3, 900, 0.05, 2); play('explosion'); }
+        await this.tween(ev.boss ? 900 : 450, (p) => { E.alpha = Math.floor(p * 9) % 2 ? 0.3 : 1; });
         await this.tween(500, (p) => { E.oy = 14 * ease(p); E.alpha = 1 - p; });
         break;
       }
@@ -576,7 +689,7 @@ export class Stage {
   draw(t) {
     if (!this.el.isConnected || !this.enemy) return;
     for (const tw of [...this.tweens]) {
-      const p = Math.min(1, (t - tw.start) / tw.dur);
+      const p = Math.max(0, Math.min(1, (t - tw.start) / tw.dur));
       tw.fn(p);
       if (p >= 1) { this.tweens.splice(this.tweens.indexOf(tw), 1); tw.done(); }
     }
@@ -593,14 +706,14 @@ export class Stage {
     const E = this.enemy, ec = this.center(E);
     if ((this.intent === 'heavy' && !this.stun) || this.heavyBoost) {
       const pulse = this.heavyBoost ? 0.55 : 0.25 + 0.12 * Math.sin(t / 160);
-      const rg = g.createRadialGradient(ec.x, ec.y, 4, ec.x, ec.y, E.size * 0.7);
+      const rg = g.createRadialGradient(ec.x, ec.y, 4, ec.x, ec.y, E.size * (E.sheet ? 0.4 : 0.7));
       rg.addColorStop(0, `rgba(212,72,58,${pulse})`); rg.addColorStop(1, 'rgba(212,72,58,0)');
       g.fillStyle = rg; g.fillRect(ec.x - E.size, ec.y - E.size, E.size * 2, E.size * 2);
     }
     this.drawActor(E, t);
     if (this.intent === 'guard' && !this.stun && E.alpha > 0.5) {
       g.strokeStyle = `rgba(190,200,210,${0.35 + 0.15 * Math.sin(t / 240)})`; g.lineWidth = 2;
-      g.beginPath(); g.ellipse(ec.x - 8, ec.y + 6, E.size * 0.55, E.size * 0.6, 0, Math.PI * 0.6, Math.PI * 1.25); g.stroke();
+      const k = E.sheet ? 0.5 : 1; g.beginPath(); g.ellipse(ec.x - 8, ec.y + 6, E.size * 0.55 * k, E.size * 0.6 * k, 0, Math.PI * 0.6, Math.PI * 1.25); g.stroke();
     }
     if (this.stun > 0 && E.alpha > 0.5) {
       for (let i = 0; i < 3; i++) { const a = t / 300 + (i * Math.PI * 2) / 3; g.fillStyle = C.ion; g.fillRect(Math.round(ec.x + Math.cos(a) * 16), Math.round(ec.y - E.size * 0.45 + Math.sin(a) * 4), 2, 2); }
@@ -622,7 +735,7 @@ export class Stage {
     }
 
     for (const b of [...this.bolts]) {
-      const p = (t - b.born) / b.dur;
+      const p = Math.max(0, (t - b.born) / b.dur);
       if (p >= 1) { this.bolts.splice(this.bolts.indexOf(b), 1); continue; }
       const hx = b.from.x + (b.to.x - b.from.x) * p, hy = b.from.y + (b.to.y - b.from.y) * p;
       const len = Math.hypot(b.to.x - b.from.x, b.to.y - b.from.y), tl = Math.min(22, len * p) / len;
@@ -634,12 +747,12 @@ export class Stage {
     }
     for (const pr of this.projectiles) { g.fillStyle = '#c39b45'; g.fillRect(Math.round(pr.x) - 2, Math.round(pr.y) - 2, 4, 4); g.fillStyle = '#ff5a44'; g.fillRect(Math.round(pr.x), Math.round(pr.y) - 2, 1, 1); }
     for (const r of [...this.rings]) {
-      const p = (t - r.born) / r.life;
+      const p = Math.max(0, (t - r.born) / r.life);
       if (p >= 1) { this.rings.splice(this.rings.indexOf(r), 1); continue; }
       g.strokeStyle = r.color; g.globalAlpha = 1 - p; g.lineWidth = r.w; g.beginPath(); g.ellipse(r.x, r.y, r.r1 * ease(p), r.r1 * ease(p) * 0.8, 0, 0, Math.PI * 2); g.stroke(); g.globalAlpha = 1;
     }
     for (const pt of [...this.particles]) {
-      const age = t - pt.born;
+      const age = Math.max(0, t - pt.born);
       if (age > pt.life) { this.particles.splice(this.particles.indexOf(pt), 1); continue; }
       pt.vy += pt.g; pt.x += pt.vx; pt.y += pt.vy;
       g.globalAlpha = 1 - age / pt.life; g.fillStyle = pt.color;
@@ -648,5 +761,6 @@ export class Stage {
     }
     g.globalAlpha = 1;
     g.restore();
+    if (this.dim > 0) { g.fillStyle = `rgba(4,5,7,${this.dim})`; g.fillRect(0, 0, W, H); this.drawActor(E, t); }
   }
 }
