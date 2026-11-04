@@ -144,7 +144,7 @@ const row = (name, res) => {
   return `${name.padEnd(22)} ${String(pct(d, 0.5)).padStart(6)} ${String(pct(d, 0.9)).padStart(5)} ${avg(d).toFixed(1).padStart(6)} ${avg(res.map((r) => r.level)).toFixed(1).padStart(6)} ${avg(res.map((r) => r.raids)).toFixed(1).padStart(6)}`;
 };
 
-for (const ranks of [0, 8]) {
+for (const ranks of process.env.ONLY ? [] : [0, 8]) {
   console.log(`\n=== Head-to-head, ${OPS} fresh operatives each, training ${ranks} ranks in every stat ===`);
   console.log('build / style            median  p90   mean  level  raids   (deepest sector reached)');
   for (const b of Object.keys(BUILDS)) console.log(row(`${b} / standard`, headToHead(b, 'standard', ranks)));
@@ -153,5 +153,5 @@ for (const ranks of [0, 8]) {
 
 console.log(`\n=== Campaigns (${CAMPAIGNS} each): median operative # to first beat boss 5 / 10 / 15 (share of campaigns) ===`);
 console.log('build / style                 boss5    boss10    boss15');
-for (const b of Object.keys(BUILDS)) console.log(`${(b + ' / standard').padEnd(24)} ${campaign(b, 'standard')}`);
-for (const st of ['cautious', 'greedy']) console.log(`${('strAgi / ' + st).padEnd(24)} ${campaign('strAgi', st)}`);
+for (const b of Object.keys(BUILDS).filter((b) => !process.env.ONLY || process.env.ONLY.split(',').includes(b))) console.log(`${(b + ' / standard').padEnd(24)} ${campaign(b, 'standard')}`);
+if (!process.env.ONLY) for (const st of ['cautious', 'greedy']) console.log(`${('strAgi / ' + st).padEnd(24)} ${campaign('strAgi', st)}`);

@@ -9,8 +9,7 @@ A browser roguelite (HTML + JS modules, no build step) about a resistance cell r
 - **Owner preferences learned so far:** wants it challenging ("make it harder", "Resolve harder to get"); likes humour and run-to-run randomness; wants clear explanations on every button; plays on desktop and phone; uses ChatGPT + PixelLab for art, Claude for code.
 
 ## Where the code lives (important)
-- The project is a git repo at `/home/user/cinder-cell` in the original cloud container. **It has never been pushed anywhere.** It survives only as: (1) the zip `cinder-cell-project.zip` sent to the owner (includes `.git` history), and (2) the source files published to the artifact above (an Artifact `read` with `path` can fetch each one).
-- First job in a new session: get the files (owner uploads the zip, or fetch from the artifact), then push to a GitHub repo the owner provides.
+- GitHub: https://github.com/thomaslafata0/Test. `master` = the pre-loot game; branch `loot-and-gear` = loot + gear slots (published to the artifact). Merge it when the owner is happy.
 
 ## Files
 | File | Purpose |
@@ -119,3 +118,10 @@ Implants stay as they are (separate slots in the Clinic).
    - economy: credits shouldn't let one operative max every slot early. Check average credits per raid by source (fights, rooms, events, contracts, selling loot) with an instrumented run, and make sure upgrades remain a meaningful sink.
    - flag any single item, bonus or Unique whose presence changes the bot's finale time by more than about 20% as an outlier and tone it down.
 5. Play-test the new screens in a browser (desktop 1200px and phone 390px, no page errors, no horizontal overflow), then publish to the artifact and commit.
+
+## Built: randomised loot + six gear slots (branch `loot-and-gear`, save VERSION 4)
+- Data: `D.GEAR` (bases with `slot`, `tier`, `atk`/`def`, `req`), `D.SLOTS`, `D.RARITY`, `D.BONUSES`, `D.TRAITS` (Legendary), 7 boss Uniques (`D.BOSS_UNIQUE`), `D.MELEE_COUNTER` (riot, crucible, hound, slagger, shock, sentinel, brask hit back when you Strike), `heirloom` cell upgrade.
+- Engine: items are `{ base, rarity, level, bonuses, trait, spent }` in `c.gear[slot]`; `statsOf` returns `atk` (Shoot) and `atkM` (Strike) plus `crit`/`critM`. Market `c.market` (6 pieces: one per armour/weapon slot plus one matched to the operative's best attribute or a gadget) restocks on `createChar` and `endRun`. Loot: bosses always drop (Unique first time), elites `TUNE.eliteGear` 30%; screen `loot` before contraband. Upgrades +1..+5 (8%, min +1), rerolls, trade-in when buying. v3 saves migrate (weapon -> ranged or melee slot, armour -> chest).
+- Combat: `shoot` (A, alias `attack`) and `strike` (F, ignores cover, +STR). Ranged gets AGI crit and `TUNE.agiAtk` (+1 ATK per 2 AGI). Skills now show 4 (Q W E T). Threat Scanner/Ostrane's Datapad show the next intent (`e.next`).
+- Simulators: shared bot logic in `sim-gear.mjs`; profiles meleeOnly / rangedOnly / hybrid added. `ECON=1 node sim.mjs` prints credits per raid by source; `TUNE='{...}'` and `ABLATE=bonus:x,unique:y,...` env overrides; `ONLY=a,b node sim-builds.mjs` runs selected builds.
+- Balance status (owner asked to stop tuning here): main bot 3 / 10 / 20 (Garrison finale), Port finale 25 (98%). Builds at 100 campaigns: Strength 17, Intellect 18, Hybrid 20, Balanced 20, Charisma 21, strAgi 21, meleeOnly 23, rangedOnly 25, Agility 27, Glass 30 (97%). Agility is 1.59x Strength (target 1.5x). The per-item outlier ablation was not run.

@@ -30,8 +30,8 @@ export const CARRY_CD = 2;       // minimum cooldown a skill used last fight sta
 export const MIN_FIGHTS = 2; // fights required per sector; the rest of the rooms can be anything
 // Enemy growth per sector past their first appearance: linear plus a quadratic tail.
 export const growth = (lvl, lin, quad) => 1 + lin * lvl + quad * lvl * lvl;
-export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.01, bossHp: 2.45, bossAtk: 1.5, enemyAtk: 1.57, enemyHp: 1.54, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 2, strAtk: 1, agiCrit: 0.04, agiDodge: 0.025, intOverload: 3.5, chaHesitate: 0.04, chaCredits: 0.05, wanted: 0.025, escapeLoss: 0.5,
-  upgradeCost: 60, eliteGear: 0.3, shopLegendary: 0.06 };
+export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.01, bossHp: 2.4, bossAtk: 1.5, enemyAtk: 1.55, enemyHp: 1.52, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 2, strAtk: 1, agiCrit: 0.04, agiDodge: 0.025, intOverload: 3.5, chaHesitate: 0.04, chaCredits: 0.05, wanted: 0.025, escapeLoss: 0.5,
+  upgradeCost: 60, eliteGear: 0.3, shopLegendary: 0.06, cover: 0.5, agiAtk: 0.5 };
 export const isBossSector = (n) => n % 5 === 0;
 // Optional credit accounting for the simulators: set s.ledger = {} and every credit gain or spend is tallied by source.
 const ledger = (s, k, n) => { if (s.ledger && n) s.ledger[k] = (s.ledger[k] || 0) + n; };
@@ -234,10 +234,12 @@ export const canEquip = (c, it) => !!it && meetsReq(c, baseOf(it).req);
 
 // Pick a random item. tierMin/tierMax bound the base tier (higher tiers weighted up), odds is { rarity: weight }.
 const SLOT_WEIGHT = { ranged: 2, melee: 1.5, head: 1, chest: 1.5, legs: 1, gadget: 0.7 };
-export function rollGear(rng, { slot = null, tierMin = 1, tierMax = 5, odds }) {
-  const sl = slot || pickWeighted(rng, Object.entries(SLOT_WEIGHT));
-  let bases = Object.keys(D.GEAR).filter((id) => { const b = D.GEAR[id]; return b.slot === sl && !b.unique && b.tier >= 1 && b.tier >= tierMin && b.tier <= tierMax; });
-  if (!bases.length) bases = Object.keys(D.GEAR).filter((id) => D.GEAR[id].slot === sl && !D.GEAR[id].unique && D.GEAR[id].tier >= 1);
+export function rollGear(rng, { slot = null, tierMin = 1, tierMax = 5, odds, filter = null }) {
+  const sl = slot || (filter ? null : pickWeighted(rng, Object.entries(SLOT_WEIGHT)));
+  const ok = (b) => (!sl || b.slot === sl) && !b.unique && b.tier >= 1 && (!filter || filter(b));
+  let bases = Object.keys(D.GEAR).filter((id) => { const b = D.GEAR[id]; return ok(b) && b.tier >= tierMin && b.tier <= tierMax; });
+  if (!bases.length) bases = Object.keys(D.GEAR).filter((id) => ok(D.GEAR[id]) && D.GEAR[id].tier <= Math.max(tierMax, 2));
+  if (!bases.length) bases = Object.keys(D.GEAR).filter((id) => D.GEAR[id].slot === (sl || 'ranged') && !D.GEAR[id].unique && D.GEAR[id].tier >= 1);
   const id = pickWeighted(rng, bases.map((x) => [x, D.GEAR[x].tier]));
   return makeItem(id, pickWeighted(rng, Object.entries(odds)), rng);
 }
@@ -250,8 +252,11 @@ export function shopOdds(meta) {
 export const shopBand = (meta) => clamp(1 + Math.floor((meta.bestSector || 0) / 3), 1, 5);
 export function restockMarket(s, rng) {
   const c = s.char, odds = shopOdds(s.meta), band = shopBand(s.meta);
-  const slots = ['ranged', 'melee', 'head', 'chest', 'legs', pick(rng, ['ranged', 'chest', 'gadget', 'gadget'])];
+  const slots = ['ranged', 'melee', 'head', 'chest', 'legs'];
   c.market = slots.map((slot) => rollGear(rng, { slot, tierMin: 1, tierMax: band, odds }));
+  // The sixth piece suits the operative's best attribute (Marrow knows what you like), or is a gadget.
+  const top = Object.keys(D.ATTRS).sort((a, b) => attr(c, b) - attr(c, a))[0];
+  c.market.push(rng() < 0.7 ? rollGear(rng, { tierMin: 1, tierMax: band, odds, filter: (b) => b.req && b.req[top] && b.req[top] <= Math.max(attr(c, top), 3) + 2 }) : rollGear(rng, { slot: 'gadget', tierMin: 1, tierMax: band, odds }));
 }
 // Gear dropped by an elite or boss in this sector.
 function rollLoot(s, rng, e) {
@@ -374,7 +379,7 @@ export function statsOf(meta, c) {
   const hp = B.hp + t.hp * D.TRAINING.hp.per + (c.level - 1) * 5 + Math.round(str * TUNE.strHp) + (c.background === 'foundry' ? 10 : 0) + (hasImp(c, 'pain') ? 20 : 0) + gearBonus(c, 'hp');
   return {
     maxHp: Math.round(hp * (hasTrait(c, 'stalwart') ? 1.12 : 1)),
-    atk: common + rMain + (w.type === 'heavy' ? Math.floor(str * TUNE.strAtk) : 0),
+    atk: common + rMain + (w.type === 'heavy' ? Math.floor(str * TUNE.strAtk) : Math.floor(agi * TUNE.agiAtk)),
     atkM: common + mMain + Math.floor(str * TUNE.strAtk),
     def: B.def + t.def * D.TRAINING.def.per + Math.floor((c.level - 1) / 2) + def + gearBonus(c, 'def') + (hasImp(c, 'dermal') ? 3 : 0),
     spd: B.spd + t.spd * D.TRAINING.spd.per + Math.floor((c.level - 1) / 3) + agi + (hasImp(c, 'reflex') ? 2 : 0) + spd + gearBonus(c, 'spd'),
@@ -798,7 +803,7 @@ function strike(s, rng, { mult = 1, critBonus = 0, pierce = 0, unarmoredBonus = 
   mult *= outMult(r.pst, e.st);
   r.struck = true;
   let dmg = mitigate((melee ? st.atkM : st.atk) * (0.85 + rng() * 0.3) * mult + flat, e.def * (1 - pierce));
-  if (!melee && e.intent === 'guard' && e.stun === 0) dmg = Math.max(1, Math.round(dmg / 2));
+  if (!melee && e.intent === 'guard' && e.stun === 0) dmg = Math.max(1, Math.round(dmg * TUNE.cover));
   e.hp -= dmg;
   if (e.hp > 0) {
     const bleed = 1 - (1 - (hasPerk(c, 'serrated') ? 0.3 : 0)) * (1 - gearBonus(c, 'bleed', mode) / 100);
