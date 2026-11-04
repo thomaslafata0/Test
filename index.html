@@ -357,6 +357,11 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .bulletin b { font-family: var(--display); font-size: 1.15rem; text-transform: uppercase; letter-spacing: .04em; }
 .bulletin span:last-child { font-size: .9rem; color: var(--fg); }
 @media (max-width: 520px) { .bulletin { grid-template-columns: minmax(0, 1fr); } }
+
+.perk.on { border-color: var(--sodium); box-shadow: inset 0 0 0 1px var(--sodium); }
+.swap { display: grid; gap: 8px; padding: 12px; border: 1px dashed var(--danger); }
+.perk-mini.drop { text-align: left; border: 1px solid var(--line); border-left: 3px solid var(--danger); color: inherit; cursor: pointer; }
+.perk-mini.drop:hover { border-color: var(--danger); }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 
@@ -419,7 +424,7 @@ const TIPS = {
   town: 'Start on the Targets tab. When you come back with credits, gear up at the Black Market and Clinic. Resolve is spent in the Safehouse and is never lost.',
   route: 'Pick a door. Each sector has three rooms, and at least two of them will be fights. A boss waits at the end of every fifth sector.',
   combat: 'Read the enemy\u2019s intent below the battle scene. Defend against heavy strikes and signature moves; it also steadies your next shot.',
-  perk: 'Contraband stays with this operative until they die. Elites and bosses always drop some.',
+  perk: 'Contraband stays with this operative until they die. Bosses always carry some, elites sometimes. You can hold four pieces.',
 };
 function tip(id) {
   if (state.meta.tips[id] || !TIPS[id]) return '';
@@ -572,7 +577,7 @@ function safehouse() {
         <p class="muted" style="font-size:.9rem">${esc(bg.perk)}${c.attrPoints ? ` <b style="color:var(--sodium)">${c.attrPoints} attribute point${c.attrPoints > 1 ? 's' : ''} to spend.</b>` : ' Level up to earn attribute points.'}</p>
         <div class="rows">${attrRows}</div>
         <span class="label">Skills</span><div class="rows">${skills}</div>
-        <span class="label">Contraband</span>${c.perks.length ? `<div class="perk-list">${c.perks.map((id) => { const pk = E.perkById(id); return `<div class="perk-mini ${pk.rare ? 'rare' : ''}">${ico(`perk:${id}`, 'sm2')}<div><b>${esc(pk.name)}</b><span>${esc(pk.desc)}</span></div></div>`; }).join('')}</div>` : '<p class="muted">None yet. Elites and bosses carry it.</p>'}
+        <span class="label">Contraband \u00B7 ${c.perks.length} / ${E.CONTRABAND_SLOTS} pockets</span>${c.perks.length ? `<div class="perk-list">${c.perks.map((id) => { const pk = E.perkById(id); return `<div class="perk-mini ${pk.rare ? 'rare' : ''}">${ico(`perk:${id}`, 'sm2')}<div><b>${esc(pk.name)}</b><span>${esc(pk.desc)}</span></div></div>`; }).join('')}</div>` : '<p class="muted">None yet. Elites and bosses carry it.</p>'}
         <span class="label">Choices that changed you</span><div class="wall">${history}</div>
       </div>
       <div style="display:grid;gap:14px;align-content:start;min-width:0">
@@ -726,13 +731,17 @@ function victoryScreen() {
 }
 
 function perkScreen() {
-  const r = state.run;
-  const cards = r.perkOffer.map((id, i) => { const pk = E.perkById(id); return `<button class="perk ${pk.rare ? 'rare' : ''}" data-a="perk" data-v="${id}">${ico(`perk:${id}`, 'lg')}<span class="label">${pk.rare ? 'Rare contraband' : 'Contraband'} <span class="k">${i + 1}</span></span><b>${esc(pk.name)}</b><span class="desc">${esc(pk.desc)}</span></button>`; }).join('');
+  const r = state.run, c = state.char, full = c.perks.length >= E.CONTRABAND_SLOTS, picked = state.perkPick;
+  const cards = r.perkOffer.map((id, i) => { const pk = E.perkById(id); return `<button class="perk ${pk.rare ? 'rare' : ''} ${picked === id ? 'on' : ''}" data-a="perk" data-v="${id}" aria-pressed="${picked === id}">${ico(`perk:${id}`, 'lg')}<span class="label">${pk.rare ? 'Rare contraband' : 'Contraband'} <span class="k">${i + 1}</span></span><b>${esc(pk.name)}</b><span class="desc">${esc(pk.desc)}</span></button>`; }).join('');
+  const swap = full && picked ? `<div class="swap"><span class="label">Pockets full \u00B7 drop one to take the ${esc(E.perkById(picked).name)}</span>
+    <div class="perk-list">${c.perks.map((id) => { const pk = E.perkById(id); return `<button class="perk-mini drop ${pk.rare ? 'rare' : ''}" data-a="perkdrop" data-v="${id}">${ico(`perk:${id}`, 'sm2')}<div><b>Drop ${esc(pk.name)}</b><span>${esc(pk.desc)}</span></div></button>`; }).join('')}</div></div>` : '';
   return `<div class="columns"><section class="panel">
-    <span class="label">Contraband \u00B7 pick one</span><h2>What they were carrying</h2>
+    <span class="label">Contraband \u00B7 pick one \u00B7 pockets ${c.perks.length} / ${E.CONTRABAND_SLOTS}</span><h2>What they were carrying</h2>
     ${tip('perk')}
     <div class="perks">${cards}</div>
-    <div><button class="btn" data-a="perk" data-v="">Leave it all</button></div>
+    ${swap}
+    ${full && !picked ? '<p class="muted">Your pockets are full. Pick a piece to see what you\u2019d have to drop for it.</p>' : ''}
+    <div><button class="btn" data-a="perk" data-v="">${full ? 'Keep what I have' : 'Leave it all'}</button></div>
   </section>${logPanel()}</div>`;
 }
 
@@ -765,7 +774,7 @@ function modalView() {
         <li><b>Repair</b>: hit it hard before it heals.</li></ul></section>
       <section><h3>Your turn</h3><p><b>Defend</b> also steadies your aim: your next shot deals +50%. <b>Skills</b> come from your weapon and high attributes; their cooldowns last for the whole sector, so choose your moment. <b>Stims</b> heal and stop bleeding and burning.</p></section>
       <section><h3>Status effects</h3><ul>${Object.values(D.STATUSES).map((x) => `<li><b>${esc(x.name)}</b>: ${esc(x.desc)}</li>`).join('')}</ul></section>
-      <section><h3>Elites and bosses</h3><p>Elites (veterans) carry a modifier, such as Regenerating or Volatile. Bosses enrage at half health. Both drop <b>contraband</b>: pick one of three perks that last until your operative dies.</p></section>
+      <section><h3>Elites and bosses</h3><p>Elites (veterans) carry a modifier, such as Regenerating or Volatile. Bosses enrage at half health. Bosses always carry <b>contraband</b> and elites sometimes do: pick one of three perks that last until your operative dies. You have four pockets, so a fifth piece means dropping one.</p></section>
       <section><h3>Quirks and bulletins</h3><p>Regular enemies often have a <b>quirk</b>, like a Drunk trooper whose shots go wild or an Overclocked droid that cooks itself. Every raid also rolls a <b>Directorate bulletin</b>, such as Payday or Staff Party, that bends the rules until you leave.</p></section>
       <section><h3>Getting stronger</h3><p><b>This operative</b>: levels (attribute points), gear, implants and contraband. All lost on death. <b>The cell</b>: Resolve buys permanent training and upgrades. Earn it from sectors (repeat clears pay only every other time), bosses, brave choices and contracts.</p></section>
       <section><h3>Controls</h3><p class="keys"><span><b>A</b> attack</span><span><b>D</b> defend</span><span><b>S</b> stim</span><span><b>R</b> run</span><span><b>Q W E</b> skills</span><span><b>2 3 4</b> items</span><span><b>1 2</b> doors</span><span><b>Enter</b> continue</span></p></section>
@@ -896,7 +905,10 @@ function act(a, v, k) {
     case 'setpref': A.setPref(v, !A.getPrefs()[v]); A.play('click'); break;
     case 'tip': state.meta.tips[v] = true; A.play('click'); break;
     case 'threat': state.meta.threat = +v; A.play('click'); break;
-    case 'perk': E.choosePerk(state, v, rng); if (v) A.play('perk'); break;
+    case 'perk':
+      if (v && state.char.perks.length >= E.CONTRABAND_SLOTS) { state.perkPick = state.perkPick === v ? null : v; A.play('click'); break; }
+      E.choosePerk(state, v, rng); state.perkPick = null; if (v) A.play('perk'); break;
+    case 'perkdrop': if (E.choosePerk(state, state.perkPick, rng, v)) { state.perkPick = null; A.play('perk'); } break;
     case 'ending': state.meta.endingSeen = true; state.screen = 'town'; break;
     case 'begin': state.screen = 'create'; if (!state.draft) state.draft = E.newDraft(state.meta, rng); break;
     case 'bg': state.draft.background = v; { for (const key of Object.keys(D.ATTRS)) while (E.draftAttr(state.draft, key) > D.ATTR_CREATE_MAX) E.draftAdjust(state.draft, key, -1); } break;

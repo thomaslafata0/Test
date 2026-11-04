@@ -24,6 +24,8 @@ export function seededRng(seed) {
 
 export const VERSION = 3;
 export const FIGHTS_PER_SECTOR = 3;
+export const CONTRABAND_SLOTS = 4; // pieces of contraband one operative can carry
+export const ELITE_DROP = 0.4;   // chance an elite carries contraband (bosses always do)
 export const MIN_FIGHTS = 2; // fights required per sector; the rest of the rooms can be anything
 // Enemy growth per sector past their first appearance: linear plus a quadratic tail.
 export const growth = (lvl, lin, quad) => 1 + lin * lvl + quad * lvl * lvl;
@@ -75,7 +77,11 @@ export function migrate(s, rng) {
     refreshContracts(s, rng);
     return s;
   }
-  if (s && s.v === VERSION) return s;
+  if (s && s.v === VERSION) {
+    // Recalculate open contract payouts (older saves stored inflated haul rewards).
+    for (const k of (s.meta && s.meta.contracts) || []) if (!k.done) k.credits = contractCredits(k.kind, k.n);
+    return s;
+  }
   const fresh = newGame(rng);
   if (s && s.meta) {
     const m = s.meta;
@@ -903,7 +909,7 @@ function winFight(s, rng, fled = false) {
       log(s, `The ${out.liberated} is liberated.`, 'reward');
     }
   }
-  if ((e.elite || e.boss) && !fled) r.perkOffer = offerPerks(s, rng, e.boss);
+  if (!fled && (e.boss || (e.elite && rng() < ELITE_DROP))) r.perkOffer = offerPerks(s, rng, e.boss);
   r.enemy = null;
   s.outcome = out;
   s.screen = 'victory';
@@ -920,12 +926,21 @@ function offerPerks(s, rng, boss) {
   while (out.length < 3 && (rares.length || commons.length)) take(rng() < (boss ? 0.4 : 0.2) && rares.length ? rares : commons.length ? commons : rares);
   return out.length ? out : null;
 }
-export function choosePerk(s, id, rng) {
-  const r = s.run;
-  if (!r || !r.perkOffer) return;
-  if (id && r.perkOffer.includes(id)) { s.char.perks.push(id); log(s, `Contraband: ${perkById(id).name}.`, 'reward'); }
+// Take a piece of contraband. With full pockets, dropId names the piece to leave behind.
+export function choosePerk(s, id, rng, dropId = null) {
+  const r = s.run, c = s.char;
+  if (!r || !r.perkOffer) return false;
+  if (id && r.perkOffer.includes(id)) {
+    if (c.perks.length >= CONTRABAND_SLOTS) {
+      if (!dropId || !c.perks.includes(dropId)) return false;
+      c.perks = c.perks.filter((p) => p !== dropId);
+      log(s, `You leave the ${perkById(dropId).name} behind.`, 'info');
+    }
+    c.perks.push(id); log(s, `Contraband: ${perkById(id).name}.`, 'reward');
+  }
   r.perkOffer = null;
   offerRoute(s, rng);
+  return true;
 }
 
 // ---------- events ----------
@@ -1024,6 +1039,8 @@ export const allLiberated = (s) => D.MAPS.every((m) => s.meta.liberated[m.id]);
 export const maxThreat = (s) => Math.min(D.THREAT.length - 1, Object.keys(s.meta.liberated).length);
 
 // ---------- contracts ----------
+// Credit payouts per contract type. Haul targets are themselves credit amounts, so they pay a small share.
+const contractCredits = (kind, n) => ({ kill: 90, sector: 30 + 15 * n, boss: 160, allies: 100, haul: Math.round(n * 0.25) }[kind] || 80);
 const CONTRACT_REWARD = { kill: 3, sector: 3, boss: 4, allies: 3, haul: 3 };
 export function refreshContracts(s, rng) {
   const m = s.meta;
@@ -1041,7 +1058,7 @@ export function refreshContracts(s, rng) {
     if (m.contracts.some((k) => k.key === key)) continue;
     const resolve = CONTRACT_REWARD[t.kind] + (t.kind === 'sector' && n >= 7 ? 1 : 0);
     m.contracts.push({ key, kind: t.kind, tag: t.tag || null, n, map: map ? map.id : null, progress: 0, done: false,
-      text: t.text.replace('{n}', n).replace('{map}', map ? map.name : ''), resolve, credits: 40 + 10 * n });
+      text: t.text.replace('{n}', n).replace('{map}', map ? map.name : ''), resolve, credits: contractCredits(t.kind, n) });
   }
 }
 function contractEvent(s, kind, data) {
