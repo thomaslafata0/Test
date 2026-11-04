@@ -149,7 +149,7 @@ export class Stage {
   }
 
   // Called after every render of the combat screen.
-  sync({ run, enemy, player, sector, boss, theme = 'garrison', allies = 0, pst = {}, est = {}, affix = null, label = '' }) {
+  sync({ run, enemy, player, sector, boss, theme = 'garrison', allies = 0, pst = {}, est = {}, affix = null, quirk = null, label = '' }) {
     const now = performance.now();
     this.sector = sector; this.boss = boss; this.theme = theme; this.allies = allies;
     if (!this.allySprite) this.allySprite = portraitCanvas('prisoner');
@@ -163,7 +163,7 @@ export class Stage {
     this.setHud('enemy', enemy.name, enemy.boss ? (enemy.phase2 ? 'ENRAGED' : 'BOSS') : enemy.elite ? 'ELITE' : `SECTOR ${sector}`, enemy.hp);
     this.setHud('player', player.name, `LV ${player.level}`, player.hp);
     this.setStatuses('player', pst);
-    this.setStatuses('enemy', est, affix);
+    this.setStatuses('enemy', est, affix, quirk);
     this.label = label;
     let isNewBoss = false;
     if (this.runRef !== run || !this.player) {
@@ -178,7 +178,7 @@ export class Stage {
       this.enemy.ox = 140; this.enemy.alpha = 0;
       this.tween(enemy.boss ? 800 : 450, (p) => { this.enemy.ox = 140 * (1 - ease(p)); this.enemy.alpha = p; });
       if (enemy.boss) { isNewBoss = true; this.enemy.alpha = 0; this.enemy.ox = 0; }
-      else play('door');
+      else { play('door'); if (quirk) setTimeout(() => this.popup('enemy', quirk.toUpperCase(), 'quirk'), 450 / (this.speed || 1)); }
     }
     this.enemy.rest = enemy.intent === 'heavy' && !enemy.stun ? 'charge' : 'idle';
     if (this.enemy.anim === 'idle' && this.enemy.rest === 'charge') this.enemy.setAnim('charge', now);
@@ -186,10 +186,10 @@ export class Stage {
     return { isNewBoss };
   }
 
-  setStatuses(side, st = {}, affix = null) {
+  setStatuses(side, st = {}, affix = null, quirk = null) {
     const el = this.hud[side].querySelector('.hud-st');
     const names = { bleed: 'BLEED', burn: 'BURN', shaken: 'SHAKEN', exposed: 'EXPOSED' };
-    el.innerHTML = (affix ? `<i class="st affix">${affix.toUpperCase()}</i>` : '') +
+    el.innerHTML = (quirk ? `<i class="st quirk">${quirk.toUpperCase()}</i>` : '') + (affix ? `<i class="st affix">${affix.toUpperCase()}</i>` : '') +
       Object.entries(st).filter(([, n]) => n > 0).map(([k, n]) => `<i class="st st-${k}">${names[k] || k} ${n}</i>`).join('');
   }
 
@@ -419,6 +419,13 @@ export class Stage {
         await this.wait(300);
         break;
       }
+      case 'enemy:quirk':
+        play('status');
+        this.flash(E, '#e6d36a', 250);
+        this.popup('enemy', ev.text, 'quirk');
+        await this.move(E, 6, -4, 120); await this.move(E, 0, 0, 160);
+        await this.wait(250);
+        break;
       case 'enemy:flee':
         this.popup('enemy', 'Fled!', 'info');
         await this.tween(500, (p) => { E.ox = 160 * ease(p); E.alpha = 1 - p; });
@@ -510,7 +517,7 @@ export class Stage {
           if (this.allyActors && this.allyActors.length) this.allyActors.pop();
         } else if (ev.dodged) {
           const x0 = P.ox;
-          this.popup('player', 'Dodged', 'info'); play('dodge');
+          this.popup(ev.missed ? 'enemy' : 'player', ev.missed ? 'Missed!' : 'Dodged', ev.missed ? 'quirk' : 'info'); play('dodge');
           await this.move(P, x0 - 16, 0, 90); await this.move(P, x0, 0, 160);
         } else {
           if (ev.blocked) { const c = this.center(P); this.ring(c.x + 18, c.y - 10, 30, C.ion, 260, 2); play('block'); }

@@ -347,6 +347,16 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .sk-name { display: inline-flex; align-items: center; gap: 6px; }
 .sk-name .ico { width: 20px; height: 20px; }
 @media (max-width: 520px) { .row.i > .ico { width: 32px; height: 32px; } .door b, .door .desc { padding-right: 0; } .door > .ico { width: 36px; height: 36px; } }
+
+.quirk-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: .85rem; color: var(--muted); }
+.chip.quirk { color: #f0de78; border-color: #e6d36a; }
+.st.quirk { border-color: #e6d36a; color: #f0de78; background: #e6d36a1a; }
+.pop.quirk { color: #f0de78; font-family: var(--mono); font-size: clamp(.7rem, 2vw, .95rem); letter-spacing: .14em; margin-top: -1.2em; }
+.bulletin { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; align-items: baseline; padding: 10px 14px; border: 1px solid #e6d36a55; background: #e6d36a0d; }
+.bulletin .label { grid-column: 1 / -1; color: #e6d36a; }
+.bulletin b { font-family: var(--display); font-size: 1.15rem; text-transform: uppercase; letter-spacing: .04em; }
+.bulletin span:last-child { font-size: .9rem; color: var(--fg); }
+@media (max-width: 520px) { .bulletin { grid-template-columns: minmax(0, 1fr); } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 
@@ -634,6 +644,8 @@ function combatScreen() {
     <div id="stage-slot"></div>
     <div class="intent ${intent.tone}"><span class="dot"></span><b>${esc(intent.label)}</b><span class="tip">${esc(intent.tip)}</span><span class="intent-side">${mechanicChip(r)}${r.ready ? `<span class="chip good">Aim +${E.hasPerk(c, 'steady') ? 100 : 50}%</span>` : ''}</span></div>
     <div class="statline">${meta}</div>
+    ${e.quirk ? `<div class="quirk-line"><span class="chip quirk">${esc(E.quirkById(e.quirk).name)}</span><span>${esc(E.quirkById(e.quirk).desc)}</span></div>` : ''}
+    ${e.affix ? `<div class="quirk-line"><span class="chip bad">${esc(D.AFFIXES[e.affix].name)}</span><span>${esc(D.AFFIXES[e.affix].desc)}</span></div>` : ''}
     ${tip('combat')}
     <div class="actions">
       <button class="btn primary" data-a="act" data-v="attack">Attack<span class="k">A</span></button>
@@ -657,6 +669,11 @@ function mechanicChip(r) {
   const hot = (m.id === 'vents' && r.enemy && r.vent === 1) || (m.id === 'alarm' && r.alert >= 3);
   return `<span class="mech ${hot ? 'hot' : ''}" title="${esc(m.desc)}"><b>${esc(m.name)}</b> ${v}</span>`;
 }
+function bulletinBox(r) {
+  const b = E.bulletinOf(r);
+  if (b.id === 'quiet') return '';
+  return `<div class="bulletin"><span class="label">Directorate bulletin</span><b>${esc(b.name)}</b><span>${esc(b.desc)}</span></div>`;
+}
 function roomPips(r) {
   return `<span class="pips rooms" aria-label="room ${r.room} of ${E.FIGHTS_PER_SECTOR}">${Array.from({ length: E.FIGHTS_PER_SECTOR }, (_, i) => `<i class="${i < r.room ? 'on' : ''}"></i>`).join('')}</span>`;
 }
@@ -673,6 +690,7 @@ function routeScreen() {
     ${tip('route')}
     ${r.forced ? '<p class="muted" style="font-size:.9rem">Every sector takes at least two fights. Both doors are hot.</p>' : ''}
     <div class="mech-row">${mechanicChip(r)}<span class="muted" style="font-size:.9rem">${esc(map.mechanic.desc)}</span></div>
+    ${bulletinBox(r)}
     <div class="doors">${doors}</div>
     <dl class="kv"><dt>Condition</dt><dd class="${c.hp < st.maxHp * 0.4 ? 'danger-text' : ''}">${c.hp} / ${st.maxHp} HP \u00B7 ${c.items.stim} stims</dd>
       <dt>Skills</dt><dd>${cds.length ? esc(cds.join(', ')) : 'All ready'}</dd></dl>
@@ -748,6 +766,7 @@ function modalView() {
       <section><h3>Your turn</h3><p><b>Defend</b> also steadies your aim: your next shot deals +50%. <b>Skills</b> come from your weapon and high attributes; their cooldowns last for the whole sector, so choose your moment. <b>Stims</b> heal and stop bleeding and burning.</p></section>
       <section><h3>Status effects</h3><ul>${Object.values(D.STATUSES).map((x) => `<li><b>${esc(x.name)}</b>: ${esc(x.desc)}</li>`).join('')}</ul></section>
       <section><h3>Elites and bosses</h3><p>Elites (veterans) carry a modifier, such as Regenerating or Volatile. Bosses enrage at half health. Both drop <b>contraband</b>: pick one of three perks that last until your operative dies.</p></section>
+      <section><h3>Quirks and bulletins</h3><p>Regular enemies often have a <b>quirk</b>, like a Drunk trooper whose shots go wild or an Overclocked droid that cooks itself. Every raid also rolls a <b>Directorate bulletin</b>, such as Payday or Staff Party, that bends the rules until you leave.</p></section>
       <section><h3>Getting stronger</h3><p><b>This operative</b>: levels (attribute points), gear, implants and contraband. All lost on death. <b>The cell</b>: Resolve buys permanent training and upgrades. Earn it from sectors (repeat clears pay only every other time), bosses, brave choices and contracts.</p></section>
       <section><h3>Controls</h3><p class="keys"><span><b>A</b> attack</span><span><b>D</b> defend</span><span><b>S</b> stim</span><span><b>R</b> run</span><span><b>Q W E</b> skills</span><span><b>2 3 4</b> items</span><span><b>1 2</b> doors</span><span><b>Enter</b> continue</span></p></section>
     </div>` : `
@@ -827,7 +846,7 @@ function render() {
     slot.replaceWith(stage.el);
     const r = state.run, st = E.stats(state), map = E.mapById(r.map);
     const res = stage.sync({ run: r, enemy: r.enemy, sector: r.sector, boss: r.enemy.boss, theme: map.theme, allies: r.allies,
-      pst: r.pst, est: r.enemy.st, affix: r.enemy.affix ? D.AFFIXES[r.enemy.affix].name : null,
+      pst: r.pst, est: r.enemy.st, affix: r.enemy.affix ? D.AFFIXES[r.enemy.affix].name : null, quirk: r.enemy.quirk ? E.quirkById(r.enemy.quirk).name : null,
       player: { name: state.char.name, level: state.char.level, hp: state.char.hp, maxHp: st.maxHp } });
     if (res && res.isNewBoss) {
       busy = true; document.getElementById('app').classList.add('busy');

@@ -27,7 +27,7 @@ export const FIGHTS_PER_SECTOR = 3;
 export const MIN_FIGHTS = 2; // fights required per sector; the rest of the rooms can be anything
 // Enemy growth per sector past their first appearance: linear plus a quadratic tail.
 export const growth = (lvl, lin, quad) => 1 + lin * lvl + quad * lvl * lvl;
-export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.01, bossHp: 2.3, bossAtk: 1.5, enemyAtk: 1.45, enemyHp: 1.38, statusRate: 1, smashStr: 1, aimed: 1.5 };
+export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.01, bossHp: 2.3, bossAtk: 1.5, enemyAtk: 1.52, enemyHp: 1.42, statusRate: 1, smashStr: 1, aimed: 1.5 };
 export const isBossSector = (n) => n % 5 === 0;
 export const mapById = (id) => D.MAPS.find((m) => m.id === id) || D.MAPS[0];
 export const sectorName = (n, mapId = 'garrison') => {
@@ -281,7 +281,8 @@ export function buyCell(s, id) {
 // Everything that scales credit income.
 export function creditMult(s) {
   const c = s.char, t = s.run ? s.run.threat : s.meta.threat || 0;
-  return (has(c, 'fence') ? 1.25 : 1) * (hasPerk(c, 'chit') ? 1.2 : 1) * (1 + 0.15 * t);
+  const b = s.run ? s.run.bulletin : null;
+  return (has(c, 'fence') ? 1.25 : 1) * (hasPerk(c, 'chit') ? 1.2 : 1) * (1 + 0.15 * t) * (b === 'payday' ? 1.3 : b === 'lockdown' ? 1.25 : 1);
 }
 
 // ---------- status effects ----------
@@ -314,15 +315,20 @@ export function deploy(s, mapId, startSector, rng) {
   s.run = { map: map.id, sector: startSector, room: 0, choices: null, enemy: null, defending: false, ready: false, nextMod: null, sectorCredits: 0, cooldowns: {}, adrenalUsed: false,
     alert: 0, allies: 0, vent: 3, turns: 0, threat: s.meta.threat || 0, pst: {}, pfresh: [], deadmanUsed: false, perkOffer: null };
   s.meta.stats.raids += 1;
+  s.run.bulletin = pickWeighted(rng, D.BULLETINS.map((b) => [b.id, b.weight]));
   refreshContracts(s, rng);
   s.log = [];
   s.notice = null;
   log(s, `You slip into the ${map.name}. ${sectorName(startSector, map.id)}.`, 'sys');
+  const bl = bulletinOf(s.run);
+  if (bl.id !== 'quiet') log(s, `Directorate bulletin: ${bl.name}. ${bl.desc}`, 'crit');
   beginSector(s, rng);
   return true;
 }
 
 export const mechanicOf = (r) => mapById(r.map).mechanic.id;
+export const bulletinOf = (r) => D.BULLETINS.find((b) => b.id === (r && r.bulletin)) || D.BULLETINS[0];
+export const quirkById = (id) => D.QUIRKS.find((q) => q.id === id);
 export const roomName = (mapId, kind) => kind === 'boss' ? 'Boss' : (mapById(mapId).roomNames[kind] || kind);
 
 function raiseAlarm(s, n, why) {
@@ -402,9 +408,16 @@ export function enterRoom(s, idx, rng) {
 function startFight(s, rng, kind) {
   const r = s.run, mech = mechanicOf(r), c = s.char;
   if (kind === 'fight' && r.threat >= 4 && rng() < 0.35) kind = 'elite';
+  if (kind === 'fight' && r.bulletin === 'inspection' && rng() < 0.3) kind = 'elite';
   const boss = kind === 'boss';
   const e = makeEnemy(r.sector, boss, rng, r.map, r.threat);
+  if (!boss) applyQuirk(r, e, rng);
   if (kind === 'elite') makeElite(e, rng);
+  if (r.bulletin === 'payday') e.hp = e.maxHp = Math.round(e.maxHp * 1.1);
+  if (r.bulletin === 'lockdown') e.atk = Math.round(e.atk * 1.1);
+  if (r.bulletin === 'budget') e.def = Math.max(0, e.def - 1);
+  if (r.bulletin === 'inspection') e.xp = Math.round(e.xp * 1.2);
+  if (r.bulletin === 'shift' && r.room === 1 && !boss) e.stun = Math.max(e.stun, 1);
   if (mech === 'alarm' && r.alert) { e.atk = Math.round(e.atk * (1 + 0.06 * r.alert)); e.cr = e.cr.map((v) => Math.round(v * (1 + 0.05 * r.alert))); }
   r.enemy = e; r.defending = false; r.ready = false; r.adrenalUsed = false; r.vent = 3; r.turns = 0; r.alarmRaised = false; r.struck = false;
   if (r.room === 1 && has(c, 'forger') && !boss) { e.stun = 1; log(s, 'Your forged papers buy you a free moment.', 'good'); }
@@ -416,8 +429,34 @@ function startFight(s, rng, kind) {
   e.fresh = [];
   if (hasPerk(c, 'dressing')) { const st = stats(s); c.hp = Math.min(st.maxHp, c.hp + Math.round(st.maxHp * 0.06)); }
   log(s, e.line, boss ? 'boss' : 'sys');
+  if (e.quirk) log(s, `${e.bark} (${quirkById(e.quirk).name}: ${quirkById(e.quirk).desc})`, 'info');
   if (e.affix) log(s, `${D.AFFIXES[e.affix].name}: ${D.AFFIXES[e.affix].desc}`, 'bad');
   s.screen = 'combat';
+}
+
+// Random personality for a regular enemy. Bulletins can force or forbid them.
+function applyQuirk(r, e, rng) {
+  const kind = e.tags.includes('droid') ? 'droid' : e.tags.includes('beast') ? 'beast' : 'human';
+  let pool = D.QUIRKS.filter((q) => q.tags.includes(kind)), chance = 0.4;
+  if (r.bulletin === 'inspection') return;
+  if (r.bulletin === 'party' && kind === 'human') { pool = pool.filter((q) => ['drunk', 'hungover', 'sleepy', 'gambler'].includes(q.id)); chance = 0.85; }
+  if (r.bulletin === 'budget' && kind === 'droid') { pool = pool.filter((q) => ['rusty', 'glitchy', 'outdated'].includes(q.id)); chance = 1; }
+  if (!pool.length || rng() >= chance) return;
+  const q = pick(rng, pool), m = q.mods || {};
+  e.quirk = q.id;
+  e.name = `${q.name} ${e.name}`;
+  e.hp = e.maxHp = Math.max(1, Math.round(e.maxHp * (m.hp || 1)));
+  e.atk = Math.max(1, Math.round(e.atk * (m.atk || 1)));
+  e.def = Math.max(0, e.def + (m.def || 0));
+  e.spd = Math.max(1, e.spd + (m.spd || 0));
+  e.cr = e.cr.map((v) => Math.round(v * (q.cr || 1)));
+  e.xp = Math.round(e.xp * (q.xp || 1));
+  e.bark = pick(rng, q.barks);
+  e.intents = { ...e.intents };
+  if (q.noGuard) delete e.intents.guard;
+  if (q.moreGuard) e.intents.guard = (e.intents.guard || 0) + 2;
+  if (q.sleepy) e.stun = Math.max(e.stun, 1);
+  if (q.firstGuard) { e.intent = 'guard'; e.lastIntent = 'guard'; }
 }
 
 function makeElite(e, rng) {
@@ -485,7 +524,8 @@ export function critChance(st, e) { return clamp(st.crit + (st.spd - e.spd) * 0.
 export function intimidateChance(s) {
   const e = s.run.enemy;
   if (!e.tags.includes('human')) return 0;
-  return clamp(0.15 + 0.07 * attr(s.char, 'cha') - (e.boss ? 0.35 : 0) + (1 - e.hp / e.maxHp) * 0.3, 0, 0.9);
+  const bribe = e.quirk && quirkById(e.quirk).bribable ? 0.35 : 0;
+  return clamp(0.15 + 0.07 * attr(s.char, 'cha') - (e.boss ? 0.35 : 0) + (1 - e.hp / e.maxHp) * 0.3 + bribe, 0, 0.95);
 }
 
 export function canUse(s, act) {
@@ -634,6 +674,11 @@ export function playerAct(s, act, rng) {
   }
   tick(r);
   if (e.hp <= 0) return winFight(s, rng);
+  if (e.quirk && quirkById(e.quirk).flee && e.hp < e.maxHp * 0.4) {
+    fx(s, { who: 'enemy', type: 'quirk', text: 'Nope!' });
+    log(s, `${e.name} decides this isn\u2019t worth it and runs.`, 'good');
+    return winFight(s, rng, true);
+  }
   checkPhase(s);
   if (r.allies > 0) {
     for (let i = 0; i < r.allies && e.hp > 0; i++) {
@@ -690,9 +735,13 @@ function statusTurn(s, rng) {
   const ed = tickSide(e.st, e.fresh, e.maxHp);
   let regen = 0;
   if (e.affix === 'regenerating') { regen = Math.min(e.maxHp - e.hp, Math.round(e.maxHp * 0.06)); e.hp += regen; }
-  if (pd || ed || regen) {
+  const sd = e.quirk && quirkById(e.quirk).selfDamage;
+  let selfDmg = 0;
+  if (sd) { selfDmg = Math.max(1, Math.round(e.maxHp * sd)); e.hp -= selfDmg; }
+  if (pd || ed || regen || selfDmg) {
     c.hp -= pd; e.hp -= ed;
-    fx(s, { who: 'status', pdmg: pd, edmg: ed, regen });
+    fx(s, { who: 'status', pdmg: pd, edmg: ed + selfDmg, regen });
+    if (selfDmg) log(s, `${e.name} overheats for ${selfDmg}.`, 'hit');
     if (pd) log(s, `You lose ${pd} HP to your wounds.`, 'hurt');
     if (ed) log(s, `${e.name} loses ${ed} HP to its wounds.`, 'hit');
     if (regen) log(s, `${e.name} regenerates ${regen} HP.`, 'hurt');
@@ -739,6 +788,15 @@ function envTurn(s, rng) {
 function enemyTurn(s, rng) {
   const r = s.run, e = r.enemy, c = s.char, st = stats(s);
   const vamp = (dmg) => { if (e.affix === 'vampiric' && dmg > 0) { e.hp = Math.min(e.maxHp, e.hp + Math.round(dmg / 2)); } };
+  const q = e.quirk ? quirkById(e.quirk) : null;
+  if (q && q.skip && e.stun === 0 && rng() < q.skip) {
+    const lines = ['freezes mid-step and reboots', 'plays a recorded safety announcement', 'spins in a slow circle', 'displays a loading bar'];
+    const what = pick(rng, lines);
+    fx(s, { who: 'enemy', type: 'quirk', text: 'Glitch!' });
+    log(s, `${e.name} ${what}.`, 'good');
+    e.intent = chooseIntent(e, rng);
+    return;
+  }
   if (e.stun > 0) {
     e.stun -= 1;
     fx(s, { who: 'enemy', type: 'stunned' });
@@ -749,13 +807,19 @@ function enemyTurn(s, rng) {
       r.allies -= 1;
       fx(s, { who: 'enemy', type: e.intent, ally: true, dmg: 0 });
       log(s, `${e.name} guns down one of the freed prisoners.`, 'bad');
+    } else if (q && q.miss && rng() < q.miss) {
+      fx(s, { who: 'enemy', type: e.intent, dodged: true, missed: true, dmg: 0 });
+      log(s, `${e.name} ${pick(rng, q.misses)}.`, 'good');
     } else if (rng() < dodgeChance(st, e)) {
       fx(s, { who: 'enemy', type: e.intent, dodged: true, dmg: 0 });
       log(s, `${e.name} ${heavy ? 'unleashes a heavy strike' : 'fires'}, and you dodge.`, 'good');
     } else {
-      let dmg = mitigate(e.atk * (0.85 + rng() * 0.3) * (heavy ? 2.2 : 1) * outMult(e.st, r.pst), st.def);
+      const luck = q && q.gamble ? (rng() < 0.5 ? 0.5 : 1.8) : 1;
+      let dmg = mitigate(e.atk * (0.85 + rng() * 0.3) * (heavy ? 2.2 : 1) * luck * outMult(e.st, r.pst), st.def);
       if (r.defending) dmg = Math.max(1, Math.round(dmg * (heavy ? 0.25 : 0.5)));
       c.hp -= dmg; vamp(dmg);
+      if (q && q.bleedOnHit && !r.defending) addStatus(r.pst, r.pfresh, { bleed: 2 }, hasPerk(c, 'thick') ? 1 : 0);
+      if (luck !== 1) log(s, luck > 1 ? 'The gamble pays off for them.' : 'Their gamble doesn\u2019t pay off.', 'info');
       fx(s, { who: 'enemy', type: e.intent, dmg, blocked: r.defending });
       log(s, `${e.name} ${heavy ? 'lands a heavy strike' : 'hits you'} for ${dmg}${r.defending ? ' (blocked)' : ''}.`, heavy ? 'bad' : 'hurt');
     }
