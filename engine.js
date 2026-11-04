@@ -74,6 +74,14 @@ export function statsOf(meta, c) {
 }
 export const stats = (s) => statsOf(s.meta, s.char);
 
+// Battle events for the animated stage. Only recorded when the UI sets s.events = [] before a turn,
+// so the balance simulator pays nothing for them.
+function fx(s, ev) {
+  if (!Array.isArray(s.events)) return;
+  const r = s.run;
+  s.events.push({ ...ev, php: s.char.hp, ehp: r && r.enemy ? r.enemy.hp : 0 });
+}
+
 function log(s, text, kind = 'info') {
   s.log.push({ text, kind });
   if (s.log.length > 60) s.log.splice(0, s.log.length - 60);
@@ -216,18 +224,21 @@ export function playerAct(s, act, rng) {
       let dmg = mitigate(st.atk * (0.85 + rng() * 0.3) * mult, e.def);
       if (guarded) dmg = Math.max(1, Math.round(dmg / 2));
       e.hp -= dmg;
+      fx(s, { who: 'player', type: 'shoot', dmg, crit, guarded, ready: r.ready });
       log(s, `${r.ready ? 'Steadied shot. ' : ''}${crit ? 'Critical! ' : ''}You hit ${e.name} for ${dmg}${guarded ? ' through cover' : ''}.`, crit ? 'crit' : 'hit');
       r.ready = false;
       break;
     }
     case 'defend':
       r.defending = true; r.ready = true;
+      fx(s, { who: 'player', type: 'defend' });
       log(s, 'You drop behind cover and steady your aim. Next shot +50%.', 'info');
       break;
     case 'stim': {
       c.items.stim -= 1;
       const amt = Math.min(st.maxHp - c.hp, Math.round(st.maxHp * 0.4));
       c.hp += amt;
+      fx(s, { who: 'player', type: 'stim', amt });
       log(s, `You jam a stim into your thigh. +${amt} HP.`, 'good');
       break;
     }
@@ -235,6 +246,7 @@ export function playerAct(s, act, rng) {
       c.items.thermal -= 1;
       const dmg = 20 + r.sector * 4;
       e.hp -= dmg;
+      fx(s, { who: 'player', type: 'thermal', dmg });
       log(s, `Thermal charge! ${e.name} takes ${dmg}, armour or not.`, 'crit');
       break;
     }
@@ -242,16 +254,22 @@ export function playerAct(s, act, rng) {
       c.items.ion -= 1;
       const droid = e.tags.includes('droid');
       e.stun = droid ? 3 : 1;
-      if (droid) { const dmg = 12 + r.sector * 2; e.hp -= dmg; log(s, `The ion pulse fries ${e.name}\u2019s circuits for ${dmg}. Stunned for 3 turns.`, 'crit'); }
+      const ionDmg = droid ? 12 + r.sector * 2 : 0;
+      e.hp -= ionDmg;
+      fx(s, { who: 'player', type: 'ion', dmg: ionDmg, droid });
+      if (droid) { const dmg = ionDmg; log(s, `The ion pulse fries ${e.name}\u2019s circuits for ${dmg}. Stunned for 3 turns.`, 'crit'); }
       else log(s, `The ion pulse leaves ${e.name} reeling. Stunned for a turn.`, 'hit');
       break;
     }
     case 'smoke':
       c.items.smoke -= 1;
+      fx(s, { who: 'player', type: 'smoke' });
       log(s, 'Smoke fills the corridor. You\u2019re gone before it clears.', 'sys');
       return endRun(s, 'escaped');
     case 'run': {
-      if (rng() < runChance(s)) { log(s, 'You break line of sight and run for the exit.', 'sys'); return endRun(s, 'escaped'); }
+      const ok = rng() < runChance(s);
+      fx(s, { who: 'player', type: 'run', ok });
+      if (ok) { log(s, 'You break line of sight and run for the exit.', 'sys'); return endRun(s, 'escaped'); }
       log(s, 'You try to break away, but they cut you off.', 'bad');
       break;
     }
@@ -264,22 +282,27 @@ function enemyTurn(s, rng) {
   const r = s.run, e = r.enemy, c = s.char, st = stats(s);
   if (e.stun > 0) {
     e.stun -= 1;
+    fx(s, { who: 'enemy', type: 'stunned' });
     log(s, `${e.name} is stunned and can\u2019t act.`, 'good');
   } else if (e.intent === 'attack' || e.intent === 'heavy') {
     const heavy = e.intent === 'heavy';
     if (rng() < dodgeChance(st, e)) {
+      fx(s, { who: 'enemy', type: e.intent, dodged: true, dmg: 0 });
       log(s, `${e.name} ${heavy ? 'unleashes a heavy strike' : 'fires'}, and you dodge.`, 'good');
     } else {
       let dmg = mitigate(e.atk * (0.85 + rng() * 0.3) * (heavy ? 2.2 : 1), st.def);
       if (r.defending) dmg = Math.max(1, Math.round(dmg * (heavy ? 0.25 : 0.5)));
       c.hp -= dmg;
+      fx(s, { who: 'enemy', type: e.intent, dmg, blocked: r.defending });
       log(s, `${e.name} ${heavy ? 'lands a heavy strike' : 'hits you'} for ${dmg}${r.defending ? ' (blocked)' : ''}.`, heavy ? 'bad' : 'hurt');
     }
   } else if (e.intent === 'guard') {
+    fx(s, { who: 'enemy', type: 'guard' });
     log(s, `${e.name} holds position behind cover.`, 'info');
   } else if (e.intent === 'repair') {
     const amt = Math.min(e.maxHp - e.hp, Math.round(e.maxHp * 0.15));
     e.hp += amt;
+    fx(s, { who: 'enemy', type: 'repair', amt });
     log(s, `${e.name} runs a repair cycle. +${amt} HP.`, 'hurt');
   }
   if (c.hp <= 0) return die(s, e);
@@ -303,7 +326,9 @@ function winFight(s, rng) {
   c.credits += credits; r.sectorCredits += credits;
   const out = { enemy: e.name, id: e.id, portrait: e.portrait, credits, xp: e.xp, levelUps: [], healed: 0, boss: e.boss, resolve: 0 };
   log(s, `${e.name} goes down. +${credits} ${D.SETTING.cur}, +${e.xp} XP.`, 'reward');
+  fx(s, { who: 'enemy', type: 'down' });
   gainXp(s, e.xp, out);
+  if (out.levelUps.length) fx(s, { who: 'player', type: 'levelup', level: c.level });
   if (has(c, 'medic')) {
     const st = stats(s);
     out.healed = Math.min(st.maxHp - c.hp, Math.round(st.maxHp * 0.15));
@@ -404,6 +429,7 @@ export function endRun(s, how) {
 }
 
 function die(s, foe) {
+  fx(s, { who: 'player', type: 'down' });
   const c = s.char, r = s.run;
   const record = { name: c.name, number: c.number, level: c.level, sector: r.sector, killer: foe.name, killerId: foe.id, killerPortrait: foe.portrait, credits: c.credits };
   s.meta.fallen.unshift(record);

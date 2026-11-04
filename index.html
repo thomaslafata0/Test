@@ -86,6 +86,39 @@ p { margin: 0; }
 @media (max-width: 820px) { .columns { grid-template-columns: minmax(0, 1fr); } }
 
 /* combat */
+.stage { position: relative; border: 1px solid var(--line); background: #0b0e11; overflow: hidden; }
+.stage canvas { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; image-rendering: pixelated; }
+.hud { position: absolute; display: grid; gap: 3px; min-width: 0; width: 42%; max-width: 260px; padding: 6px 10px 7px; background: #121518e6; border: 1px solid var(--line); }
+.hud-enemy { left: 3%; top: 5%; }
+.hud-player { right: 3%; bottom: 6%; border-color: #e8973a66; }
+.hud-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; min-width: 0; }
+.hud-name { font-family: var(--display); font-weight: 600; font-size: clamp(.85rem, 2.4vw, 1.15rem); text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.hud-tag { font-family: var(--mono); font-size: .6rem; letter-spacing: .1em; color: var(--muted); white-space: nowrap; }
+.hud-hp { font-size: .68rem; color: var(--muted); justify-self: end; }
+.hud .bar i { transition: width .35s ease; }
+.pops { position: absolute; inset: 0; pointer-events: none; }
+.pop { position: absolute; transform: translate(-50%, 0); font-family: var(--display); font-weight: 800; font-size: clamp(1.1rem, 3.6vw, 1.9rem); color: #fff; text-shadow: 0 2px 0 #000, 0 0 8px #000; animation: pop 1s ease-out forwards; white-space: nowrap; }
+.pop.crit { color: #ffd27a; font-size: clamp(1.4rem, 4.6vw, 2.4rem); }
+.pop.heavy { color: #ff7a64; font-size: clamp(1.3rem, 4.2vw, 2.2rem); }
+.pop.heal { color: var(--ok); }
+.pop.ion { color: var(--ion); }
+.pop.info { font-family: var(--mono); font-weight: 500; font-size: clamp(.65rem, 1.8vw, .85rem); letter-spacing: .08em; text-transform: uppercase; color: var(--fg); }
+.pop.tag { font-family: var(--mono); font-size: clamp(.6rem, 1.6vw, .75rem); letter-spacing: .2em; color: #ffd27a; margin-top: 2.2em; }
+.pop.level { color: #f1d98a; letter-spacing: .08em; }
+@keyframes pop { 0% { opacity: 0; transform: translate(-50%, 8px) scale(.7); } 15% { opacity: 1; transform: translate(-50%, 0) scale(1.1); } 30% { transform: translate(-50%, 0) scale(1); } 100% { opacity: 0; transform: translate(-50%, -34px); } }
+.speed { position: absolute; right: 2%; top: 4%; display: flex; gap: 2px; }
+.speed button { background: #121518cc; border: 1px solid var(--line); color: var(--muted); font-family: var(--mono); font-size: .62rem; padding: 3px 6px; }
+.speed button[aria-pressed="true"] { color: var(--sodium); border-color: var(--sodium); }
+@media (max-width: 560px) {
+  .stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1px; background: var(--line); }
+  .stage canvas { grid-column: 1 / -1; }
+  .hud { position: static; width: auto; max-width: none; border: 0; background: var(--panel-2); }
+  .hud-player { order: 2; }
+  .hud-enemy { order: 3; }
+}
+.busy .actions .btn, .busy .items .btn { opacity: .45; pointer-events: none; }
+.foe-info { display: grid; gap: 10px; }
+.foe-info .title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .foe { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; padding: 18px; background: var(--panel-2); border: 1px solid var(--line); align-items: start; }
 .foe-info { display: grid; gap: 10px; min-width: 0; }
 .portrait { width: 160px; aspect-ratio: 1; max-width: 100%; image-rendering: pixelated; background: radial-gradient(circle at 50% 35%, #e8973a26, transparent 65%), var(--panel); border: 1px solid var(--line); display: block; }
@@ -152,6 +185,7 @@ p { margin: 0; }
 import * as D from './data.js';
 import * as E from './engine.js';
 import { portraitURL } from './portraits.js';
+import { Stage, loadSheets } from './stage.js';
 
 const SAVE_KEY = 'cinder-cell-save-v1';
 const rng = Math.random;
@@ -280,23 +314,16 @@ function portraitImg(e, cls = '') {
   return src ? `<img class="portrait ${cls}" src="${src}" alt="Portrait of ${esc(e.name)}" width="160" height="160">` : '';
 }
 
-let lastFoe = null;
 function combatScreen() {
   const r = state.run, e = r.enemy, c = state.char, st = E.stats(state);
-  const hitClass = lastFoe && lastFoe.ref === e && e.hp < lastFoe.hp ? 'hit' : '';
-  lastFoe = { ref: e, hp: e.hp };
   const intent = e.stun > 0 ? { label: `Stunned \u00B7 ${e.stun} turn${e.stun > 1 ? 's' : ''}`, tone: 'calm', tip: 'Free hits.' } : D.INTENTS[e.intent];
   const items = Object.entries(D.ITEMS).map(([id, it], i) => `<button class="btn" data-a="act" data-v="${id}" ${c.items[id] ? '' : 'disabled'}>${esc(it.name)} \u00D7${c.items[id]}<span class="k">${i + 1}</span></button>`).join('');
   return `<div class="columns"><section class="panel">
     <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px"><span class="label">Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector))}</span><span class="label">Fight ${r.fight} / ${E.FIGHTS_PER_SECTOR}</span></div>
-    <div class="foe ${e.boss ? 'boss' : ''}">
-      ${portraitImg(e, hitClass)}
-      <div class="foe-info">
-      <div class="title"><h2>${esc(e.name)}</h2>${e.tags.map((t) => `<span class="tag ${t}">${t}</span>`).join('')}</div>
-      <div style="display:grid;gap:4px"><span class="num" style="font-size:.85rem">${Math.max(0, e.hp)} / ${e.maxHp}</span>${bar(e.hp, e.maxHp, 'enemy')}</div>
-      <div class="statline"><span>ATK <b>${e.atk}</b></span><span>DEF <b>${e.def}</b></span><span>SPD <b>${e.spd}</b></span><span>Run <b>${Math.round(E.runChance(state) * 100)}%</b></span><span>Dodge <b>${Math.round(E.dodgeChance(st, e) * 100)}%</b></span></div>
-      <div class="intent ${intent.tone}"><span class="dot"></span><b>${esc(intent.label)}</b><span class="tip">${esc(intent.tip)}</span></div>
-      </div>
+    <div id="stage-slot"></div>
+    <div class="foe-info">
+      <div class="title">${e.tags.map((t) => `<span class="tag ${t}">${t}</span>`).join('')}<div class="statline"><span>ATK <b>${e.atk}</b></span><span>DEF <b>${e.def}</b></span><span>SPD <b>${e.spd}</b></span><span>Run <b>${Math.round(E.runChance(state) * 100)}%</b></span><span>Dodge <b>${Math.round(E.dodgeChance(st, e) * 100)}%</b></span></div></div>
+      <div class="intent ${intent.tone}"><span class="dot"></span><b>${esc(e.name)}: ${esc(intent.label)}</b><span class="tip">${esc(intent.tip)}</span></div>
     </div>
     ${r.ready ? '<div class="notice">Aim steadied: your next attack deals +50%.</div>' : ''}
     <div class="actions">
@@ -362,13 +389,40 @@ function render() {
   const screens = { intro: introScreen, town: townScreen, combat: combatScreen, victory: victoryScreen, event: eventScreen, sectorClear: sectorClearScreen, death: deathScreen };
   const showStatus = state.screen !== 'intro';
   document.getElementById('app').innerHTML = (showStatus ? statusStrip() : '') + screens[state.screen]();
+  const slot = document.getElementById('stage-slot');
+  if (slot) {
+    slot.replaceWith(stage.el);
+    const r = state.run, st = E.stats(state);
+    stage.sync({ run: r, enemy: r.enemy, sector: r.sector, boss: r.enemy.boss, player: { name: state.char.name, level: state.char.level, hp: state.char.hp, maxHp: st.maxHp } });
+  }
   const log = document.getElementById('log');
   if (log) log.scrollTop = log.scrollHeight;
   save();
 }
 
 // ---------- input ----------
+const stage = new Stage();
+let busy = false;
+
+async function fight(v) {
+  if (busy || !E.canUse(state, v)) return;
+  busy = true;
+  document.getElementById('app').classList.add('busy');
+  state.events = [];
+  E.playerAct(state, v, rng);
+  const events = state.events;
+  delete state.events;
+  save();
+  try { await stage.play(events); } finally {
+    busy = false;
+    document.getElementById('app').classList.remove('busy');
+    render();
+  }
+}
+
 function act(a, v, k) {
+  if (busy) return;
+  if (a === 'act') return fight(v);
   if (a !== 'reset') confirmReset = false;
   switch (a) {
     case 'begin': state.screen = 'town'; state.tab = 'gate'; state.notice = 'Start with what you have. Come back with more.'; break;
@@ -379,7 +433,6 @@ function act(a, v, k) {
     case 'heal': E.heal(state); break;
     case 'train': E.train(state, v); break;
     case 'deploy': E.deploy(state, +v, rng); break;
-    case 'act': E.playerAct(state, v, rng); break;
     case 'continue': E.continueAfterVictory(state, rng); break;
     case 'event': E.resolveEvent(state, v, rng); break;
     case 'eventDone': E.nextEncounter(state, rng); break;
@@ -400,7 +453,7 @@ document.addEventListener('click', (ev) => {
 });
 
 document.addEventListener('keydown', (ev) => {
-  if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+  if (ev.metaKey || ev.ctrlKey || ev.altKey || busy) return;
   const key = ev.key.toLowerCase();
   if (state.screen === 'combat') {
     const map = { a: 'attack', d: 'defend', r: 'run', s: 'stim', 1: 'stim', 2: 'thermal', 3: 'ion', 4: 'smoke' };
@@ -413,7 +466,10 @@ document.addEventListener('keydown', (ev) => {
 
 function start(data) {
   state = (data && data.state) || load() || E.newGame(rng);
+  delete state.events;
   render();
+  // PixelLab sheets, if any have been delivered. Re-render so the stage picks them up.
+  loadSheets().then((n) => { if (n && state.screen === 'combat') { stage.enemyRef = null; stage.player = null; render(); } });
 }
 window.claude?.hot?.snapshot?.(() => ({ state }));
 window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});

@@ -22,6 +22,8 @@ const RAMPS = {
   gold:   ['#6e5016', '#c39b45', '#f1d98a'],
   navy:   ['#18202c', '#2d3a50', '#4a5d7c'],
   white:  ['#8e959b', '#d2d5d7', '#f5f5f0'],
+  rust:   ['#4f2818', '#86452a', '#bb6c3f'],
+  knit:   ['#22282e', '#38424b', '#56626d'],
 };
 
 function makeGrid() {
@@ -83,6 +85,25 @@ function outline(g) {
 const eyes = (g, y, l = 17, r = 23, mat = 'hair') => { g.dot(l, y, mat, 0); g.dot(r, y, mat, 0); };
 
 export const ART = {
+  // The player's operative, seen from behind (lower-left of the battle stage).
+  player(g) {
+    g.ellipse(19, 42, 19, 12, 'rust');
+    g.rect(1, 33, 6, 3, 'gold', 2);
+    g.line(9, 31, 13, 40, 'rust', 0);
+    g.rect(11, 24, 16, 6, 'olive');
+    g.tri(20, 28, 26, 28, 24, 36, 'olive', 0);
+    g.ellipse(19, 16, 8, 9, 'hair');
+    g.ellipse(19, 10, 9, 6, 'knit');
+    for (let x = 12; x < 27; x += 2) g.dot(x, 13, 'knit', 0);
+    g.rect(10, 12, 18, 2, 'brown', 0);
+    g.rect(26, 10, 4, 4, 'gold', 1); g.dot(28, 11, 'gold', 2);
+    g.dot(19, 4, 'knit', 2);
+    g.line(25, 35, 38, 20, 'black', 1); g.line(26, 35, 39, 21, 'black', 0);
+    g.line(25, 36, 37, 22, 'black', 2);
+    g.rect(29, 28, 4, 3, 'grey', 1);
+    g.ellipse(27, 33, 3, 2, 'skin');
+  },
+
   patrol(g) {
     g.ellipse(20, 41, 18, 10, 'grey');
     g.rect(4, 32, 8, 3, 'olive', 1); g.rect(28, 32, 8, 3, 'olive', 0);
@@ -264,9 +285,9 @@ export const ART = {
   },
 };
 
-const cache = {};
-export function portraitURL(id) {
-  if (cache[id]) return cache[id];
+const canvases = {}, urls = {};
+export function portraitCanvas(id) {
+  if (canvases[id]) return canvases[id];
   if (!ART[id] || typeof document === 'undefined') return null;
   const g = makeGrid();
   ART[id](g);
@@ -275,5 +296,12 @@ export function portraitURL(id) {
   c.width = c.height = N;
   const ctx = c.getContext('2d');
   g.px.forEach((col, i) => { if (col) { ctx.fillStyle = col; ctx.fillRect(i % N, Math.floor(i / N), 1, 1); } });
-  return (cache[id] = c.toDataURL('image/png'));
+  return (canvases[id] = c);
 }
+export function portraitURL(id) {
+  if (urls[id]) return urls[id];
+  const c = portraitCanvas(id);
+  return c ? (urls[id] = c.toDataURL('image/png')) : null;
+}
+// Where the gun barrel ends on each drawn sprite, in 40x40 art coordinates (for muzzle flashes).
+export const MUZZLE = { player: [39, 20], patrol: [9, 30], officer: [11, 36], marksman: [30, 18], interrogator: [12, 36], shock: [8, 34], halvek: [8, 36], ostrane: [12, 36], probe: [20, 20], sentinel: [20, 15], crawler: [1, 18] };
