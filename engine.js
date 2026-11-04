@@ -22,7 +22,7 @@ export function seededRng(seed) {
   };
 }
 
-export const VERSION = 3;
+export const VERSION = 4;
 export const FIGHTS_PER_SECTOR = 3;
 export const CONTRABAND_SLOTS = 4; // pieces of contraband one operative can carry
 export const ELITE_DROP = 0.4;   // chance an elite carries contraband (bosses always do)
@@ -30,8 +30,11 @@ export const CARRY_CD = 2;       // minimum cooldown a skill used last fight sta
 export const MIN_FIGHTS = 2; // fights required per sector; the rest of the rooms can be anything
 // Enemy growth per sector past their first appearance: linear plus a quadratic tail.
 export const growth = (lvl, lin, quad) => 1 + lin * lvl + quad * lvl * lvl;
-export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.01, bossHp: 2.3, bossAtk: 1.5, enemyAtk: 1.52, enemyHp: 1.42, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 2, strAtk: 1, agiCrit: 0.035, agiDodge: 0.025, intOverload: 3.5, chaHesitate: 0.04, chaCredits: 0.05, wanted: 0.025, escapeLoss: 0.5 };
+export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.01, bossHp: 2.45, bossAtk: 1.5, enemyAtk: 1.57, enemyHp: 1.54, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 2, strAtk: 1, agiCrit: 0.04, agiDodge: 0.025, intOverload: 3.5, chaHesitate: 0.04, chaCredits: 0.05, wanted: 0.025, escapeLoss: 0.5,
+  upgradeCost: 60, eliteGear: 0.3, shopLegendary: 0.06 };
 export const isBossSector = (n) => n % 5 === 0;
+// Optional credit accounting for the simulators: set s.ledger = {} and every credit gain or spend is tallied by source.
+const ledger = (s, k, n) => { if (s.ledger && n) s.ledger[k] = (s.ledger[k] || 0) + n; };
 export const mapById = (id) => D.MAPS.find((m) => m.id === id) || D.MAPS[0];
 export const sectorName = (n, mapId = 'garrison') => {
   const list = mapById(mapId).sectors, len = list.length;
@@ -47,13 +50,11 @@ const hasImp = (c, id) => c.implants.includes(id);
 const hasCell = (m, id) => m.cell.includes(id);
 export const hasPerk = (c, id) => !!c && (c.perks || []).includes(id);
 export const perkById = (id) => D.PERKS.find((p) => p.id === id);
-export const weaponOf = (c) => D.WEAPONS.find((x) => x.id === c.weapon);
-export const armorOf = (c) => D.ARMOR.find((x) => x.id === c.armor);
 
 // ---------- state ----------
 export function newMeta() {
   return { resolve: 0, totalResolve: 0, training: { hp: 0, atk: 0, def: 0, spd: 0 }, cell: [], operatives: 0, bestSector: 0, bestByMap: {},
-    fallen: [], contracts: [], liberated: {}, threat: 0, tips: {}, endingSeen: false, stats: { kills: 0, bosses: 0, raids: 0 } };
+    fallen: [], contracts: [], liberated: {}, threat: 0, heirloom: null, tips: {}, endingSeen: false, stats: { kills: 0, bosses: 0, raids: 0 } };
 }
 
 export function newGame(rng) {
@@ -66,23 +67,47 @@ export function newGame(rng) {
 // Older saves keep their permanent progress; the current operative is retired.
 export function migrate(s, rng) {
   if (s && s.v === 2 && s.meta) {
+    s = migrateV2(s, rng);
+  }
+  if (s && s.v === 3 && s.meta) {
+    // v3 -> v4: single weapon + armour become item instances in six gear slots.
+    if (s.char) migrateGear(s, rng);
+    s.meta.heirloom = s.meta.heirloom || null;
+    if (s.run) { s.run.lootOffer = null; }
+    s.v = 4;
+    if (s.char) s.notice = 'The Black Market has new stock and your kit now has six slots. Check the Gear tab.';
+  }
+  if (s && s.v === VERSION) {
+    for (const k of (s.meta && s.meta.contracts) || []) if (!k.done) k.credits = contractCredits(k.kind, k.n);
+    return s;
+  }
+  return migrateOld(s, rng);
+}
+function migrateGear(s, rng) {
+  const c = s.char, g = starterGear(null);
+  const w = D.GEAR[c.weapon], a = D.GEAR[c.armor];
+  if (w && (w.slot === 'ranged' || w.slot === 'melee')) g[w.slot] = makeItem(c.weapon);
+  if (a && a.slot === 'chest') g.chest = makeItem(c.armor);
+  c.gear = g;
+  delete c.weapon; delete c.armor;
+  restockMarket(s, rng);
+}
+function migrateV2(s, rng) {
+  {
     // v2 -> v3: keep everything, add the new systems, call off any raid in progress.
     const fresh = newMeta();
     for (const k of Object.keys(fresh)) if (s.meta[k] === undefined) s.meta[k] = fresh[k];
     if (s.char) s.char.perks = s.char.perks || [];
     if (s.run) { s.run = null; s.notice = 'The cell has new intel on the Directorate. Your last raid was called off; you kept what you carried.'; }
-    s.v = VERSION;
     s.screen = s.char ? 'town' : 'create';
     if (!s.char && !s.draft) s.draft = newDraft(s.meta, rng);
     s.tab = 'gate';
     refreshContracts(s, rng);
+    s.v = 3;
     return s;
   }
-  if (s && s.v === VERSION) {
-    // Recalculate open contract payouts (older saves stored inflated haul rewards).
-    for (const k of (s.meta && s.meta.contracts) || []) if (!k.done) k.credits = contractCredits(k.kind, k.n);
-    return s;
-  }
+}
+function migrateOld(s, rng) {
   const fresh = newGame(rng);
   if (s && s.meta) {
     const m = s.meta;
@@ -120,7 +145,7 @@ export function createChar(s, rng) {
   const c = {
     name: (d.name || '').trim().slice(0, 24) || pick(rng, D.OPERATIVE_NAMES), number: m.operatives, background: bg.id,
     attrs, attrPoints: d.points, level: 1, xp: 0, credits: 25 + (bg.start.credits || 0) + (hasCell(m, 'stash') ? 60 : 0),
-    weapon: hasCell(m, 'cache') ? 'carbine' : 'holdout', armor: 'none',
+    gear: starterGear(m), market: [],
     items: { stim: 2, thermal: 0, ion: 0, smoke: 0 }, upgrades: [], implants: [],
     maps: {}, deepest: 0, hp: 1, history: [], perks: [],
   };
@@ -128,10 +153,201 @@ export function createChar(s, rng) {
   if (hasCell(m, 'kit')) { c.items.stim += 1; c.items.thermal += 1; }
   c.hp = statsOf(m, c).maxHp;
   s.char = c; s.draft = null;
+  if (m.heirloom && canEquip(c, m.heirloom)) { const it = m.heirloom; m.heirloom = null; c.gear[baseOf(it).slot] = it; c.hp = statsOf(m, c).maxHp; }
+  restockMarket(s, rng);
   refreshContracts(s, rng);
   s.screen = 'town'; s.tab = 'gate';
   s.notice = `${c.name} takes the empty bunk. Gear up, then pick a target.`;
   return c;
+}
+
+// ---------- gear: item instances ----------
+// An item is { base, rarity, level, bonuses: [{ k, v }], trait, spent }. Bases live in D.GEAR.
+export const ELITE_GEAR_DROP = 0.3; // chance an elite drops a piece of gear (bosses always do)
+export const MARKET_SIZE = 6;
+export const baseOf = (it) => (it ? D.GEAR[it.base] : null);
+export const gearIn = (c, slot) => (c && c.gear && c.gear[slot]) || null;
+export const weaponOf = (c) => baseOf(gearIn(c, 'ranged')) || D.GEAR.holdout;
+export const meleeOf = (c) => baseOf(gearIn(c, 'melee')) || D.GEAR.knife;
+export const armorOf = (c) => baseOf(gearIn(c, 'chest')) || D.GEAR.none;
+const traitGroup = (slot) => (slot === 'ranged' || slot === 'melee' ? 'weapon' : slot === 'gadget' ? 'gadget' : 'armor');
+const isWeaponSlot = (slot) => slot === 'ranged' || slot === 'melee';
+
+function rollBonus(k, b, rng) {
+  const [lo, hi] = D.BONUSES[k].range, scale = 1 + 0.1 * Math.max(0, (b.tier || 1) - 1);
+  return { k, v: Math.max(1, Math.round((lo + rng() * (hi - lo)) * scale)) };
+}
+function bonusPool(b, it) {
+  return Object.keys(D.BONUSES).filter((k) => D.BONUSES[k].slots.includes(b.slot) && !(k === 'droid' && b.droid) && !it.bonuses.some((x) => x.k === k));
+}
+export function makeItem(baseId, rarity = 'common', rng = null) {
+  const b = D.GEAR[baseId];
+  if (b.unique) rarity = 'unique';
+  const it = { base: baseId, rarity, level: 0, bonuses: (b.bonuses || []).map(([k, v]) => ({ k, v, fixed: true })), trait: null, spent: 0 };
+  const R = D.RARITY[rarity];
+  if (rng) {
+    for (let i = 0; i < R.bonuses; i++) { const pool = bonusPool(b, it); if (!pool.length) break; it.bonuses.push(rollBonus(pick(rng, pool), b, rng)); }
+    if (R.trait) it.trait = pick(rng, Object.keys(D.TRAITS).filter((t) => D.TRAITS[t].group === traitGroup(b.slot)));
+  }
+  return it;
+}
+export function starterGear(meta) {
+  const g = {};
+  for (const [slot, id] of Object.entries(D.STARTER_GEAR)) g[slot] = id ? makeItem(id) : null;
+  if (meta && hasCell(meta, 'cache')) { g.ranged = makeItem('carbine'); g.melee = makeItem('baton'); }
+  return g;
+}
+// Main stat (ATK for weapons, DEF for armour) after rarity and upgrades. Each upgrade adds 8% (at least +1).
+export const upgradeGain = (it) => { const b = baseOf(it), key = b.atk !== undefined ? 'atk' : b.def !== undefined ? 'def' : null; return key && b[key] > 0 ? Math.max(1, Math.round(b[key] * D.RARITY[it.rarity].mult * D.UPGRADE_STEP)) : 0; };
+export function mainStat(it) {
+  if (!it) return null;
+  const b = baseOf(it), key = b.atk !== undefined ? 'atk' : b.def !== undefined ? 'def' : null;
+  if (!key) return null;
+  return { key, v: Math.round(b[key] * D.RARITY[it.rarity].mult) + it.level * upgradeGain(it) };
+}
+export const itemName = (it) => `${baseOf(it).name}${it.level ? ` +${it.level}` : ''}`;
+export const itemPrice = (it) => Math.round(baseOf(it).cost * D.RARITY[it.rarity].price);
+export const sellValue = (it) => (it ? Math.round(0.35 * (itemPrice(it) + (it.spent || 0))) : 0);
+export const canUpgrade = (it) => !!it && upgradeGain(it) > 0 && it.level < D.UPGRADE_MAX;
+export const upgradeCost = (it) => Math.round(TUNE.upgradeCost * upgradeGain(it) * (it.level + 1) * D.RARITY[it.rarity].up);
+export const canReroll = (it) => !!it && it.bonuses.some((x) => !x.fixed);
+export const rerollCost = (it) => Math.round((40 + baseOf(it).cost * 0.15) * D.RARITY[it.rarity].up);
+export const bonusText = (x) => D.BONUSES[x.k].label.replace('{v}', x.v);
+
+// Bonus totals. Weapon bonuses only count for attacks with that weapon (mode 'ranged' or 'melee');
+// everything else (armour, gadget, and character-wide bonuses like credits) always counts.
+const WIDE = new Set(['healkill', 'cooldown', 'credits', 'resist', 'hp', 'def', 'spd']);
+export function gearBonus(c, k, mode = null) {
+  let t = 0;
+  for (const slot of D.SLOT_ORDER) {
+    const it = gearIn(c, slot);
+    if (!it) continue;
+    if (isWeaponSlot(slot) && !WIDE.has(k) && slot !== mode) continue;
+    for (const x of it.bonuses) if (x.k === k) t += x.v;
+  }
+  return t;
+}
+export const hasTrait = (c, t, slot = null) => (slot ? [slot] : D.SLOT_ORDER).some((sl) => { const it = gearIn(c, sl); return it && it.trait === t; });
+export const hasUnique = (c, u) => D.SLOT_ORDER.some((sl) => { const b = baseOf(gearIn(c, sl)); return b && b.unique === u; });
+const gearFlag = (c, f) => D.SLOT_ORDER.some((sl) => { const b = baseOf(gearIn(c, sl)); return b && b[f]; });
+export const canEquip = (c, it) => !!it && meetsReq(c, baseOf(it).req);
+
+// Pick a random item. tierMin/tierMax bound the base tier (higher tiers weighted up), odds is { rarity: weight }.
+const SLOT_WEIGHT = { ranged: 2, melee: 1.5, head: 1, chest: 1.5, legs: 1, gadget: 0.7 };
+export function rollGear(rng, { slot = null, tierMin = 1, tierMax = 5, odds }) {
+  const sl = slot || pickWeighted(rng, Object.entries(SLOT_WEIGHT));
+  let bases = Object.keys(D.GEAR).filter((id) => { const b = D.GEAR[id]; return b.slot === sl && !b.unique && b.tier >= 1 && b.tier >= tierMin && b.tier <= tierMax; });
+  if (!bases.length) bases = Object.keys(D.GEAR).filter((id) => D.GEAR[id].slot === sl && !D.GEAR[id].unique && D.GEAR[id].tier >= 1);
+  const id = pickWeighted(rng, bases.map((x) => [x, D.GEAR[x].tier]));
+  return makeItem(id, pickWeighted(rng, Object.entries(odds)), rng);
+}
+// Black Market rarity odds improve with the cell's deepest sector.
+export function shopOdds(meta) {
+  const b = meta.bestSector || 0;
+  const legendary = Math.min(TUNE.shopLegendary, 0.004 * b), elite = Math.min(0.16, 0.03 + 0.008 * b), rare = Math.min(0.32, 0.2 + 0.008 * b);
+  return { common: 1 - legendary - elite - rare, rare, elite, legendary };
+}
+export const shopBand = (meta) => clamp(1 + Math.floor((meta.bestSector || 0) / 3), 1, 5);
+export function restockMarket(s, rng) {
+  const c = s.char, odds = shopOdds(s.meta), band = shopBand(s.meta);
+  const slots = ['ranged', 'melee', 'head', 'chest', 'legs', pick(rng, ['ranged', 'chest', 'gadget', 'gadget'])];
+  c.market = slots.map((slot) => rollGear(rng, { slot, tierMin: 1, tierMax: band, odds }));
+}
+// Gear dropped by an elite or boss in this sector.
+function rollLoot(s, rng, e) {
+  const c = s.char, r = s.run, band = clamp(Math.ceil(r.sector / 3), 1, 5);
+  if (e.boss) {
+    const u = D.BOSS_UNIQUE[e.id];
+    if (u && !hasUnique(c, D.GEAR[u].unique)) return makeItem(u);
+    return rollGear(rng, { tierMin: band - 1, tierMax: band, odds: { elite: 0.6, legendary: 0.4 } });
+  }
+  if (e.elite && rng() < TUNE.eliteGear) return rollGear(rng, { tierMin: band - 1, tierMax: band, odds: { rare: 0.55, elite: 0.35, legendary: 0.1 } });
+  return null;
+}
+
+function equip(s, it, verb) {
+  const c = s.char, slot = baseOf(it).slot, old = gearIn(c, slot), hpBefore = stats(s).maxHp;
+  c.gear[slot] = it;
+  const after = stats(s).maxHp;
+  c.hp = after > hpBefore ? c.hp + (after - hpBefore) : Math.min(c.hp, after);
+  c.hp = Math.max(1, c.hp);
+  return old;
+}
+// Buy from the Black Market. The piece it replaces is traded in for its sale value.
+export const tradeIn = (c, it) => sellValue(gearIn(c, baseOf(it).slot));
+export const netPrice = (s, it) => Math.max(0, price(s, itemPrice(it)) - tradeIn(s.char, it));
+export function buyGear(s, idx) {
+  const c = s.char, it = c.market && c.market[idx];
+  if (!it || !canEquip(c, it) || c.credits < netPrice(s, it)) return false;
+  const cost = netPrice(s, it), back = tradeIn(c, it);
+  c.credits -= cost; ledger(s, 'spend:gear', cost);
+  c.market.splice(idx, 1);
+  const old = equip(s, it);
+  s.notice = `Bought ${itemName(it)}.${back ? ` Marrow took your ${itemName(old)} for ${back} ${D.SETTING.cur}.` : ''}`;
+  return true;
+}
+export function upgradeItem(s, slot) {
+  const c = s.char, it = gearIn(c, slot);
+  if (!canUpgrade(it)) return false;
+  const cost = price(s, upgradeCost(it));
+  if (c.credits < cost) return false;
+  const hpBefore = stats(s).maxHp;
+  c.credits -= cost; it.level += 1; it.spent = (it.spent || 0) + cost; ledger(s, 'spend:upgrades', cost);
+  c.hp = Math.min(c.hp, stats(s).maxHp, Math.max(c.hp, hpBefore));
+  s.notice = `${itemName(it)}: ${mainStat(it).key.toUpperCase()} now ${mainStat(it).v}.`;
+  return true;
+}
+export function rerollBonus(s, slot, idx, rng) {
+  const c = s.char, it = gearIn(c, slot), x = it && it.bonuses[idx];
+  if (!x || x.fixed) return false;
+  const cost = price(s, rerollCost(it));
+  if (c.credits < cost) return false;
+  const b = baseOf(it), pool = bonusPool(b, it);
+  if (!pool.length) return false;
+  c.credits -= cost; it.spent = (it.spent || 0) + cost; ledger(s, 'spend:rerolls', cost);
+  const before = bonusText(x);
+  it.bonuses[idx] = rollBonus(pick(rng, pool), b, rng);
+  s.notice = `${before} became ${bonusText(it.bonuses[idx])}.`;
+  return true;
+}
+// Loot drop after a fight: take it (the old piece is sold) or sell it.
+export function takeLoot(s, rng) {
+  const r = s.run, c = s.char, it = r && r.lootOffer;
+  if (!it || !canEquip(c, it)) return false;
+  const old = equip(s, it), back = sellValue(old);
+  c.credits += back; ledger(s, 'loot', back);
+  r.lootOffer = null;
+  log(s, `You take the ${itemName(it)}.${back ? ` The old ${itemName(old)} goes in the sack: +${back} ${D.SETTING.cur}.` : ''}`, 'reward');
+  afterLoot(s, rng);
+  return true;
+}
+export function sellLoot(s, rng) {
+  const r = s.run, c = s.char, it = r && r.lootOffer;
+  if (!it) return false;
+  const v = sellValue(it);
+  c.credits += v; r.sectorCredits += v; ledger(s, 'loot', v);
+  r.lootOffer = null;
+  log(s, `You bag the ${itemName(it)} for the fence: +${v} ${D.SETTING.cur}.`, 'reward');
+  afterLoot(s, rng);
+  return true;
+}
+function afterLoot(s, rng) { if (s.run.perkOffer) s.screen = 'perk'; else offerRoute(s, rng); }
+
+// Heirloom (cell upgrade): on death, pick one piece to leave for the next operative.
+export function setHeirloom(s, slot) {
+  const c = s.char, it = gearIn(c, slot);
+  if (!hasCell(s.meta, 'heirloom') || s.screen !== 'death' || !it || baseOf(it).tier === 0) return false;
+  s.meta.heirloom = JSON.parse(JSON.stringify(it));
+  s.notice = `${itemName(it)} goes in the safehouse locker.`;
+  return true;
+}
+export function equipHeirloom(s) {
+  const c = s.char, it = s.meta.heirloom;
+  if (!c || !it || !canEquip(c, it)) return false;
+  const old = equip(s, it);
+  s.meta.heirloom = old && baseOf(old).tier > 0 ? old : null;
+  s.notice = `${itemName(it)} is yours now.`;
+  return true;
 }
 
 // ---------- derived stats ----------
@@ -141,19 +357,35 @@ export function attr(c, k) {
 }
 
 export function statsOf(meta, c) {
-  const t = meta.training, B = D.BASE_STATS, w = weaponOf(c), a = armorOf(c);
+  const t = meta.training, B = D.BASE_STATS, w = weaponOf(c), mw = meleeOf(c);
   const str = attr(c, 'str'), agi = attr(c, 'agi');
-  const strWeapon = w.type === 'melee' || w.type === 'heavy';
+  let def = 0, spd = 0, carry = 0, critAll = 0;
+  for (const slot of D.SLOT_ORDER) {
+    const it = gearIn(c, slot);
+    if (!it) continue;
+    const b = baseOf(it), ms = mainStat(it);
+    if (ms && ms.key === 'def') def += ms.v;
+    spd += b.spd || 0; carry += b.carry || 0;
+    if (!isWeaponSlot(slot)) critAll += b.crit || 0;
+  }
+  const common = B.atk + t.atk * D.TRAINING.atk.per + (c.level - 1) + (has(c, 'drill') ? 2 : 0);
+  const rMain = (mainStat(gearIn(c, 'ranged')) || { v: 0 }).v, mMain = (mainStat(gearIn(c, 'melee')) || { v: 0 }).v;
+  const optic = hasImp(c, 'optic') ? 0.08 : 0, gadget = baseOf(gearIn(c, 'gadget')) || {};
+  const hp = B.hp + t.hp * D.TRAINING.hp.per + (c.level - 1) * 5 + Math.round(str * TUNE.strHp) + (c.background === 'foundry' ? 10 : 0) + (hasImp(c, 'pain') ? 20 : 0) + gearBonus(c, 'hp');
   return {
-    maxHp: B.hp + t.hp * D.TRAINING.hp.per + (c.level - 1) * 5 + Math.round(str * TUNE.strHp) + (c.background === 'foundry' ? 10 : 0) + (hasImp(c, 'pain') ? 20 : 0),
-    atk: B.atk + t.atk * D.TRAINING.atk.per + (c.level - 1) + w.atk + (strWeapon ? Math.floor(str * TUNE.strAtk) : 0) + (has(c, 'drill') ? 2 : 0),
-    def: B.def + t.def * D.TRAINING.def.per + Math.floor((c.level - 1) / 2) + a.def + (hasImp(c, 'dermal') ? 3 : 0),
-    spd: B.spd + t.spd * D.TRAINING.spd.per + Math.floor((c.level - 1) / 3) + agi + (hasImp(c, 'reflex') ? 2 : 0) + (a.spd || 0) + (w.spd || 0),
+    maxHp: Math.round(hp * (hasTrait(c, 'stalwart') ? 1.12 : 1)),
+    atk: common + rMain + (w.type === 'heavy' ? Math.floor(str * TUNE.strAtk) : 0),
+    atkM: common + mMain + Math.floor(str * TUNE.strAtk),
+    def: B.def + t.def * D.TRAINING.def.per + Math.floor((c.level - 1) / 2) + def + gearBonus(c, 'def') + (hasImp(c, 'dermal') ? 3 : 0),
+    spd: B.spd + t.spd * D.TRAINING.spd.per + Math.floor((c.level - 1) / 3) + agi + (hasImp(c, 'reflex') ? 2 : 0) + spd + gearBonus(c, 'spd'),
     dodge: (agi - 1) * TUNE.agiDodge,
-    crit: 0.05 + (w.crit || 0) + (hasImp(c, 'optic') ? 0.08 : 0) + (agi - 1) * TUNE.agiCrit,
-    carry: 4 + (has(c, 'belt') ? 3 : 0),
+    crit: 0.05 + (w.crit || 0) + critAll + optic + (agi - 1) * TUNE.agiCrit + gearBonus(c, 'crit', 'ranged') / 100,
+    critM: 0.05 + (mw.crit || 0) + critAll + optic + gearBonus(c, 'crit', 'melee') / 100,
+    carry: 4 + (has(c, 'belt') ? 3 : 0) + carry,
     slots: 2 + (attr(c, 'int') >= 4 ? 1 : 0) + (attr(c, 'int') >= 8 ? 1 : 0),
-    tech: 1 + 0.1 * attr(c, 'int'),
+    tech: (1 + 0.1 * attr(c, 'int')) * (hasTrait(c, 'overcharge') ? 1.2 : 1),
+    stimBoost: gadget.stimBoost || 0,
+    scan: !!gadget.scan,
   };
 }
 export const stats = (s) => statsOf(s.meta, s.char);
@@ -163,10 +395,10 @@ export const reqText = (req) => req ? Object.entries(req).map(([k, v]) => `${D.A
 
 export function skillsOf(c) {
   const out = [];
-  const w = weaponOf(c), ws = D.WEAPON_SKILL[w.type];
+  const w = weaponOf(c), ws = D.WEAPON_SKILL[w.type], mw = meleeOf(c), gad = baseOf(gearIn(c, 'gadget'));
   if (ws) out.push(ws);
-  if (attr(c, 'str') >= 6 && !out.includes('smash')) out.push('smash');
-  if (attr(c, 'int') >= 4 && !out.includes('overload')) out.push('overload');
+  if ((!mw.noSkill || attr(c, 'str') >= 6) && !out.includes('smash')) out.push('smash');
+  if ((attr(c, 'int') >= 4 || (gad && gad.overload)) && !out.includes('overload')) out.push('overload');
   if (attr(c, 'agi') >= 4) out.push('suppress');
   if (attr(c, 'cha') >= 4) out.push('intimidate');
   return out;
@@ -218,26 +450,15 @@ export function healCost(s) {
 export function heal(s) {
   const cost = healCost(s);
   if (cost <= 0 || s.char.credits < cost) return false;
-  s.char.credits -= cost; s.char.hp = stats(s).maxHp;
+  s.char.credits -= cost; s.char.hp = stats(s).maxHp; ledger(s, 'spend:clinic', cost);
   s.notice = `Doc patched you up for ${cost} ${D.SETTING.cur}.`;
-  return true;
-}
-
-export function buyGear(s, kind, id) {
-  const list = kind === 'weapon' ? D.WEAPONS : D.ARMOR;
-  const item = list.find((x) => x.id === id), c = s.char;
-  if (!item || c[kind] === id || c.credits < price(s, item.cost) || !meetsReq(c, item.req)) return false;
-  const hpBefore = stats(s).maxHp;
-  c.credits -= price(s, item.cost); c[kind] = id;
-  c.hp = Math.min(c.hp, stats(s).maxHp, hpBefore);
-  s.notice = `Bought ${item.name}.`;
   return true;
 }
 
 export function buyItem(s, id) {
   const item = D.ITEMS[id], c = s.char;
   if (!item || c.credits < price(s, item.cost) || c.items[id] >= stats(s).carry) return false;
-  c.credits -= price(s, item.cost); c.items[id] += 1;
+  c.credits -= price(s, item.cost); c.items[id] += 1; ledger(s, 'spend:items', price(s, item.cost));
   s.notice = `Bought ${item.name}.`;
   return true;
 }
@@ -245,7 +466,7 @@ export function buyItem(s, id) {
 export function buyUpgrade(s, id) {
   const u = D.UPGRADES.find((x) => x.id === id), c = s.char;
   if (!u || has(c, id) || c.credits < price(s, u.cost)) return false;
-  c.credits -= price(s, u.cost); c.upgrades.push(id);
+  c.credits -= price(s, u.cost); c.upgrades.push(id); ledger(s, 'spend:contacts', price(s, u.cost));
   s.notice = `${u.name} acquired.`;
   return true;
 }
@@ -254,7 +475,7 @@ export function installImplant(s, id) {
   const u = D.IMPLANTS.find((x) => x.id === id), c = s.char;
   if (!u || hasImp(c, id) || c.credits < price(s, u.cost) || c.implants.length >= stats(s).slots) return false;
   const before = stats(s).maxHp;
-  c.credits -= price(s, u.cost); c.implants.push(id);
+  c.credits -= price(s, u.cost); c.implants.push(id); ledger(s, 'spend:implants', price(s, u.cost));
   c.hp += Math.max(0, stats(s).maxHp - before);
   s.notice = `${u.name} installed. Doc says the twitching stops in a week.`;
   return true;
@@ -291,7 +512,7 @@ export function creditMult(s) {
   const c = s.char, t = s.run ? s.run.threat : s.meta.threat || 0;
   const b = s.run ? s.run.bulletin : null;
   const cha = 1 + TUNE.chaCredits * (attr(c, 'cha') - 1), wanted = 1 + TUNE.wanted * (s.run ? s.run.wanted || 0 : 0);
-  return cha * wanted * (has(c, 'fence') ? 1.25 : 1) * (hasPerk(c, 'chit') ? 1.2 : 1) * (1 + 0.15 * t) * (b === 'payday' ? 1.3 : b === 'lockdown' ? 1.25 : 1);
+  return cha * wanted * (has(c, 'fence') ? 1.25 : 1) * (hasPerk(c, 'chit') ? 1.2 : 1) * (1 + gearBonus(c, 'credits') / 100) * (1 + 0.15 * t) * (b === 'payday' ? 1.3 : b === 'lockdown' ? 1.25 : 1);
 }
 
 // ---------- status effects ----------
@@ -325,6 +546,7 @@ export function deploy(s, mapId, startSector, rng) {
   s.run = { wanted: s.char.wanted, startCredits: s.char.credits, map: map.id, sector: startSector, room: 0, choices: null, enemy: null, defending: false, ready: false, nextMod: null, sectorCredits: 0, cooldowns: {}, adrenalUsed: false,
     alert: 0, allies: 0, vent: 3, turns: 0, threat: s.meta.threat || 0, pst: {}, pfresh: [], deadmanUsed: false, perkOffer: null };
   s.meta.stats.raids += 1;
+  if (hasTrait(s.char, 'surplus') && s.char.items.stim < stats(s).carry) s.char.items.stim += 1;
   s.run.bulletin = pickWeighted(rng, D.BULLETINS.map((b) => [b.id, b.weight]));
   refreshContracts(s, rng);
   s.log = [];
@@ -395,7 +617,7 @@ export function enterRoom(s, idx, rng) {
   if (kind === 'supply' || kind === 'cargo') {
     const range = kind === 'cargo' ? [20, 30] : [8, 15];
     const cr = Math.round(randInt(rng, range[0], range[1]) * r.sector * map.credits * creditMult(s));
-    c.credits += cr; r.sectorCredits += cr; notes.push(`+${cr} ${D.SETTING.cur}`);
+    c.credits += cr; r.sectorCredits += cr; ledger(s, 'rooms', cr); notes.push(`+${cr} ${D.SETTING.cur}`);
     if (kind === 'supply' && rng() < 0.5) {
       const it = pick(rng, ['stim', 'thermal', 'ion']);
       if (c.items[it] < st.carry) { c.items[it] += 1; notes.push(`+1 ${D.ITEMS[it].name}`); }
@@ -516,14 +738,21 @@ export function makeEnemy(sector, boss, rng, mapId = 'garrison', threat = 0) {
   return e;
 }
 
-function chooseIntent(e, rng) {
+function rollIntent(e, rng, last) {
   const entries = Object.entries(e.intents).filter(([k, w]) => w > 0 &&
-    !(k === 'heavy' && e.lastIntent === 'heavy') &&
-    !(k === 'special' && e.lastIntent === 'special') &&
-    !(k === 'guard' && e.lastIntent === 'guard') &&
+    !(k === 'heavy' && last === 'heavy') &&
+    !(k === 'special' && last === 'special') &&
+    !(k === 'guard' && last === 'guard') &&
     !(k === 'repair' && e.hp > e.maxHp * 0.6));
-  const i = entries.length ? pickWeighted(rng, entries) : 'attack';
+  return entries.length ? pickWeighted(rng, entries) : 'attack';
+}
+// The enemy's next move is rolled one turn ahead, so a scanner can show it.
+function chooseIntent(e, rng) {
+  let i = e.next || rollIntent(e, rng, e.lastIntent);
+  if (!e.intents[i] && i !== 'attack') i = rollIntent(e, rng, e.lastIntent);
+  if (i === 'repair' && e.hp > e.maxHp * 0.6) i = 'attack';
   e.lastIntent = i;
+  e.next = rollIntent(e, rng, i);
   return i;
 }
 
@@ -534,37 +763,75 @@ export function runChance(s) {
   return e.boss ? ch * 0.5 : ch;
 }
 export function dodgeChance(st, e) { return clamp(0.05 + (st.spd - e.spd) * 0.03 + (st.dodge || 0), 0, 0.45); }
-export function critChance(st, e) { return clamp(st.crit + (st.spd - e.spd) * 0.01, 0.02, 0.5); }
+export function critChance(st, e, melee = false) { return clamp((melee ? st.critM : st.crit) + (st.spd - e.spd) * 0.01, 0.02, 0.5); }
 export function intimidateChance(s) {
   const e = s.run.enemy;
-  if (!e.tags.includes('human')) return 0;
+  const key = hasUnique(s.char, 'kell');
+  if (!e.tags.includes('human') && !(key && e.tags.includes('beast'))) return 0;
   const bribe = e.quirk && quirkById(e.quirk).bribable ? 0.35 : 0;
-  return clamp(0.15 + 0.07 * attr(s.char, 'cha') - (e.boss ? 0.35 : 0) + (1 - e.hp / e.maxHp) * 0.3 + bribe, 0, 0.95);
+  return clamp(0.15 + 0.07 * attr(s.char, 'cha') - (e.boss && !key ? 0.35 : 0) + (1 - e.hp / e.maxHp) * 0.3 + bribe, 0, 0.95);
 }
 
 export function canUse(s, act) {
-  if (['attack', 'defend', 'run'].includes(act)) return true;
+  if (['attack', 'shoot', 'strike', 'defend', 'run'].includes(act)) return true;
   if (D.SKILLS[act]) return skillsOf(s.char).includes(act) && !(s.run.cooldowns[act] > 0);
   return (s.char.items[act] || 0) > 0;
 }
 
-// One weapon hit on the current enemy. Returns damage dealt.
-function strike(s, rng, { mult = 1, critBonus = 0, pierce = 0, unarmoredBonus = 1, flat = 0 } = {}) {
-  const r = s.run, e = r.enemy, c = s.char, st = stats(s), w = weaponOf(c);
+// One weapon hit on the current enemy. melee: uses the melee weapon (ignores cover, no AGI crit). Returns damage dealt.
+function strike(s, rng, { mult = 1, critBonus = 0, pierce = 0, unarmoredBonus = 1, flat = 0, melee = false, forceCrit = false } = {}) {
+  const r = s.run, e = r.enemy, c = s.char, st = stats(s), mode = melee ? 'melee' : 'ranged', w = melee ? meleeOf(c) : weaponOf(c);
+  const droid = e.tags.includes('droid'), human = e.tags.includes('human');
   if (r.ready) mult *= hasPerk(c, 'steady') ? 2 : 1.5;
-  const crit = rng() < critChance(st, e) + critBonus;
+  const first = !r.struck;
+  const crit = forceCrit || (first && hasUnique(c, 'ostrane')) || rng() < critChance(st, e, melee) + critBonus;
   if (crit) mult *= hasPerk(c, 'hollow') ? 2.2 : 1.6;
-  if (w.type === 'tech') { pierce = Math.max(pierce, 0.5); if (e.tags.includes('droid')) mult *= 1.5; }
+  if (w.type === 'tech') { pierce = Math.max(pierce, 0.5); if (droid) mult *= 1.5; }
+  if (w.droid && droid) mult *= 1 + w.droid;
+  if (droid) mult *= 1 + gearBonus(c, 'droid', mode) / 100;
+  if (human) mult *= 1 + gearBonus(c, 'human', mode) / 100;
+  if (hasTrait(c, 'executioner', mode) && e.hp < e.maxHp * 0.3) mult *= 1.4;
+  if (hasUnique(c, 'crucible') && e.st.burn) mult *= 1.25;
   if (!e.tags.includes('armored')) mult *= unarmoredBonus;
-  if (hasPerk(c, 'ambush') && !r.struck) mult *= 2;
+  if (hasPerk(c, 'ambush') && first) mult *= 2;
   if (hasPerk(c, 'grudge') && (e.elite || e.boss)) mult *= 1.3;
   mult *= outMult(r.pst, e.st);
   r.struck = true;
-  let dmg = mitigate(st.atk * (0.85 + rng() * 0.3) * mult + flat, e.def * (1 - pierce));
-  if (e.intent === 'guard' && e.stun === 0) dmg = Math.max(1, Math.round(dmg / 2));
+  let dmg = mitigate((melee ? st.atkM : st.atk) * (0.85 + rng() * 0.3) * mult + flat, e.def * (1 - pierce));
+  if (!melee && e.intent === 'guard' && e.stun === 0) dmg = Math.max(1, Math.round(dmg / 2));
   e.hp -= dmg;
-  if (hasPerk(c, 'serrated') && e.hp > 0 && rng() < 0.3) addStatus(e.st, e.fresh, { bleed: 2 });
+  if (e.hp > 0) {
+    const bleed = 1 - (1 - (hasPerk(c, 'serrated') ? 0.3 : 0)) * (1 - gearBonus(c, 'bleed', mode) / 100);
+    if (bleed > 0 && rng() < bleed) addStatus(e.st, e.fresh, { bleed: 2 });
+    if (melee && hasUnique(c, 'crucible')) addStatus(e.st, e.fresh, { burn: 2 });
+    if (hasTrait(c, 'stunner', mode) && rng() < 0.12) e.stun = Math.max(e.stun, 1);
+  }
+  if (hasTrait(c, 'leech', mode)) c.hp = Math.min(st.maxHp, c.hp + Math.round(dmg * 0.08));
+  if (crit && !melee && hasUnique(c, 'halvek')) for (const k of Object.keys(r.cooldowns)) if (r.cooldowns[k] > 0 && r.cooldowns[k] < 50) r.cooldowns[k] -= 1;
   return { dmg, crit };
+}
+
+// Status effects on the player: Thick Skin, gear resistance, Officer's Cap and Crawler Treads can stop them.
+function addPlayerStatus(s, statuses, rng) {
+  const c = s.char, r = s.run, res = Math.min(75, gearBonus(c, 'resist')) / 100, out = {};
+  for (const [k, n] of Object.entries(statuses || {})) {
+    if (k === 'shaken' && gearFlag(c, 'noShaken')) continue;
+    if (k === 'burn' && hasUnique(c, 'crawler')) continue;
+    if (res && rng() < res) continue;
+    out[k] = n;
+  }
+  return addStatus(r.pst, r.pfresh, out, hasPerk(c, 'thick') ? 1 : 0);
+}
+
+// Some enemies punish melee: after a Strike or Power Strike.
+function meleeCounter(s, rng) {
+  const r = s.run, e = r.enemy, c = s.char, mc = D.MELEE_COUNTER[e.id];
+  if (!mc || e.hp <= 0 || e.stun > 0) return;
+  let dmg = 0;
+  if (mc.mult) { dmg = mitigate(e.atk * mc.mult, stats(s).def); c.hp -= dmg; }
+  const added = mc.status ? addPlayerStatus(s, mc.status, rng) : [];
+  fx(s, { who: 'enemy', type: 'counter', dmg, text: mc.name, statuses: added });
+  log(s, `${mc.name}: ${dmg ? `you take ${dmg}` : 'it bites back'}${added.length ? ` and you are ${added.map((k) => D.STATUSES[k].name).join(' and ')}` : ''}.`, 'bad');
 }
 
 export function playerAct(s, act, rng) {
@@ -574,18 +841,31 @@ export function playerAct(s, act, rng) {
   r.defending = false;
   const guarded = e.intent === 'guard' && e.stun === 0;
   const skill = D.SKILLS[act];
-  if (skill) { r.cooldowns[act] = skillCd(c, act) + 1; (r.usedThisFight = r.usedThisFight || []).includes(act) || r.usedThisFight.push(act); }
+  if (skill) {
+    r.cooldowns[act] = skillCd(c, act) + 1;
+    if (act !== 'intimidate' && rng() < Math.min(60, gearBonus(c, 'cooldown')) / 100) r.cooldowns[act] -= 1;
+    (r.usedThisFight = r.usedThisFight || []).includes(act) || r.usedThisFight.push(act);
+  }
+  if (act === 'attack') act = 'shoot';
 
   switch (act) {
-    case 'attack': {
+    case 'shoot': {
       const { dmg, crit } = strike(s, rng);
       r.ready = false;
       fx(s, { who: 'player', type: 'shoot', dmg, crit, guarded, ready: wasReady });
       log(s, `${wasReady ? 'Steadied shot. ' : ''}${crit ? 'Critical! ' : ''}You hit ${e.name} for ${dmg}${guarded ? ' through cover' : ''}.`, crit ? 'crit' : 'hit');
       break;
     }
+    case 'strike': {
+      const { dmg, crit } = strike(s, rng, { melee: true });
+      r.ready = false;
+      fx(s, { who: 'player', type: 'strike', dmg, crit, ready: wasReady });
+      log(s, `${wasReady ? 'Braced. ' : ''}${crit ? 'Critical! ' : ''}You strike ${e.name} with the ${meleeOf(c).name} for ${dmg}${guarded ? ', straight past their cover' : ''}.`, crit ? 'crit' : 'hit');
+      meleeCounter(s, rng);
+      break;
+    }
     case 'aimed': {
-      const { dmg, crit } = strike(s, rng, { mult: TUNE.aimed, critBonus: 0.25 });
+      const { dmg, crit } = strike(s, rng, { mult: TUNE.aimed, critBonus: 0.25, forceCrit: hasUnique(c, 'vane') });
       r.ready = false;
       fx(s, { who: 'player', type: 'shoot', skill: act, dmg, crit, guarded, ready: true });
       log(s, `Aimed shot${crit ? ', critical' : ''}: ${dmg} damage.`, crit ? 'crit' : 'hit');
@@ -606,15 +886,18 @@ export function playerAct(s, act, rng) {
       break;
     }
     case 'smash': {
-      const { dmg, crit } = strike(s, rng, { mult: 1.6, pierce: 0.5, flat: attr(c, 'str') * TUNE.smashStr });
+      const { dmg, crit } = strike(s, rng, { mult: 1.6, pierce: 0.5, flat: attr(c, 'str') * TUNE.smashStr, melee: true });
       r.ready = false;
-      fx(s, { who: 'player', type: 'smash', dmg, crit, guarded });
-      log(s, `Power strike${crit ? ', critical' : ''}: ${dmg} damage.`, crit ? 'crit' : 'hit');
+      const stun = hasUnique(c, 'brask') && e.hp > 0;
+      if (stun) e.stun = Math.max(e.stun, 1);
+      fx(s, { who: 'player', type: 'smash', dmg, crit });
+      log(s, `Power strike${crit ? ', critical' : ''}: ${dmg} damage${stun ? ', and they\u2019re seeing stars' : ''}.`, crit ? 'crit' : 'hit');
+      meleeCounter(s, rng);
       break;
     }
     case 'overload': {
       const droid = e.tags.includes('droid');
-      const dmg = Math.round((6 + attr(c, 'int') * TUNE.intOverload + r.sector * 2) * (droid ? 2 : 1) * (hasPerk(c, 'capacitor') ? 1.3 : 1) * outMult(r.pst, e.st));
+      const dmg = Math.round((6 + attr(c, 'int') * TUNE.intOverload + r.sector * 2) * (droid ? 2 : 1) * (hasPerk(c, 'capacitor') ? 1.3 : 1) * (1 + ((baseOf(gearIn(c, 'gadget')) || {}).overload || 0)) * outMult(r.pst, e.st));
       e.hp -= dmg;
       if (droid) e.stun = Math.max(e.stun, 1);
       fx(s, { who: 'player', type: 'overload', dmg, droid });
@@ -646,7 +929,7 @@ export function playerAct(s, act, rng) {
       break;
     case 'stim': {
       c.items.stim -= 1;
-      const amt = Math.min(st.maxHp - c.hp, Math.round(st.maxHp * 0.4 * st.tech));
+      const amt = Math.min(st.maxHp - c.hp, Math.round(st.maxHp * 0.4 * st.tech * (1 + st.stimBoost)));
       c.hp += amt;
       delete r.pst.bleed; delete r.pst.burn;
       fx(s, { who: 'player', type: 'stim', amt });
@@ -676,17 +959,18 @@ export function playerAct(s, act, rng) {
       c.items.smoke -= 1;
       fx(s, { who: 'player', type: 'smoke' });
       log(s, 'Smoke fills the corridor. You\u2019re gone before it clears.', 'sys');
-      return endRun(s, 'escaped');
+      return endRun(s, 'escaped', rng);
     case 'run': {
       const ok = rng() < runChance(s);
       fx(s, { who: 'player', type: 'run', ok });
-      if (ok) { log(s, 'You break line of sight and run for the exit.', 'sys'); return endRun(s, 'escaped'); }
+      if (ok) { log(s, 'You break line of sight and run for the exit.', 'sys'); return endRun(s, 'escaped', rng); }
       log(s, 'You try to break away, but they cut you off.', 'bad');
       raiseAlarm(s, 1, 'Your escape attempt was spotted.');
       break;
     }
   }
   tick(r);
+  if (c.hp <= 0 && !lethalSave(s)) return die(s, e);
   if (e.hp <= 0) return winFight(s, rng);
   if (e.quirk && quirkById(e.quirk).flee && e.hp < e.maxHp * 0.4) {
     fx(s, { who: 'enemy', type: 'quirk', text: 'Nope!' });
@@ -778,7 +1062,7 @@ function envTurn(s, rng) {
     r.vent -= 1;
     if (r.vent <= 0) {
       r.vent = 3;
-      const pdmg = r.defending ? 0 : Math.round(st.maxHp * 0.1);
+      const pdmg = r.defending ? 0 : Math.round(st.maxHp * 0.1 * (hasUnique(c, 'crawler') ? 0.5 : 1));
       const edmg = Math.round(e.maxHp * (e.tags.includes('droid') ? 0.06 : 0.12));
       c.hp -= pdmg; e.hp -= edmg;
       fx(s, { who: 'env', type: 'vent', pdmg, edmg, blocked: r.defending });
@@ -788,7 +1072,7 @@ function envTurn(s, rng) {
       checkPhase(s);
     }
   } else if (mech === 'snipers' && rng() < 0.2) {
-    const dmg = r.defending ? 0 : Math.round(st.maxHp * 0.08);
+    const dmg = r.defending ? 0 : Math.round(st.maxHp * 0.08 * (hasUnique(c, 'crawler') ? 0.5 : 1));
     c.hp -= dmg;
     fx(s, { who: 'env', type: 'sniper', dmg, blocked: r.defending });
     log(s, dmg ? `A tower sniper clips you for ${dmg}.` : 'A sniper round sparks off your cover.', dmg ? 'bad' : 'info');
@@ -802,6 +1086,7 @@ function envTurn(s, rng) {
 function enemyTurn(s, rng) {
   const r = s.run, e = r.enemy, c = s.char, st = stats(s);
   const vamp = (dmg) => { if (e.affix === 'vampiric' && dmg > 0) { e.hp = Math.min(e.maxHp, e.hp + Math.round(dmg / 2)); } };
+  const reflect = (dmg) => { if (dmg > 0 && hasTrait(c, 'reactive')) e.hp -= Math.max(1, Math.round(dmg * 0.2)); };
   const q = e.quirk ? quirkById(e.quirk) : null;
   if (q && q.skip && e.stun === 0 && rng() < q.skip) {
     const lines = ['freezes mid-step and reboots', 'plays a recorded safety announcement', 'spins in a slow circle', 'displays a loading bar'];
@@ -836,9 +1121,9 @@ function enemyTurn(s, rng) {
     } else {
       const luck = q && q.gamble ? (rng() < 0.5 ? 0.5 : 1.8) : 1;
       let dmg = mitigate(e.atk * (0.85 + rng() * 0.3) * (heavy ? 2.2 : 1) * luck * outMult(e.st, r.pst), st.def);
-      if (r.defending) dmg = Math.max(1, Math.round(dmg * (heavy ? 0.25 : 0.5)));
-      c.hp -= dmg; vamp(dmg);
-      if (q && q.bleedOnHit && !r.defending) addStatus(r.pst, r.pfresh, { bleed: 2 }, hasPerk(c, 'thick') ? 1 : 0);
+      if (r.defending) dmg = Math.max(1, Math.round(dmg * (heavy ? 0.25 : 0.5) * (hasTrait(c, 'bulwark') ? 0.7 : 1)));
+      c.hp -= dmg; vamp(dmg); reflect(dmg);
+      if (q && q.bleedOnHit && !r.defending) addPlayerStatus(s, { bleed: 2 }, rng);
       if (luck !== 1) log(s, luck > 1 ? 'The gamble pays off for them.' : 'Their gamble doesn\u2019t pay off.', 'info');
       fx(s, { who: 'enemy', type: e.intent, dmg, blocked: r.defending });
       log(s, `${e.name} ${heavy ? 'lands a heavy strike' : 'hits you'} for ${dmg}${r.defending ? ' (blocked)' : ''}.`, heavy ? 'bad' : 'hurt');
@@ -846,9 +1131,9 @@ function enemyTurn(s, rng) {
   } else if (e.intent === 'special') {
     const sp = D.SPECIALS[e.id];
     let dmg = sp.mult > 0 ? mitigate(e.atk * (0.85 + rng() * 0.3) * sp.mult * outMult(e.st, r.pst), st.def) : 0;
-    if (r.defending) dmg = Math.max(dmg ? 1 : 0, Math.round(dmg * 0.5));
-    c.hp -= dmg; vamp(dmg);
-    const added = r.defending ? [] : addStatus(r.pst, r.pfresh, sp.status, hasPerk(c, 'thick') ? 1 : 0);
+    if (r.defending) dmg = Math.max(dmg ? 1 : 0, Math.round(dmg * 0.5 * (hasTrait(c, 'bulwark') ? 0.7 : 1)));
+    c.hp -= dmg; vamp(dmg); reflect(dmg);
+    const added = r.defending ? [] : addPlayerStatus(s, sp.status, rng);
     fx(s, { who: 'enemy', type: 'special', name: sp.name, dmg, blocked: r.defending, statuses: added });
     log(s, `${e.name}: ${sp.name}${dmg ? ` for ${dmg}` : ''}${r.defending ? ', mostly blocked' : ''}.${added.length ? ` You are ${added.map((k) => D.STATUSES[k].name).join(' and ')}.` : ''}`, 'bad');
   } else if (e.intent === 'guard') {
@@ -868,6 +1153,7 @@ function enemyTurn(s, rng) {
     log(s, `Adrenal pump kicks in. +${amt} HP.`, 'good');
   }
   if (c.hp <= 0 && !lethalSave(s)) return die(s, e);
+  if (e.hp <= 0) return winFight(s, rng);
   e.intent = chooseIntent(e, rng);
 }
 
@@ -886,7 +1172,7 @@ function winFight(s, rng, fled = false) {
   const r = s.run, e = r.enemy, c = s.char, m = s.meta;
   const credits = Math.round(randInt(rng, e.cr[0], e.cr[1]) * creditMult(s) * (fled ? 0.5 : 1));
   const xp = fled ? Math.round(e.xp * 0.75) : e.xp;
-  c.credits += credits; r.sectorCredits += credits;
+  c.credits += credits; r.sectorCredits += credits; ledger(s, 'fights', credits);
   const out = { enemy: e.name, id: e.id, portrait: e.portrait, credits, xp, levelUps: [], healed: 0, boss: e.boss, elite: !!e.elite, resolve: 0, fled, items: [], notes: [] };
   log(s, `${e.name} ${fled ? 'flees, dropping a credit pouch' : 'goes down'}. +${credits} ${D.SETTING.cur}, +${xp} XP.`, 'reward');
   fx(s, { who: 'enemy', type: fled ? 'flee' : 'down', boss: e.boss });
@@ -908,6 +1194,8 @@ function winFight(s, rng, fled = false) {
     const it = pick(rng, ['stim', 'thermal', 'ion', 'smoke']);
     if (c.items[it] < stats(s).carry) { c.items[it] += 1; out.items.push(D.ITEMS[it].name); }
   }
+  const hk = gearBonus(c, 'healkill');
+  if (hk && !fled) { const st = stats(s), h = Math.min(st.maxHp - c.hp, Math.round(st.maxHp * hk / 100)); c.hp += h; out.healed += h; }
   if (hasPerk(c, 'quickdraw')) for (const k of Object.keys(r.cooldowns)) if (r.cooldowns[k] < 50) r.cooldowns[k] = Math.max(0, r.cooldowns[k] - 2);
   contractEvent(s, 'kill', { enemy: e });
   if (e.boss) {
@@ -924,6 +1212,8 @@ function winFight(s, rng, fled = false) {
     }
   }
   if (!fled && (e.boss || (e.elite && rng() < ELITE_DROP))) r.perkOffer = offerPerks(s, rng, e.boss);
+  r.lootOffer = fled ? null : rollLoot(s, rng, e);
+  if (r.lootOffer) out.loot = itemName(r.lootOffer);
   r.enemy = null;
   s.outcome = out;
   s.screen = 'victory';
@@ -959,6 +1249,7 @@ export function choosePerk(s, id, rng, dropId = null) {
 
 // ---------- events ----------
 export function continueAfterVictory(s, rng) {
+  if (s.run.lootOffer) { s.screen = 'loot'; return; }
   if (s.run.perkOffer) { s.screen = 'perk'; return; }
   offerRoute(s, rng);
 }
@@ -980,11 +1271,11 @@ export function resolveEvent(s, index, rng) {
   const ev = eventById(s.event), opt = ev && ev.options[index];
   if (!opt || s.eventResult || !optionAvailable(s, opt)) return;
   const c = s.char, r = s.run, st = stats(s);
-  if (opt.cost) { if (opt.cost.credits) c.credits -= opt.cost.credits; if (opt.cost.stim) c.items.stim -= opt.cost.stim; }
+  if (opt.cost) { if (opt.cost.credits) { c.credits -= opt.cost.credits; ledger(s, 'spend:events', opt.cost.credits); } if (opt.cost.stim) c.items.stim -= opt.cost.stim; }
   const success = !opt.check || rng() < checkChance(s, opt.check);
   const fxs = success ? opt.win : opt.lose;
   const notes = [];
-  if (fxs.credits) { const cr = Math.round(randInt(rng, fxs.credits[0], fxs.credits[1]) * r.sector * creditMult(s)); c.credits += cr; r.sectorCredits += cr; notes.push(`+${cr} ${D.SETTING.cur}`); }
+  if (fxs.credits) { const cr = Math.round(randInt(rng, fxs.credits[0], fxs.credits[1]) * r.sector * creditMult(s)); c.credits += cr; r.sectorCredits += cr; ledger(s, 'events', cr); notes.push(`+${cr} ${D.SETTING.cur}`); }
   if (fxs.hp) {
     const amt = Math.round(st.maxHp * Math.abs(fxs.hp));
     if (fxs.hp > 0) { const h = Math.min(st.maxHp - c.hp, amt); c.hp += h; notes.push(`+${h} HP`); }
@@ -1014,7 +1305,7 @@ function clearSector(s) {
   if (!fresh) c.repeatClears = (c.repeatClears || 0) + 1;
   const pays = fresh || c.repeatClears % 2 === 0;
   const res = pays ? 1 + (r.threat >= 3 && isBossSector(r.sector) ? 1 : 0) : 0;
-  c.credits += bonus;
+  c.credits += bonus; ledger(s, 'sector bonus', bonus);
   m.resolve += res; m.totalResolve += res;
   prog.deepest = Math.max(prog.deepest, r.sector);
   c.deepest = Math.max(c.deepest, r.sector);
@@ -1033,14 +1324,15 @@ export function pushDeeper(s, rng) {
   beginSector(s, rng);
 }
 
-export function endRun(s, how) {
+export function endRun(s, how, rngForRestock = Math.random) {
   const r = s.run, c = s.char;
   let lost = 0;
   if (how === 'escaped') {
     lost = Math.max(0, Math.round((c.credits - (r.startCredits || 0)) * TUNE.escapeLoss));
-    c.credits -= lost;
+    c.credits -= lost; ledger(s, 'escape loss', -lost);
   }
   c.wanted = (c.wanted || 0) + 1;
+  if (rngForRestock) restockMarket(s, rngForRestock);
   let home = '';
   if (how === 'extracted' && r.allies > 0) {
     s.meta.resolve += r.allies; s.meta.totalResolve += r.allies;
@@ -1097,7 +1389,7 @@ function contractEvent(s, kind, data) {
     if (k.progress >= k.n) {
       k.done = true; k.progress = k.n;
       m.resolve += k.resolve; m.totalResolve += k.resolve;
-      if (s.char) s.char.credits += k.credits;
+      if (s.char) { s.char.credits += k.credits; ledger(s, 'contracts', k.credits); }
       if (r) log(s, `Contract complete: ${k.text}. +${k.resolve} ${D.SETTING.meta}, +${k.credits} ${D.SETTING.cur}.`, 'reward');
       s.contractDone = k.text;
     }

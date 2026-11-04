@@ -33,6 +33,30 @@ function fist(g, mat = 'skin') { g.rect(6, 8, 12, 10, mat); for (let x = 9; x < 
 function coin(g, x = 12, y = 12, r = 8) { g.ellipse(x, y, r, r, 'gold'); g.ellipse(x, y, r - 3, r - 3, 'gold', 1); g.rect(x - 1, y - 3, 2, 6, 'gold', 0); }
 function medbag(g, mat = 'white', cross = 'red') { g.rect(3, 8, 18, 13, mat); g.rect(9, 5, 6, 3, 'black', 1); g.rect(10, 11, 4, 8, cross, 1); g.rect(8, 13, 8, 4, cross, 1); }
 
+function helm(g, mat, { brim = null, visor = null, crest = null } = {}) {
+  g.ellipse(12, 12, 8, 8, mat);
+  g.rect(3, 12, 18, 9, 'black', 0);
+  for (let y = 12; y < 22; y++) for (let x = 0; x < 24; x++) g.px[y * 24 + x] = null;
+  g.rect(4, 12, 16, 3, mat, 1);
+  if (brim) g.rect(2, 14, 20, 2, brim, 1);
+  if (visor) g.rect(6, 15, 12, 4, visor, 2);
+  if (crest) g.rect(11, 3, 2, 9, crest, 2);
+}
+function legs(g, mat, { boots = 'black', knee = null, stripe = null } = {}) {
+  g.rect(6, 2, 12, 5, mat);
+  g.rect(6, 7, 5, 13, mat);
+  g.rect(13, 7, 5, 13, mat);
+  g.rect(5, 19, 6, 3, boots, 1); g.rect(13, 19, 6, 3, boots, 1);
+  if (knee) { g.rect(6, 11, 5, 3, knee, 2); g.rect(13, 11, 5, 3, knee, 2); }
+  if (stripe) { g.rect(7, 7, 1, 12, stripe, 2); g.rect(16, 7, 1, 12, stripe, 2); }
+}
+function blade(g, mat = 'silver', handle = 'brown', len = 12) {
+  g.tri(5 + 0, 19, 8, 19, 5 + len, 19 - len, mat, 2);
+  g.line(6, 18, 5 + len - 1, 20 - len, mat, 1);
+  g.rect(3, 18, 5, 2, 'grey', 1);
+  g.line(2, 22, 5, 19, handle, 1); g.line(3, 22, 6, 19, handle, 0);
+}
+
 // ---------- icon definitions ----------
 const DRAW = {
   // weapons
@@ -49,6 +73,47 @@ const DRAW = {
   'weapon:repeater': (g) => { gun(g, { x: 3, len: 14, h: 5, bl: 5, body: 'black', barrel: 'grey', drum: 'grey' }); for (let x = 18; x < 22; x += 2) g.dot(x, 10, 'ion', 2); },
   'weapon:marksman': (g) => gun(g, { x: 2, y: 11, len: 17, h: 3, bl: 4, body: 'silver', barrel: 'black', stock: 'silver', grip: 'black', scope: 'black' }),
   'weapon:cannon': (g) => { g.rect(2, 8, 18, 7, 'olive'); g.ellipse(20, 11, 2, 4, 'black'); for (let x = 5; x < 18; x += 5) g.rect(x, 8, 2, 7, 'yellow', 1); g.rect(9, 15, 3, 5, 'black'); },
+
+  // melee weapons (new)
+  'weapon:knife': (g) => blade(g, 'silver', 'brown', 10),
+  'weapon:shiv': (g) => { blade(g, 'grey', 'black', 13); g.dot(12, 12, 'white', 2); },
+  'weapon:prod': (g) => { g.line(3, 21, 16, 8, 'black', 1); g.line(4, 21, 17, 8, 'grey', 1); g.line(17, 8, 20, 4, 'yellow', 2); g.line(18, 8, 21, 5, 'yellow', 1); g.dot(21, 3, 'ion', 2); g.dot(22, 5, 'ion', 2); g.dot(19, 2, 'ion', 2); },
+  'weapon:sabre': (g) => { g.line(6, 18, 20, 3, 'silver', 2); g.line(7, 18, 21, 4, 'silver', 1); g.rect(3, 16, 7, 2, 'gold', 2); g.line(3, 22, 6, 18, 'navy', 1); g.ellipse(4, 21, 2, 2, 'gold', 1); },
+  'weapon:axe': (g) => { g.line(5, 22, 15, 4, 'brown', 1); g.line(6, 22, 16, 4, 'brown', 0); g.tri(13, 3, 21, 4, 18, 13, 'red', 1); g.tri(14, 4, 20, 5, 17, 11, 'silver', 2); },
+  'weapon:hammer': (g) => { g.line(5, 22, 13, 9, 'black', 1); g.line(6, 22, 14, 9, 'grey', 1); g.rect(7, 3, 14, 8, 'grey'); g.rect(7, 3, 14, 2, 'silver', 2); g.rect(19, 4, 3, 6, 'yellow', 1); for (let x = 9; x < 18; x += 3) g.dot(x, 7, 'black', 0); },
+
+  // helmets
+  'head:cap': (g) => { g.ellipse(12, 12, 8, 6, 'olive'); for (let y = 12; y < 24; y++) for (let x = 0; x < 24; x++) g.px[y * 24 + x] = null; g.rect(4, 12, 18, 3, 'olive', 0); g.rect(15, 13, 7, 2, 'olive', 1); },
+  'head:hood': (g) => { helm(g, 'tan'); for (let y = 6; y < 12; y += 2) g.rect(6, y, 12, 1, 'tan', 0); g.rect(5, 15, 3, 6, 'tan', 1); g.rect(16, 15, 3, 6, 'tan', 1); },
+  'head:helmet': (g) => helm(g, 'rust', { visor: 'black' }),
+  'head:visor': (g) => { helm(g, 'grey', { visor: 'ion' }); g.dot(9, 16, 'red', 2); g.dot(15, 16, 'red', 2); },
+  'head:officercap': (g) => { g.ellipse(12, 10, 9, 6, 'navy'); for (let y = 11; y < 24; y++) for (let x = 0; x < 24; x++) g.px[y * 24 + x] = null; g.rect(5, 11, 14, 4, 'navy', 1); g.rect(3, 15, 18, 2, 'black', 1); g.ellipse(12, 9, 2, 2, 'gold', 2); },
+  'head:trooperhelm': (g) => { helm(g, 'white', { visor: 'black' }); g.rect(4, 15, 2, 6, 'white', 1); g.rect(18, 15, 2, 6, 'white', 1); g.line(8, 7, 13, 10, 'grey', 0); },
+  'head:blasthelm': (g) => { helm(g, 'yellow', { visor: 'black', crest: 'black' }); g.rect(3, 13, 3, 8, 'yellow', 1); g.rect(18, 13, 3, 8, 'yellow', 1); g.rect(7, 18, 10, 2, 'black', 1); },
+
+  // leg armour
+  'legs:trousers': (g) => legs(g, 'olive', { boots: 'brown' }),
+  'legs:padded': (g) => legs(g, 'tan', { knee: 'brown' }),
+  'legs:runners': (g) => { legs(g, 'navy', { knee: 'silver' }); g.line(19, 15, 22, 15, 'yellow', 2); g.line(19, 18, 22, 18, 'yellow', 2); },
+  'legs:plated': (g) => { legs(g, 'brown', { knee: 'grey' }); g.rect(6, 15, 5, 3, 'grey', 1); g.rect(13, 15, 5, 3, 'grey', 1); },
+  'legs:officerboots': (g) => { legs(g, 'navy', { stripe: 'red' }); g.rect(5, 15, 6, 7, 'black', 2); g.rect(13, 15, 6, 7, 'black', 2); },
+  'legs:trooperlegs': (g) => legs(g, 'white', { knee: 'grey', boots: 'black' }),
+  'legs:exolegs': (g) => { legs(g, 'grey', { knee: 'yellow' }); g.rect(4, 6, 2, 14, 'yellow', 1); g.rect(18, 6, 2, 14, 'yellow', 1); },
+
+  // gadgets
+  'gadget:grenadebelt': (g) => { g.rect(2, 11, 20, 4, 'brown'); for (let x = 3; x < 21; x += 6) { g.ellipse(x + 2, 9, 2, 3, 'olive'); g.dot(x + 2, 5, 'grey', 2); } g.rect(10, 11, 4, 4, 'gold', 1); },
+  'gadget:injector': (g) => { g.rect(4, 9, 13, 6, 'white'); g.rect(6, 10, 7, 4, 'green', 2); g.rect(17, 11, 4, 2, 'silver', 2); g.rect(1, 8, 3, 8, 'grey'); g.rect(8, 15, 3, 4, 'grey', 1); },
+  'gadget:scanner': (g) => { g.rect(4, 4, 16, 17, 'black'); g.rect(6, 6, 12, 9, 'green', 0); g.line(7, 13, 10, 9, 'green', 2); g.line(10, 9, 13, 12, 'green', 2); g.line(13, 12, 17, 7, 'green', 2); g.dot(8, 18, 'red', 2); g.dot(12, 18, 'yellow', 2); },
+  'gadget:coil': (g) => { for (let y = 5; y < 20; y += 3) g.ellipse(12, y, 6, 2, 'rust'); g.rect(11, 1, 2, 4, 'grey'); bolt(g, 'ion'); },
+
+  // boss uniques
+  'unique:halvekpistol': (g) => { gun(g, { x: 4, len: 11, h: 4, bl: 4, body: 'black', barrel: 'silver', grip: 'red' }); g.rect(6, 11, 7, 1, 'silver', 2); g.dot(13, 7, 'red', 2); },
+  'unique:vanepistol': (g) => { gun(g, { x: 3, len: 12, h: 5, bl: 5, body: 'gold', barrel: 'silver', grip: 'navy' }); for (let x = 5; x < 15; x += 3) g.dot(x, 11, 'white', 2); g.dot(10, 6, 'ion', 2); },
+  'unique:braskhammer': (g) => { fist(g, 'grey'); for (let x = 7; x < 18; x += 3) g.rect(x, 9, 2, 2, 'silver', 2); g.rect(6, 17, 12, 2, 'gold', 1); },
+  'unique:crucibleplate': (g) => { torso(g, 'black'); g.ellipse(12, 14, 5, 5, 'fire'); g.ellipse(12, 14, 2, 2, 'yellow', 2); g.rect(4, 7, 4, 3, 'rust', 1); g.rect(16, 7, 4, 3, 'rust', 1); },
+  'unique:crawlertreads': (g) => { legs(g, 'olive', { knee: 'yellow' }); for (let y = 8; y < 19; y += 3) { g.rect(5, y, 7, 1, 'black', 0); g.rect(12, y, 7, 1, 'black', 0); } },
+  'unique:kellkey': (g) => { ring(g, 7, 8, 5, 'silver', 2, 2); g.rect(11, 7, 11, 3, 'silver'); g.rect(17, 10, 2, 5, 'silver', 1); g.rect(20, 10, 2, 3, 'silver', 1); g.dot(7, 8, 'red', 2); },
+  'unique:ostranepad': (g) => { g.rect(4, 2, 16, 20, 'navy'); g.rect(6, 4, 12, 14, 'paper'); for (let y = 6; y < 16; y += 2) g.rect(7, y, 10, 1, 'grey', 1); g.rect(7, 9, 6, 1, 'red', 2); g.ellipse(12, 20, 1, 1, 'gold', 2); },
 
   // armour
   'armor:none': (g) => { torso(g, 'rust'); g.rect(14, 12, 4, 3, 'tan', 1); g.rect(11, 9, 2, 12, 'rust', 0); },
@@ -148,3 +213,8 @@ export function iconURL(key) {
   return (cache[key] = c.toDataURL('image/png'));
 }
 export const iconKeys = () => Object.keys(DRAW);
+// Icon key for a gear base from data.js GEAR.
+export function gearIconKey(id, b) {
+  if (b.unique) return `unique:${id}`;
+  return `${{ ranged: 'weapon', melee: 'weapon', chest: 'armor', head: 'head', legs: 'legs', gadget: 'gadget' }[b.slot]}:${id}`;
+}

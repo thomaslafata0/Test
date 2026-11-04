@@ -2,20 +2,28 @@
 // Usage: node sim-builds.mjs [operativesPerBuild=300] [campaigns=30]
 import * as E from './engine.js';
 import * as D from './data.js';
+import * as G from './sim-gear.mjs';
+// TUNE='{"enemyHp":1.5}' overrides engine tuning for a test run.
+Object.assign(E.TUNE, JSON.parse(process.env.TUNE || '{}'));
 
 const OPS = +process.argv[2] || 300;
 const CAMPAIGNS = +process.argv[3] || 30;
 
 // ---------- bot personalities ----------
+// style: which attacks the bot uses and values when shopping (see sim-gear.mjs).
 const BUILDS = {
-  strength:  { bg: 'foundry',  attrs: ['str'], weapons: ['cannon', 'maul', 'scatter', 'baton'], implants: ['myomer', 'pain', 'dermal', 'adrenal'] },
-  agility:   { bg: 'runner',   attrs: ['agi'], weapons: ['marksman', 'longbore', 'carbine'], implants: ['reflex', 'optic', 'dermal', 'adrenal'] },
-  intellect: { bg: 'clerk',    attrs: ['int'], weapons: ['arc', 'carbine'], implants: ['neural', 'synapse', 'dermal', 'pain'], items: { ion: 2, thermal: 2 } },
-  charisma:  { bg: 'preacher', attrs: ['cha'], weapons: ['gilded', 'sidearm', 'carbine'], implants: ['voice', 'dermal', 'pain', 'adrenal'] },
-  balanced:  { bg: 'foundry',  attrs: ['str', 'agi', 'int', 'cha'], weapons: null, implants: ['dermal', 'reflex', 'pain', 'adrenal'] },
-  strAgi:    { bg: 'foundry',  attrs: ['str', 'agi'], weapons: null, implants: ['dermal', 'reflex', 'pain', 'adrenal'] },
-  glass:     { bg: 'runner',   attrs: ['agi', 'agi', 'str'], weapons: ['marksman', 'longbore', 'carbine'], implants: ['optic', 'reflex', 'synapse'], noArmor: true },
+  strength:   { bg: 'foundry',  attrs: ['str'], style: 'auto', implants: ['myomer', 'pain', 'dermal', 'adrenal'] },
+  agility:    { bg: 'runner',   attrs: ['agi'], style: 'rangedFocus', implants: ['reflex', 'optic', 'dermal', 'adrenal'] },
+  intellect:  { bg: 'clerk',    attrs: ['int'], style: 'auto', implants: ['neural', 'synapse', 'dermal', 'pain'], items: { ion: 2, thermal: 2 } },
+  charisma:   { bg: 'preacher', attrs: ['cha'], style: 'auto', implants: ['voice', 'dermal', 'pain', 'adrenal'] },
+  balanced:   { bg: 'foundry',  attrs: ['str', 'agi', 'int', 'cha'], style: 'auto', implants: ['dermal', 'reflex', 'pain', 'adrenal'] },
+  strAgi:     { bg: 'foundry',  attrs: ['str', 'agi'], style: 'auto', implants: ['dermal', 'reflex', 'pain', 'adrenal'] },
+  glass:      { bg: 'runner',   attrs: ['agi', 'agi', 'str'], style: 'ranged', implants: ['optic', 'reflex', 'synapse'], noArmor: true },
+  meleeOnly:  { bg: 'foundry',  attrs: ['str', 'str', 'agi'], style: 'melee', implants: ['myomer', 'dermal', 'pain', 'adrenal'] },
+  rangedOnly: { bg: 'runner',   attrs: ['agi', 'agi', 'str'], style: 'ranged', implants: ['reflex', 'optic', 'dermal', 'adrenal'] },
+  hybrid:     { bg: 'foundry',  attrs: ['str', 'agi'], style: 'hybrid', implants: ['dermal', 'reflex', 'pain', 'adrenal'] },
 };
+const ARMOR_SLOTS = ['head', 'chest', 'legs'];
 const STYLES = {
   cautious: { extractHp: 0.6, bossHp: 0.9, smoke: 1, smokeAt: 0.2 },
   standard: { extractHp: 0.5, bossHp: 0.8, smoke: 0, smokeAt: 0 },
@@ -32,18 +40,16 @@ function shop(s, b, st) {
   const c = s.char;
   E.heal(s);
   let i = 0; while (c.attrPoints > 0 && i++ < 40) if (!E.spendAttr(s, b.attrs[i % b.attrs.length])) for (const k of Object.keys(D.ATTRS)) if (E.spendAttr(s, k)) break;
-  // weapon: build list in order of preference, else the strongest affordable
-  const list = b.weapons ? b.weapons.map((id) => D.WEAPONS.find((w) => w.id === id)) : [...D.WEAPONS].reverse();
-  for (const w of list) if (w.atk > E.weaponOf(c).atk && E.buyGear(s, 'weapon', w.id)) break;
-  if (!b.noArmor) for (let k = D.ARMOR.length - 1; k > 0; k--) if (D.ARMOR[k].def > E.armorOf(c).def && E.buyGear(s, 'armor', D.ARMOR[k].id)) break;
+  G.shopGear(s, b.style, 60, b.noArmor ? ARMOR_SLOTS : []);
   while (c.items.stim < 3 && E.buyItem(s, 'stim'));
   for (const [it, n] of Object.entries(b.items || {})) while (c.items[it] < n && c.credits > 80 && E.buyItem(s, it));
   while (c.items.smoke < st.smoke && E.buyItem(s, 'smoke'));
   for (const id of b.implants) if (c.credits > 120) E.installImplant(s, id);
   for (const u of D.UPGRADES) if (c.credits > u.cost + 80) E.buyUpgrade(s, u.id);
+  G.upgradeGear(s, b.style, 150, b.noArmor ? ARMOR_SLOTS : []);
 }
 
-function act(s, st) {
+function act(s, st, b) {
   const r = s.run, e = r.enemy, c = s.char, hp = E.stats(s).maxHp;
   if (c.hp < hp * st.smokeAt && c.items.smoke) return 'smoke';
   if (c.hp < hp * 0.35 && c.items.stim) return 'stim';
@@ -52,9 +58,10 @@ function act(s, st) {
   if ((e.boss || e.elite) && c.items.thermal) return 'thermal';
   if (e.tags.includes('droid') && c.items.ion && !e.stun && e.hp > e.maxHp * 0.5) return 'ion';
   if (E.canUse(s, 'intimidate') && E.intimidateChance(s) > 0.45) return 'intimidate';
-  if (e.intent === 'guard' && !e.stun) return 'defend';
-  for (const k of ['overload', 'smash', 'aimed', 'blast', 'burst', 'suppress']) if (E.canUse(s, k)) return k;
-  return 'attack';
+  const hit = G.attackChoice(s, b.style);
+  if (e.intent === 'guard' && !e.stun && hit !== 'strike') return 'defend';
+  for (const k of ['overload', 'smash', 'aimed', 'blast', 'burst', 'suppress']) if (E.canUse(s, k) && G.skillAllowed(b.style, k)) return k;
+  return hit;
 }
 
 // Play one operative until death or 25 raids. Returns stats for that operative.
@@ -67,8 +74,9 @@ function playOperative(s, rng, b, st, map = 'garrison') {
     E.deploy(s, m, Math.max(...E.mapProgress(s.char, m).insertions), rng);
     let steps = 0;
     while (s.run && s.screen !== 'death' && steps++ < 4000) {
-      if (s.screen === 'combat') { const a = act(s, st); if (a === 'smoke' || a === 'run') escapes++; E.playerAct(s, a, rng); }
+      if (s.screen === 'combat') { const a = act(s, st, b); if (a === 'smoke' || a === 'run') escapes++; E.playerAct(s, a, rng); }
       else if (s.screen === 'victory') E.continueAfterVictory(s, rng);
+      else if (s.screen === 'loot') G.lootChoice(s, rng, b.style, b.noArmor ? ARMOR_SLOTS : []);
       else if (s.screen === 'perk') E.choosePerk(s, s.run.perkOffer[0], rng, s.char.perks[0]);
       else if (s.screen === 'route') {
         const ch = s.run.choices, low = s.char.hp < E.stats(s).maxHp * 0.5;
@@ -85,7 +93,7 @@ function playOperative(s, rng, b, st, map = 'garrison') {
       }
       else if (s.screen === 'sectorClear') {
         const hp = E.stats(s).maxHp, next = s.run.sector + 1;
-        if (s.char.hp < hp * st.extractHp || (E.isBossSector(next) && s.char.hp < hp * st.bossHp)) { credits += s.char.credits; extracts++; E.endRun(s, 'extracted'); }
+        if (s.char.hp < hp * st.extractHp || (E.isBossSector(next) && s.char.hp < hp * st.bossHp)) { credits += s.char.credits; extracts++; E.endRun(s, 'extracted', rng); }
         else E.pushDeeper(s, rng);
       } else break;
     }

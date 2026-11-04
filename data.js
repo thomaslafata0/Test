@@ -26,8 +26,8 @@ export const BASE_STATS = { hp: 34, atk: 6, def: 2, spd: 4 };
 
 // ---------- attributes (per operative, lost on death) ----------
 export const ATTRS = {
-  str: { label: 'Strength',  short: 'STR', desc: '+2 max HP per point. Melee and heavy weapons get +1 ATK per point. Forcing doors, carrying people.' },
-  agi: { label: 'Agility',   short: 'AGI', desc: '+1 SPD, +2.5% dodge and +3.5% crit per point. Escaping and sneaking past guards.' },
+  str: { label: 'Strength',  short: 'STR', desc: '+2 max HP per point. Melee and heavy weapons get +1 ATK per point. Power Strike at 6. Forcing doors, carrying people.' },
+  agi: { label: 'Agility',   short: 'AGI', desc: '+1 SPD, +2.5% dodge and +3.5% ranged crit per point. Escaping and sneaking past guards.' },
   int: { label: 'Intellect', short: 'INT', desc: 'Items work 10% better per point. Slicing consoles. An extra implant slot at 4 and 8.' },
   cha: { label: 'Charisma',  short: 'CHA', desc: 'Prices 4% lower and credits 5% higher per point. People and hounds may hesitate to attack (4% per point; half against bosses). Bluffing and rallying.' },
 };
@@ -47,42 +47,145 @@ export const BACKGROUNDS = [
 // ---------- skills (combat abilities beyond Attack / Defend / Run) ----------
 // cd = your turns before it can be used again. Cooldowns carry over between fights and reset at each new sector.
 export const SKILLS = {
-  aimed:     { name: 'Aimed Shot',      short: 'x1.5 damage, +25% crit', cd: 3, desc: 'x1.5 damage, +25% crit chance.', from: 'Pistols and rifles' },
+  aimed:     { name: 'Aimed Shot',      short: 'x1.5 damage, +25% crit', cd: 3, desc: 'Uses your ranged weapon. x1.5 damage, +25% crit chance.', from: 'Pistols and rifles' },
   burst:     { name: 'Burst Fire',      short: '3 quick shots', cd: 2, desc: 'Three shots at 55% each. Shreds unarmoured targets, weak against armour.', from: 'Carbines' },
-  blast:     { name: 'Scatter Blast',   short: 'Big spread, x2 vs unarmoured', cd: 2, desc: 'x1.4 damage, doubled against unarmoured targets.', from: 'Scatterguns' },
-  smash:     { name: 'Power Strike',    short: 'Heavy hit, ignores \u00BD armour', cd: 3, desc: 'x1.6 damage plus 1 per STR, ignores half of armour.', from: 'Melee and heavy weapons, or STR 6' },
-  overload:  { name: 'Overload',        short: 'Tech blast, stuns droids', cd: 4, desc: 'Tech burst: 6 + 4 per INT, ignores armour. Droids take double and are stunned.', from: 'Tech weapons, or INT 4' },
+  blast:     { name: 'Scatter Blast',   short: 'Big spread, x2 vs unarmoured', cd: 2, desc: 'x1.4 damage, doubled against unarmoured targets.', from: 'Scatterguns and heavy weapons' },
+  smash:     { name: 'Power Strike',    short: 'Melee: heavy hit, ignores \u00BD armour', cd: 3, desc: 'Uses your melee weapon. x1.6 damage plus 1 per STR, ignores half of armour and the enemy\u2019s cover.', from: 'Melee weapons, or STR 6' },
+  overload:  { name: 'Overload',        short: 'Tech blast, stuns droids', cd: 4, desc: 'Tech burst: 6 + 4 per INT, ignores armour. Droids take double and are stunned.', from: 'Tech weapons, the Arc Coil, or INT 4' },
   suppress:  { name: 'Suppressing Fire', short: 'Pins it in cover', cd: 3, desc: '60% damage and pins the enemy: its next move is forced to be taking cover.', from: 'AGI 4' },
   intimidate:{ name: 'Intimidate',      short: 'Scare a human off', cd: 99, desc: 'Once per sector. A human enemy may run. If not, its ATK drops 25% for the fight.', from: 'CHA 4' },
 };
-export const WEAPON_SKILL = { pistol: 'aimed', rifle: 'aimed', carbine: 'burst', scatter: 'blast', melee: 'smash', heavy: 'smash', tech: 'overload' };
+export const WEAPON_SKILL = { pistol: 'aimed', rifle: 'aimed', carbine: 'burst', scatter: 'blast', heavy: 'blast', tech: 'overload' };
+// Power Strike comes from any real melee weapon (not the starter knife) or STR 6.
 
 // ---------- gear ----------
-// req: minimum attributes to buy. Melee and heavy weapons add 1.5 ATK per STR.
-export const WEAPONS = [
-  { id: 'holdout',   name: 'Holdout Pistol',       type: 'pistol',  atk: 0,  cost: 0,    desc: 'Fits in a boot.' },
-  { id: 'baton',     name: 'Shock Baton',          type: 'melee',   atk: 1,  cost: 45,   desc: 'Stolen off a riot cop. Scales with STR.' },
-  { id: 'carbine',   name: 'Salvaged Carbine',     type: 'carbine', atk: 3,  cost: 60,   desc: 'Rebuilt from three broken ones.' },
-  { id: 'scatter',   name: 'Foundry Scattergun',   type: 'scatter', atk: 5,  cost: 140,  req: { str: 3 }, desc: 'Ugly, loud, effective.' },
-  { id: 'longbore',  name: 'Longbore Rifle',       type: 'rifle',   atk: 7,  cost: 250,  req: { agi: 3 }, crit: 0.12, desc: '+12% crit chance.' },
-  { id: 'maul',      name: 'Breaching Maul',       type: 'melee',   atk: 7,  cost: 280,  req: { str: 5 }, desc: 'For doors. And for people. Scales with STR.' },
-  { id: 'sidearm',   name: 'Officer\u2019s Sidearm',  type: 'pistol',  atk: 8,  cost: 300,  req: { cha: 4 }, crit: 0.06, desc: 'Talked out of a quartermaster. +6% crit.' },
-  { id: 'arc',       name: 'Arc Projector',        type: 'tech',    atk: 8,  cost: 420,  req: { int: 5 }, desc: 'Ignores half of armour, +50% against droids.' },
-  { id: 'repeater',  name: 'Ion-Bored Repeater',   type: 'carbine', atk: 12, cost: 560,  req: { str: 4 }, desc: 'Stolen from a garrison armoury.' },
-  { id: 'gilded',    name: 'Gilded Repeater',      type: 'carbine', atk: 13, cost: 640,  req: { cha: 6 }, desc: 'A gift from someone who owes you a favour.' },
-  { id: 'marksman',  name: 'Directorate Long Rifle', type: 'rifle', atk: 14, cost: 760,  req: { agi: 6 }, crit: 0.18, desc: '+18% crit chance. Officer issue.' },
-  { id: 'cannon',    name: 'Shoulder Cannon',      type: 'heavy',   atk: 16, cost: 1100, req: { str: 7 }, spd: -1, desc: '\u22121 SPD. Scales with STR.' },
-];
+// Six slots. Every piece of gear is an item instance { base, rarity, level, bonuses, trait } built from a base below.
+// slot: ranged | melee | head | chest | legs | gadget. tier 0 = starter (never sold), 1-5 = market tiers.
+// atk: main stat of weapons. def: main stat of armour. req: minimum attributes to buy or equip.
+// Melee weapons add +1 ATK per STR and ignore cover. Ranged weapons get AGI crit. Heavy ranged weapons also add STR.
+export const SLOTS = {
+  ranged: { name: 'Ranged weapon', short: 'Ranged', stat: 'atk', desc: 'Used by Shoot, Aimed Shot, Burst Fire, Scatter Blast and Suppressing Fire. AGI adds crit chance.' },
+  melee:  { name: 'Melee weapon',  short: 'Melee',  stat: 'atk', desc: 'Used by Strike and Power Strike. +1 ATK per STR, and it ignores the enemy’s cover.' },
+  head:   { name: 'Helmet',        short: 'Head',   stat: 'def', desc: 'DEF. Bonuses lean to status resistance.' },
+  chest:  { name: 'Chest armour',  short: 'Chest',  stat: 'def', desc: 'The biggest share of your DEF.' },
+  legs:   { name: 'Leg armour',    short: 'Legs',   stat: 'def', desc: 'DEF and SPD. Heavy legs slow you down, light ones speed you up.' },
+  gadget: { name: 'Gadget',        short: 'Gadget', stat: null,  desc: 'A utility piece. Optional.' },
+};
+export const SLOT_ORDER = ['ranged', 'melee', 'head', 'chest', 'legs', 'gadget'];
 
-export const ARMOR = [
-  { id: 'none',    name: 'Work Coveralls',         def: 0,  cost: 0,   desc: 'Foundry-issue. Smells like slag.' },
-  { id: 'vest',    name: 'Padded Vest',            def: 2,  cost: 50,  desc: 'Layered cloth and luck.' },
-  { id: 'plates',  name: 'Plated Jacket',          def: 4,  cost: 140, desc: 'Hull scrap sewn into canvas.' },
-  { id: 'trooper', name: 'Stripped Trooper Plate', def: 7,  cost: 300, req: { str: 3 }, spd: -1, desc: '\u22121 SPD. Paint scraped off.' },
-  { id: 'coat',    name: 'Officer\u2019s Greatcoat', def: 8,  cost: 420, req: { cha: 4 }, desc: 'Lined with plate. Guards salute before they shoot.' },
-  { id: 'weave',   name: 'Ballistic Weave',        def: 9,  cost: 560, req: { agi: 4 }, desc: 'Officer-grade. Light and quiet.' },
-  { id: 'exo',     name: 'Foundry Exo-Frame',      def: 13, cost: 950, req: { str: 6 }, spd: -2, desc: '\u22122 SPD. A loader rig cut down to size.' },
-];
+export const GEAR = {
+  // ranged
+  holdout:  { slot: 'ranged', tier: 0, name: 'Holdout Pistol',        type: 'pistol',  atk: 2,  cost: 0,    desc: 'Fits in a boot.' },
+  carbine:  { slot: 'ranged', tier: 1, name: 'Salvaged Carbine',      type: 'carbine', atk: 4,  cost: 60,   desc: 'Rebuilt from three broken ones.' },
+  scatter:  { slot: 'ranged', tier: 2, name: 'Foundry Scattergun',    type: 'scatter', atk: 7,  cost: 150,  req: { str: 3 }, desc: 'Ugly, loud, effective.' },
+  longbore: { slot: 'ranged', tier: 2, name: 'Longbore Rifle',        type: 'rifle',   atk: 8,  cost: 250,  req: { agi: 3 }, crit: 0.1, desc: '+10% crit chance.' },
+  sidearm:  { slot: 'ranged', tier: 3, name: 'Officer’s Sidearm', type: 'pistol',  atk: 10, cost: 300,  req: { cha: 4 }, crit: 0.06, desc: 'Talked out of a quartermaster. +6% crit.' },
+  arc:      { slot: 'ranged', tier: 3, name: 'Arc Projector',         type: 'tech',    atk: 10,  cost: 420,  req: { int: 5 }, desc: 'Ignores half of armour, +50% against droids.' },
+  repeater: { slot: 'ranged', tier: 4, name: 'Ion-Bored Repeater',    type: 'carbine', atk: 14, cost: 560,  req: { str: 4 }, desc: 'Stolen from a garrison armoury.' },
+  gilded:   { slot: 'ranged', tier: 4, name: 'Gilded Repeater',       type: 'carbine', atk: 15, cost: 640,  req: { cha: 6 }, desc: 'A gift from someone who owes you a favour.' },
+  marksman: { slot: 'ranged', tier: 5, name: 'Directorate Long Rifle', type: 'rifle',  atk: 17, cost: 760,  req: { agi: 6 }, crit: 0.15, desc: '+15% crit chance. Officer issue.' },
+  cannon:   { slot: 'ranged', tier: 5, name: 'Shoulder Cannon',       type: 'heavy',   atk: 17, cost: 1000, req: { str: 7 }, spd: -1, desc: '−1 SPD. Adds STR to ATK like a melee weapon.' },
+  // melee
+  knife:    { slot: 'melee', tier: 0, name: 'Kitchen Knife',          type: 'melee', atk: 0,  cost: 0,   noSkill: true, desc: 'From the canteen. Better than nothing, barely.' },
+  baton:    { slot: 'melee', tier: 1, name: 'Shock Baton',            type: 'melee', atk: 2,  cost: 50,  desc: 'Stolen off a riot cop.' },
+  shiv:     { slot: 'melee', tier: 2, name: 'Combat Knife',           type: 'melee', atk: 4,  cost: 140, req: { agi: 3 }, crit: 0.1, desc: 'Quick and quiet. +10% crit.' },
+  prod:     { slot: 'melee', tier: 2, name: 'Shock Prod',             type: 'melee', atk: 4,  cost: 160, req: { int: 3 }, droid: 0.3, desc: 'Cattle prod, overvolted. +30% against droids.' },
+  maul:     { slot: 'melee', tier: 3, name: 'Breaching Maul',         type: 'melee', atk: 7,  cost: 280, req: { str: 5 }, desc: 'For doors. And for people.' },
+  sabre:    { slot: 'melee', tier: 4, name: 'Officer’s Sabre',   type: 'melee', atk: 9,  cost: 500, req: { cha: 5 }, crit: 0.08, desc: 'Ceremonial, until it isn’t. +8% crit.' },
+  axe:      { slot: 'melee', tier: 4, name: 'Breaching Axe',          type: 'melee', atk: 10, cost: 520, req: { str: 6 }, desc: 'A fire axe with ambitions.' },
+  hammer:   { slot: 'melee', tier: 5, name: 'Riveting Hammer',        type: 'melee', atk: 13, cost: 850, req: { str: 8 }, spd: -1, desc: '−1 SPD. Built for hull plate.' },
+  // head
+  cap:      { slot: 'head', tier: 0, name: 'Work Cap',                def: 0, cost: 0,   desc: 'Keeps the ash out of your eyes.' },
+  hood:     { slot: 'head', tier: 1, name: 'Padded Hood',             def: 1, cost: 40,  desc: 'Quilted. Warm, at least.' },
+  helmet:   { slot: 'head', tier: 2, name: 'Scrap Helmet',            def: 2, cost: 120, desc: 'A welder’s mask with the glass knocked out.' },
+  visor:    { slot: 'head', tier: 3, name: 'Sensor Visor',            def: 2, cost: 260, req: { int: 4 }, crit: 0.04, desc: 'Highlights weak points. +4% crit.' },
+  officercap:{ slot: 'head', tier: 3, name: 'Officer’s Cap',     def: 2, cost: 280, req: { cha: 4 }, noShaken: true, desc: 'Nobody shouts at the cap. Immune to Shaken.' },
+  trooperhelm:{ slot: 'head', tier: 3, name: 'Trooper Helmet',        def: 3, cost: 300, req: { str: 3 }, desc: 'The visor’s cracked. It still stops a round.' },
+  blasthelm:{ slot: 'head', tier: 5, name: 'Blast Helmet',            def: 4, cost: 620, req: { str: 6 }, desc: 'Foundry rescue gear. Heavy as sin.' },
+  // chest
+  none:     { slot: 'chest', tier: 0, name: 'Work Coveralls',         def: 0, cost: 0,   desc: 'Foundry-issue. Smells like slag.' },
+  vest:     { slot: 'chest', tier: 1, name: 'Padded Vest',            def: 2, cost: 50,  desc: 'Layered cloth and luck.' },
+  plates:   { slot: 'chest', tier: 2, name: 'Plated Jacket',          def: 4, cost: 140, desc: 'Hull scrap sewn into canvas.' },
+  trooper:  { slot: 'chest', tier: 3, name: 'Stripped Trooper Plate', def: 6, cost: 300, req: { str: 3 }, spd: -1, desc: '−1 SPD. Paint scraped off.' },
+  coat:     { slot: 'chest', tier: 4, name: 'Officer’s Greatcoat', def: 6, cost: 420, req: { cha: 4 }, desc: 'Lined with plate. Guards salute before they shoot.' },
+  weave:    { slot: 'chest', tier: 4, name: 'Ballistic Weave',        def: 7, cost: 560, req: { agi: 4 }, desc: 'Officer-grade. Light and quiet.' },
+  exo:      { slot: 'chest', tier: 5, name: 'Foundry Exo-Frame',      def: 10, cost: 950, req: { str: 6 }, spd: -2, desc: '−2 SPD. A loader rig cut down to size.' },
+  // legs
+  trousers: { slot: 'legs', tier: 0, name: 'Work Trousers',           def: 0, cost: 0,   desc: 'Patched at both knees.' },
+  padded:   { slot: 'legs', tier: 1, name: 'Padded Trousers',         def: 1, cost: 40,  desc: 'Knee pads from the casting floor.' },
+  runners:  { slot: 'legs', tier: 2, name: 'Runner’s Greaves',   def: 1, cost: 150, req: { agi: 3 }, spd: 1, desc: '+1 SPD. Light shin plates and good boots.' },
+  plated:   { slot: 'legs', tier: 2, name: 'Plated Leggings',         def: 2, cost: 130, desc: 'Sheet steel and leather straps.' },
+  officerboots:{ slot: 'legs', tier: 3, name: 'Officer’s Boots',  def: 2, cost: 260, req: { cha: 4 }, spd: 1, desc: '+1 SPD. Polished. Loud on purpose.' },
+  trooperlegs:{ slot: 'legs', tier: 3, name: 'Trooper Greaves',       def: 3, cost: 280, req: { str: 3 }, desc: 'Armoured from hip to ankle.' },
+  exolegs:  { slot: 'legs', tier: 5, name: 'Exo Leg Struts',          def: 4, cost: 640, req: { str: 6 }, spd: -1, desc: '−1 SPD. Hydraulic and very sure of itself.' },
+  // gadgets (no main stat; they do one thing)
+  grenadebelt:{ slot: 'gadget', tier: 1, name: 'Grenade Belt',        cost: 120, carry: 1, desc: 'Carry 1 more of each item.' },
+  injector: { slot: 'gadget', tier: 2, name: 'Stim Injector',         cost: 200, stimBoost: 0.5, desc: 'Stims heal 50% more.' },
+  scanner:  { slot: 'gadget', tier: 2, name: 'Threat Scanner',        cost: 260, req: { int: 3 }, scan: true, desc: 'Shows the enemy’s next two moves.' },
+  coil:     { slot: 'gadget', tier: 3, name: 'Arc Coil',              cost: 380, req: { int: 4 }, overload: 0.2, desc: 'Grants Overload. Overload deals +20%.' },
+  // boss uniques: fixed stats and a signature effect. Bosses always drop theirs.
+  halvekpistol: { slot: 'ranged', tier: 3, unique: 'halvek', name: 'Halvek’s Service Pistol', type: 'pistol', atk: 11, cost: 600, crit: 0.08, bonuses: [['crit', 4]], desc: 'Critical hits cut every skill cooldown by 1.' },
+  vanepistol:   { slot: 'ranged', tier: 5, unique: 'vane', name: 'Vane’s Ornate Pistol', type: 'pistol', atk: 17, cost: 1200, crit: 0.1, bonuses: [['human', 20]], desc: 'Aimed Shot always crits.' },
+  braskhammer:  { slot: 'melee', tier: 4, unique: 'brask', name: 'Brask’s Hammer Fist', type: 'melee', atk: 11, cost: 800, bonuses: [['healkill', 4]], desc: 'Power Strike stuns for a turn.' },
+  crucibleplate:{ slot: 'chest', tier: 4, unique: 'crucible', name: 'Crucible Core Plate', def: 9, cost: 900, bonuses: [['hp', 10]], desc: 'Your Strikes set enemies Burning. Burning enemies take +25% damage.' },
+  crawlertreads:{ slot: 'legs', tier: 4, unique: 'crawler', name: 'Crawler Tread Greaves', def: 4, cost: 800, bonuses: [['resist', 25]], desc: 'You can’t be set Burning. Furnace vents and snipers deal half.' },
+  kellkey:      { slot: 'gadget', tier: 3, unique: 'kell', name: 'Kell’s Cell Key', cost: 700, bonuses: [['credits', 10]], desc: 'Intimidate works on bosses at full odds and on beasts.' },
+  ostranepad:   { slot: 'gadget', tier: 5, unique: 'ostrane', name: 'Ostrane’s Datapad', cost: 1100, scan: true, bonuses: [['cooldown', 25]], desc: 'Shows the enemy’s next two moves. Your first hit each fight is a critical.' },
+};
+// Which unique each boss drops.
+export const BOSS_UNIQUE = { halvek: 'halvekpistol', vane: 'vanepistol', brask: 'braskhammer', crucible: 'crucibleplate', crawler: 'crawlertreads', kell: 'kellkey', ostrane: 'ostranepad' };
+// What a new operative starts wearing.
+export const STARTER_GEAR = { ranged: 'holdout', melee: 'knife', head: 'cap', chest: 'none', legs: 'trousers', gadget: null };
+
+// ---------- loot rarity ----------
+// mult: main stat multiplier. bonuses: random bonuses rolled. price: market price multiplier. trait: Legendary special trait.
+export const RARITY = {
+  common:    { name: 'Common',    color: '#a3a7a4', mult: 1,    bonuses: 0, price: 1,   up: 1 },
+  rare:      { name: 'Rare',      color: '#5ea6e8', mult: 1.2,  bonuses: 1, price: 1.6, up: 1.2 },
+  elite:     { name: 'Elite',     color: '#b77be8', mult: 1.45, bonuses: 2, price: 2.6, up: 1.4 },
+  legendary: { name: 'Legendary', color: '#e8b23a', mult: 1.75, bonuses: 2, price: 4.2, up: 1.6, trait: true },
+  unique:    { name: 'Unique',    color: '#e8673a', mult: 1,    bonuses: 0, price: 1,   up: 1.6 },
+};
+export const RARITY_ORDER = ['common', 'rare', 'elite', 'legendary', 'unique'];
+export const UPGRADE_MAX = 5;      // +1 .. +5
+export const UPGRADE_STEP = 0.08;  // main stat per upgrade level
+
+// Random bonuses. range [low, high] at tier 1; higher tiers roll up to +50% more. slots: which slots can roll it.
+const W = ['ranged', 'melee'], A3 = ['head', 'chest', 'legs'];
+export const BONUSES = {
+  crit:     { label: '+{v}% crit chance',            range: [3, 6],   pct: true, slots: [...W, 'head', 'gadget'] },
+  spd:      { label: '+{v} SPD',                     range: [1, 1],   slots: ['head', 'legs', 'gadget'] },
+  def:      { label: '+{v} DEF',                     range: [1, 2],   slots: [...A3, 'gadget'] },
+  hp:       { label: '+{v} max HP',                  range: [5, 10],  slots: [...A3] },
+  bleed:    { label: '{v}% chance to cause Bleeding', range: [10, 18], pct: true, slots: [...W] },
+  droid:    { label: '+{v}% damage vs droids',        range: [12, 25], pct: true, slots: [...W, 'gadget'] },
+  human:    { label: '+{v}% damage vs humans',        range: [10, 20], pct: true, slots: [...W, 'gadget'] },
+  healkill: { label: 'Heal {v}% of max HP on a kill', range: [3, 5],   pct: true, slots: [...W, 'chest', 'gadget'] },
+  cooldown: { label: '{v}% chance a skill recharges a turn faster', range: [15, 25], pct: true, slots: [...W, 'head', 'gadget'] },
+  resist:   { label: '{v}% chance to shrug off a status', range: [20, 35], pct: true, slots: [...A3, 'gadget'] },
+  credits:  { label: '+{v}% credits',                range: [4, 8],   pct: true, slots: [...W, ...A3, 'gadget'] },
+};
+// Legendary traits, by slot group.
+export const TRAITS = {
+  executioner: { name: 'Executioner', group: 'weapon', desc: '+40% damage to enemies below 30% HP.' },
+  stunner:     { name: 'Concussive',  group: 'weapon', desc: '12% chance a hit stuns the enemy for a turn.' },
+  leech:       { name: 'Leeching',    group: 'weapon', desc: 'Heal 8% of the damage you deal with this weapon.' },
+  reactive:    { name: 'Reactive',    group: 'armor',  desc: 'Attackers take 20% of the damage they deal you.' },
+  bulwark:     { name: 'Bulwark',     group: 'armor',  desc: 'Defending blocks 65% of damage instead of 50%.' },
+  stalwart:    { name: 'Stalwart',    group: 'armor',  desc: '+12% max HP.' },
+  surplus:     { name: 'Surplus',     group: 'gadget', desc: 'Start every raid with +1 Med Stim (up to your carry limit).' },
+  overcharge:  { name: 'Overcharged', group: 'gadget', desc: 'Thermal, ion and stims work 20% better.' },
+};
+// Enemies that punish melee: Strike and Power Strike trigger this.
+export const MELEE_COUNTER = {
+  riot:     { name: 'Riot shield', mult: 0.5, desc: 'Strikes against it are met with the shield: you take 50% of its ATK.' },
+  crucible: { name: 'Molten hull', status: { burn: 2 }, desc: 'Striking it sets you Burning.' },
+  hound:    { name: 'Snapping jaws', status: { bleed: 2 }, desc: 'Get close and it bites: striking it leaves you Bleeding.' },
+  slagger:  { name: 'Slag spatter', status: { burn: 2 }, desc: 'Molten slag splashes back: striking it sets you Burning.' },
+  shock:    { name: 'Shock baton', mult: 0.4, desc: 'Strikes against it are answered with a baton: you take 40% of its ATK.' },
+  sentinel: { name: 'Arc field', mult: 0.4, desc: 'Its hull is live: striking it costs you 40% of its ATK.' },
+  brask:    { name: 'Hammer fist', mult: 0.5, desc: 'Brask loves a brawl: strikes against him are met with 50% of his ATK.' },
+};
 
 export const ITEMS = {
   stim:    { name: 'Med Stim',       short: 'Heal 40%, stop bleeding', cost: 20, desc: 'Restore 40% max HP (+10% per INT).' },
@@ -123,9 +226,10 @@ export const TRAINING = {
 export const CELL = [
   { id: 'stash',  name: 'Hidden Stash',   cost: 6,  desc: 'New operatives start with +60 credits.' },
   { id: 'kit',    name: 'Field Kit',      cost: 6,  desc: 'New operatives start with +1 Med Stim and +1 Thermal Charge.' },
-  { id: 'cache',  name: 'Weapons Cache',  cost: 8,  desc: 'New operatives start with a Salvaged Carbine.' },
+  { id: 'cache',  name: 'Weapons Cache',  cost: 8,  desc: 'New operatives start with a Salvaged Carbine and a Shock Baton.' },
   { id: 'ledger', name: 'Doc\u2019s Ledger', cost: 8, desc: 'Med Bay treatment costs half.' },
   { id: 'mentor', name: 'Old Hand',       cost: 12, desc: 'New operatives get +1 attribute point at creation.' },
+  { id: 'heirloom', name: 'Heirloom',     cost: 10, desc: 'When an operative dies, choose one piece of their gear to pass on to the next.' },
 ];
 
 // ---------- enemies ----------
