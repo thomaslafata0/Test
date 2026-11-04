@@ -62,3 +62,15 @@ Replace the town tabs with a top-down 2D hub you walk around (Stardew/Pokémon-s
 ## Other ideas discussed but not built
 - iPhone app via Capacitor (bundle fonts, native storage for saves, touch hold-for-info, haptics, needs a Mac/Xcode + Apple developer account). A free "Add to Home Screen" web build is the cheaper first step.
 - "Copy run report" button so the owner can paste their save/log into a session for debugging.
+
+## Proposed next feature: randomised loot (design agreed in principle, not built)
+Goal: more run-to-run variety, a credit sink, and exciting drops.
+1. **Rarity tiers for weapons and armour:** Common (grey, main stat x1.0), Rare (blue, x1.2, 1 random bonus), Elite (purple, x1.45, 2 bonuses), Legendary (gold, x1.75, 2 bonuses + a special trait), and **Unique** boss items (fixed, signature effect).
+2. **Bonus pool:** +crit, +SPD, +DEF, bleed-on-hit chance, +damage vs droids/humans, heal on kill, shorter skill cooldowns, status resistance, +credits.
+3. **Wider base gaps** between item tiers so rarity creates overlap (a Legendary Carbine can beat a Common Repeater).
+4. **Rotating Black Market:** 4-6 random pieces restocked after each raid; rarity odds improve with the cell's best sector. No more buying the whole catalogue.
+5. **Upgrades (credit sink):** pay to raise an item +1..+5 (about +8% main stat each, escalating cost) or reroll one bonus.
+6. **Drops:** elites ~30% chance of gear; bosses always drop their Unique (ideas: Halvek's Service Pistol: crits refund a skill cooldown; Crucible Core Plate: burning enemies take extra damage; Kell's Cell Key: Intimidate works on bosses; Vane's Ornate Pistol: Aimed Shot always crits; plus Brask, Crawler, Ostrane). After a drop: take it (side-by-side comparison) or sell it.
+7. **Death still loses gear;** optional Resolve cell upgrade "Heirloom" keeps one piece for the next operative.
+8. **UI:** rarity-coloured names and icon frames, item cards with +/- comparison against equipped gear, a loot screen after drops.
+Implementation notes: gear becomes item instances (`{ base, rarity, level, bonuses[] }`) instead of ids; bump save `VERSION` to 4 and migrate equipped ids to Common instances; update `statsOf`, the market/victory/safehouse screens, `icons.js` (rarity frames), and both simulators (shop RNG, upgrades, drop rates); re-run `sim.mjs` and `sim-builds.mjs` to retune prices and drop rates.
