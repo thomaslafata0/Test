@@ -74,3 +74,48 @@ Goal: more run-to-run variety, a credit sink, and exciting drops.
 7. **Death still loses gear;** optional Resolve cell upgrade "Heirloom" keeps one piece for the next operative.
 8. **UI:** rarity-coloured names and icon frames, item cards with +/- comparison against equipped gear, a loot screen after drops.
 Implementation notes: gear becomes item instances (`{ base, rarity, level, bonuses[] }`) instead of ids; bump save `VERSION` to 4 and migrate equipped ids to Common instances; update `statsOf`, the market/victory/safehouse screens, `icons.js` (rarity frames), and both simulators (shop RNG, upgrades, drop rates); re-run `sim.mjs` and `sim-builds.mjs` to retune prices and drop rates.
+
+## Proposed next feature: gear slots and a character gear screen (build together with the loot system)
+Replace the single weapon + armour with a paper-doll gear screen. Every slot uses the loot system above (rarity, bonuses, upgrades, boss Uniques).
+
+**Slots**
+| Slot | Main stat | Notes |
+|---|---|---|
+| Ranged weapon | ATK (ranged) | pistols, carbines, scatterguns, rifles, heavy, tech (Arc Projector) |
+| Melee weapon | ATK (melee) | baton, maul, knives, prods; new bases needed (e.g. combat knife, shock prod, breaching axe) |
+| Helmet | DEF | bonuses lean to crit resistance, status resistance, Shaken immunity |
+| Chest armour | DEF (largest share) | current armour list becomes chest pieces |
+| Leg armour | DEF + SPD | heavy legs cost SPD, light legs add it |
+| Gadget (optional, 1 slot) | utility | e.g. grenade belt (+1 item carry), scanner (see enemy's next 2 intents), stim injector (stims heal more) |
+Implants stay as they are (separate slots in the Clinic).
+
+**Combat changes**
+- Two basic attacks instead of one: **Shoot** (ranged weapon ATK) and **Strike** (melee weapon ATK). Keys: A = Shoot, F = Strike.
+- Each skill uses the weapon of its type: Aimed Shot, Burst Fire, Scatter Blast and Suppressing Fire use the **ranged** weapon; Power Strike uses the **melee** weapon; Overload uses a tech weapon or gadget. A strong rifle with a basic knife makes your melee skills weak, and vice versa.
+- Give each a reason to exist: **melee** ignores the enemy's cover penalty and is boosted by STR (+1 ATK per STR point, as now); **ranged** gets AGI-based crit and is the only way to hit without risking melee-specific counters (optional: some enemies like the Riot Enforcer punish melee).
+- Defence = sum of helmet + chest + legs DEF; SPD modifiers from legs (and heavy chest) apply.
+- Stat requirements stay per item (STR for heavy melee and heavy armour, AGI for rifles and light legs, INT for tech, CHA for officer gear).
+
+**UI**
+- New **Gear** screen (tab in town, and viewable from the Safehouse): a paper-doll layout with the slots around the operative's portrait, each slot showing the item icon in its rarity frame, name, main stat and bonuses; tap a slot to see an item card and compare.
+- Market and loot screens show which slot an item goes in and a +/- comparison against what's equipped in that slot.
+- Combat buttons: Shoot and Strike each show the weapon name underneath, like Attack does now.
+- Needs new icons in `icons.js` for helmets, leg armour, melee weapons and gadgets (same 24x24 style), with rarity-coloured frames.
+
+**Save migration:** existing `weapon` becomes the ranged slot (or melee if its type is melee/heavy melee), existing `armor` becomes chest; other slots start empty (or with Common starter pieces: work cap, trousers, kitchen knife).
+
+## Required balance check after building loot + gear slots
+1. **Before changing anything,** run and save the baseline:
+   ```bash
+   node sim.mjs 100 30
+   MAP=port node sim.mjs 50 40
+   node sim-builds.mjs 200 25
+   ```
+2. Update both simulators' bots to the new systems: buy and equip per slot (prefer items meeting their build's requirements; ranged-focused bots for AGI, melee-focused for STR), use market upgrades with spare credits, take loot drops when they're better, choose Shoot vs Strike sensibly (Strike against enemies in cover, otherwise the stronger one). Add bot profiles for **melee-only**, **ranged-only** and **hybrid** builds.
+3. Re-run all three commands and report a before/after table.
+4. **Targets** (adjust `TUNE`, item stats, rarity odds, drop rates and upgrade costs until they hold):
+   - main bot: first boss around operative 2-3; sector-10 boss around 7-10; Garrison finale 18-25 operatives; Port finale 25-35 with at least 80% of campaigns finishing within 40.
+   - builds: every pure build (STR, AGI, INT, CHA) and melee-only / ranged-only / hybrid finishes in 100% of campaigns; slowest build within about 1.5x of the fastest at the sector-15 finale.
+   - economy: credits shouldn't let one operative max every slot early. Check average credits per raid by source (fights, rooms, events, contracts, selling loot) with an instrumented run, and make sure upgrades remain a meaningful sink.
+   - flag any single item, bonus or Unique whose presence changes the bot's finale time by more than about 20% as an outlier and tone it down.
+5. Play-test the new screens in a browser (desktop 1200px and phone 390px, no page errors, no horizontal overflow), then publish to the artifact and commit.
