@@ -4,7 +4,7 @@
 
 export const N = 40;
 const OUTLINE = '#07080a';
-const RAMPS = {
+export const RAMPS = {
   armor:  ['#676d73', '#a7acb0', '#e2e1da'],
   black:  ['#141619', '#262b31', '#454d56'],
   visor:  ['#08090b', '#16191d', '#3d4650'],
@@ -22,16 +22,19 @@ const RAMPS = {
   gold:   ['#6e5016', '#c39b45', '#f1d98a'],
   navy:   ['#18202c', '#2d3a50', '#4a5d7c'],
   white:  ['#8e959b', '#d2d5d7', '#f5f5f0'],
+  green:  ['#2e5a2a', '#5f9a4f', '#a6d98e'],
+  fire:   ['#8a2a0c', '#e0602a', '#ffc15a'],
+  paper:  ['#a39a86', '#d9d0bb', '#f3ecdc'],
   rust:   ['#4f2818', '#86452a', '#bb6c3f'],
   knit:   ['#22282e', '#38424b', '#56626d'],
 };
 
-function makeGrid() {
-  const g = { px: new Array(N * N).fill(null) };
+export function makeGrid(n = N) {
+  const g = { n, px: new Array(n * n).fill(null) };
   const put = (x, y, mat, shade) => {
     x = Math.round(x); y = Math.round(y);
-    if (x < 0 || y < 0 || x >= N || y >= N) return;
-    g.px[y * N + x] = RAMPS[mat][shade];
+    if (x < 0 || y < 0 || x >= n || y >= n) return;
+    g.px[y * n + x] = RAMPS[mat][shade];
   };
   // shade from a surface normal (nx, ny in -1..1); light comes from the top-left
   const lit = (nx, ny) => { const d = -0.6 * nx - 0.8 * ny; return d > 0.35 ? 2 : d < -0.3 ? 0 : 1; };
@@ -67,16 +70,16 @@ function makeGrid() {
   return g;
 }
 
-function outline(g) {
-  const out = g.px.slice();
-  for (let y = 0; y < N; y++)
-    for (let x = 0; x < N; x++) {
-      if (g.px[y * N + x]) continue;
+export function outline(g) {
+  const out = g.px.slice(), n = g.n || N;
+  for (let y = 0; y < n; y++)
+    for (let x = 0; x < n; x++) {
+      if (g.px[y * n + x]) continue;
       const near = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => {
         const nx = x + dx, ny = y + dy;
-        return nx >= 0 && ny >= 0 && nx < N && ny < N && g.px[ny * N + nx];
+        return nx >= 0 && ny >= 0 && nx < n && ny < n && g.px[ny * n + nx];
       });
-      if (near) out[y * N + x] = OUTLINE;
+      if (near) out[y * n + x] = OUTLINE;
     }
   g.px = out;
 }

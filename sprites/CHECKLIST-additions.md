@@ -1,0 +1,75 @@
+# Cinder Cell sprites, additions: delivery checklist
+
+12 characters, 66 strips. Checked by script: frame size, frame count (no empty frames), transparent background (no semi-transparent pixels), lowest pixel 8 px above the bottom edge in every frame.
+
+| File | Frames | Frame size | Transparent bg | Baseline (8 px) |
+|---|---|---|---|---|
+| sprites/welder/idle.png | 4 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/welder/attack.png | 4 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/welder/charge.png | 2 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/welder/hit.png | 2 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/welder/death.png | 6 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/foreman/idle.png | 4 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/foreman/attack.png | 4 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/foreman/charge.png | 2 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/foreman/hit.png | 2 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/foreman/defend.png | 2 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/foreman/death.png | 6 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/slagger/idle.png | 4 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/slagger/attack.png | 4 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/slagger/charge.png | 2 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/slagger/hit.png | 2 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/slagger/repair.png | 3 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/slagger/death.png | 6 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/jailer/idle.png | 4 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/jailer/attack.png | 4 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/jailer/charge.png | 2 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/jailer/hit.png | 2 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/jailer/defend.png | 2 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/jailer/death.png | 6 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/sedation/idle.png | 4 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/sedation/attack.png | 4 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/sedation/charge.png | 2 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/sedation/hit.png | 2 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/sedation/repair.png | 3 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/sedation/death.png | 6 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/dockguard/idle.png | 4 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/dockguard/attack.png | 4 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/dockguard/charge.png | 2 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/dockguard/hit.png | 2 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/dockguard/defend.png | 2 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/dockguard/death.png | 6 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/gunner/idle.png | 4 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/gunner/attack.png | 4 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/gunner/charge.png | 2 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/gunner/hit.png | 2 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/gunner/defend.png | 2 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/gunner/death.png | 6 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/brask/idle.png | 4 ✓ | 128x128 ✓ | ✓ | ✓ |
+| sprites/brask/attack.png | 4 ✓ | 128x128 ✓ | ✓ | ✓ |
+| sprites/brask/charge.png | 2 ✓ | 128x128 ✓ | ✓ | ✓ |
+| sprites/brask/hit.png | 2 ✓ | 128x128 ✓ | ✓ | ✓ |
+| sprites/brask/defend.png | 2 ✓ | 128x128 ✓ | ✓ | ✓ |
+| sprites/brask/death.png | 6 ✓ | 128x128 ✓ | ✓ | ✓ |
+| sprites/crucible/idle.png | 4 ✓ | 128x128 ✓ | ✓ | ✓ |
+| sprites/crucible/attack.png | 4 ✓ | 128x128 ✓ | ✓ | ✓ |
+| sprites/crucible/charge.png | 2 ✓ | 128x128 ✓ | ✓ | ✓ |
+| sprites/crucible/hit.png | 2 ✓ | 128x128 ✓ | ✓ | ✓ |
+| sprites/crucible/repair.png | 3 ✓ | 128x128 ✓ | ✓ | ✓ |
+| sprites/crucible/death.png | 6 ✓ | 128x128 ✓ | ✓ | ✓ |
+| sprites/kell/idle.png | 4 ✓ | 128x128 ✓ | ✓ | ✓ |
+| sprites/kell/attack.png | 4 ✓ | 128x128 ✓ | ✓ | ✓ |
+| sprites/kell/charge.png | 2 ✓ | 128x128 ✓ | ✓ | ✓ |
+| sprites/kell/hit.png | 2 ✓ | 128x128 ✓ | ✓ | ✓ |
+| sprites/kell/defend.png | 2 ✓ | 128x128 ✓ | ✓ | ✓ |
+| sprites/kell/death.png | 6 ✓ | 128x128 ✓ | ✓ | ✓ |
+| sprites/vane/idle.png | 4 ✓ | 128x128 ✓ | ✓ | ✓ |
+| sprites/vane/attack.png | 4 ✓ | 128x128 ✓ | ✓ | ✓ |
+| sprites/vane/charge.png | 2 ✓ | 128x128 ✓ | ✓ | ✓ |
+| sprites/vane/hit.png | 2 ✓ | 128x128 ✓ | ✓ | ✓ |
+| sprites/vane/defend.png | 2 ✓ | 128x128 ✓ | ✓ | ✓ |
+| sprites/vane/death.png | 6 ✓ | 128x128 ✓ | ✓ | ✓ |
+| sprites/prisoner/idle.png | 4 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/prisoner/attack.png | 4 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/prisoner/hit.png | 2 ✓ | 96x96 ✓ | ✓ | ✓ |
+| sprites/prisoner/death.png | 6 ✓ | 96x96 ✓ | ✓ | ✓ |

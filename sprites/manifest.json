@@ -478,5 +478,410 @@
         "loop": false
       }
     }
+  },
+  "welder": {
+    "size": 96,
+    "anims": {
+      "idle": {
+        "frames": 4,
+        "fps": 6,
+        "loop": true
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 10,
+        "loop": false
+      },
+      "charge": {
+        "frames": 2,
+        "fps": 6,
+        "loop": true
+      },
+      "hit": {
+        "frames": 2,
+        "fps": 10,
+        "loop": false
+      },
+      "death": {
+        "frames": 6,
+        "fps": 8,
+        "loop": false
+      }
+    }
+  },
+  "foreman": {
+    "size": 96,
+    "anims": {
+      "idle": {
+        "frames": 4,
+        "fps": 6,
+        "loop": true
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 10,
+        "loop": false
+      },
+      "charge": {
+        "frames": 2,
+        "fps": 6,
+        "loop": true
+      },
+      "hit": {
+        "frames": 2,
+        "fps": 10,
+        "loop": false
+      },
+      "defend": {
+        "frames": 2,
+        "fps": 6,
+        "loop": false
+      },
+      "death": {
+        "frames": 6,
+        "fps": 8,
+        "loop": false
+      }
+    }
+  },
+  "slagger": {
+    "size": 96,
+    "anims": {
+      "idle": {
+        "frames": 4,
+        "fps": 6,
+        "loop": true
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 10,
+        "loop": false
+      },
+      "charge": {
+        "frames": 2,
+        "fps": 6,
+        "loop": true
+      },
+      "hit": {
+        "frames": 2,
+        "fps": 10,
+        "loop": false
+      },
+      "repair": {
+        "frames": 3,
+        "fps": 6,
+        "loop": true
+      },
+      "death": {
+        "frames": 6,
+        "fps": 8,
+        "loop": false
+      }
+    }
+  },
+  "jailer": {
+    "size": 96,
+    "anims": {
+      "idle": {
+        "frames": 4,
+        "fps": 6,
+        "loop": true
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 10,
+        "loop": false
+      },
+      "charge": {
+        "frames": 2,
+        "fps": 6,
+        "loop": true
+      },
+      "hit": {
+        "frames": 2,
+        "fps": 10,
+        "loop": false
+      },
+      "defend": {
+        "frames": 2,
+        "fps": 6,
+        "loop": false
+      },
+      "death": {
+        "frames": 6,
+        "fps": 8,
+        "loop": false
+      }
+    }
+  },
+  "sedation": {
+    "size": 96,
+    "anims": {
+      "idle": {
+        "frames": 4,
+        "fps": 6,
+        "loop": true
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 10,
+        "loop": false
+      },
+      "charge": {
+        "frames": 2,
+        "fps": 6,
+        "loop": true
+      },
+      "hit": {
+        "frames": 2,
+        "fps": 10,
+        "loop": false
+      },
+      "repair": {
+        "frames": 3,
+        "fps": 6,
+        "loop": true
+      },
+      "death": {
+        "frames": 6,
+        "fps": 8,
+        "loop": false
+      }
+    }
+  },
+  "dockguard": {
+    "size": 96,
+    "anims": {
+      "idle": {
+        "frames": 4,
+        "fps": 6,
+        "loop": true
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 10,
+        "loop": false
+      },
+      "charge": {
+        "frames": 2,
+        "fps": 6,
+        "loop": true
+      },
+      "hit": {
+        "frames": 2,
+        "fps": 10,
+        "loop": false
+      },
+      "defend": {
+        "frames": 2,
+        "fps": 6,
+        "loop": false
+      },
+      "death": {
+        "frames": 6,
+        "fps": 8,
+        "loop": false
+      }
+    }
+  },
+  "gunner": {
+    "size": 96,
+    "anims": {
+      "idle": {
+        "frames": 4,
+        "fps": 6,
+        "loop": true
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 10,
+        "loop": false
+      },
+      "charge": {
+        "frames": 2,
+        "fps": 6,
+        "loop": true
+      },
+      "hit": {
+        "frames": 2,
+        "fps": 10,
+        "loop": false
+      },
+      "defend": {
+        "frames": 2,
+        "fps": 6,
+        "loop": false
+      },
+      "death": {
+        "frames": 6,
+        "fps": 8,
+        "loop": false
+      }
+    }
+  },
+  "brask": {
+    "size": 128,
+    "anims": {
+      "idle": {
+        "frames": 4,
+        "fps": 6,
+        "loop": true
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 10,
+        "loop": false
+      },
+      "charge": {
+        "frames": 2,
+        "fps": 6,
+        "loop": true
+      },
+      "hit": {
+        "frames": 2,
+        "fps": 10,
+        "loop": false
+      },
+      "defend": {
+        "frames": 2,
+        "fps": 6,
+        "loop": false
+      },
+      "death": {
+        "frames": 6,
+        "fps": 8,
+        "loop": false
+      }
+    }
+  },
+  "crucible": {
+    "size": 128,
+    "anims": {
+      "idle": {
+        "frames": 4,
+        "fps": 6,
+        "loop": true
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 10,
+        "loop": false
+      },
+      "charge": {
+        "frames": 2,
+        "fps": 6,
+        "loop": true
+      },
+      "hit": {
+        "frames": 2,
+        "fps": 10,
+        "loop": false
+      },
+      "repair": {
+        "frames": 3,
+        "fps": 6,
+        "loop": true
+      },
+      "death": {
+        "frames": 6,
+        "fps": 8,
+        "loop": false
+      }
+    }
+  },
+  "kell": {
+    "size": 128,
+    "anims": {
+      "idle": {
+        "frames": 4,
+        "fps": 6,
+        "loop": true
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 10,
+        "loop": false
+      },
+      "charge": {
+        "frames": 2,
+        "fps": 6,
+        "loop": true
+      },
+      "hit": {
+        "frames": 2,
+        "fps": 10,
+        "loop": false
+      },
+      "defend": {
+        "frames": 2,
+        "fps": 6,
+        "loop": false
+      },
+      "death": {
+        "frames": 6,
+        "fps": 8,
+        "loop": false
+      }
+    }
+  },
+  "vane": {
+    "size": 128,
+    "anims": {
+      "idle": {
+        "frames": 4,
+        "fps": 6,
+        "loop": true
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 10,
+        "loop": false
+      },
+      "charge": {
+        "frames": 2,
+        "fps": 6,
+        "loop": true
+      },
+      "hit": {
+        "frames": 2,
+        "fps": 10,
+        "loop": false
+      },
+      "defend": {
+        "frames": 2,
+        "fps": 6,
+        "loop": false
+      },
+      "death": {
+        "frames": 6,
+        "fps": 8,
+        "loop": false
+      }
+    }
+  },
+  "prisoner": {
+    "size": 96,
+    "anims": {
+      "idle": {
+        "frames": 4,
+        "fps": 6,
+        "loop": true
+      },
+      "attack": {
+        "frames": 4,
+        "fps": 10,
+        "loop": false
+      },
+      "hit": {
+        "frames": 2,
+        "fps": 10,
+        "loop": false
+      },
+      "death": {
+        "frames": 6,
+        "fps": 8,
+        "loop": false
+      }
+    }
   }
 }

@@ -262,12 +262,12 @@ export const EVENTS = [
       { label: 'Slice the door controls', check: { attr: 'int', base: 0.35, per: 0.1 },
         win: { next: 'stunned', text: 'You loop the camera feed and trip the next door early.' }, lose: { next: 'alerted', text: 'Wrong sequence. An alarm starts to wail.' } },
       { label: 'Copy the patrol routes', check: { attr: 'int', base: 0.2, per: 0.08 },
-        win: { resolve: 2, attrs: { int: 1 }, text: 'The routes go to the cell. You learn a thing or two about their systems.' }, lose: { next: 'alerted', text: 'Access denied. Then a lot of red text.' } },
+        win: { resolve: 1, attrs: { int: 1 }, text: 'The routes go to the cell. You learn a thing or two about their systems.' }, lose: { next: 'alerted', text: 'Access denied. Then a lot of red text.' } },
       { label: 'Leave it alone', win: { text: 'Terminals have a way of remembering faces.' } },
     ] },
   { id: 'prisoner', maps: ['garrison', 'detention'], text: 'Behind a holding-cell door, a prisoner looks up. The release panel is right there.',
     options: [
-      { label: 'Free them', win: { hp: -0.1, resolve: 2, ally: 1, attrs: { cha: 1 }, text: 'You take a graze covering their escape. Word will spread in the yard.' } },
+      { label: 'Free them', win: { hp: -0.1, resolve: 1, ally: 1, attrs: { cha: 1 }, text: 'You take a graze covering their escape. Word will spread in the yard.' } },
       { label: 'Ask what they know first', check: { attr: 'cha', base: 0.4, per: 0.1 },
         win: { credits: [15, 25], resolve: 1, text: 'A hidden credit stash, a guard rotation, and a promise to tell the others.' }, lose: { next: 'alerted', text: 'They panic and start shouting.' } },
       { label: 'Leave them', win: { text: 'You tell yourself you\u2019ll come back.' } },
@@ -284,7 +284,7 @@ export const EVENTS = [
   { id: 'wounded', maps: ['garrison', 'port'], text: 'A wounded trooper, barely more than a kid, is slumped against the wall. He\u2019s reaching for his comm.',
     options: [
       { label: 'Take the comm and go', win: { next: 'stunned', text: 'You listen in on their channel for the next stretch.' } },
-      { label: 'Patch him up', cost: { stim: 1 }, win: { resolve: 2, attrs: { cha: 1 }, text: 'He stares at you the whole time. Maybe he\u2019ll remember this.' } },
+      { label: 'Patch him up', cost: { stim: 1 }, win: { resolve: 1, attrs: { cha: 1 }, text: 'He stares at you the whole time. Maybe he\u2019ll remember this.' } },
       { label: 'Make sure he stays quiet', win: { attrs: { str: 1, cha: -1 }, text: 'It\u2019s quiet. It stays with you.' } },
     ] },
   { id: 'steam', maps: ['foundry'], text: 'A coolant line has burst. The corridor ahead is a wall of scalding steam.',
@@ -299,16 +299,16 @@ export const EVENTS = [
   { id: 'workers', maps: ['foundry'], text: 'Forced-shift workers watch you from the line. One whispers: the overseer keeps a strongbox two floors up.',
     options: [
       { label: 'Rally them', check: { attr: 'cha', base: 0.25, per: 0.1 },
-        win: { resolve: 2, attrs: { cha: 1 }, next: 'stunned', text: 'Someone kills the line. In the chaos, nobody is watching you.' }, lose: { next: 'alerted', text: 'Most look away. Someone calls security.' } },
+        win: { resolve: 1, attrs: { cha: 1 }, next: 'stunned', text: 'Someone kills the line. In the chaos, nobody is watching you.' }, lose: { next: 'alerted', text: 'Most look away. Someone calls security.' } },
       { label: 'Go for the strongbox', win: { credits: [20, 30], text: 'You crack it with a pry bar. Quota bonuses, all of it.' } },
       { label: 'Keep your head down', win: { text: 'Not tonight.' } },
     ] },
   { id: 'interrogation', maps: ['detention'], text: 'Through the glass: an interrogation. The subject\u2019s face is one you know from the market.',
     options: [
       { label: 'Break in', check: { attr: 'str', base: 0.35, per: 0.1 },
-        win: { resolve: 3, ally: 1, attrs: { cha: 1 }, text: 'The interrogator runs. They pick up his baton and follow you.' }, lose: { hp: -0.2, resolve: 1, text: 'You get them out, but not cleanly.' } },
+        win: { resolve: 2, ally: 1, attrs: { cha: 1 }, text: 'The interrogator runs. They pick up his baton and follow you.' }, lose: { hp: -0.2, resolve: 1, text: 'You get them out, but not cleanly.' } },
       { label: 'Cut the power', check: { attr: 'int', base: 0.35, per: 0.1 },
-        win: { resolve: 2, next: 'stunned', text: 'The lights die. When they come back, the chair is empty.' }, lose: { next: 'alerted', text: 'Backup generators kick in. So do the sirens.' } },
+        win: { resolve: 1, next: 'stunned', text: 'The lights die. When they come back, the chair is empty.' }, lose: { next: 'alerted', text: 'Backup generators kick in. So do the sirens.' } },
       { label: 'Walk on', win: { attrs: { cha: -1 }, text: 'You\u2019ll remember their face. They\u2019ll remember yours.' } },
     ] },
   { id: 'armory', maps: ['garrison', 'port'], text: 'An unlocked weapons locker. Somebody\u2019s going to be in trouble for this.',
@@ -326,7 +326,7 @@ export const EVENTS = [
     options: [
       { label: 'Steal it back', check: { attr: 'agi', base: 0.35, per: 0.1 },
         win: { credits: [30, 45], text: 'You reroute two crates to a smuggler\u2019s berth.' }, lose: { next: 'alerted', hp: -0.1, text: 'A loader spots you between the stacks.' } },
-      { label: 'Flag it for the cell', win: { resolve: 2, text: 'The yard will know where their things went.' } },
+      { label: 'Flag it for the cell', win: { resolve: 1, text: 'The yard will know where their things went.' } },
     ] },
   { id: 'smuggler', maps: 'any', text: 'A smuggler in a stolen maintenance uniform leans out of a vent. \u201CBuying or selling?\u201D',
     options: [

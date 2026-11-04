@@ -325,6 +325,28 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .contract b { font-weight: 600; }
 .contract.done { border-left-color: var(--ok); opacity: .75; }
 .ending .big-title { color: var(--ok); }
+
+/* ---------- icons ---------- */
+.ico { image-rendering: pixelated; flex: none; display: block; }
+.ico-sm { width: 24px; height: 24px; }
+.ico-sm2 { width: 36px; height: 36px; }
+.ico-md { width: 48px; height: 48px; }
+.ico-lg { width: 72px; height: 72px; }
+.row.i { grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 14px; }
+.row.i > .ico { background: var(--panel-2); border: 1px solid var(--line); padding: 4px; box-sizing: content-box; width: 40px; height: 40px; }
+.row.owned > .ico { border-color: var(--ok); }
+.perk > .ico { margin-bottom: 2px; }
+.perk-mini { grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px; }
+.perk-mini > div { display: grid; gap: 2px; }
+.door > .ico { position: absolute; right: 14px; top: 14px; opacity: .9; }
+.door { position: relative; }
+.door b, .door .desc { padding-right: 56px; }
+.items .btn, .actions .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.items .btn .ico, .actions .btn .ico { width: 20px; height: 20px; }
+.items .btn:disabled .ico { opacity: .5; filter: grayscale(1); }
+.sk-name { display: inline-flex; align-items: center; gap: 6px; }
+.sk-name .ico { width: 20px; height: 20px; }
+@media (max-width: 520px) { .row.i > .ico { width: 32px; height: 32px; } .door b, .door .desc { padding-right: 0; } .door > .ico { width: 36px; height: 36px; } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 
@@ -336,6 +358,7 @@ import * as E from './engine.js';
 import { portraitURL } from './portraits.js';
 import { Stage, loadSheets, sheetStill } from './stage.js';
 import * as A from './audio.js';
+import { iconURL } from './icons.js';
 
 const SAVE_KEY = 'cinder-cell-save-v1';
 const rng = Math.random;
@@ -356,6 +379,8 @@ const bar = (v, max, cls = '') => `<div class="bar ${cls} ${v / max < 0.3 ? 'low
 const cr = (n) => `${n.toLocaleString()} ${S.cur}`;
 const pct = (x) => `${Math.round(x * 100)}%`;
 const SKILL_KEYS = ['q', 'w', 'e'];
+// Pixel icon as a decorative image. size: sm 24px, md 48px, lg 72px.
+const ico = (key, size = 'md') => { const src = iconURL(key); return src ? `<img class="ico ico-${size}" src="${src}" alt="" width="24" height="24">` : ''; };
 
 function headerTools() {
   const p = A.getPrefs();
@@ -406,7 +431,7 @@ function introScreen() {
     <ol class="howto">
       <li><b>Raid</b> one of four Directorate districts. Pick your doors, fight, push deeper or slip out with the credits.</li>
       <li><b>Die</b> and you lose the operative: level, gear, implants, contraband, credits.</li>
-      <li><b>Resolve</b> survives. Spend it on training that every future operative keeps.</li>
+      <li><b>Resolve</b> survives. It\u2019s scarce: earned from new sectors, bosses, contracts and brave choices. Spend it on training every future operative keeps.</li>
       <li><b>Liberate</b> all four districts by beating their sector-15 bosses.</li>
     </ol>
     <div class="btnrow"><button class="btn primary big" data-a="begin">Build your first operative</button><button class="btn big" data-a="modal" data-v="manual">Field manual</button></div>
@@ -475,7 +500,7 @@ function gearRows(kind, list) {
     const stat = kind === 'weapon' ? `+${g.atk} ATK \u00B7 ${g.type}` : `+${g.def} DEF`;
     const skill = kind === 'weapon' ? D.SKILLS[D.WEAPON_SKILL[g.type]] : null;
     const weaker = kind === 'weapon' ? g.atk <= cur.atk && g.type === cur.type : g.def <= cur.def;
-    return `<div class="row ${owned ? 'owned' : ''}"><div><div class="name">${esc(g.name)} <span class="num muted" style="font-size:.8rem">${stat}</span>${g.req ? ` <span class="chip ${ok ? '' : 'bad'}">needs ${E.reqText(g.req)}</span>` : ''}</div>
+    return `<div class="row i ${owned ? 'owned' : ''}">${ico(`${kind}:${g.id}`)}<div><div class="name">${esc(g.name)} <span class="num muted" style="font-size:.8rem">${stat}</span>${g.req ? ` <span class="chip ${ok ? '' : 'bad'}">needs ${E.reqText(g.req)}</span>` : ''}</div>
       <div class="desc">${esc(g.desc)}${skill ? ` Skill: ${esc(skill.name)}.` : ''}</div></div>
       ${owned ? '<span></span>' : weaker ? '<span class="label">no upgrade</span>' : buyBtn('gear', g.id, kind, g.cost, !ok)}</div>`;
   }).join('');
@@ -483,11 +508,11 @@ function gearRows(kind, list) {
 
 function market() {
   const c = state.char, st = E.stats(state);
-  const items = Object.entries(D.ITEMS).map(([id, it]) => `<div class="row"><div><div class="name">${esc(it.name)} <span class="num muted" style="font-size:.8rem">${c.items[id]}/${st.carry}</span></div><div class="desc">${esc(it.desc)}</div></div>
+  const items = Object.entries(D.ITEMS).map(([id, it]) => `<div class="row i">${ico(`item:${id}`)}<div><div class="name">${esc(it.name)} <span class="num muted" style="font-size:.8rem">${c.items[id]}/${st.carry}</span></div><div class="desc">${esc(it.desc)}</div></div>
     ${buyBtn('item', id, '', it.cost, c.items[id] >= st.carry)}</div>`).join('');
   const ups = D.UPGRADES.map((u) => {
     const owned = c.upgrades.includes(u.id);
-    return `<div class="row ${owned ? 'owned' : ''}"><div><div class="name">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div></div>${owned ? '<span></span>' : buyBtn('upgrade', u.id, '', u.cost)}</div>`;
+    return `<div class="row i ${owned ? 'owned' : ''}">${ico(`upgrade:${u.id}`)}<div><div class="name">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div></div>${owned ? '<span></span>' : buyBtn('upgrade', u.id, '', u.cost)}</div>`;
   }).join('');
   const disc = 1 - E.price(state, 100) / 100;
   return `<p class="muted">Old Marrow\u2019s stall, behind the scrap scales. No receipts. Everything here is lost if you die.${disc > 0 ? ` Your Charisma gets you ${pct(disc)} off.` : ''}</p>
@@ -501,7 +526,7 @@ function clinic() {
   const c = state.char, st = E.stats(state), cost = E.healCost(state);
   const imps = D.IMPLANTS.map((u) => {
     const owned = c.implants.includes(u.id);
-    return `<div class="row ${owned ? 'owned' : ''}"><div><div class="name">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div></div>
+    return `<div class="row i ${owned ? 'owned' : ''}">${ico(`implant:${u.id}`)}<div><div class="name">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div></div>
       ${owned ? `<button class="btn" data-a="unimplant" data-v="${u.id}">Remove</button>` : buyBtn('implant', u.id, '', u.cost, c.implants.length >= st.slots)}</div>`;
   }).join('');
   return `<p class="muted">Doc Ilse works out of a laundry back room. Stitches, and for the right price, hardware under the skin.</p>
@@ -517,17 +542,17 @@ function safehouse() {
   const m = state.meta, c = state.char;
   const attrRows = Object.entries(D.ATTRS).map(([k, a]) => `<div class="attr-row"><div><div class="name">${esc(a.label)} <span class="num muted">${a.short}</span></div><div class="desc">${esc(a.desc)}</div></div>
     <div class="stepper"><span class="num big-num">${E.attr(c, k)}</span>${c.attrPoints ? `<button class="btn" data-a="spend" data-v="${k}" aria-label="Raise ${a.label}" ${c.attrs[k] >= D.ATTR_MAX ? 'disabled' : ''}>+</button>` : ''}</div></div>`).join('');
-  const skills = E.skillsOf(c).map((k) => `<div class="row"><div><div class="name">${esc(D.SKILLS[k].name)} <span class="num muted" style="font-size:.8rem">cooldown ${E.skillCd(c, k)}</span></div><div class="desc">${esc(D.SKILLS[k].desc)}</div></div><span class="label">${esc(D.SKILLS[k].from)}</span></div>`).join('');
+  const skills = E.skillsOf(c).map((k) => `<div class="row i">${ico(`skill:${k}`)}<div><div class="name">${esc(D.SKILLS[k].name)} <span class="num muted" style="font-size:.8rem">cooldown ${E.skillCd(c, k)}</span></div><div class="desc">${esc(D.SKILLS[k].desc)}</div></div><span class="label">${esc(D.SKILLS[k].from)}</span></div>`).join('');
   const history = c.history.length ? c.history.map((h) => `<div><span>${esc(h.text)}</span></div>`).join('') : '<p class="muted">Nothing yet. Your choices in the field will show up here.</p>';
   const rows = Object.entries(D.TRAINING).map(([k, t]) => {
     const lvl = m.training[k], cost = E.trainingCost(lvl), maxed = lvl >= t.max;
-    return `<div class="row"><div><div class="name">${esc(t.label)} <span class="num muted" style="font-size:.8rem">+${t.per} ${t.stat} per rank</span></div>
+    return `<div class="row i">${ico(`train:${k}`)}<div><div class="name">${esc(t.label)} <span class="num muted" style="font-size:.8rem">+${t.per} ${t.stat} per rank</span></div>
       <div class="desc">${esc(t.note)}</div><div class="pips" aria-label="rank ${lvl} of ${t.max}">${Array.from({ length: t.max }, (_, i) => `<i class="${i < lvl ? 'on' : ''}"></i>`).join('')}</div></div>
       ${maxed ? '<span class="label">mastered</span>' : `<button class="btn" data-a="train" data-v="${k}" ${m.resolve < cost ? 'disabled' : ''}>${cost} ${esc(S.meta)}</button>`}</div>`;
   }).join('');
   const cell = D.CELL.map((u) => {
     const owned = m.cell.includes(u.id);
-    return `<div class="row ${owned ? 'owned' : ''}"><div><div class="name">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div></div>${owned ? '<span></span>' : `<button class="btn" data-a="cell" data-v="${u.id}" ${m.resolve < u.cost ? 'disabled' : ''}>${u.cost} ${esc(S.meta)}</button>`}</div>`;
+    return `<div class="row i ${owned ? 'owned' : ''}">${ico(`cell:${u.id}`)}<div><div class="name">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div></div>${owned ? '<span></span>' : `<button class="btn" data-a="cell" data-v="${u.id}" ${m.resolve < u.cost ? 'disabled' : ''}>${u.cost} ${esc(S.meta)}</button>`}</div>`;
   }).join('');
   const wall = m.fallen.length ? m.fallen.map((f) => `<div><span>${esc(f.name)} <span class="muted">\u00B7 Lv ${f.level}</span></span><span class="muted">${esc(E.sectorName(f.sector, f.map))}, ${esc(f.killer)}</span></div>`).join('') : '<p class="muted">No names yet. Keep it that way.</p>';
   const bg = D.BACKGROUNDS.find((b) => b.id === c.background);
@@ -537,7 +562,7 @@ function safehouse() {
         <p class="muted" style="font-size:.9rem">${esc(bg.perk)}${c.attrPoints ? ` <b style="color:var(--sodium)">${c.attrPoints} attribute point${c.attrPoints > 1 ? 's' : ''} to spend.</b>` : ' Level up to earn attribute points.'}</p>
         <div class="rows">${attrRows}</div>
         <span class="label">Skills</span><div class="rows">${skills}</div>
-        <span class="label">Contraband</span>${c.perks.length ? `<div class="perk-list">${c.perks.map((id) => { const pk = E.perkById(id); return `<div class="perk-mini ${pk.rare ? 'rare' : ''}"><b>${esc(pk.name)}</b><span>${esc(pk.desc)}</span></div>`; }).join('')}</div>` : '<p class="muted">None yet. Elites and bosses carry it.</p>'}
+        <span class="label">Contraband</span>${c.perks.length ? `<div class="perk-list">${c.perks.map((id) => { const pk = E.perkById(id); return `<div class="perk-mini ${pk.rare ? 'rare' : ''}">${ico(`perk:${id}`, 'sm2')}<div><b>${esc(pk.name)}</b><span>${esc(pk.desc)}</span></div></div>`; }).join('')}</div>` : '<p class="muted">None yet. Elites and bosses carry it.</p>'}
         <span class="label">Choices that changed you</span><div class="wall">${history}</div>
       </div>
       <div style="display:grid;gap:14px;align-content:start;min-width:0">
@@ -594,12 +619,12 @@ function intentInfo(e) {
 function combatScreen() {
   const r = state.run, e = r.enemy, c = state.char, st = E.stats(state);
   const intent = intentInfo(e);
-  const items = ['thermal', 'ion', 'smoke'].map((id, i) => `<button class="btn" data-a="act" data-v="${id}" title="${esc(D.ITEMS[id].desc)}" ${c.items[id] ? '' : 'disabled'}>${esc(D.ITEMS[id].name)} <span class="num">\u00D7${c.items[id]}</span><span class="k">${i + 2}</span></button>`).join('');
+  const items = ['thermal', 'ion', 'smoke'].map((id, i) => `<button class="btn" data-a="act" data-v="${id}" title="${esc(D.ITEMS[id].desc)}" ${c.items[id] ? '' : 'disabled'}>${ico(`item:${id}`, 'sm')}${esc(D.ITEMS[id].name)} <span class="num">\u00D7${c.items[id]}</span><span class="k">${i + 2}</span></button>`).join('');
   const skills = E.skillsOf(c).slice(0, 3).map((k, i) => {
     const cd = r.cooldowns[k] || 0, sk = D.SKILLS[k];
     const note = k === 'intimidate' ? (cd ? 'used this sector' : e.tags.includes('human') ? `${pct(E.intimidateChance(state))} to break` : 'humans only') : cd ? `ready in ${cd}` : 'ready';
     return `<button class="btn skill ${cd ? '' : 'ready'}" data-a="act" data-v="${k}" title="${esc(sk.desc)}" ${E.canUse(state, k) && !(k === 'intimidate' && !e.tags.includes('human')) ? '' : 'disabled'}>
-      <span class="sk-name">${esc(sk.name)}<span class="k">${SKILL_KEYS[i].toUpperCase()}</span></span><span class="sk-note">${note}</span></button>`;
+      <span class="sk-name">${ico(`skill:${k}`, 'sm')}${esc(sk.name)}<span class="k">${SKILL_KEYS[i].toUpperCase()}</span></span><span class="sk-note">${note}</span></button>`;
   }).join('');
   const meta = [...e.tags.filter((t) => t !== 'boss').map((t) => `<span class="tag ${t}">${t}</span>`),
     `<span>ATK <b>${e.atk}</b></span>`, `<span>DEF <b>${e.def}</b></span>`, `<span>SPD <b>${e.spd}</b></span>`,
@@ -613,7 +638,7 @@ function combatScreen() {
     <div class="actions">
       <button class="btn primary" data-a="act" data-v="attack">Attack<span class="k">A</span></button>
       <button class="btn" data-a="act" data-v="defend">Defend<span class="k">D</span></button>
-      <button class="btn" data-a="act" data-v="stim" ${c.items.stim ? '' : 'disabled'}>Stim <span class="num">\u00D7${c.items.stim}</span><span class="k">S</span></button>
+      <button class="btn" data-a="act" data-v="stim" ${c.items.stim ? '' : 'disabled'}>${ico('item:stim', 'sm')}Stim <span class="num">\u00D7${c.items.stim}</span><span class="k">S</span></button>
       <button class="btn" data-a="act" data-v="run">Run<span class="k">R</span></button>
     </div>
     ${skills ? `<div class="skills">${skills}</div>` : ''}
@@ -638,7 +663,7 @@ function roomPips(r) {
 
 function routeScreen() {
   const r = state.run, map = E.mapById(r.map), c = state.char, st = E.stats(state);
-  const doors = r.choices.map((k, i) => `<button class="door door-${k}" data-a="room" data-v="${i}">
+  const doors = r.choices.map((k, i) => `<button class="door door-${k}" data-a="room" data-v="${i}">${ico(`room:${k}`)}
       <span class="label">${ROOM_LABEL[k]} <span class="k">${i + 1}</span></span>
       <b>${esc(E.roomName(r.map, k))}</b><span class="desc">${esc(D.ROOMS[k].desc)}</span></button>`).join('');
   const cds = Object.entries(r.cooldowns).filter(([, v]) => v > 0).map(([k, v]) => `${D.SKILLS[k].name} ${v >= 50 ? 'used' : `ready in ${v}`}`);
@@ -684,7 +709,7 @@ function victoryScreen() {
 
 function perkScreen() {
   const r = state.run;
-  const cards = r.perkOffer.map((id, i) => { const pk = E.perkById(id); return `<button class="perk ${pk.rare ? 'rare' : ''}" data-a="perk" data-v="${id}"><span class="label">${pk.rare ? 'Rare contraband' : 'Contraband'} <span class="k">${i + 1}</span></span><b>${esc(pk.name)}</b><span class="desc">${esc(pk.desc)}</span></button>`; }).join('');
+  const cards = r.perkOffer.map((id, i) => { const pk = E.perkById(id); return `<button class="perk ${pk.rare ? 'rare' : ''}" data-a="perk" data-v="${id}">${ico(`perk:${id}`, 'lg')}<span class="label">${pk.rare ? 'Rare contraband' : 'Contraband'} <span class="k">${i + 1}</span></span><b>${esc(pk.name)}</b><span class="desc">${esc(pk.desc)}</span></button>`; }).join('');
   return `<div class="columns"><section class="panel">
     <span class="label">Contraband \u00B7 pick one</span><h2>What they were carrying</h2>
     ${tip('perk')}
@@ -723,7 +748,7 @@ function modalView() {
       <section><h3>Your turn</h3><p><b>Defend</b> also steadies your aim: your next shot deals +50%. <b>Skills</b> come from your weapon and high attributes; their cooldowns last for the whole sector, so choose your moment. <b>Stims</b> heal and stop bleeding and burning.</p></section>
       <section><h3>Status effects</h3><ul>${Object.values(D.STATUSES).map((x) => `<li><b>${esc(x.name)}</b>: ${esc(x.desc)}</li>`).join('')}</ul></section>
       <section><h3>Elites and bosses</h3><p>Elites (veterans) carry a modifier, such as Regenerating or Volatile. Bosses enrage at half health. Both drop <b>contraband</b>: pick one of three perks that last until your operative dies.</p></section>
-      <section><h3>Getting stronger</h3><p><b>This operative</b>: levels (attribute points), gear, implants and contraband. All lost on death. <b>The cell</b>: Resolve buys permanent training and upgrades. Earn it from sectors, bosses, brave choices and contracts.</p></section>
+      <section><h3>Getting stronger</h3><p><b>This operative</b>: levels (attribute points), gear, implants and contraband. All lost on death. <b>The cell</b>: Resolve buys permanent training and upgrades. Earn it from sectors (repeat clears pay only every other time), bosses, brave choices and contracts.</p></section>
       <section><h3>Controls</h3><p class="keys"><span><b>A</b> attack</span><span><b>D</b> defend</span><span><b>S</b> stim</span><span><b>R</b> run</span><span><b>Q W E</b> skills</span><span><b>2 3 4</b> items</span><span><b>1 2</b> doors</span><span><b>Enter</b> continue</span></p></section>
     </div>` : `
     <h2>Settings</h2>
@@ -759,7 +784,7 @@ function sectorClearScreen() {
   const r = state.run, o = state.outcome, c = state.char, st = E.stats(state), next = r.sector + 1;
   return `<div class="columns"><section class="panel">
     <span class="label">Sector ${r.sector} secured \u00B7 ${esc(E.mapById(r.map).name)}</span><h2>${esc(E.sectorName(r.sector, r.map))}</h2>
-    <dl class="kv"><dt>Sector haul</dt><dd style="color:var(--sodium)">+${cr(o.credits)}</dd><dt>Carrying</dt><dd>${cr(c.credits)}</dd><dt>Condition</dt><dd class="${c.hp < st.maxHp * 0.4 ? 'danger-text' : ''}">${c.hp} / ${st.maxHp} HP \u00B7 ${c.items.stim} stims</dd><dt>${esc(S.meta)}</dt><dd style="color:var(--sodium)">+${o.resolve || 1} (banked)</dd></dl>
+    <dl class="kv"><dt>Sector haul</dt><dd style="color:var(--sodium)">+${cr(o.credits)}</dd><dt>Carrying</dt><dd>${cr(c.credits)}</dd><dt>Condition</dt><dd class="${c.hp < st.maxHp * 0.4 ? 'danger-text' : ''}">${c.hp} / ${st.maxHp} HP \u00B7 ${c.items.stim} stims</dd><dt>${esc(S.meta)}</dt><dd style="color:var(--sodium)">${o.resolve ? `+${o.resolve} (banked)` : '<span class="muted">none this time: repeat clears pay every other time</span>'}</dd></dl>
     ${E.isBossSector(next) ? `<div class="notice" style="border-color:var(--danger);background:var(--danger-dim)">Sector ${next} is a boss sector. Something worse than troopers is waiting.</div>` : ''}
     <div class="btnrow">
       <button class="btn primary big" data-a="deeper">Push to sector ${next}</button>

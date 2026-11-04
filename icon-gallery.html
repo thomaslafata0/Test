@@ -1,0 +1,5 @@
+<meta charset="utf-8"><body style="background:#1a1f23;margin:0;padding:10px;display:flex;flex-wrap:wrap;gap:8px;font:10px monospace;color:#999">
+<script type="module">
+import { iconURL, iconKeys } from './icons.js';
+for (const k of iconKeys()) { const d = document.createElement('div'); d.style.cssText = 'width:84px;text-align:center;background:#222930;padding:4px'; d.innerHTML = `<img src="${iconURL(k)}" style="width:72px;height:72px;image-rendering:pixelated;display:block;margin:auto">${k.split(':')[1]}`; document.body.append(d); }
+</script>

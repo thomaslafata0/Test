@@ -62,7 +62,7 @@ class Actor {
   }
   get scale() {
     // Sheet characters fill about half their frame, so they're drawn larger than the frame size.
-    if (this.sheet) return this.side === 'player' ? 2 : this.sheet.size >= 128 ? 1.1 : 1.6;
+    if (this.sheet) return this.side === 'player' ? 2 : this.side === 'ally' ? 1.1 : this.sheet.size >= 128 ? 1.1 : 1.6;
     return this.side === 'player' ? 3 : this.boss ? 2.5 : 2;
   }
   get size() { return (this.sheet ? this.sheet.size : 40) * this.scale; }
@@ -153,6 +153,11 @@ export class Stage {
     const now = performance.now();
     this.sector = sector; this.boss = boss; this.theme = theme; this.allies = allies;
     if (!this.allySprite) this.allySprite = portraitCanvas('prisoner');
+    if (sheets.prisoner) {
+      this.allyActors = this.allyActors || [];
+      while (this.allyActors.length < allies) this.allyActors.push(new Actor('prisoner', 'ally', false));
+      this.allyActors.length = allies;
+    }
     this.intent = enemy.intent; this.stun = enemy.stun;
     this.max.enemy = enemy.maxHp; this.max.player = player.maxHp;
     this.setHud('enemy', enemy.name, enemy.boss ? (enemy.phase2 ? 'ENRAGED' : 'BOSS') : enemy.elite ? 'ELITE' : `SECTOR ${sector}`, enemy.hp);
@@ -384,6 +389,8 @@ export class Stage {
       }
       case 'ally:shoot': {
         const from = { x: 20 + Math.random() * 20, y: 150 }, c = this.center(E);
+        const ally = (this.allyActors || [])[Math.floor(Math.random() * (this.allyActors || []).length)];
+        if (ally) ally.setAnim('attack', now());
         this.burst(from.x, from.y, 4, C.amber, 1, 100, 0);
         await this.bolt(from, c, C.amber, 1, 160);
         this.flash(E); this.burst(c.x, c.y, 5, C.spark, 1.5);
@@ -500,6 +507,7 @@ export class Stage {
           this.popup('player', 'Ally down', 'heavy');
           this.burst(30, 160, 14, C.red, 2, 400);
           this.allies = Math.max(0, this.allies - 1);
+          if (this.allyActors && this.allyActors.length) this.allyActors.pop();
         } else if (ev.dodged) {
           const x0 = P.ox;
           this.popup('player', 'Dodged', 'info'); play('dodge');
@@ -721,7 +729,15 @@ export class Stage {
 
     const pa = this.anchor('player');
     this.pad(pa.x, this.player && this.player.sheet ? pa.y - 2 : pa.y - 16, 84, 16);
-    if (this.allies && this.allySprite && this.player && this.player.alpha > 0) {
+    if (this.allies && this.allyActors && this.allyActors.length && this.player && this.player.alpha > 0) {
+      // Freed prisoners from the PixelLab sheet stand behind the player's left shoulder.
+      this.allyActors.forEach((al, i) => {
+        const f = al.frame(t), sc = al.scale, w = Math.round(f.sw * sc), h = Math.round(f.sh * sc);
+        g.globalAlpha = this.player.alpha;
+        g.drawImage(f.img, f.sx, 0, f.sw, f.sh, Math.round(18 + i * 26 - w / 2), Math.round(184 - h + 8 * sc), w, h);
+        g.globalAlpha = 1;
+      });
+    } else if (this.allies && this.allySprite && this.player && this.player.alpha > 0) {
       for (let i = 0; i < this.allies; i++) {
         const x = 2 + i * 34, y = 216 - 70 + Math.round(Math.sin(t / 650 + i) * 1);
         g.globalAlpha = this.player.alpha; g.drawImage(this.allySprite, 0, 0, 40, 40, x, y, 70, 70); g.globalAlpha = 1;

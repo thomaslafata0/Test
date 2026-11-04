@@ -914,17 +914,22 @@ export function resolveEvent(s, index, rng) {
 function clearSector(s) {
   const r = s.run, c = s.char, map = mapById(r.map), m = s.meta;
   const bonus = Math.round(8 * r.sector * map.credits * creditMult(s));
-  const res = 1 + (r.threat >= 3 && isBossSector(r.sector) ? 1 : 0);
+  const prog = mapProgress(c, r.map);
+  // Resolve only for new ground: sectors this operative hasn't cleared on this map before.
+  // Repeat clears pay every other time, so farming early sectors is slow.
+  const fresh = r.sector > prog.deepest;
+  if (!fresh) c.repeatClears = (c.repeatClears || 0) + 1;
+  const pays = fresh || c.repeatClears % 2 === 0;
+  const res = pays ? 1 + (r.threat >= 3 && isBossSector(r.sector) ? 1 : 0) : 0;
   c.credits += bonus;
   m.resolve += res; m.totalResolve += res;
-  const prog = mapProgress(c, r.map);
   prog.deepest = Math.max(prog.deepest, r.sector);
   c.deepest = Math.max(c.deepest, r.sector);
   m.bestSector = Math.max(m.bestSector, r.sector);
   m.bestByMap[r.map] = Math.max(m.bestByMap[r.map] || 0, r.sector);
   contractEvent(s, 'sector', {});
-  s.outcome = { sector: r.sector, bonus, credits: r.sectorCredits + bonus, resolve: res };
-  log(s, `${sectorName(r.sector, r.map)} cleared. +${bonus} ${D.SETTING.cur}, +${res} ${D.SETTING.meta}.`, 'reward');
+  s.outcome = { sector: r.sector, bonus, credits: r.sectorCredits + bonus, resolve: res, fresh };
+  log(s, `${sectorName(r.sector, r.map)} cleared. +${bonus} ${D.SETTING.cur}${res ? `, +${res} ${D.SETTING.meta}` : ''}.`, 'reward');
   s.screen = 'sectorClear';
 }
 
@@ -955,7 +960,7 @@ export const allLiberated = (s) => D.MAPS.every((m) => s.meta.liberated[m.id]);
 export const maxThreat = (s) => Math.min(D.THREAT.length - 1, Object.keys(s.meta.liberated).length);
 
 // ---------- contracts ----------
-const CONTRACT_REWARD = { kill: 3, sector: 3, boss: 5, allies: 4, haul: 3 };
+const CONTRACT_REWARD = { kill: 3, sector: 3, boss: 4, allies: 3, haul: 3 };
 export function refreshContracts(s, rng) {
   const m = s.meta;
   m.contracts = (m.contracts || []).filter((k) => !k.done);
@@ -970,7 +975,7 @@ export function refreshContracts(s, rng) {
     if (t.kind === 'haul') n = Math.round(t.n * (1 + (m.bestSector || 0) / 5));
     const key = `${t.kind}-${t.tag || ''}-${map ? map.id : ''}`;
     if (m.contracts.some((k) => k.key === key)) continue;
-    const resolve = CONTRACT_REWARD[t.kind] + (t.kind === 'sector' && n >= 7 ? 2 : 0);
+    const resolve = CONTRACT_REWARD[t.kind] + (t.kind === 'sector' && n >= 7 ? 1 : 0);
     m.contracts.push({ key, kind: t.kind, tag: t.tag || null, n, map: map ? map.id : null, progress: 0, done: false,
       text: t.text.replace('{n}', n).replace('{map}', map ? map.name : ''), resolve, credits: 40 + 10 * n });
   }
