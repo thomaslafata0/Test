@@ -116,7 +116,7 @@ p { margin: 0; }
   .hud-player { order: 2; }
   .hud-enemy { order: 3; }
 }
-.busy .actions .btn, .busy .items .btn { opacity: .45; pointer-events: none; }
+.busy .actions .btn, .busy .items .btn, .busy .skills .btn { opacity: .45; pointer-events: none; }
 .foe-info { display: grid; gap: 10px; }
 .foe-info .title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .foe { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; padding: 18px; background: var(--panel-2); border: 1px solid var(--line); align-items: start; }
@@ -176,6 +176,47 @@ p { margin: 0; }
 .danger-text { color: var(--danger); }
 .ok-text { color: var(--ok); }
 .ins { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* character creation, map board, skills, events */
+.create-grid, .two-col { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; }
+@media (max-width: 820px) { .create-grid, .two-col { grid-template-columns: minmax(0, 1fr); } }
+input.text { flex: 1 1 200px; min-width: 0; background: var(--panel-2); border: 1px solid var(--line); color: var(--fg); font: 600 1.1rem var(--body); padding: 8px 12px; }
+input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px; }
+.choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 520px) { .choices { grid-template-columns: minmax(0, 1fr); } }
+.choice { text-align: left; display: grid; gap: 4px; align-content: start; padding: 12px; background: var(--panel-2); border: 1px solid var(--line); }
+.choice b { font-family: var(--display); font-size: 1.2rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.choice .desc { font-size: .88rem; color: var(--muted); }
+.choice .perk { font-size: .85rem; color: var(--sodium); }
+.choice.on, .map-card.on { border-color: var(--sodium); box-shadow: inset 0 0 0 1px var(--sodium); }
+.chip { display: inline-block; font-family: var(--mono); font-size: .62rem; letter-spacing: .08em; text-transform: uppercase; padding: 2px 6px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.chip.bad { color: var(--danger); border-color: var(--danger); }
+.chip.good { color: var(--ok); border-color: var(--ok); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.attr-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 14px; background: var(--panel); }
+.attr-row .desc { font-size: .85rem; color: var(--muted); }
+.stepper { display: flex; align-items: center; gap: 8px; }
+.stepper .btn { width: 36px; padding: 6px 0; }
+.big-num { font-size: 1.4rem; min-width: 1.6ch; text-align: center; }
+.points { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border: 1px dashed var(--line); }
+.badge { display: inline-block; min-width: 1.4em; padding: 0 4px; background: var(--sodium); color: #1a1208; font-family: var(--mono); font-size: .7rem; text-align: center; vertical-align: middle; }
+.maps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; }
+.map-card { text-align: left; display: grid; gap: 6px; align-content: start; padding: 14px; border: 1px solid var(--line); background: var(--panel-2); position: relative; overflow: hidden; }
+.map-card::before { content: ""; position: absolute; inset: 0 0 auto; height: 3px; background: var(--map, var(--sodium)); }
+.map-card b { font-family: var(--display); font-size: 1.35rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.map-card .desc { font-size: .9rem; color: var(--muted); }
+.map-card:disabled { opacity: .45; }
+.theme-garrison { --map: #e8973a; } .theme-foundry { --map: #e0602a; } .theme-detention { --map: #73b6d4; } .theme-port { --map: #b9c2cc; }
+.skills { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 520px) { .skills { grid-template-columns: minmax(0, 1fr); } }
+.skill { display: grid; gap: 2px; text-align: left; border-color: #e8973a55; white-space: normal; }
+.sk-name { font-family: var(--display); font-size: 1.1rem; text-transform: uppercase; letter-spacing: .04em; }
+.sk-note { font-family: var(--mono); font-size: .62rem; letter-spacing: .06em; color: var(--muted); text-transform: uppercase; }
+.options { display: grid; gap: 8px; max-width: 640px; }
+.option { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; text-align: left; white-space: normal; padding: 12px 14px; }
+.notice.win { border-color: var(--ok); background: #8db57d22; }
+.notice.lose { border-color: var(--danger); background: var(--danger-dim); }
+.spend-inline { display: grid; gap: 8px; padding: 12px; border: 1px dashed var(--sodium); }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 
@@ -202,14 +243,19 @@ function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const bar = (v, max, cls = '') => `<div class="bar ${cls} ${v / max < 0.3 ? 'low' : ''}"><i style="width:${Math.max(0, Math.min(100, (v / max) * 100))}%"></i></div>`;
 const cr = (n) => `${n.toLocaleString()} ${S.cur}`;
+const pct = (x) => `${Math.round(x * 100)}%`;
+const SKILL_KEYS = ['q', 'w', 'e'];
 
 function statusStrip() {
-  const c = state.char, st = E.stats(state);
+  const c = state.char;
+  if (!c) return `<header class="status"><div class="brand">${esc(S.title)}</div><div class="stat"><span class="label">${esc(S.meta)}</span><span class="v" style="color:var(--sodium)">${state.meta.resolve}</span></div></header>`;
+  const st = E.stats(state);
   return `<header class="status">
     <div class="brand">${esc(S.title)}</div>
     <div class="stat"><span class="label">Operative ${c.number}</span><span class="v">${esc(c.name)} \u00B7 Lv ${c.level}</span></div>
     <div class="stat hp"><span class="label">HP</span><span class="v">${Math.max(0, c.hp)} / ${st.maxHp}</span>${bar(c.hp, st.maxHp)}</div>
     <div class="stat"><span class="label">ATK \u00B7 DEF \u00B7 SPD</span><span class="v">${st.atk} \u00B7 ${st.def} \u00B7 ${st.spd}</span></div>
+    <div class="stat"><span class="label">${Object.values(D.ATTRS).map((a) => a.short).join(' \u00B7 ')}</span><span class="v">${Object.keys(D.ATTRS).map((k) => E.attr(c, k)).join(' \u00B7 ')}</span></div>
     <div class="stat"><span class="label">${esc(S.currency)}</span><span class="v">${c.credits.toLocaleString()}</span></div>
     <div class="stat"><span class="label">${esc(S.meta)}</span><span class="v" style="color:var(--sodium)">${state.meta.resolve}</span></div>
   </header>`;
@@ -219,6 +265,7 @@ function logPanel() {
   const lines = state.log.slice(-30).map((l) => `<p class="${l.kind}">${esc(l.text)}</p>`).join('');
   return `<aside class="panel"><span class="label">Comms log</span><div class="log" id="log">${lines || '<p class="sys">Quiet on the channel.</p>'}</div></aside>`;
 }
+const notice = () => state.notice ? `<div class="notice">${esc(state.notice)}</div>` : '';
 
 // ---------- screens ----------
 function introScreen() {
@@ -226,87 +273,174 @@ function introScreen() {
     <span class="label">${esc(S.town)} \u00B7 after curfew</span>
     <h1 class="big-title">${esc(S.title)}</h1>
     <div class="story">${S.intro.map((p) => `<p>${esc(p)}</p>`).join('')}</div>
-    <div class="kv" style="max-width:520px">
-      <dt>Death</dt><dd class="danger-text">Lose everything: ${S.currency}, gear, items, level</dd>
-      <dt>Survives</dt><dd style="color:var(--sodium)">${S.meta} and the training bought with it</dd>
-      <dt>Earn ${S.meta}</dt><dd>+1 per sector cleared, +3 per boss</dd>
+    <div class="kv" style="max-width:560px">
+      <dt>Death</dt><dd class="danger-text">Lose the operative: ${S.currency}, gear, implants, attributes, level</dd>
+      <dt>Survives</dt><dd style="color:var(--sodium)">${S.meta}, training and cell upgrades bought with it</dd>
+      <dt>Earn ${S.meta}</dt><dd>+1 per sector cleared, +3 per boss, more for brave choices</dd>
     </div>
-    <div><button class="btn primary big" data-a="begin">Enter ${esc(S.town)}</button></div>
+    <div><button class="btn primary big" data-a="begin">Build your first operative</button></div>
+  </section>`;
+}
+
+function createScreen() {
+  const d = state.draft, bg = D.BACKGROUNDS.find((b) => b.id === d.background);
+  const attrs = {};
+  for (const k of Object.keys(D.ATTRS)) attrs[k] = E.draftAttr(d, k);
+  // Preview stats with a throwaway character.
+  const fake = { attrs, level: 1, weapon: state.meta.cell.includes('cache') ? 'carbine' : 'holdout', armor: 'none', upgrades: [], implants: [], background: d.background };
+  const st = E.statsOf(state.meta, fake);
+  const skills = E.skillsOf(fake);
+  const bgCards = D.BACKGROUNDS.map((b) => `<button class="choice ${b.id === d.background ? 'on' : ''}" data-a="bg" data-v="${b.id}" aria-pressed="${b.id === d.background}">
+      <b>${esc(b.name)}</b><span class="chip">+1 ${Object.keys(b.attrs).map((k) => D.ATTRS[k].short).join(', ')}</span>
+      <span class="desc">${esc(b.desc)}</span><span class="perk">${esc(b.perk)}</span></button>`).join('');
+  const attrRows = Object.entries(D.ATTRS).map(([k, a]) => `<div class="attr-row">
+      <div><div class="name">${esc(a.label)} <span class="num muted">${a.short}</span></div><div class="desc">${esc(a.desc)}</div></div>
+      <div class="stepper"><button class="btn" data-a="attr" data-v="${k}" data-k="-1" aria-label="Lower ${a.label}" ${d.attrs[k] <= D.ATTR_START ? 'disabled' : ''}>\u2212</button>
+      <span class="num big-num">${attrs[k]}</span>
+      <button class="btn" data-a="attr" data-v="${k}" data-k="1" aria-label="Raise ${a.label}" ${d.points <= 0 || attrs[k] >= D.ATTR_CREATE_MAX ? 'disabled' : ''}>+</button></div></div>`).join('');
+  return `<section class="panel" style="padding:28px">
+    <div style="display:grid;gap:4px"><span class="label">New operative \u00B7 #${state.meta.operatives + 1}</span><h2>Who walks through the gate?</h2></div>
+    ${notice()}
+    <div class="create-grid">
+      <div style="display:grid;gap:16px;align-content:start;min-width:0">
+        <label class="label" for="op-name">Name</label>
+        <div class="btnrow"><input id="op-name" class="text" maxlength="24" value="${esc(d.name)}" autocomplete="off"><button class="btn" data-a="randname">Random</button></div>
+        <span class="label">Background</span>
+        <div class="choices">${bgCards}</div>
+      </div>
+      <div style="display:grid;gap:16px;align-content:start;min-width:0">
+        <div class="points"><span class="label">Attribute points left</span><span class="num big-num" style="color:${d.points ? 'var(--sodium)' : 'var(--muted)'}">${d.points}</span></div>
+        <div class="rows">${attrRows}</div>
+        <dl class="kv"><dt>Max HP</dt><dd>${st.maxHp}</dd><dt>ATK \u00B7 DEF \u00B7 SPD</dt><dd>${st.atk} \u00B7 ${st.def} \u00B7 ${st.spd}</dd><dt>Implant slots</dt><dd>${st.slots}</dd>
+          <dt>Skills</dt><dd>${skills.map((k) => D.SKILLS[k].name).join(', ')}</dd></dl>
+        <p class="muted" style="font-size:.9rem">Higher attributes unlock skills: STR 5 Power Strike, INT 4 Overload, AGI 4 Suppressing Fire, CHA 4 Intimidate. You gain a point every level, and your choices in the field can raise or lower them.</p>
+        <div><button class="btn primary big" data-a="create">${d.points ? `Start (keep ${d.points} point${d.points > 1 ? 's' : ''} for later)` : 'Start'}</button></div>
+      </div>
+    </div>
   </section>`;
 }
 
 function townScreen() {
-  const tabs = [['market', 'Black Market'], ['medbay', 'Med Bay'], ['safehouse', 'Safehouse'], ['gate', 'Garrison Gate']];
-  const body = { market, medbay, safehouse, gate }[state.tab]();
+  const c = state.char;
+  const tabs = [['market', 'Black Market'], ['clinic', 'Clinic'], ['safehouse', 'Safehouse'], ['gate', 'Targets']];
+  const body = { market, clinic, safehouse, gate }[state.tab] || gate;
   return `<section class="panel">
     <div style="display:grid;gap:4px"><span class="label">Town \u00B7 curfew in effect</span><h2>${esc(S.town)}</h2></div>
-    ${state.notice ? `<div class="notice">${esc(state.notice)}</div>` : ''}
-    <nav class="tabs" role="tablist">${tabs.map(([id, l]) => `<button class="tab" role="tab" aria-selected="${state.tab === id}" data-a="tab" data-v="${id}">${l}</button>`).join('')}</nav>
-    ${body}
+    ${notice()}
+    <nav class="tabs" role="tablist">${tabs.map(([id, l]) => `<button class="tab" role="tab" aria-selected="${state.tab === id}" data-a="tab" data-v="${id}">${l}${id === 'safehouse' && c.attrPoints ? ` <span class="badge">${c.attrPoints}</span>` : ''}</button>`).join('')}</nav>
+    ${body()}
   </section>`;
 }
 
+function buyBtn(a, v, k, cost, extraDisabled = false) {
+  const p = E.price(state, cost);
+  return `<button class="btn" data-a="${a}" data-v="${v}" ${k ? `data-k="${k}"` : ''} ${state.char.credits < p || extraDisabled ? 'disabled' : ''}>${cr(p)}</button>`;
+}
+
 function gearRows(kind, list) {
-  const c = state.char, curIdx = list.findIndex((x) => x.id === c[kind]);
-  return list.slice(1).map((g, i) => {
-    const idx = i + 1, owned = c[kind] === g.id, older = idx < curIdx;
-    const stat = kind === 'weapon' ? `+${g.atk} ATK` : `+${g.def} DEF`;
-    return `<div class="row ${owned ? 'owned' : ''}"><div><div class="name">${esc(g.name)} <span class="num muted" style="font-size:.8rem">${stat}</span></div><div class="desc">${esc(g.desc)}</div></div>
-      ${owned || older ? `<span class="label">${owned ? '' : 'outclassed'}</span>` : `<button class="btn" data-a="gear" data-k="${kind}" data-v="${g.id}" ${c.credits < g.cost ? 'disabled' : ''}>${cr(g.cost)}</button>`}</div>`;
+  const c = state.char, cur = list.find((x) => x.id === c[kind]);
+  return list.slice(1).map((g) => {
+    const owned = c[kind] === g.id, ok = E.meetsReq(c, g.req);
+    const stat = kind === 'weapon' ? `+${g.atk} ATK \u00B7 ${g.type}` : `+${g.def} DEF`;
+    const skill = kind === 'weapon' ? D.SKILLS[D.WEAPON_SKILL[g.type]] : null;
+    const weaker = kind === 'weapon' ? g.atk <= cur.atk && g.type === cur.type : g.def <= cur.def;
+    return `<div class="row ${owned ? 'owned' : ''}"><div><div class="name">${esc(g.name)} <span class="num muted" style="font-size:.8rem">${stat}</span>${g.req ? ` <span class="chip ${ok ? '' : 'bad'}">needs ${E.reqText(g.req)}</span>` : ''}</div>
+      <div class="desc">${esc(g.desc)}${skill ? ` Skill: ${esc(skill.name)}.` : ''}</div></div>
+      ${owned ? '<span></span>' : weaker ? '<span class="label">no upgrade</span>' : buyBtn('gear', g.id, kind, g.cost, !ok)}</div>`;
   }).join('');
 }
 
 function market() {
   const c = state.char, st = E.stats(state);
   const items = Object.entries(D.ITEMS).map(([id, it]) => `<div class="row"><div><div class="name">${esc(it.name)} <span class="num muted" style="font-size:.8rem">${c.items[id]}/${st.carry}</span></div><div class="desc">${esc(it.desc)}</div></div>
-    <button class="btn" data-a="item" data-v="${id}" ${c.credits < it.cost || c.items[id] >= st.carry ? 'disabled' : ''}>${cr(it.cost)}</button></div>`).join('');
+    ${buyBtn('item', id, '', it.cost, c.items[id] >= st.carry)}</div>`).join('');
   const ups = D.UPGRADES.map((u) => {
     const owned = c.upgrades.includes(u.id);
-    return `<div class="row ${owned ? 'owned' : ''}"><div><div class="name">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div></div>
-      ${owned ? '<span></span>' : `<button class="btn" data-a="upgrade" data-v="${u.id}" ${c.credits < u.cost ? 'disabled' : ''}>${cr(u.cost)}</button>`}</div>`;
+    return `<div class="row ${owned ? 'owned' : ''}"><div><div class="name">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div></div>${owned ? '<span></span>' : buyBtn('upgrade', u.id, '', u.cost)}</div>`;
   }).join('');
-  return `<p class="muted">Old Marrow\u2019s stall, behind the scrap scales. No receipts. Everything here is lost if you die.</p>
+  const disc = 1 - E.price(state, 100) / 100;
+  return `<p class="muted">Old Marrow\u2019s stall, behind the scrap scales. No receipts. Everything here is lost if you die.${disc > 0 ? ` Your Charisma gets you ${pct(disc)} off.` : ''}</p>
     <h3>Weapons</h3><div class="rows">${gearRows('weapon', D.WEAPONS)}</div>
     <h3>Armour</h3><div class="rows">${gearRows('armor', D.ARMOR)}</div>
     <h3>Supplies</h3><div class="rows">${items}</div>
     <h3>Contacts &amp; mods</h3><div class="rows">${ups}</div>`;
 }
 
-function medbay() {
+function clinic() {
   const c = state.char, st = E.stats(state), cost = E.healCost(state);
-  return `<p class="muted">Doc Ilse works out of a laundry back room. She charges half a credit per stitch and doesn\u2019t ask where the holes came from.</p>
-    <div class="kv"><dt>Condition</dt><dd>${c.hp} / ${st.maxHp} HP</dd><dt>Treatment</dt><dd>${cost > 0 ? cr(cost) : 'Not needed'}</dd></div>
+  const imps = D.IMPLANTS.map((u) => {
+    const owned = c.implants.includes(u.id);
+    return `<div class="row ${owned ? 'owned' : ''}"><div><div class="name">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div></div>
+      ${owned ? `<button class="btn" data-a="unimplant" data-v="${u.id}">Remove</button>` : buyBtn('implant', u.id, '', u.cost, c.implants.length >= st.slots)}</div>`;
+  }).join('');
+  return `<p class="muted">Doc Ilse works out of a laundry back room. Stitches, and for the right price, hardware under the skin.</p>
+    <h3>Treatment</h3>
+    <div class="kv"><dt>Condition</dt><dd>${c.hp} / ${st.maxHp} HP</dd><dt>Cost</dt><dd>${cost > 0 ? cr(cost) : 'Not needed'}</dd></div>
     <div><button class="btn primary" data-a="heal" ${cost <= 0 || c.credits < cost ? 'disabled' : ''}>${cost > 0 ? `Patch me up \u00B7 ${cr(cost)}` : 'Fully healed'}</button></div>
-    ${cost > 0 && c.credits < cost ? '<p class="danger-text">Not enough credits for full treatment. Stims from the market are cheaper per HP.</p>' : ''}`;
+    <h3>Implants <span class="num muted" style="font-size:.9rem">${c.implants.length} / ${st.slots} slots</span></h3>
+    <p class="muted" style="font-size:.9rem">Slots: 2, plus one at INT 4 and another at INT 8. Removing an implant frees the slot but refunds nothing.</p>
+    <div class="rows">${imps}</div>`;
 }
 
 function safehouse() {
-  const m = state.meta;
+  const m = state.meta, c = state.char;
+  const attrRows = Object.entries(D.ATTRS).map(([k, a]) => `<div class="attr-row"><div><div class="name">${esc(a.label)} <span class="num muted">${a.short}</span></div><div class="desc">${esc(a.desc)}</div></div>
+    <div class="stepper"><span class="num big-num">${E.attr(c, k)}</span>${c.attrPoints ? `<button class="btn" data-a="spend" data-v="${k}" aria-label="Raise ${a.label}" ${c.attrs[k] >= D.ATTR_MAX ? 'disabled' : ''}>+</button>` : ''}</div></div>`).join('');
+  const skills = E.skillsOf(c).map((k) => `<div class="row"><div><div class="name">${esc(D.SKILLS[k].name)} <span class="num muted" style="font-size:.8rem">cooldown ${E.skillCd(c, k)}</span></div><div class="desc">${esc(D.SKILLS[k].desc)}</div></div><span class="label">${esc(D.SKILLS[k].from)}</span></div>`).join('');
+  const history = c.history.length ? c.history.map((h) => `<div><span>${esc(h.text)}</span></div>`).join('') : '<p class="muted">Nothing yet. Your choices in the field will show up here.</p>';
   const rows = Object.entries(D.TRAINING).map(([k, t]) => {
     const lvl = m.training[k], cost = E.trainingCost(lvl), maxed = lvl >= t.max;
     return `<div class="row"><div><div class="name">${esc(t.label)} <span class="num muted" style="font-size:.8rem">+${t.per} ${t.stat} per rank</span></div>
       <div class="desc">${esc(t.note)}</div><div class="pips" aria-label="rank ${lvl} of ${t.max}">${Array.from({ length: t.max }, (_, i) => `<i class="${i < lvl ? 'on' : ''}"></i>`).join('')}</div></div>
       ${maxed ? '<span class="label">mastered</span>' : `<button class="btn" data-a="train" data-v="${k}" ${m.resolve < cost ? 'disabled' : ''}>${cost} ${esc(S.meta)}</button>`}</div>`;
   }).join('');
-  const wall = m.fallen.length ? m.fallen.map((f) => `<div><span>${esc(f.name)} <span class="muted">\u00B7 Lv ${f.level}</span></span><span class="muted">${esc(E.sectorName(f.sector))}, ${esc(f.killer)}</span></div>`).join('') : '<p class="muted">No names yet. Keep it that way.</p>';
-  return `<p class="muted">Permanent training. ${esc(S.meta)} is never lost, and every future operative starts with these ranks.</p>
-    <div class="kv"><dt>${esc(S.meta)} banked</dt><dd style="color:var(--sodium)">${m.resolve}</dd><dt>Deepest sector</dt><dd>${m.bestSector || '\u2014'}</dd><dt>Operatives</dt><dd>${m.operatives}</dd></div>
-    <div class="rows">${rows}</div>
-    <h3>The wall</h3><div class="wall">${wall}</div>
-    <div class="btnrow"><button class="btn" data-a="reset">${confirmReset ? 'Click again to wipe all progress' : 'Reset save'}</button></div>`;
+  const cell = D.CELL.map((u) => {
+    const owned = m.cell.includes(u.id);
+    return `<div class="row ${owned ? 'owned' : ''}"><div><div class="name">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div></div>${owned ? '<span></span>' : `<button class="btn" data-a="cell" data-v="${u.id}" ${m.resolve < u.cost ? 'disabled' : ''}>${u.cost} ${esc(S.meta)}</button>`}</div>`;
+  }).join('');
+  const wall = m.fallen.length ? m.fallen.map((f) => `<div><span>${esc(f.name)} <span class="muted">\u00B7 Lv ${f.level}</span></span><span class="muted">${esc(E.sectorName(f.sector, f.map))}, ${esc(f.killer)}</span></div>`).join('') : '<p class="muted">No names yet. Keep it that way.</p>';
+  const bg = D.BACKGROUNDS.find((b) => b.id === c.background);
+  return `<div class="two-col">
+      <div style="display:grid;gap:14px;align-content:start;min-width:0">
+        <h3>${esc(c.name)} <span class="num muted" style="font-size:.85rem">${esc(bg.name)} \u00B7 lost on death</span></h3>
+        <p class="muted" style="font-size:.9rem">${esc(bg.perk)}${c.attrPoints ? ` <b style="color:var(--sodium)">${c.attrPoints} attribute point${c.attrPoints > 1 ? 's' : ''} to spend.</b>` : ' Level up to earn attribute points.'}</p>
+        <div class="rows">${attrRows}</div>
+        <span class="label">Skills</span><div class="rows">${skills}</div>
+        <span class="label">Choices that changed you</span><div class="wall">${history}</div>
+      </div>
+      <div style="display:grid;gap:14px;align-content:start;min-width:0">
+        <h3>The cell <span class="num muted" style="font-size:.85rem">permanent</span></h3>
+        <div class="kv"><dt>${esc(S.meta)} banked</dt><dd style="color:var(--sodium)">${m.resolve}</dd><dt>Deepest sector</dt><dd>${m.bestSector || '\u2014'}</dd><dt>Operatives</dt><dd>${m.operatives}</dd></div>
+        <span class="label">Training</span><div class="rows">${rows}</div>
+        <span class="label">Cell upgrades</span><div class="rows">${cell}</div>
+        <span class="label">The wall</span><div class="wall">${wall}</div>
+        <div class="btnrow"><button class="btn" data-a="reset">${confirmReset ? 'Click again to wipe all progress' : 'Reset save'}</button></div>
+      </div>
+    </div>`;
 }
 
 function gate() {
   const c = state.char, st = E.stats(state);
-  const ins = [...c.insertions].sort((a, b) => a - b);
-  const warn = c.hp < st.maxHp * 0.6 ? `<p class="danger-text">You\u2019re going in at ${c.hp}/${st.maxHp} HP. The Med Bay is right there.</p>` : '';
-  return `<p class="muted">Three fights per sector. A boss holds every fifth sector. After each sector you choose: push deeper or slip out with what you\u2019re carrying.</p>
+  const sel = E.mapById(state.gateMap || 'garrison');
+  const cards = D.MAPS.map((m) => {
+    const open = E.mapUnlocked(state, m), prog = c.maps[m.id];
+    const traits = [m.credits !== 1 ? `${m.credits > 1 ? '+' : ''}${pct(m.credits - 1)} credits` : null, m.level ? `enemies +${m.level} lv` : null, m.events > 0.3 ? 'more events' : null].filter(Boolean);
+    return `<button class="map-card ${m.id === sel.id ? 'on' : ''} theme-${m.theme}" data-a="pickmap" data-v="${m.id}" ${open ? '' : 'disabled'} aria-pressed="${m.id === sel.id}">
+      <span class="label">${open ? `Best: sector ${state.meta.bestByMap[m.id] || 0}` : `Locked \u00B7 reach sector ${m.unlock} anywhere`}</span>
+      <b>${esc(m.name)}</b><span class="desc">${esc(m.desc)}</span>
+      ${traits.length ? `<span class="chips">${traits.map((t) => `<span class="chip">${t}</span>`).join('')}</span>` : ''}
+      ${prog && prog.deepest ? `<span class="label">This operative: sector ${prog.deepest}</span>` : ''}</button>`;
+  }).join('');
+  const ins = [...(c.maps[sel.id]?.insertions || [1])].sort((a, b) => a - b);
+  const warn = c.hp < st.maxHp * 0.6 ? `<p class="danger-text">You\u2019re going in at ${c.hp}/${st.maxHp} HP. The clinic is right there.</p>` : '';
+  return `<p class="muted">Pick a target. Three fights per sector, a boss every fifth. After each sector: push deeper or slip out with what you\u2019re carrying.</p>
+    <div class="maps">${cards}</div>
     <div class="kv"><dt>Carrying</dt><dd>${cr(c.credits)} \u00B7 ${Object.entries(c.items).filter(([, n]) => n).map(([k, n]) => `${n}\u00D7 ${D.ITEMS[k].name}`).join(', ') || 'no supplies'}</dd>
-    <dt>If you die</dt><dd class="danger-text">All of it is gone, including level ${c.level} and your gear</dd></div>
+    <dt>If you die</dt><dd class="danger-text">All of it is gone, including level ${c.level}, your attributes and implants</dd></div>
     ${warn}
-    <span class="label">Insertion point</span>
-    <div class="ins">${ins.map((n) => `<button class="btn ${n === ins[ins.length - 1] ? 'primary' : ''}" data-a="deploy" data-v="${n}">Sector ${n} \u00B7 ${esc(E.sectorName(n))}</button>`).join('')}</div>
-    ${ins.length === 1 ? '<p class="muted" style="font-size:.9rem">Beat a boss to unlock a deeper insertion point for this operative.</p>' : ''}`;
+    <span class="label">Insertion point \u00B7 ${esc(sel.name)}</span>
+    <div class="ins">${ins.map((n) => `<button class="btn ${n === ins[ins.length - 1] ? 'primary' : ''}" data-a="deploy" data-v="${n}">Sector ${n} \u00B7 ${esc(E.sectorName(n, sel.id))}</button>`).join('')}</div>
+    ${ins.length === 1 ? '<p class="muted" style="font-size:.9rem">Beat a boss to unlock a deeper insertion point on that map for this operative.</p>' : ''}`;
 }
 
 function portraitImg(e, cls = '') {
@@ -318,11 +452,17 @@ function combatScreen() {
   const r = state.run, e = r.enemy, c = state.char, st = E.stats(state);
   const intent = e.stun > 0 ? { label: `Stunned \u00B7 ${e.stun} turn${e.stun > 1 ? 's' : ''}`, tone: 'calm', tip: 'Free hits.' } : D.INTENTS[e.intent];
   const items = Object.entries(D.ITEMS).map(([id, it], i) => `<button class="btn" data-a="act" data-v="${id}" ${c.items[id] ? '' : 'disabled'}>${esc(it.name)} \u00D7${c.items[id]}<span class="k">${i + 1}</span></button>`).join('');
+  const skills = E.skillsOf(c).slice(0, 3).map((k, i) => {
+    const cd = r.cooldowns[k] || 0, sk = D.SKILLS[k];
+    const note = k === 'intimidate' ? (cd ? 'used' : e.tags.includes('human') ? `${pct(E.intimidateChance(state))} to break` : 'humans only') : cd ? `ready in ${cd}` : `cooldown ${E.skillCd(c, k)}`;
+    return `<button class="btn skill" data-a="act" data-v="${k}" title="${esc(sk.desc)}" ${E.canUse(state, k) && !(k === 'intimidate' && !e.tags.includes('human')) ? '' : 'disabled'}>
+      <span class="sk-name">${esc(sk.name)}<span class="k">${SKILL_KEYS[i].toUpperCase()}</span></span><span class="sk-note">${note}</span></button>`;
+  }).join('');
   return `<div class="columns"><section class="panel">
-    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px"><span class="label">Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector))}</span><span class="label">Fight ${r.fight} / ${E.FIGHTS_PER_SECTOR}</span></div>
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px"><span class="label">${esc(E.mapById(r.map).name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span><span class="label">Fight ${r.fight} / ${E.FIGHTS_PER_SECTOR}</span></div>
     <div id="stage-slot"></div>
     <div class="foe-info">
-      <div class="title">${e.tags.map((t) => `<span class="tag ${t}">${t}</span>`).join('')}<div class="statline"><span>ATK <b>${e.atk}</b></span><span>DEF <b>${e.def}</b></span><span>SPD <b>${e.spd}</b></span><span>Run <b>${Math.round(E.runChance(state) * 100)}%</b></span><span>Dodge <b>${Math.round(E.dodgeChance(st, e) * 100)}%</b></span></div></div>
+      <div class="title">${e.tags.map((t) => `<span class="tag ${t}">${t}</span>`).join('')}<div class="statline"><span>ATK <b>${e.atk}</b></span><span>DEF <b>${e.def}</b></span><span>SPD <b>${e.spd}</b></span><span>Run <b>${pct(E.runChance(state))}</b></span><span>Dodge <b>${pct(E.dodgeChance(st, e))}</b></span></div></div>
       <div class="intent ${intent.tone}"><span class="dot"></span><b>${esc(e.name)}: ${esc(intent.label)}</b><span class="tip">${esc(intent.tip)}</span></div>
     </div>
     ${r.ready ? '<div class="notice">Aim steadied: your next attack deals +50%.</div>' : ''}
@@ -332,38 +472,46 @@ function combatScreen() {
       <button class="btn" data-a="act" data-v="run">Run<span class="k">R</span></button>
       <button class="btn" data-a="act" data-v="stim" ${c.items.stim ? '' : 'disabled'}>Stim \u00D7${c.items.stim}<span class="k">S</span></button>
     </div>
+    ${skills ? `<span class="label">Skills</span><div class="skills">${skills}</div>` : ''}
     <span class="label">Gear</span>
     <div class="items">${items}</div>
   </section>${logPanel()}</div>`;
 }
 
 function victoryScreen() {
-  const o = state.outcome;
+  const o = state.outcome, c = state.char;
   return `<div class="columns"><section class="panel">
-    <div class="killer">${o.id ? portraitImg({ id: o.id, name: o.enemy, portrait: o.portrait }, 'down') : ''}<div style="display:grid;gap:4px"><span class="label">Target down</span><h2>${esc(o.enemy)}</h2></div></div>
+    <div class="killer">${o.id ? portraitImg({ id: o.id, name: o.enemy, portrait: o.portrait }, 'down') : ''}<div style="display:grid;gap:4px"><span class="label">${o.fled ? 'Target fled' : 'Target down'}</span><h2>${esc(o.enemy)}</h2></div></div>
     <dl class="kv"><dt>${esc(S.currency)}</dt><dd style="color:var(--sodium)">+${o.credits}</dd><dt>XP</dt><dd>+${o.xp}</dd>
-    ${o.levelUps.length ? `<dt>Level up</dt><dd class="ok-text">Now level ${o.levelUps[o.levelUps.length - 1]}</dd>` : ''}
+    ${o.levelUps.length ? `<dt>Level up</dt><dd class="ok-text">Now level ${o.levelUps[o.levelUps.length - 1]} \u00B7 +${o.levelUps.length} attribute point${o.levelUps.length > 1 ? 's' : ''}</dd>` : ''}
     ${o.healed ? `<dt>Field medic</dt><dd class="ok-text">+${o.healed} HP</dd>` : ''}
     ${o.resolve ? `<dt>${esc(S.meta)}</dt><dd style="color:var(--sodium)">+${o.resolve}, and a deeper insertion point</dd>` : ''}</dl>
+    ${c.attrPoints ? `<div class="spend-inline"><span class="label">Spend ${c.attrPoints} attribute point${c.attrPoints > 1 ? 's' : ''}</span><div class="btnrow">${Object.entries(D.ATTRS).map(([k, a]) => `<button class="btn" data-a="spend" data-v="${k}">${a.short} ${c.attrs[k]} \u2192 ${c.attrs[k] + 1}</button>`).join('')}</div></div>` : ''}
     <div><button class="btn primary big" data-a="continue">Keep moving<span class="k">\u21B5</span></button></div>
   </section>${logPanel()}</div>`;
 }
 
 function eventScreen() {
-  const opts = E.EVENT_OPTIONS[state.event];
+  const ev = E.eventById(state.event), res = state.eventResult;
+  const opts = ev.options.map((o, i) => {
+    const avail = E.optionAvailable(state, o);
+    const check = o.check ? `<span class="chip">${D.ATTRS[o.check.attr].short} ${E.attr(state.char, o.check.attr)} \u00B7 ${pct(E.checkChance(state, o.check))}</span>` : '';
+    const cost = o.cost ? `<span class="chip ${avail ? '' : 'bad'}">costs ${o.cost.credits ? cr(o.cost.credits) : `${o.cost.stim} stim`}</span>` : '';
+    return `<button class="btn option" data-a="event" data-v="${i}" ${avail ? '' : 'disabled'}><span>${esc(o.label)}</span><span class="chips">${check}${cost}</span></button>`;
+  }).join('');
+  const result = res ? `<div class="notice ${res.check ? (res.success ? 'win' : 'lose') : ''}">${res.check ? `<b>${res.success ? 'Success.' : 'Failed.'}</b> ` : ''}${esc(res.text)}</div>
+    ${res.notes.length ? `<div class="chips">${res.notes.map((n) => `<span class="chip ${/\u2212|alerted/.test(n) ? 'bad' : 'good'}">${esc(n)}</span>`).join('')}</div>` : ''}` : '';
   return `<div class="columns"><section class="panel">
-    <span class="label">Something in the corridor</span>
-    <p style="font-size:1.15rem;max-width:56ch">${esc(D.EVENT_TEXT[state.event])}</p>
-    ${state.eventResult
-      ? `<div class="notice">${esc(state.eventResult)}</div><div><button class="btn primary big" data-a="eventDone">Move on<span class="k">\u21B5</span></button></div>`
-      : `<div class="btnrow">${opts.map((o, i) => `<button class="btn ${i === 0 ? 'primary' : ''}" data-a="event" data-v="${o.id}">${esc(o.label)}</button>`).join('')}</div>`}
+    <span class="label">Something in the corridor \u00B7 ${esc(E.sectorName(state.run.sector, state.run.map))}</span>
+    <p style="font-size:1.15rem;max-width:58ch">${esc(ev.text)}</p>
+    ${res ? `${result}<div><button class="btn primary big" data-a="eventDone">Move on<span class="k">\u21B5</span></button></div>` : `<div class="options">${opts}</div>`}
   </section>${logPanel()}</div>`;
 }
 
 function sectorClearScreen() {
   const r = state.run, o = state.outcome, c = state.char, st = E.stats(state), next = r.sector + 1;
   return `<div class="columns"><section class="panel">
-    <span class="label">Sector ${r.sector} secured</span><h2>${esc(E.sectorName(r.sector))}</h2>
+    <span class="label">Sector ${r.sector} secured \u00B7 ${esc(E.mapById(r.map).name)}</span><h2>${esc(E.sectorName(r.sector, r.map))}</h2>
     <dl class="kv"><dt>Sector haul</dt><dd style="color:var(--sodium)">+${cr(o.credits)}</dd><dt>Carrying</dt><dd>${cr(c.credits)}</dd><dt>Condition</dt><dd class="${c.hp < st.maxHp * 0.4 ? 'danger-text' : ''}">${c.hp} / ${st.maxHp} HP \u00B7 ${c.items.stim} stims</dd><dt>${esc(S.meta)}</dt><dd style="color:var(--sodium)">+1 (banked)</dd></dl>
     ${E.isBossSector(next) ? `<div class="notice" style="border-color:var(--danger);background:var(--danger-dim)">Sector ${next} is a boss sector. Something worse than troopers is waiting.</div>` : ''}
     <div class="btnrow">
@@ -376,24 +524,28 @@ function sectorClearScreen() {
 function deathScreen() {
   const o = state.outcome;
   return `<section class="panel" style="padding:32px">
-    <span class="label">Signal lost \u00B7 Sector ${o.sector}</span>
+    <span class="label">Signal lost \u00B7 ${esc(E.mapById(o.map).name)} \u00B7 Sector ${o.sector}</span>
     <h1 class="big-title" style="color:var(--danger)">${esc(o.name)}</h1>
     ${o.killerId ? `<div class="killer">${portraitImg({ id: o.killerId, name: o.killer, portrait: o.killerPortrait })}<span class="label">Last seen<br>engaging a ${esc(o.killer)}</span></div>` : ''}
-    <p class="story">Operative ${o.number} went down in the ${esc(E.sectorName(o.sector))}, killed by a ${esc(o.killer)}. The ${o.credits.toLocaleString()} ${S.currency}, the gear and level ${o.level} went with them.</p>
+    <p class="story">Operative ${o.number} went down in the ${esc(E.sectorName(o.sector, o.map))}, killed by a ${esc(o.killer)}. The ${o.credits.toLocaleString()} ${S.currency}, the gear, the implants and level ${o.level} went with them.</p>
     <dl class="kv"><dt>${esc(S.meta)} to spend</dt><dd style="color:var(--sodium)">${state.meta.resolve}</dd><dt>Deepest ever</dt><dd>Sector ${state.meta.bestSector}</dd></dl>
-    <div><button class="btn primary big" data-a="recruit">Recruit the next operative</button></div>
+    <div><button class="btn primary big" data-a="recruit">Build the next operative</button></div>
   </section>`;
 }
 
 function render() {
-  const screens = { intro: introScreen, town: townScreen, combat: combatScreen, victory: victoryScreen, event: eventScreen, sectorClear: sectorClearScreen, death: deathScreen };
+  const screens = { intro: introScreen, create: createScreen, town: townScreen, combat: combatScreen, victory: victoryScreen, event: eventScreen, sectorClear: sectorClearScreen, death: deathScreen };
+  // Recover from inconsistent saves instead of rendering a blank page.
+  if (!state.char && !['intro', 'create'].includes(state.screen)) { state.screen = 'create'; if (!state.draft) state.draft = E.newDraft(state.meta, rng); }
+  if (!state.run && ['combat', 'victory', 'event', 'sectorClear'].includes(state.screen)) state.screen = 'town';
+  if (state.screen === 'event' && !E.eventById(state.event)) state.screen = 'combat';
   const showStatus = state.screen !== 'intro';
   document.getElementById('app').innerHTML = (showStatus ? statusStrip() : '') + screens[state.screen]();
   const slot = document.getElementById('stage-slot');
   if (slot) {
     slot.replaceWith(stage.el);
     const r = state.run, st = E.stats(state);
-    stage.sync({ run: r, enemy: r.enemy, sector: r.sector, boss: r.enemy.boss, player: { name: state.char.name, level: state.char.level, hp: state.char.hp, maxHp: st.maxHp } });
+    stage.sync({ run: r, enemy: r.enemy, sector: r.sector, boss: r.enemy.boss, theme: E.mapById(r.map).theme, player: { name: state.char.name, level: state.char.level, hp: state.char.hp, maxHp: st.maxHp } });
   }
   const log = document.getElementById('log');
   if (log) log.scrollTop = log.scrollHeight;
@@ -425,16 +577,25 @@ function act(a, v, k) {
   if (a === 'act') return fight(v);
   if (a !== 'reset') confirmReset = false;
   switch (a) {
-    case 'begin': state.screen = 'town'; state.tab = 'gate'; state.notice = 'Start with what you have. Come back with more.'; break;
+    case 'begin': state.screen = 'create'; if (!state.draft) state.draft = E.newDraft(state.meta, rng); break;
+    case 'bg': state.draft.background = v; { for (const key of Object.keys(D.ATTRS)) while (E.draftAttr(state.draft, key) > D.ATTR_CREATE_MAX) E.draftAdjust(state.draft, key, -1); } break;
+    case 'attr': E.draftAdjust(state.draft, v, +k); break;
+    case 'randname': state.draft.name = D.OPERATIVE_NAMES[Math.floor(rng() * D.OPERATIVE_NAMES.length)]; break;
+    case 'create': E.createChar(state, rng); state.gateMap = 'garrison'; break;
     case 'tab': state.tab = v; state.notice = null; break;
     case 'gear': E.buyGear(state, k, v); break;
     case 'item': E.buyItem(state, v); break;
     case 'upgrade': E.buyUpgrade(state, v); break;
+    case 'implant': E.installImplant(state, v); break;
+    case 'unimplant': E.removeImplant(state, v); break;
     case 'heal': E.heal(state); break;
     case 'train': E.train(state, v); break;
-    case 'deploy': E.deploy(state, +v, rng); break;
+    case 'cell': E.buyCell(state, v); break;
+    case 'spend': E.spendAttr(state, v); break;
+    case 'pickmap': state.gateMap = v; break;
+    case 'deploy': E.deploy(state, state.gateMap || 'garrison', +v, rng); break;
     case 'continue': E.continueAfterVictory(state, rng); break;
-    case 'event': E.resolveEvent(state, v, rng); break;
+    case 'event': E.resolveEvent(state, +v, rng); break;
     case 'eventDone': E.nextEncounter(state, rng); break;
     case 'deeper': E.pushDeeper(state, rng); break;
     case 'extract': E.endRun(state, 'extracted'); break;
@@ -451,12 +612,16 @@ document.addEventListener('click', (ev) => {
   if (!b || b.disabled) return;
   act(b.dataset.a, b.dataset.v, b.dataset.k);
 });
+document.addEventListener('input', (ev) => {
+  if (ev.target.id === 'op-name' && state.draft) { state.draft.name = ev.target.value; save(); }
+});
 
 document.addEventListener('keydown', (ev) => {
-  if (ev.metaKey || ev.ctrlKey || ev.altKey || busy) return;
+  if (ev.metaKey || ev.ctrlKey || ev.altKey || busy || ev.target.tagName === 'INPUT') return;
   const key = ev.key.toLowerCase();
   if (state.screen === 'combat') {
     const map = { a: 'attack', d: 'defend', r: 'run', s: 'stim', 1: 'stim', 2: 'thermal', 3: 'ion', 4: 'smoke' };
+    E.skillsOf(state.char).slice(0, 3).forEach((sk, i) => { map[SKILL_KEYS[i]] = sk; });
     if (map[key] && E.canUse(state, map[key])) { ev.preventDefault(); act('act', map[key]); }
   } else if (key === 'enter') {
     if (state.screen === 'victory') { ev.preventDefault(); act('continue'); }
@@ -465,8 +630,9 @@ document.addEventListener('keydown', (ev) => {
 });
 
 function start(data) {
-  state = (data && data.state) || load() || E.newGame(rng);
+  state = E.migrate((data && data.state) || load(), rng);
   delete state.events;
+  if (state.screen === 'create' && !state.draft) state.draft = E.newDraft(state.meta, rng);
   render();
   // PixelLab sheets, if any have been delivered. Re-render so the stage picks them up.
   loadSheets().then((n) => { if (n && state.screen === 'combat') { stage.enemyRef = null; stage.player = null; render(); } });

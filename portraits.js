@@ -85,6 +85,145 @@ function outline(g) {
 const eyes = (g, y, l = 17, r = 23, mat = 'hair') => { g.dot(l, y, mat, 0); g.dot(r, y, mat, 0); };
 
 export const ART = {
+  welder(g) {
+    g.rect(16, 30, 8, 6, 'grey');
+    g.dot(18, 37, 'red', 2); g.dot(21, 37, 'red', 2);
+    g.ellipse(20, 20, 10, 9, 'yellow');
+    g.rect(11, 13, 18, 2, 'black', 0);
+    g.rect(15, 18, 10, 4, 'visor');
+    g.rect(17, 19, 6, 2, 'ion', 2);
+    g.line(29, 22, 36, 30, 'grey'); g.line(30, 22, 37, 30, 'grey', 0);
+    g.dot(37, 31, 'white', 2); g.dot(38, 32, 'ion', 2); g.dot(36, 32, 'yellow', 2); g.dot(38, 30, 'yellow', 2);
+    g.line(11, 22, 5, 30, 'grey'); g.rect(3, 30, 4, 3, 'black');
+    g.dot(20, 11, 'red', 2);
+  },
+  foreman(g) {
+    g.ellipse(20, 42, 17, 11, 'yellow');
+    g.rect(16, 30, 2, 10, 'grey', 1); g.rect(22, 30, 2, 10, 'grey', 1);
+    g.rect(17, 26, 6, 5, 'skin', 0);
+    g.ellipse(20, 19, 9, 10, 'skin');
+    g.ellipse(20, 11, 11, 5, 'yellow');
+    g.rect(8, 12, 24, 2, 'yellow', 0);
+    g.rect(14, 16, 4, 1, 'hair', 1); g.rect(22, 16, 4, 1, 'hair', 1);
+    eyes(g, 18);
+    g.dot(20, 21, 'skin', 0);
+    g.rect(16, 23, 8, 3, 'hair', 1);
+    g.rect(18, 24, 4, 1, 'skin', 0);
+    g.rect(28, 30, 3, 10, 'black'); g.rect(28, 28, 3, 2, 'ion', 2);
+  },
+  slagger(g) {
+    g.rect(4, 26, 32, 14, 'grey');
+    g.rect(4, 26, 32, 1, 'grey', 2);
+    for (let k = 4; k < 36; k += 6) g.line(k, 40, k + 5, 34, 'yellow', 1);
+    g.rect(7, 8, 26, 18, 'grey');
+    g.rect(7, 8, 26, 1, 'grey', 2);
+    g.rect(10, 18, 20, 6, 'black', 0);
+    for (let x = 11; x < 30; x += 3) { g.tri(x, 18, x + 2, 18, x + 1, 21, 'red', 1); g.tri(x, 24, x + 2, 24, x + 1, 21, 'red', 2); }
+    g.rect(11, 11, 4, 3, 'red', 2); g.rect(25, 11, 4, 3, 'red', 2);
+    g.rect(1, 14, 6, 10, 'black'); g.rect(33, 14, 6, 10, 'black');
+  },
+  jailer(g) {
+    g.ellipse(20, 42, 17, 11, 'navy');
+    g.rect(13, 34, 14, 2, 'black', 1);
+    g.dot(25, 37, 'silver', 2); g.dot(26, 38, 'silver', 1); g.dot(24, 38, 'silver', 1);
+    g.rect(17, 26, 6, 5, 'skin', 0);
+    g.ellipse(20, 19, 8, 10, 'skin');
+    g.ellipse(20, 11, 9, 5, 'navy');
+    g.rect(11, 12, 18, 2, 'navy', 0);
+    g.rect(16, 17, 3, 1, 'hair', 1); g.rect(22, 17, 3, 1, 'hair', 1);
+    eyes(g, 19);
+    g.dot(20, 21, 'skin', 0);
+    g.rect(18, 24, 4, 1, 'skin', 0);
+    g.rect(12, 30, 4, 2, 'silver', 2);
+  },
+  sedation(g) {
+    g.line(10, 24, 4, 32, 'silver'); g.line(30, 24, 36, 32, 'silver');
+    g.line(4, 32, 4, 37, 'silver', 2); g.line(36, 32, 36, 37, 'silver', 2);
+    g.dot(4, 38, 'ion', 2); g.dot(36, 38, 'ion', 2);
+    g.ellipse(20, 30, 8, 6, 'white');
+    g.ellipse(20, 17, 10, 11, 'white');
+    g.rect(13, 14, 14, 5, 'visor');
+    g.rect(15, 16, 3, 1, 'ion', 2); g.rect(22, 16, 3, 1, 'ion', 2);
+    g.rect(19, 22, 2, 5, 'red', 1); g.rect(17, 24, 6, 1, 'red', 1);
+  },
+  dockguard(g) {
+    g.ellipse(20, 41, 18, 11, 'silver');
+    g.ellipse(6, 32, 6, 4, 'navy'); g.ellipse(34, 32, 6, 4, 'navy');
+    g.rect(16, 27, 8, 5, 'black', 0);
+    g.ellipse(20, 17, 11, 12, 'silver');
+    g.ellipse(20, 18, 8, 7, 'visor');
+    g.line(16, 15, 19, 13, 'ion', 2);
+    g.rect(8, 15, 3, 6, 'navy'); g.rect(29, 15, 3, 6, 'navy');
+    g.dot(30, 13, 'red', 2);
+  },
+  gunner(g) {
+    g.rect(2, 26, 36, 14, 'black');
+    g.rect(2, 26, 36, 1, 'black', 2);
+    g.rect(22, 18, 18, 4, 'grey'); g.rect(36, 17, 4, 6, 'black');
+    g.rect(16, 20, 8, 7, 'grey', 0);
+    g.ellipse(14, 16, 7, 8, 'skin');
+    g.ellipse(14, 11, 8, 5, 'olive');
+    g.rect(10, 15, 9, 3, 'visor'); g.dot(12, 16, 'red', 2);
+    g.rect(11, 20, 6, 1, 'skin', 0);
+    for (let x = 4; x < 36; x += 8) g.rect(x, 31, 4, 2, 'yellow', 1);
+  },
+  brask(g) {
+    g.ellipse(20, 42, 19, 12, 'brown');
+    g.rect(10, 32, 20, 8, 'yellow', 0);
+    g.rect(17, 25, 6, 5, 'skin', 0);
+    g.ellipse(20, 18, 10, 10, 'skin');
+    g.rect(10, 9, 20, 4, 'hair');
+    g.rect(13, 16, 5, 2, 'hair', 1); g.rect(22, 16, 5, 2, 'hair', 1);
+    eyes(g, 19, 16, 24);
+    g.dot(20, 21, 'skin', 0);
+    g.rect(14, 23, 12, 4, 'hair', 1);
+    g.rect(17, 24, 6, 1, 'skin', 0);
+    g.line(25, 12, 28, 24, 'red', 0);
+    g.rect(31, 28, 6, 4, 'skin'); g.rect(3, 28, 6, 4, 'skin');
+  },
+  crucible(g) {
+    g.rect(5, 26, 30, 14, 'black');
+    g.ellipse(20, 32, 10, 6, 'red', 1); g.ellipse(20, 32, 6, 3, 'yellow', 2);
+    g.ellipse(6, 26, 6, 6, 'grey'); g.ellipse(34, 26, 6, 6, 'grey');
+    g.rect(10, 4, 20, 22, 'grey');
+    g.rect(10, 4, 20, 1, 'grey', 2);
+    g.rect(13, 10, 14, 4, 'visor');
+    g.rect(14, 11, 12, 2, 'yellow', 2);
+    g.rect(13, 17, 14, 5, 'black', 0);
+    for (let x = 14; x < 27; x += 3) g.rect(x, 18, 1, 3, 'red', 2);
+    g.dot(20, 2, 'red', 2); g.line(20, 3, 20, 4, 'grey');
+  },
+  kell(g) {
+    g.ellipse(20, 42, 17, 11, 'navy');
+    g.tri(13, 28, 19, 38, 14, 39, 'navy', 2); g.tri(27, 28, 21, 38, 26, 39, 'navy', 0);
+    g.rect(19, 30, 2, 10, 'silver', 1);
+    g.rect(24, 33, 5, 1, 'ion', 1); g.rect(24, 35, 5, 1, 'ion', 1);
+    g.rect(17, 25, 6, 3, 'pale', 0);
+    g.ellipse(20, 17, 8, 10, 'pale');
+    g.ellipse(20, 9, 9, 4, 'silver');
+    g.rect(11, 9, 3, 12, 'silver'); g.rect(26, 9, 3, 12, 'silver');
+    g.rect(16, 16, 3, 1, 'hair', 1); g.rect(22, 16, 3, 1, 'hair', 1);
+    g.rect(15, 17, 4, 2, 'black', 1); g.rect(21, 17, 4, 2, 'black', 1);
+    g.dot(19, 18, 'black', 0);
+    g.rect(18, 23, 4, 1, 'pale', 0);
+    g.dot(10, 36, 'silver', 2); g.dot(9, 37, 'silver', 2);
+  },
+  vane(g) {
+    g.ellipse(20, 42, 18, 11, 'white');
+    g.rect(4, 31, 9, 2, 'gold', 2); g.rect(27, 31, 9, 2, 'gold', 2);
+    for (let y = 31; y < 40; y += 3) g.dot(20, y, 'gold', 2);
+    g.rect(24, 34, 6, 2, 'red', 1);
+    g.rect(17, 26, 6, 4, 'skin', 0);
+    g.ellipse(20, 18, 8, 10, 'skin');
+    g.rect(12, 10, 16, 5, 'silver');
+    g.ellipse(20, 9, 8, 3, 'silver');
+    g.rect(16, 16, 3, 1, 'silver', 1); g.rect(22, 16, 3, 1, 'silver', 1);
+    eyes(g, 18);
+    g.rect(24, 17, 3, 3, 'ion', 1);
+    g.dot(20, 21, 'skin', 0);
+    g.rect(18, 24, 4, 1, 'skin', 0);
+  },
+
   // The player's operative, seen from behind (lower-left of the battle stage).
   player(g) {
     g.ellipse(19, 42, 19, 12, 'rust');
@@ -304,4 +443,4 @@ export function portraitURL(id) {
   return c ? (urls[id] = c.toDataURL('image/png')) : null;
 }
 // Where the gun barrel ends on each drawn sprite, in 40x40 art coordinates (for muzzle flashes).
-export const MUZZLE = { player: [39, 20], patrol: [9, 30], officer: [11, 36], marksman: [30, 18], interrogator: [12, 36], shock: [8, 34], halvek: [8, 36], ostrane: [12, 36], probe: [20, 20], sentinel: [20, 15], crawler: [1, 18] };
+export const MUZZLE = { welder: [38, 32], foreman: [30, 28], jailer: [10, 36], dockguard: [8, 34], gunner: [40, 20], brask: [36, 30], kell: [10, 36], vane: [8, 36], player: [39, 20], patrol: [9, 30], officer: [11, 36], marksman: [30, 18], interrogator: [12, 36], shock: [8, 34], halvek: [8, 36], ostrane: [12, 36], probe: [20, 20], sentinel: [20, 15], crawler: [1, 18] };

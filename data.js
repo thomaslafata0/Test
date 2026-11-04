@@ -5,13 +5,12 @@ export const SETTING = {
   title: 'Cinder Cell',
   town: 'Kessa Yard',
   faction: 'the Directorate',
-  dungeon: 'Directorate Garrison',
   currency: 'credits',
   cur: 'cr',
   meta: 'Resolve',
   intro: [
     'Three years ago the Directorate took the foundry at Kessa Yard. Since then the quotas have doubled, the curfew has moved to dusk, and people who ask questions stop coming to work.',
-    'The cell is small: a back-room medic, a fence with a stall in the market, and whoever is willing to walk through the garrison gate tonight.',
+    'The cell is small: a back-room medic, a fence with a stall in the market, and whoever is willing to walk through the gate tonight.',
     'Every operative who goes in alone either comes back with credits or does not come back. What survives them is Resolve: the training, the routes and the nerve they leave to the next one.',
   ],
 };
@@ -22,57 +21,164 @@ export const OPERATIVE_NAMES = [
   'Sefa Orrin', 'Wick Tallis', 'Lio Granger', 'Rhea Okonedo', 'Pell Stroud', 'Vida Maren',
 ];
 
-// Sector names repeat with a "Sublevel" prefix past the end of the list.
-export const SECTORS = [
-  'Outer Checkpoint', 'Barracks Ring', 'Motor Pool', 'Comms Spire', 'Warden\u2019s Gate',
-  'Ration Depot', 'Detention Level', 'Reactor Annex', 'Archive Vault', 'Siege Hangar',
-  'Officers\u2019 Deck', 'Interrogation Wing', 'Signal Core', 'Directorate Chancery', 'Supervisor\u2019s Spire',
+// Base numbers before attributes, level, gear and training.
+export const BASE_STATS = { hp: 34, atk: 6, def: 2, spd: 4 };
+
+// ---------- attributes (per operative, lost on death) ----------
+export const ATTRS = {
+  str: { label: 'Strength',  short: 'STR', desc: '+3 max HP per point. Melee and heavy weapons hit harder. Forcing doors, carrying people.' },
+  agi: { label: 'Agility',   short: 'AGI', desc: '+1 SPD per point: dodge, crit and escape odds. Sneaking past guards.' },
+  int: { label: 'Intellect', short: 'INT', desc: 'Items work 10% better per point. Slicing consoles. An extra implant slot at 4 and 8.' },
+  cha: { label: 'Charisma',  short: 'CHA', desc: 'Prices 4% lower per point. Bluffing, rallying and getting help from locals.' },
+};
+export const ATTR_START = 1, ATTR_POINTS = 4, ATTR_CREATE_MAX = 5, ATTR_MAX = 10;
+
+export const BACKGROUNDS = [
+  { id: 'foundry', name: 'Foundry Hand', attrs: { str: 1 }, perk: 'Tough: +10 max HP.', start: {},
+    desc: 'Twelve years on the casting floor before the Directorate came. Strong back, short temper.' },
+  { id: 'runner', name: 'Market Runner', attrs: { agi: 1 }, perk: 'Slippery: +15% escape chance.', start: { smoke: 1 },
+    desc: 'Grew up moving goods past checkpoints. Knows every gap in every fence.' },
+  { id: 'clerk', name: 'Defector Clerk', attrs: { int: 1 }, perk: 'Codes: +15% on Intellect checks.', start: { ion: 1 },
+    desc: 'Filed the arrest orders for two years. Still remembers the passwords.' },
+  { id: 'preacher', name: 'Street Preacher', attrs: { cha: 1 }, perk: 'Voice: +1 extra Resolve from every boss.', start: { credits: 40 },
+    desc: 'People listen when they talk. The Directorate has noticed.' },
 ];
 
-export const BASE_STATS = { hp: 40, atk: 6, def: 2, spd: 5 };
+// ---------- skills (combat abilities beyond Attack / Defend / Run) ----------
+// cd = turns before it can be used again. Unlocked by weapon type or attribute.
+export const SKILLS = {
+  aimed:     { name: 'Aimed Shot',      cd: 3, desc: 'x1.5 damage, +25% crit chance.', from: 'Pistols and rifles' },
+  burst:     { name: 'Burst Fire',      cd: 2, desc: 'Three shots at 55% each. Shreds unarmoured targets, weak against armour.', from: 'Carbines' },
+  blast:     { name: 'Scatter Blast',   cd: 2, desc: 'x1.4 damage, doubled against unarmoured targets.', from: 'Scatterguns' },
+  smash:     { name: 'Power Strike',    cd: 3, desc: 'x1.6 damage plus 1 per STR, ignores half of armour.', from: 'Melee and heavy weapons, or STR 5' },
+  overload:  { name: 'Overload',        cd: 4, desc: 'Tech burst: 6 + 4 per INT, ignores armour. Droids take double and are stunned.', from: 'Tech weapons, or INT 4' },
+  suppress:  { name: 'Suppressing Fire', cd: 3, desc: '60% damage and pins the enemy: its next move is forced to be taking cover.', from: 'AGI 4' },
+  intimidate:{ name: 'Intimidate',      cd: 99, desc: 'Once per fight. A human enemy may run. If not, its ATK drops 25% for the fight.', from: 'CHA 4' },
+};
+export const WEAPON_SKILL = { pistol: 'aimed', rifle: 'aimed', carbine: 'burst', scatter: 'blast', melee: 'smash', heavy: 'smash', tech: 'overload' };
 
-// Permanent training bought with Resolve. Survives death.
+// ---------- gear ----------
+// req: minimum attributes to buy. Melee and heavy weapons add 1.5 ATK per STR.
+export const WEAPONS = [
+  { id: 'holdout',   name: 'Holdout Pistol',       type: 'pistol',  atk: 0,  cost: 0,    desc: 'Fits in a boot.' },
+  { id: 'baton',     name: 'Shock Baton',          type: 'melee',   atk: 1,  cost: 45,   desc: 'Stolen off a riot cop. Scales with STR.' },
+  { id: 'carbine',   name: 'Salvaged Carbine',     type: 'carbine', atk: 3,  cost: 60,   desc: 'Rebuilt from three broken ones.' },
+  { id: 'scatter',   name: 'Foundry Scattergun',   type: 'scatter', atk: 5,  cost: 140,  req: { str: 3 }, desc: 'Ugly, loud, effective.' },
+  { id: 'longbore',  name: 'Longbore Rifle',       type: 'rifle',   atk: 7,  cost: 250,  req: { agi: 3 }, crit: 0.12, desc: '+12% crit chance.' },
+  { id: 'maul',      name: 'Breaching Maul',       type: 'melee',   atk: 7,  cost: 280,  req: { str: 5 }, desc: 'For doors. And for people. Scales with STR.' },
+  { id: 'arc',       name: 'Arc Projector',        type: 'tech',    atk: 8,  cost: 420,  req: { int: 5 }, desc: 'Ignores half of armour, +50% against droids.' },
+  { id: 'repeater',  name: 'Ion-Bored Repeater',   type: 'carbine', atk: 12, cost: 560,  req: { str: 4 }, desc: 'Stolen from a garrison armoury.' },
+  { id: 'marksman',  name: 'Directorate Long Rifle', type: 'rifle', atk: 14, cost: 760,  req: { agi: 6 }, crit: 0.18, desc: '+18% crit chance. Officer issue.' },
+  { id: 'cannon',    name: 'Shoulder Cannon',      type: 'heavy',   atk: 16, cost: 1100, req: { str: 7 }, spd: -1, desc: '\u22121 SPD. Scales with STR.' },
+];
+
+export const ARMOR = [
+  { id: 'none',    name: 'Work Coveralls',         def: 0,  cost: 0,   desc: 'Foundry-issue. Smells like slag.' },
+  { id: 'vest',    name: 'Padded Vest',            def: 2,  cost: 50,  desc: 'Layered cloth and luck.' },
+  { id: 'plates',  name: 'Plated Jacket',          def: 4,  cost: 140, desc: 'Hull scrap sewn into canvas.' },
+  { id: 'trooper', name: 'Stripped Trooper Plate', def: 7,  cost: 300, req: { str: 3 }, spd: -1, desc: '\u22121 SPD. Paint scraped off.' },
+  { id: 'weave',   name: 'Ballistic Weave',        def: 9,  cost: 560, req: { agi: 4 }, desc: 'Officer-grade. Light and quiet.' },
+  { id: 'exo',     name: 'Foundry Exo-Frame',      def: 13, cost: 950, req: { str: 6 }, spd: -2, desc: '\u22122 SPD. A loader rig cut down to size.' },
+];
+
+export const ITEMS = {
+  stim:    { name: 'Med Stim',       cost: 20, desc: 'Restore 40% max HP (+10% per INT).' },
+  thermal: { name: 'Thermal Charge', cost: 35, desc: 'Heavy damage that ignores armour.' },
+  ion:     { name: 'Ion Pulse',      cost: 30, desc: 'Stun 1 turn. Droids: stun 3 turns and damage.' },
+  smoke:   { name: 'Smoke Canister', cost: 25, desc: 'Guaranteed escape back to town.' },
+};
+
+// Implants: installed at the clinic, lost on death. Slots: 2, +1 at INT 4 and INT 8.
+export const IMPLANTS = [
+  { id: 'reflex',  name: 'Reflex Booster',       cost: 150, desc: '+2 SPD.' },
+  { id: 'dermal',  name: 'Subdermal Plating',    cost: 180, desc: '+3 DEF.' },
+  { id: 'optic',   name: 'Targeting Optic',      cost: 160, desc: '+8% crit chance.' },
+  { id: 'pain',    name: 'Pain Editor',          cost: 200, desc: '+20 max HP.' },
+  { id: 'adrenal', name: 'Adrenal Pump',         cost: 220, desc: 'Once per fight, below 30% HP: heal 25%.' },
+  { id: 'myomer',  name: 'Myomer Fibres',        cost: 240, desc: '+2 STR.' },
+  { id: 'neural',  name: 'Neural Jack',          cost: 240, desc: '+2 INT.' },
+  { id: 'voice',   name: 'Voice Modulator',      cost: 200, desc: '+2 CHA.' },
+  { id: 'synapse', name: 'Synapse Accelerator',  cost: 320, desc: 'Skill cooldowns 1 turn shorter.' },
+];
+
+// Contacts and mods: one-time purchases for this operative.
+export const UPGRADES = [
+  { id: 'belt',   name: 'Bandolier',            cost: 70,  desc: 'Carry 3 more of each item.' },
+  { id: 'medic',  name: 'Field Medic Contact',  cost: 150, desc: 'Heal 15% max HP after every fight.' },
+  { id: 'drill',  name: 'Close-Quarters Drill', cost: 180, desc: '+2 ATK.' },
+  { id: 'forger', name: 'Forged Papers',        cost: 200, desc: 'The first enemy in each sector is caught off guard (stunned 1 turn).' },
+  { id: 'fence',  name: 'Fence Network',        cost: 220, desc: '+25% credits from enemies.' },
+];
+
+// ---------- permanent progression (Resolve; survives death) ----------
 export const TRAINING = {
   hp:  { label: 'Endurance',    stat: 'Max HP', per: 8, max: 15, note: 'Scar tissue and stubbornness.' },
   atk: { label: 'Marksmanship', stat: 'ATK',    per: 2, max: 15, note: 'Range time behind the slag heaps.' },
   def: { label: 'Grit',         stat: 'DEF',    per: 1, max: 15, note: 'Knowing which cover holds.' },
   spd: { label: 'Reflexes',     stat: 'SPD',    per: 1, max: 15, note: 'Dodge, crit and escape odds.' },
 };
+export const CELL = [
+  { id: 'stash',  name: 'Hidden Stash',   cost: 6,  desc: 'New operatives start with +60 credits.' },
+  { id: 'kit',    name: 'Field Kit',      cost: 6,  desc: 'New operatives start with +1 Med Stim and +1 Thermal Charge.' },
+  { id: 'cache',  name: 'Weapons Cache',  cost: 8,  desc: 'New operatives start with a Salvaged Carbine.' },
+  { id: 'ledger', name: 'Doc\u2019s Ledger', cost: 8, desc: 'Med Bay treatment costs half.' },
+  { id: 'mentor', name: 'Old Hand',       cost: 12, desc: 'New operatives get +1 attribute point at creation.' },
+];
 
-// portrait (optional): path to a PNG, e.g. 'portraits/patrol.png', to replace the built-in pixel art.
-// intents: weights for what the enemy does next. attack / heavy (telegraphed, x2.2) / guard / repair
-export const ENEMIES = [
-  { id: 'patrol', name: 'Patrol Trooper', min: 1, hp: 18, atk: 6, def: 1, spd: 4, cr: [6, 10], xp: 6,
+// ---------- enemies ----------
+// tags: human / beast / droid / armored / boss. intents: weights for the enemy's next move.
+export const ENEMIES = {
+  patrol:  { name: 'Patrol Trooper', tags: ['human'], hp: 18, atk: 6, def: 1, spd: 4, cr: [6, 10], xp: 6,
     intents: { attack: 6, heavy: 1, guard: 1 }, line: 'A trooper rounds the corner, rifle already raised.' },
-  { id: 'probe', name: 'Sentry Probe', tags: ['droid'], min: 1, hp: 13, atk: 5, def: 0, spd: 8, cr: [4, 8], xp: 5,
+  probe:   { name: 'Sentry Probe', tags: ['droid'], hp: 13, atk: 5, def: 0, spd: 8, cr: [4, 8], xp: 5,
     intents: { attack: 5, heavy: 1 }, line: 'A sentry probe drops from the ceiling rail, lens glowing.' },
-  { id: 'officer', name: 'Compliance Officer', min: 1, hp: 15, atk: 4, def: 0, spd: 5, cr: [12, 18], xp: 5,
+  officer: { name: 'Compliance Officer', tags: ['human'], hp: 15, atk: 4, def: 0, spd: 5, cr: [12, 18], xp: 5,
     intents: { attack: 4, guard: 2 }, line: '\u201CPapers. Now.\u201D The officer\u2019s hand drifts to a sidearm.' },
-  { id: 'hound', name: 'Security Hound', min: 2, hp: 17, atk: 7, def: 0, spd: 10, cr: [5, 9], xp: 7,
+  hound:   { name: 'Security Hound', tags: ['beast'], hp: 17, atk: 7, def: 0, spd: 10, cr: [5, 9], xp: 7,
     intents: { attack: 5, heavy: 2 }, line: 'Claws on grating. A collared hound comes low and fast.' },
-  { id: 'riot', name: 'Riot Enforcer', tags: ['armored'], min: 3, hp: 28, atk: 7, def: 4, spd: 3, cr: [10, 16], xp: 10,
+  riot:    { name: 'Riot Enforcer', tags: ['human', 'armored'], hp: 28, atk: 7, def: 4, spd: 3, cr: [10, 16], xp: 10,
     intents: { attack: 4, heavy: 2, guard: 2 }, line: 'An enforcer locks a shock-shield into place across the corridor.' },
-  { id: 'loader', name: 'Rigged Loader Droid', tags: ['droid', 'armored'], min: 4, hp: 32, atk: 9, def: 3, spd: 2, cr: [8, 14], xp: 11,
+  loader:  { name: 'Rigged Loader Droid', tags: ['droid', 'armored'], hp: 32, atk: 9, def: 3, spd: 2, cr: [8, 14], xp: 11,
     intents: { attack: 3, heavy: 3, repair: 1 }, line: 'A cargo loader, its safety governor ripped out, swings toward you.' },
-  { id: 'marksman', name: 'Garrison Marksman', min: 6, hp: 20, atk: 11, def: 1, spd: 7, cr: [14, 20], xp: 12,
+  marksman:{ name: 'Garrison Marksman', tags: ['human'], hp: 20, atk: 11, def: 1, spd: 7, cr: [14, 20], xp: 12,
     intents: { attack: 3, heavy: 2, guard: 1 }, line: 'A red dot settles on your chest from the catwalk above.' },
-  { id: 'interrogator', name: 'Directorate Interrogator', min: 7, hp: 26, atk: 9, def: 2, spd: 6, cr: [24, 34], xp: 13,
+  interrogator: { name: 'Directorate Interrogator', tags: ['human'], hp: 26, atk: 9, def: 2, spd: 6, cr: [24, 34], xp: 13,
     intents: { attack: 3, heavy: 2, guard: 1 }, line: 'Grey coat, gloved hands. \u201CYou could make this easy.\u201D' },
-  { id: 'shock', name: 'Shock Trooper', tags: ['armored'], min: 8, hp: 36, atk: 11, def: 5, spd: 5, cr: [16, 24], xp: 15,
+  shock:   { name: 'Shock Trooper', tags: ['human', 'armored'], hp: 36, atk: 11, def: 5, spd: 5, cr: [16, 24], xp: 15,
     intents: { attack: 4, heavy: 2, guard: 1 }, line: 'Black armour, no insignia. Shock troopers don\u2019t take prisoners.' },
-  { id: 'sentinel', name: 'Sentinel Droid', tags: ['droid', 'armored'], min: 11, hp: 44, atk: 12, def: 6, spd: 4, cr: [18, 26], xp: 17,
-    intents: { attack: 3, heavy: 2, repair: 1 }, line: 'A sentinel unfolds from its alcove, three meters of plated steel.' },
-];
+  sentinel:{ name: 'Sentinel Droid', tags: ['droid', 'armored'], hp: 44, atk: 12, def: 6, spd: 4, cr: [18, 26], xp: 17,
+    intents: { attack: 3, heavy: 2, repair: 1 }, line: 'A sentinel unfolds from its alcove, three metres of plated steel.' },
+  welder:  { name: 'Welding Drone', tags: ['droid'], hp: 15, atk: 7, def: 1, spd: 7, cr: [6, 10], xp: 7,
+    intents: { attack: 5, heavy: 2 }, line: 'A welding drone peels off the assembly line, torch flaring white.' },
+  foreman: { name: 'Shift Foreman', tags: ['human'], hp: 22, atk: 7, def: 2, spd: 4, cr: [14, 22], xp: 9,
+    intents: { attack: 4, guard: 2, heavy: 1 }, line: '\u201CYou\u2019re off-shift, worker.\u201D The foreman unclips a shock-prod.' },
+  slagger: { name: 'Slag Crusher', tags: ['droid', 'armored'], hp: 40, atk: 11, def: 6, spd: 2, cr: [12, 18], xp: 14,
+    intents: { attack: 3, heavy: 3, repair: 1 }, line: 'A slag crusher grinds out of the furnace glow, jaws still red-hot.' },
+  jailer:  { name: 'Cell Guard', tags: ['human'], hp: 22, atk: 7, def: 2, spd: 5, cr: [8, 12], xp: 8,
+    intents: { attack: 5, guard: 2, heavy: 1 }, line: 'A cell guard looks up from the roster. Their keys jangle as they stand.' },
+  sedation:{ name: 'Sedation Droid', tags: ['droid'], hp: 20, atk: 8, def: 1, spd: 6, cr: [8, 14], xp: 9,
+    intents: { attack: 4, heavy: 1, repair: 1 }, line: 'A medical droid glides out of the infirmary, needles extending.' },
+  dockguard: { name: 'Dock Sentry', tags: ['human', 'armored'], hp: 30, atk: 10, def: 5, spd: 5, cr: [16, 24], xp: 13,
+    intents: { attack: 4, guard: 2, heavy: 1 }, line: 'A dock sentry in vacuum-rated armour brings a carbine to bear.' },
+  gunner:  { name: 'Turret Gunner', tags: ['human'], hp: 24, atk: 14, def: 3, spd: 3, cr: [18, 26], xp: 14,
+    intents: { attack: 3, heavy: 3, guard: 1 }, line: 'A gunner swings the emplaced cannon around. It\u2019s already spinning up.' },
 
-// One boss guards the last fight of every 5th sector.
-export const BOSSES = [
-  { id: 'halvek', name: 'Sector Warden Halvek', tags: ['boss'], hp: 75, atk: 9, def: 3, spd: 5, cr: [70, 90], xp: 35,
+  // bosses
+  halvek:  { name: 'Sector Warden Halvek', tags: ['boss', 'human'], hp: 75, atk: 9, def: 3, spd: 5, cr: [70, 90], xp: 35,
     intents: { attack: 4, heavy: 2, guard: 1 }, line: 'Warden Halvek steps out of the gatehouse, buttoning his gloves. \u201CAnother one.\u201D' },
-  { id: 'crawler', name: 'Siege Crawler', tags: ['boss', 'droid', 'armored'], hp: 125, atk: 14, def: 7, spd: 2, cr: [130, 170], xp: 60,
-    intents: { attack: 3, heavy: 3, repair: 1 }, line: 'The hangar floor shakes. A six-legged siege crawler turns its guns on you.' },
-  { id: 'ostrane', name: 'Supervisor Ostrane', tags: ['boss'], hp: 150, atk: 18, def: 6, spd: 9, cr: [220, 280], xp: 90,
+  crawler: { name: 'Siege Crawler', tags: ['boss', 'droid', 'armored'], hp: 125, atk: 14, def: 7, spd: 2, cr: [130, 170], xp: 60,
+    intents: { attack: 3, heavy: 3, repair: 1 }, line: 'The floor shakes. A six-legged siege crawler turns its guns on you.' },
+  ostrane: { name: 'Supervisor Ostrane', tags: ['boss', 'human'], hp: 150, atk: 18, def: 6, spd: 9, cr: [220, 280], xp: 90,
     intents: { attack: 3, heavy: 2, guard: 2 }, line: 'Supervisor Ostrane doesn\u2019t look up from her datapad. \u201CI read your file. All of them.\u201D' },
-];
+  brask:   { name: 'Overseer Brask', tags: ['boss', 'human'], hp: 85, atk: 10, def: 4, spd: 4, cr: [90, 115], xp: 40,
+    intents: { attack: 3, heavy: 2, guard: 2 }, line: 'Overseer Brask cracks his knuckles. \u201CQuota\u2019s short. You\u2019ll make it up.\u201D' },
+  crucible:{ name: 'The Crucible', tags: ['boss', 'droid', 'armored'], hp: 130, atk: 15, def: 8, spd: 2, cr: [150, 190], xp: 65,
+    intents: { attack: 3, heavy: 3, repair: 1 }, line: 'The furnace door opens and the Crucible walks out of it.' },
+  kell:    { name: 'Warden Sabine Kell', tags: ['boss', 'human'], hp: 90, atk: 11, def: 4, spd: 7, cr: [90, 120], xp: 45,
+    intents: { attack: 4, heavy: 2, guard: 1 }, line: 'Warden Kell closes the cell door behind you. \u201CWe have a bed ready.\u201D' },
+  vane:    { name: 'Port Commodore Vane', tags: ['boss', 'human'], hp: 140, atk: 17, def: 6, spd: 8, cr: [240, 300], xp: 95,
+    intents: { attack: 3, heavy: 2, guard: 2 }, line: 'Commodore Vane lowers his macrobinoculars. \u201CYou\u2019re a long way from the yard.\u201D' },
+};
 
 export const INTENTS = {
   attack: { label: 'Taking aim',              tone: 'warn',   tip: 'Normal attack.' },
@@ -81,41 +187,127 @@ export const INTENTS = {
   repair: { label: 'Running self-repair',     tone: 'calm',   tip: 'Will restore 15% HP. Hit it hard now.' },
 };
 
-export const WEAPONS = [
-  { id: 'holdout',  name: 'Holdout Pistol',      atk: 0,  cost: 0,   desc: 'Fits in a boot. Not much else to say.' },
-  { id: 'carbine',  name: 'Salvaged Carbine',    atk: 3,  cost: 60,  desc: 'Rebuilt from three broken ones.' },
-  { id: 'scatter',  name: 'Foundry Scattergun',  atk: 6,  cost: 160, desc: 'Ugly, loud, effective.' },
-  { id: 'longbore', name: 'Longbore Rifle',      atk: 9,  cost: 320, crit: 0.1, desc: '+10% crit chance.' },
-  { id: 'repeater', name: 'Ion-Bored Repeater',  atk: 14, cost: 620, desc: 'Stolen from a garrison armoury.' },
+// ---------- maps ----------
+// pool: [enemy id, sector it first appears]. unlock: deepest sector reached anywhere.
+// level: extra enemy levels. events: chance of an event after a fight. theme: stage backdrop.
+export const MAPS = [
+  { id: 'garrison', name: 'Directorate Garrison', unlock: 0, level: 0, credits: 1, xp: 1, events: 0.3, theme: 'garrison',
+    desc: 'Checkpoints, barracks and the regime\u2019s soldiers. The straight fight.',
+    sectors: ['Outer Checkpoint', 'Barracks Ring', 'Motor Pool', 'Comms Spire', 'Warden\u2019s Gate', 'Ration Depot', 'Armoury Row', 'Reactor Annex', 'Archive Vault', 'Siege Hangar', 'Officers\u2019 Deck', 'Signal Core', 'Chancery Halls', 'Inner Keep', 'Supervisor\u2019s Spire'],
+    pool: [['patrol', 1], ['probe', 1], ['officer', 1], ['hound', 2], ['riot', 3], ['marksman', 6], ['interrogator', 7], ['shock', 8], ['sentinel', 11]],
+    bosses: ['halvek', 'crawler', 'ostrane'] },
+  { id: 'foundry', name: 'Foundry Works', unlock: 0, level: 0, credits: 1.25, xp: 0.9, events: 0.3, theme: 'foundry',
+    desc: 'The occupied foundry. Heat, machines and overtime. More droids, more credits.',
+    sectors: ['Slag Yard', 'Conveyor Hall', 'Casting Floor', 'Smelter Gantry', 'Foreman\u2019s Office', 'Coolant Tunnels', 'Ore Crusher', 'Pattern Shop', 'Shipping Bay', 'Furnace Core', 'Rolling Mill', 'Quench Pits', 'Tapping Floor', 'Blast Furnace', 'Control Booth'],
+    pool: [['welder', 1], ['probe', 1], ['foreman', 1], ['hound', 2], ['loader', 3], ['riot', 5], ['slagger', 6], ['shock', 9], ['sentinel', 10]],
+    bosses: ['brask', 'crucible', 'crawler'] },
+  { id: 'detention', name: 'Detention Complex', unlock: 5, level: 1, credits: 1, xp: 1.15, events: 0.5, theme: 'detention',
+    desc: 'Where the yard\u2019s people disappear. More prisoners, more choices, more Resolve.',
+    sectors: ['Intake', 'Holding Pens', 'Processing', 'Cell Block A', 'Warden\u2019s Office', 'Isolation Wing', 'Infirmary', 'Cell Block C', 'Records Room', 'Interrogation Suite', 'Yard Gallery', 'Solitary', 'Transfer Dock', 'Deep Cells', 'Warden\u2019s Tower'],
+    pool: [['jailer', 1], ['officer', 1], ['hound', 1], ['sedation', 2], ['riot', 3], ['interrogator', 4], ['marksman', 6], ['shock', 8], ['sentinel', 11]],
+    bosses: ['kell', 'crawler', 'ostrane'] },
+  { id: 'port', name: 'Orbital Lift Port', unlock: 10, level: 3, credits: 1.5, xp: 1.2, events: 0.25, theme: 'port',
+    desc: 'The regime\u2019s lifeline off-world. Elite guards and rich cargo.',
+    sectors: ['Cargo Gate', 'Customs Hall', 'Fuel Depot', 'Landing Pad 3', 'Tower Base', 'Container Stacks', 'Lift Shaft', 'Hangar Deck', 'Crew Quarters', 'Control Tower', 'Tether Anchor', 'Gantry Ring', 'Flight Ops', 'Command Deck', 'The Lift'],
+    pool: [['dockguard', 1], ['probe', 1], ['gunner', 2], ['marksman', 3], ['shock', 4], ['sentinel', 6]],
+    bosses: ['vane', 'crawler', 'ostrane'] },
 ];
 
-export const ARMOR = [
-  { id: 'none',    name: 'Work Coveralls',       def: 0,  cost: 0,   desc: 'Foundry-issue. Smells like slag.' },
-  { id: 'vest',    name: 'Padded Vest',          def: 2,  cost: 50,  desc: 'Layered cloth and luck.' },
-  { id: 'plates',  name: 'Plated Jacket',        def: 4,  cost: 140, desc: 'Hull scrap sewn into canvas.' },
-  { id: 'trooper', name: 'Stripped Trooper Plate', def: 7, cost: 300, spd: -1, desc: '\u22121 SPD. Paint scraped off.' },
-  { id: 'weave',   name: 'Ballistic Weave',      def: 10, cost: 600, desc: 'Officer-grade. Light and quiet.' },
+// ---------- events between fights ----------
+// check: { attr, base, per } -> chance = base + per x attribute. Effects: credits [min,max] (x sector),
+// hp (fraction of max HP, + or -), resolve, attrs { str: +1 }, items { stim: 1 }, next ('stunned' | 'alerted'), heal ('full').
+export const EVENTS = [
+  { id: 'cache', maps: 'any', text: 'A supply locker sits half-hidden behind a ventilation grate. The lock looks cheap.',
+    options: [
+      { label: 'Force it open', check: { attr: 'str', base: 0.35, per: 0.1 },
+        win: { credits: [12, 22], text: 'The hinge gives. Ration chits and a credit chip.' }, lose: { hp: -0.12, text: 'The locker was rigged. A shock arcs up your arm.' } },
+      { label: 'Pick the lock', check: { attr: 'int', base: 0.3, per: 0.1 },
+        win: { credits: [8, 14], items: { stim: 1 }, text: 'Click. Credits and a med stim, neatly packed.' }, lose: { next: 'alerted', text: 'The lock chirps. Somewhere, an alert goes out.' } },
+      { label: 'Leave it', win: { text: 'Not worth the risk. You move on.' } },
+    ] },
+  { id: 'sympathizer', maps: 'any', text: 'A maintenance worker catches your eye, taps the wall twice and nods at a utility closet.',
+    options: [
+      { label: 'Follow them', win: { hp: 0.3, text: 'They clean and bind your wounds without a word.' } },
+      { label: 'Ask what they\u2019ve seen', check: { attr: 'cha', base: 0.35, per: 0.1 },
+        win: { next: 'stunned', resolve: 1, text: '\u201CShift change in two minutes. They\u2019ll be looking the wrong way.\u201D' }, lose: { text: 'They shake their head and vanish into the closet.' } },
+      { label: 'Keep moving', win: { text: 'You can\u2019t trust anyone in here.' } },
+    ] },
+  { id: 'console', maps: ['garrison', 'foundry', 'port'], text: 'An unattended security terminal, still logged in. Somebody stepped away for a smoke.',
+    options: [
+      { label: 'Slice the door controls', check: { attr: 'int', base: 0.35, per: 0.1 },
+        win: { next: 'stunned', text: 'You loop the camera feed and trip the next door early.' }, lose: { next: 'alerted', text: 'Wrong sequence. An alarm starts to wail.' } },
+      { label: 'Copy the patrol routes', check: { attr: 'int', base: 0.2, per: 0.08 },
+        win: { resolve: 2, attrs: { int: 1 }, text: 'The routes go to the cell. You learn a thing or two about their systems.' }, lose: { next: 'alerted', text: 'Access denied. Then a lot of red text.' } },
+      { label: 'Leave it alone', win: { text: 'Terminals have a way of remembering faces.' } },
+    ] },
+  { id: 'prisoner', maps: ['garrison', 'detention'], text: 'Behind a holding-cell door, a prisoner looks up. The release panel is right there.',
+    options: [
+      { label: 'Free them', win: { hp: -0.1, resolve: 2, attrs: { cha: 1 }, text: 'You take a graze covering their escape. Word will spread in the yard.' } },
+      { label: 'Ask what they know first', check: { attr: 'cha', base: 0.4, per: 0.1 },
+        win: { credits: [15, 25], resolve: 1, text: 'A hidden credit stash, a guard rotation, and a promise to tell the others.' }, lose: { next: 'alerted', text: 'They panic and start shouting.' } },
+      { label: 'Leave them', win: { text: 'You tell yourself you\u2019ll come back.' } },
+    ] },
+  { id: 'cardgame', maps: 'any', text: 'Two off-duty guards are playing cards, rifles racked, a pile of pay chits on the table.',
+    options: [
+      { label: 'Rob them at gunpoint', check: { attr: 'str', base: 0.35, per: 0.1 },
+        win: { credits: [20, 35], attrs: { str: 1, cha: -1 }, text: 'They hand it over. It gets easier every time, and you don\u2019t like that.' }, lose: { hp: -0.15, next: 'alerted', text: 'One of them goes for a rifle. You get out, barely.' } },
+      { label: 'Slip past', check: { attr: 'agi', base: 0.45, per: 0.1 },
+        win: { next: 'stunned', attrs: { agi: 1 }, text: 'Not a single head turns. You\u2019re getting good at this.' }, lose: { next: 'alerted', text: 'A chair scrapes. \u201CWho\u2019s there?\u201D' } },
+      { label: 'Pose as an inspector', check: { attr: 'cha', base: 0.25, per: 0.1 },
+        win: { credits: [10, 18], resolve: 1, text: '\u201CGambling on duty? I\u2019ll take that as evidence.\u201D They don\u2019t argue.' }, lose: { hp: -0.1, next: 'alerted', text: 'They ask for your badge number.' } },
+    ] },
+  { id: 'wounded', maps: ['garrison', 'port'], text: 'A wounded trooper, barely more than a kid, is slumped against the wall. He\u2019s reaching for his comm.',
+    options: [
+      { label: 'Take the comm and go', win: { next: 'stunned', text: 'You listen in on their channel for the next stretch.' } },
+      { label: 'Patch him up', cost: { stim: 1 }, win: { resolve: 2, attrs: { cha: 1 }, text: 'He stares at you the whole time. Maybe he\u2019ll remember this.' } },
+      { label: 'Make sure he stays quiet', win: { attrs: { str: 1, cha: -1 }, text: 'It\u2019s quiet. It stays with you.' } },
+    ] },
+  { id: 'steam', maps: ['foundry'], text: 'A coolant line has burst. The corridor ahead is a wall of scalding steam.',
+    options: [
+      { label: 'Push through', check: { attr: 'str', base: 0.4, per: 0.1 },
+        win: { attrs: { str: 1 }, text: 'Lungs burning, you make it. You\u2019ve hauled worse.' }, lose: { hp: -0.18, text: 'The steam takes skin with it.' } },
+      { label: 'Reroute the valves', check: { attr: 'int', base: 0.35, per: 0.1 },
+        win: { credits: [10, 16], text: 'The steam dies down, and the bypass panel had a maintenance cashbox.' }, lose: { hp: -0.1, text: 'Wrong valve. A jet of steam catches your shoulder.' } },
+      { label: 'Find another way', check: { attr: 'agi', base: 0.45, per: 0.1 },
+        win: { text: 'Up through the cable trays and down the other side.' }, lose: { next: 'alerted', text: 'You drop right in front of a camera.' } },
+    ] },
+  { id: 'workers', maps: ['foundry'], text: 'Forced-shift workers watch you from the line. One whispers: the overseer keeps a strongbox two floors up.',
+    options: [
+      { label: 'Rally them', check: { attr: 'cha', base: 0.25, per: 0.1 },
+        win: { resolve: 2, attrs: { cha: 1 }, next: 'stunned', text: 'Someone kills the line. In the chaos, nobody is watching you.' }, lose: { next: 'alerted', text: 'Most look away. Someone calls security.' } },
+      { label: 'Go for the strongbox', win: { credits: [20, 30], text: 'You crack it with a pry bar. Quota bonuses, all of it.' } },
+      { label: 'Keep your head down', win: { text: 'Not tonight.' } },
+    ] },
+  { id: 'interrogation', maps: ['detention'], text: 'Through the glass: an interrogation. The subject\u2019s face is one you know from the market.',
+    options: [
+      { label: 'Break in', check: { attr: 'str', base: 0.35, per: 0.1 },
+        win: { resolve: 3, attrs: { cha: 1 }, text: 'The interrogator runs. You carry them out on your shoulder.' }, lose: { hp: -0.2, resolve: 1, text: 'You get them out, but not cleanly.' } },
+      { label: 'Cut the power', check: { attr: 'int', base: 0.35, per: 0.1 },
+        win: { resolve: 2, next: 'stunned', text: 'The lights die. When they come back, the chair is empty.' }, lose: { next: 'alerted', text: 'Backup generators kick in. So do the sirens.' } },
+      { label: 'Walk on', win: { attrs: { cha: -1 }, text: 'You\u2019ll remember their face. They\u2019ll remember yours.' } },
+    ] },
+  { id: 'armory', maps: ['garrison', 'port'], text: 'An unlocked weapons locker. Somebody\u2019s going to be in trouble for this.',
+    options: [
+      { label: 'Take the charges', win: { items: { thermal: 2 }, text: 'Two thermal charges, still sealed.' } },
+      { label: 'Strip it for parts', win: { credits: [12, 20], text: 'Firing pins and optics. Marrow will pay for these.' } },
+    ] },
+  { id: 'meddroid', maps: ['detention', 'port'], text: 'A medical droid stands idle in an empty infirmary, waiting for orders.',
+    options: [
+      { label: 'Reprogram it', check: { attr: 'int', base: 0.35, per: 0.1 },
+        win: { heal: 'full', attrs: { int: 1 }, text: 'It patches you up, then politely forgets you exist.' }, lose: { hp: -0.15, text: 'It decides you\u2019re a patient. A violent one.' } },
+      { label: 'Smash it for parts', win: { credits: [8, 14], items: { stim: 1 }, text: 'Its med reservoir still has a stim in it.' } },
+    ] },
+  { id: 'manifest', maps: ['port'], text: 'A cargo manifest on a dock terminal: \u201CConfiscated goods, Kessa Yard.\u201D It\u2019s due to lift in an hour.',
+    options: [
+      { label: 'Steal it back', check: { attr: 'agi', base: 0.35, per: 0.1 },
+        win: { credits: [30, 45], text: 'You reroute two crates to a smuggler\u2019s berth.' }, lose: { next: 'alerted', hp: -0.1, text: 'A loader spots you between the stacks.' } },
+      { label: 'Flag it for the cell', win: { resolve: 2, text: 'The yard will know where their things went.' } },
+    ] },
+  { id: 'smuggler', maps: 'any', text: 'A smuggler in a stolen maintenance uniform leans out of a vent. \u201CBuying or selling?\u201D',
+    options: [
+      { label: 'Buy two stims (30 cr)', cost: { credits: 30 }, win: { items: { stim: 2 }, text: '\u201CPleasure doing business.\u201D' } },
+      { label: 'Talk them into a discount', check: { attr: 'cha', base: 0.3, per: 0.1 },
+        win: { items: { stim: 1, ion: 1 }, text: '\u201CFor the yard, then. Just this once.\u201D' }, lose: { text: '\u201CNice try.\u201D The vent cover slides shut.' } },
+      { label: 'Wave them off', win: { text: 'You don\u2019t need more friends like that.' } },
+    ] },
 ];
-
-export const ITEMS = {
-  stim:    { name: 'Med Stim',        cost: 20, desc: 'Restore 40% max HP.' },
-  thermal: { name: 'Thermal Charge',  cost: 35, desc: 'Heavy damage that ignores armour.' },
-  ion:     { name: 'Ion Pulse',       cost: 30, desc: 'Stun 1 turn. Droids: stun 3 turns and damage.' },
-  smoke:   { name: 'Smoke Canister',  cost: 25, desc: 'Guaranteed escape back to town.' },
-};
-
-// One-time purchases that last until the operative dies.
-export const UPGRADES = [
-  { id: 'belt',   name: 'Bandolier',             cost: 70,  desc: 'Carry 3 more of each item.' },
-  { id: 'reflex', name: 'Reflex Wiring',         cost: 120, desc: '+2 SPD.' },
-  { id: 'medic',  name: 'Field Medic Contact',   cost: 150, desc: 'Heal 15% max HP after every fight.' },
-  { id: 'drill',  name: 'Close-Quarters Drill',  cost: 180, desc: '+2 ATK.' },
-  { id: 'fence',  name: 'Fence Network',         cost: 220, desc: '+25% credits from enemies.' },
-];
-
-export const EVENT_TEXT = {
-  cache: 'A supply locker sits half-hidden behind a ventilation grate. The lock looks cheap.',
-  sympathizer: 'A maintenance worker catches your eye, taps the wall twice and nods at a utility closet.',
-  console: 'An unattended security terminal, still logged in. Somebody stepped away for a smoke.',
-  prisoner: 'Behind a holding-cell door, a prisoner looks up. The release panel is right there.',
-};

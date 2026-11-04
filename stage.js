@@ -118,9 +118,9 @@ export class Stage {
   }
 
   // Called after every render of the combat screen.
-  sync({ run, enemy, player, sector, boss }) {
+  sync({ run, enemy, player, sector, boss, theme = 'garrison' }) {
     const now = performance.now();
-    this.sector = sector; this.boss = boss;
+    this.sector = sector; this.boss = boss; this.theme = theme;
     this.intent = enemy.intent; this.stun = enemy.stun;
     this.max.enemy = enemy.maxHp; this.max.player = player.maxHp;
     this.setHud('enemy', enemy.name, enemy.boss ? 'BOSS' : `SECTOR ${sector}`, enemy.hp);
@@ -225,6 +225,76 @@ export class Stage {
         await this.hit(E, ev.dmg, { crit: ev.crit, note: ev.guarded ? '(cover)' : '' });
         break;
       }
+      case 'player:burst': {
+        P.setAnim('attack', now());
+        await this.move(P, 5, -3, 60);
+        for (const h of ev.hits) {
+          const m = this.muzzle(P), c = this.center(E);
+          this.burst(m.x, m.y, 4, C.amber, 1.2, 100, 0);
+          await this.bolt(m, { x: c.x + (Math.random() * 16 - 8), y: c.y + (Math.random() * 16 - 8) }, ev.suppress ? C.ion : C.amber, 2, 120);
+          this.flash(E); this.burst(c.x, c.y, 5, C.spark, 1.5);
+          this.popup('enemy', `\u2212${h.dmg}`, h.crit ? 'crit' : '');
+        }
+        this.setHp('enemy', ev.ehp);
+        this.move(P, 0, 0, 120);
+        if (ev.suppress) this.popup('enemy', 'Pinned', 'info');
+        await this.wait(200);
+        break;
+      }
+      case 'player:blast': {
+        P.setAnim('attack', now());
+        await this.move(P, 6, -4, 70);
+        const m = this.muzzle(P), c = this.center(E);
+        this.burst(m.x, m.y, 10, C.amber, 2, 140, 0);
+        for (let i = 0; i < 5; i++) this.bolt(m, { x: c.x + (i - 2) * 9, y: c.y + (Math.random() * 20 - 10) }, C.amber, 1, 150);
+        await this.wait(150);
+        this.shake(3, 180);
+        this.move(P, -4, 0, 140);
+        this.setHp('enemy', ev.ehp);
+        await this.hit(E, ev.dmg, { crit: ev.crit });
+        this.move(P, 0, 0, 120);
+        break;
+      }
+      case 'player:smash': {
+        P.setAnim('attack', now());
+        await this.move(P, 150, -70, 200);
+        const c = this.center(E);
+        this.ring(c.x, c.y, 34, C.amber, 260, 3);
+        this.shake(5, 240);
+        this.setHp('enemy', ev.ehp);
+        await this.hit(E, ev.dmg, { crit: ev.crit, heavy: true });
+        await this.move(P, 0, 0, 260);
+        break;
+      }
+      case 'player:overload': {
+        const from = this.muzzle(P), to = this.center(E);
+        this.burst(from.x, from.y, 12, C.ion, 1.5, 200, 0);
+        for (let k = 0; k < 3; k++) {
+          const pts = [from];
+          for (let i = 1; i < 6; i++) pts.push({ x: from.x + ((to.x - from.x) * i) / 6 + (Math.random() * 14 - 7), y: from.y + ((to.y - from.y) * i) / 6 + (Math.random() * 14 - 7) });
+          pts.push(to);
+          for (let i = 0; i < pts.length - 1; i++) this.bolt(pts[i], pts[i + 1], C.ion, 2, 60 + i * 10);
+          await this.wait(70);
+        }
+        this.ring(to.x, to.y, 36, C.ion, 380, 2);
+        this.flash(E, C.ion, 250);
+        this.setHp('enemy', ev.ehp);
+        await this.hit(E, ev.dmg, { heavy: true });
+        if (ev.droid) this.popup('enemy', 'Stunned', 'ion');
+        break;
+      }
+      case 'player:intimidate': {
+        const c = this.center(P);
+        this.ring(c.x + 30, c.y - 20, 50, C.amber, 400, 2);
+        this.popup('player', '\u201CRun.\u201D', 'level');
+        await this.wait(350);
+        if (!ev.ok) { this.popup('enemy', 'Shaken \u221225% ATK', 'info'); await this.move(E, 6, 0, 100); await this.move(E, 0, 0, 120); }
+        break;
+      }
+      case 'enemy:flee':
+        this.popup('enemy', 'Fled!', 'info');
+        await this.tween(500, (p) => { E.ox = 160 * ease(p); E.alpha = 1 - p; });
+        break;
       case 'player:defend':
         P.setAnim('defend', now());
         this.playerShield = true;
@@ -237,6 +307,7 @@ export class Stage {
         this.flash(P, C.heal, 300);
         this.setHp('player', ev.php);
         this.popup('player', `+${ev.amt}`, 'heal');
+        if (ev.adrenal) this.popup('player', 'Adrenal pump', 'info');
         await this.wait(450);
         break;
       }
@@ -348,8 +419,8 @@ export class Stage {
   }
 
   // ---------- drawing ----------
-  background(sector, boss) {
-    const key = `${sector}`;
+  background(sector, boss, theme = 'garrison') {
+    const key = `${theme}-${sector}`;
     if (this.bgCache[key]) return this.bgCache[key];
     const c = document.createElement('canvas'); c.width = W; c.height = H;
     const g = c.getContext('2d'), rnd = seeded(sector * 977 + 31);
@@ -360,7 +431,14 @@ export class Stage {
       { sky: ['#090d15', '#1a2438'], glow: '115,182,212', far: '#10161f', mid: '#18202c', floor: ['#232a35', '#10131a'] },
       { sky: ['#120c0c', '#2e1d1a'], glow: '212,72,58', far: '#1a1212', mid: '#241918', floor: ['#2e2422', '#151010'] },
     ];
-    const th = boss ? themes[4] : themes[(sector - 1) % 4];
+    const byMap = {
+      garrison: [themes[0], themes[1], themes[0], themes[3]],
+      foundry: [{ sky: ['#140b06', '#3a1a0b'], glow: '240,110,40', far: '#1c120c', mid: '#2a1a10', floor: ['#33231a', '#170f0a'] }, { sky: ['#120a06', '#33190c'], glow: '255,140,60', far: '#1a110b', mid: '#28190f', floor: ['#30211a', '#150e09'] }],
+      detention: [{ sky: ['#0a0e12', '#1c2a33'], glow: '115,182,212', far: '#10171d', mid: '#1a242c', floor: ['#26313a', '#11161b'] }, { sky: ['#0b0f12', '#222b30'], glow: '180,210,220', far: '#12181c', mid: '#1d252b', floor: ['#2a3237', '#121619'] }],
+      port: [{ sky: ['#060a14', '#1b2a44'], glow: '185,194,204', far: '#0f1622', mid: '#18212f', floor: ['#262e3a', '#10141b'] }, { sky: ['#07091a', '#2a2448'], glow: '210,190,255', far: '#12122a', mid: '#1c1b33', floor: ['#29283a', '#12111a'] }],
+    };
+    const set = byMap[theme] || byMap.garrison;
+    const th = boss ? themes[4] : set[(sector - 1) % set.length];
     const horizon = 112;
     let grd = g.createLinearGradient(0, 0, 0, horizon);
     grd.addColorStop(0, th.sky[0]); grd.addColorStop(1, th.sky[1]);
@@ -377,6 +455,8 @@ export class Stage {
       for (let i = 0; i < w * h * 0.02; i++) { g.fillStyle = rnd() < 0.8 ? `rgba(${th.glow},${0.4 + rnd() * 0.5})` : 'rgba(115,182,212,0.7)'; g.fillRect(x + 1 + Math.floor(rnd() * (w - 2)), horizon - h + 2 + Math.floor(rnd() * (h - 4)), 1, 1); }
       x += w + Math.floor(rnd() * 4);
     }
+    if (theme === 'port') { g.fillStyle = '#1d2433'; g.fillRect(W * 0.72, 0, 3, horizon); g.fillStyle = 'rgba(210,190,255,0.5)'; for (let y = 6; y < horizon; y += 14) g.fillRect(W * 0.72 - 1, y, 5, 1); }
+    if (theme === 'foundry') for (let i = 0; i < 4; i++) { const x = 40 + i * 90 + Math.floor(rnd() * 30); g.fillStyle = th.far; g.fillRect(x, horizon - 90, 8, 90); g.fillStyle = 'rgba(255,140,60,0.7)'; g.fillRect(x + 1, horizon - 92, 6, 2); }
     // perimeter wall with lamps
     g.fillStyle = th.mid; g.fillRect(0, horizon - 14, W, 16);
     g.fillStyle = 'rgba(0,0,0,0.35)'; for (let x = 0; x < W; x += 24) g.fillRect(x, horizon - 14, 1, 16);
@@ -394,6 +474,7 @@ export class Stage {
     g.strokeStyle = 'rgba(0,0,0,0.28)'; g.lineWidth = 1;
     for (let i = -12; i <= 12; i++) { g.beginPath(); g.moveTo(W / 2 + i * 14, horizon + 2); g.lineTo(W / 2 + i * 70, H); g.stroke(); }
     for (let y = horizon + 6, d = 4; y < H; y += d, d *= 1.35) { g.beginPath(); g.moveTo(0, Math.round(y) + 0.5); g.lineTo(W, Math.round(y) + 0.5); g.stroke(); }
+    if (theme === 'detention') { g.fillStyle = 'rgba(0,0,0,0.5)'; for (let x = 4; x < W; x += 6) g.fillRect(x, horizon - 13, 1, 13); }
     // hazard stripe along the base of the wall
     for (let x = 0; x < W; x += 8) { g.fillStyle = (x / 8) % 2 ? '#1a1a1a' : 'rgba(207,149,40,0.55)'; g.fillRect(x, horizon + 2, 8, 2); }
     return (this.bgCache[key] = c);
@@ -438,9 +519,9 @@ export class Stage {
     const g = this.ctx;
     g.save();
     if (t < this.shakeUntil) g.translate(Math.round((Math.random() * 2 - 1) * this.shakeMag), Math.round((Math.random() * 2 - 1) * this.shakeMag));
-    g.drawImage(this.background(this.sector, this.boss), 0, 0);
+    g.drawImage(this.background(this.sector, this.boss, this.theme), 0, 0);
     if (this.boss && !reduceMotion) { g.fillStyle = `rgba(212,72,58,${0.06 + 0.06 * Math.sin(t / 300)})`; g.fillRect(0, 0, W, H); }
-    g.fillStyle = 'rgba(160,180,200,0.22)';
+    g.fillStyle = this.theme === 'foundry' ? 'rgba(255,150,70,0.35)' : 'rgba(160,180,200,0.22)';
     for (const d of this.rain) { d.y += d.v; d.x -= d.v * 0.25; if (d.y > H) { d.y = -6; d.x = Math.random() * (W + 40); } g.fillRect(Math.round(d.x), Math.round(d.y), 1, 4); }
 
     const ea = this.anchor('enemy');
