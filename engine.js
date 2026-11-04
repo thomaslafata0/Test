@@ -26,10 +26,11 @@ export const VERSION = 3;
 export const FIGHTS_PER_SECTOR = 3;
 export const CONTRABAND_SLOTS = 4; // pieces of contraband one operative can carry
 export const ELITE_DROP = 0.4;   // chance an elite carries contraband (bosses always do)
+export const CARRY_CD = 2;       // minimum cooldown a skill used last fight starts the next fight with
 export const MIN_FIGHTS = 2; // fights required per sector; the rest of the rooms can be anything
 // Enemy growth per sector past their first appearance: linear plus a quadratic tail.
 export const growth = (lvl, lin, quad) => 1 + lin * lvl + quad * lvl * lvl;
-export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.01, bossHp: 2.3, bossAtk: 1.5, enemyAtk: 1.52, enemyHp: 1.42, statusRate: 1, smashStr: 1, aimed: 1.5 };
+export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.01, bossHp: 2.3, bossAtk: 1.5, enemyAtk: 1.52, enemyHp: 1.42, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 2, strAtk: 1, agiCrit: 0.035, agiDodge: 0.025, intOverload: 3.5, chaHesitate: 0.04, chaCredits: 0.05, wanted: 0.025, escapeLoss: 0.5 };
 export const isBossSector = (n) => n % 5 === 0;
 export const mapById = (id) => D.MAPS.find((m) => m.id === id) || D.MAPS[0];
 export const sectorName = (n, mapId = 'garrison') => {
@@ -144,11 +145,12 @@ export function statsOf(meta, c) {
   const str = attr(c, 'str'), agi = attr(c, 'agi');
   const strWeapon = w.type === 'melee' || w.type === 'heavy';
   return {
-    maxHp: B.hp + t.hp * D.TRAINING.hp.per + (c.level - 1) * 5 + str * 3 + (c.background === 'foundry' ? 10 : 0) + (hasImp(c, 'pain') ? 20 : 0),
-    atk: B.atk + t.atk * D.TRAINING.atk.per + (c.level - 1) + w.atk + (strWeapon ? Math.floor(str * 1.5) : 0) + (has(c, 'drill') ? 2 : 0),
+    maxHp: B.hp + t.hp * D.TRAINING.hp.per + (c.level - 1) * 5 + Math.round(str * TUNE.strHp) + (c.background === 'foundry' ? 10 : 0) + (hasImp(c, 'pain') ? 20 : 0),
+    atk: B.atk + t.atk * D.TRAINING.atk.per + (c.level - 1) + w.atk + (strWeapon ? Math.floor(str * TUNE.strAtk) : 0) + (has(c, 'drill') ? 2 : 0),
     def: B.def + t.def * D.TRAINING.def.per + Math.floor((c.level - 1) / 2) + a.def + (hasImp(c, 'dermal') ? 3 : 0),
     spd: B.spd + t.spd * D.TRAINING.spd.per + Math.floor((c.level - 1) / 3) + agi + (hasImp(c, 'reflex') ? 2 : 0) + (a.spd || 0) + (w.spd || 0),
-    crit: 0.05 + (w.crit || 0) + (hasImp(c, 'optic') ? 0.08 : 0),
+    dodge: (agi - 1) * TUNE.agiDodge,
+    crit: 0.05 + (w.crit || 0) + (hasImp(c, 'optic') ? 0.08 : 0) + (agi - 1) * TUNE.agiCrit,
     carry: 4 + (has(c, 'belt') ? 3 : 0),
     slots: 2 + (attr(c, 'int') >= 4 ? 1 : 0) + (attr(c, 'int') >= 8 ? 1 : 0),
     tech: 1 + 0.1 * attr(c, 'int'),
@@ -163,7 +165,7 @@ export function skillsOf(c) {
   const out = [];
   const w = weaponOf(c), ws = D.WEAPON_SKILL[w.type];
   if (ws) out.push(ws);
-  if (attr(c, 'str') >= 5 && !out.includes('smash')) out.push('smash');
+  if (attr(c, 'str') >= 6 && !out.includes('smash')) out.push('smash');
   if (attr(c, 'int') >= 4 && !out.includes('overload')) out.push('overload');
   if (attr(c, 'agi') >= 4) out.push('suppress');
   if (attr(c, 'cha') >= 4) out.push('intimidate');
@@ -288,7 +290,8 @@ export function buyCell(s, id) {
 export function creditMult(s) {
   const c = s.char, t = s.run ? s.run.threat : s.meta.threat || 0;
   const b = s.run ? s.run.bulletin : null;
-  return (has(c, 'fence') ? 1.25 : 1) * (hasPerk(c, 'chit') ? 1.2 : 1) * (1 + 0.15 * t) * (b === 'payday' ? 1.3 : b === 'lockdown' ? 1.25 : 1);
+  const cha = 1 + TUNE.chaCredits * (attr(c, 'cha') - 1), wanted = 1 + TUNE.wanted * (s.run ? s.run.wanted || 0 : 0);
+  return cha * wanted * (has(c, 'fence') ? 1.25 : 1) * (hasPerk(c, 'chit') ? 1.2 : 1) * (1 + 0.15 * t) * (b === 'payday' ? 1.3 : b === 'lockdown' ? 1.25 : 1);
 }
 
 // ---------- status effects ----------
@@ -318,7 +321,8 @@ export function deploy(s, mapId, startSector, rng) {
   if (!mapUnlocked(s, map)) return false;
   const prog = mapProgress(s.char, map.id);
   if (!prog.insertions.includes(startSector)) startSector = 1;
-  s.run = { map: map.id, sector: startSector, room: 0, choices: null, enemy: null, defending: false, ready: false, nextMod: null, sectorCredits: 0, cooldowns: {}, adrenalUsed: false,
+  s.char.wanted = (s.char.wanted || 0);
+  s.run = { wanted: s.char.wanted, startCredits: s.char.credits, map: map.id, sector: startSector, room: 0, choices: null, enemy: null, defending: false, ready: false, nextMod: null, sectorCredits: 0, cooldowns: {}, adrenalUsed: false,
     alert: 0, allies: 0, vent: 3, turns: 0, threat: s.meta.threat || 0, pst: {}, pfresh: [], deadmanUsed: false, perkOffer: null };
   s.meta.stats.raids += 1;
   s.run.bulletin = pickWeighted(rng, D.BULLETINS.map((b) => [b.id, b.weight]));
@@ -347,7 +351,7 @@ function raiseAlarm(s, n, why) {
 // New sector: cooldowns reset, then pick the first room.
 function beginSector(s, rng) {
   const r = s.run;
-  r.room = 0; r.fightsDone = 0; r.cooldowns = {}; r.sectorCredits = 0;
+  r.room = 0; r.fightsDone = 0; r.cooldowns = {}; r.usedThisFight = []; r.sectorCredits = 0;
   offerRoute(s, rng);
 }
 
@@ -419,6 +423,7 @@ function startFight(s, rng, kind) {
   const e = makeEnemy(r.sector, boss, rng, r.map, r.threat);
   if (!boss) applyQuirk(r, e, rng);
   if (kind === 'elite') makeElite(e, rng);
+  if (r.wanted) { const w = 1 + TUNE.wanted * r.wanted; e.hp = e.maxHp = Math.round(e.maxHp * w); e.atk = Math.round(e.atk * w); }
   if (r.bulletin === 'payday') e.hp = e.maxHp = Math.round(e.maxHp * 1.1);
   if (r.bulletin === 'lockdown') e.atk = Math.round(e.atk * 1.1);
   if (r.bulletin === 'budget') e.def = Math.max(0, e.def - 1);
@@ -426,6 +431,9 @@ function startFight(s, rng, kind) {
   if (r.bulletin === 'shift' && r.room === 1 && !boss) e.stun = Math.max(e.stun, 1);
   if (mech === 'alarm' && r.alert) { e.atk = Math.round(e.atk * (1 + 0.06 * r.alert)); e.cr = e.cr.map((v) => Math.round(v * (1 + 0.05 * r.alert))); }
   r.enemy = e; r.defending = false; r.ready = false; r.adrenalUsed = false; r.vent = 3; r.turns = 0; r.alarmRaised = false; r.struck = false;
+  // Skills used last fight are still recharging when the next one starts (at least 2 turns), so you can't open every fight with them.
+  for (const k of r.usedThisFight || []) if (r.cooldowns[k] < 50) r.cooldowns[k] = Math.max(r.cooldowns[k] || 0, CARRY_CD);
+  r.usedThisFight = [];
   if (r.room === 1 && has(c, 'forger') && !boss) { e.stun = 1; log(s, 'Your forged papers buy you a free moment.', 'good'); }
   if (r.nextMod === 'stunned') { e.stun = Math.max(e.stun, 1); log(s, 'They don\u2019t see you coming.', 'good'); }
   if (r.nextMod === 'alerted') { e.atk = Math.round(e.atk * 1.2); log(s, 'The alarm is still sounding. They\u2019re ready for you.', 'bad'); }
@@ -525,7 +533,7 @@ export function runChance(s) {
   const ch = clamp(0.45 + (st.spd - e.spd) * 0.06 + (s.char.background === 'runner' ? 0.15 : 0), 0.1, 0.95);
   return e.boss ? ch * 0.5 : ch;
 }
-export function dodgeChance(st, e) { return clamp(0.05 + (st.spd - e.spd) * 0.03, 0, 0.35); }
+export function dodgeChance(st, e) { return clamp(0.05 + (st.spd - e.spd) * 0.03 + (st.dodge || 0), 0, 0.45); }
 export function critChance(st, e) { return clamp(st.crit + (st.spd - e.spd) * 0.01, 0.02, 0.5); }
 export function intimidateChance(s) {
   const e = s.run.enemy;
@@ -566,7 +574,7 @@ export function playerAct(s, act, rng) {
   r.defending = false;
   const guarded = e.intent === 'guard' && e.stun === 0;
   const skill = D.SKILLS[act];
-  if (skill) r.cooldowns[act] = skillCd(c, act) + 1;
+  if (skill) { r.cooldowns[act] = skillCd(c, act) + 1; (r.usedThisFight = r.usedThisFight || []).includes(act) || r.usedThisFight.push(act); }
 
   switch (act) {
     case 'attack': {
@@ -606,7 +614,7 @@ export function playerAct(s, act, rng) {
     }
     case 'overload': {
       const droid = e.tags.includes('droid');
-      const dmg = Math.round((6 + attr(c, 'int') * 4 + r.sector * 2) * (droid ? 2 : 1) * (hasPerk(c, 'capacitor') ? 1.3 : 1) * outMult(r.pst, e.st));
+      const dmg = Math.round((6 + attr(c, 'int') * TUNE.intOverload + r.sector * 2) * (droid ? 2 : 1) * (hasPerk(c, 'capacitor') ? 1.3 : 1) * outMult(r.pst, e.st));
       e.hp -= dmg;
       if (droid) e.stun = Math.max(e.stun, 1);
       fx(s, { who: 'player', type: 'overload', dmg, droid });
@@ -800,6 +808,12 @@ function enemyTurn(s, rng) {
     const what = pick(rng, lines);
     fx(s, { who: 'enemy', type: 'quirk', text: 'Glitch!' });
     log(s, `${e.name} ${what}.`, 'good');
+    e.intent = chooseIntent(e, rng);
+    return;
+  }
+  if (e.stun === 0 && !e.tags.includes('droid') && (e.intent === 'attack' || e.intent === 'heavy' || e.intent === 'special') && rng() < Math.min(0.35, TUNE.chaHesitate * attr(c, 'cha')) * (e.boss ? 0.5 : 1)) {
+    fx(s, { who: 'enemy', type: 'quirk', text: 'Hesitates' });
+    log(s, `${e.name} hesitates. Something in your voice made them think twice.`, 'good');
     e.intent = chooseIntent(e, rng);
     return;
   }
@@ -1020,7 +1034,13 @@ export function pushDeeper(s, rng) {
 }
 
 export function endRun(s, how) {
-  const r = s.run;
+  const r = s.run, c = s.char;
+  let lost = 0;
+  if (how === 'escaped') {
+    lost = Math.max(0, Math.round((c.credits - (r.startCredits || 0)) * TUNE.escapeLoss));
+    c.credits -= lost;
+  }
+  c.wanted = (c.wanted || 0) + 1;
   let home = '';
   if (how === 'extracted' && r.allies > 0) {
     s.meta.resolve += r.allies; s.meta.totalResolve += r.allies;
@@ -1029,7 +1049,7 @@ export function endRun(s, how) {
   if (how === 'extracted') contractEvent(s, 'extract', { credits: s.char.credits, allies: r.allies });
   s.notice = how === 'extracted'
     ? `You made it out of ${sectorName(r.sector, r.map)}.${home} Spend it before your luck runs out.`
-    : `You escaped from ${sectorName(r.sector, r.map)} with what you were carrying.`;
+    : `You escaped from ${sectorName(r.sector, r.map)}${lost ? `, but dropped ${lost} ${D.SETTING.cur} on the way out` : ''}.`;
   s.run = null;
   s.screen = allLiberated(s) && !s.meta.endingSeen ? 'ending' : 'town';
   s.tab = 'clinic';

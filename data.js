@@ -26,10 +26,10 @@ export const BASE_STATS = { hp: 34, atk: 6, def: 2, spd: 4 };
 
 // ---------- attributes (per operative, lost on death) ----------
 export const ATTRS = {
-  str: { label: 'Strength',  short: 'STR', desc: '+3 max HP per point. Melee and heavy weapons hit harder. Forcing doors, carrying people.' },
-  agi: { label: 'Agility',   short: 'AGI', desc: '+1 SPD per point: dodge, crit and escape odds. Sneaking past guards.' },
+  str: { label: 'Strength',  short: 'STR', desc: '+2 max HP per point. Melee and heavy weapons get +1 ATK per point. Forcing doors, carrying people.' },
+  agi: { label: 'Agility',   short: 'AGI', desc: '+1 SPD, +2.5% dodge and +3.5% crit per point. Escaping and sneaking past guards.' },
   int: { label: 'Intellect', short: 'INT', desc: 'Items work 10% better per point. Slicing consoles. An extra implant slot at 4 and 8.' },
-  cha: { label: 'Charisma',  short: 'CHA', desc: 'Prices 4% lower per point. Bluffing, rallying and getting help from locals.' },
+  cha: { label: 'Charisma',  short: 'CHA', desc: 'Prices 4% lower and credits 5% higher per point. People and hounds may hesitate to attack (4% per point; half against bosses). Bluffing and rallying.' },
 };
 export const ATTR_START = 1, ATTR_POINTS = 4, ATTR_CREATE_MAX = 5, ATTR_MAX = 10;
 
@@ -50,7 +50,7 @@ export const SKILLS = {
   aimed:     { name: 'Aimed Shot',      short: 'x1.5 damage, +25% crit', cd: 3, desc: 'x1.5 damage, +25% crit chance.', from: 'Pistols and rifles' },
   burst:     { name: 'Burst Fire',      short: '3 quick shots', cd: 2, desc: 'Three shots at 55% each. Shreds unarmoured targets, weak against armour.', from: 'Carbines' },
   blast:     { name: 'Scatter Blast',   short: 'Big spread, x2 vs unarmoured', cd: 2, desc: 'x1.4 damage, doubled against unarmoured targets.', from: 'Scatterguns' },
-  smash:     { name: 'Power Strike',    short: 'Heavy hit, ignores \u00BD armour', cd: 3, desc: 'x1.6 damage plus 1 per STR, ignores half of armour.', from: 'Melee and heavy weapons, or STR 5' },
+  smash:     { name: 'Power Strike',    short: 'Heavy hit, ignores \u00BD armour', cd: 3, desc: 'x1.6 damage plus 1 per STR, ignores half of armour.', from: 'Melee and heavy weapons, or STR 6' },
   overload:  { name: 'Overload',        short: 'Tech blast, stuns droids', cd: 4, desc: 'Tech burst: 6 + 4 per INT, ignores armour. Droids take double and are stunned.', from: 'Tech weapons, or INT 4' },
   suppress:  { name: 'Suppressing Fire', short: 'Pins it in cover', cd: 3, desc: '60% damage and pins the enemy: its next move is forced to be taking cover.', from: 'AGI 4' },
   intimidate:{ name: 'Intimidate',      short: 'Scare a human off', cd: 99, desc: 'Once per sector. A human enemy may run. If not, its ATK drops 25% for the fight.', from: 'CHA 4' },
@@ -66,8 +66,10 @@ export const WEAPONS = [
   { id: 'scatter',   name: 'Foundry Scattergun',   type: 'scatter', atk: 5,  cost: 140,  req: { str: 3 }, desc: 'Ugly, loud, effective.' },
   { id: 'longbore',  name: 'Longbore Rifle',       type: 'rifle',   atk: 7,  cost: 250,  req: { agi: 3 }, crit: 0.12, desc: '+12% crit chance.' },
   { id: 'maul',      name: 'Breaching Maul',       type: 'melee',   atk: 7,  cost: 280,  req: { str: 5 }, desc: 'For doors. And for people. Scales with STR.' },
+  { id: 'sidearm',   name: 'Officer\u2019s Sidearm',  type: 'pistol',  atk: 8,  cost: 300,  req: { cha: 4 }, crit: 0.06, desc: 'Talked out of a quartermaster. +6% crit.' },
   { id: 'arc',       name: 'Arc Projector',        type: 'tech',    atk: 8,  cost: 420,  req: { int: 5 }, desc: 'Ignores half of armour, +50% against droids.' },
   { id: 'repeater',  name: 'Ion-Bored Repeater',   type: 'carbine', atk: 12, cost: 560,  req: { str: 4 }, desc: 'Stolen from a garrison armoury.' },
+  { id: 'gilded',    name: 'Gilded Repeater',      type: 'carbine', atk: 13, cost: 640,  req: { cha: 6 }, desc: 'A gift from someone who owes you a favour.' },
   { id: 'marksman',  name: 'Directorate Long Rifle', type: 'rifle', atk: 14, cost: 760,  req: { agi: 6 }, crit: 0.18, desc: '+18% crit chance. Officer issue.' },
   { id: 'cannon',    name: 'Shoulder Cannon',      type: 'heavy',   atk: 16, cost: 1100, req: { str: 7 }, spd: -1, desc: '\u22121 SPD. Scales with STR.' },
 ];
@@ -77,6 +79,7 @@ export const ARMOR = [
   { id: 'vest',    name: 'Padded Vest',            def: 2,  cost: 50,  desc: 'Layered cloth and luck.' },
   { id: 'plates',  name: 'Plated Jacket',          def: 4,  cost: 140, desc: 'Hull scrap sewn into canvas.' },
   { id: 'trooper', name: 'Stripped Trooper Plate', def: 7,  cost: 300, req: { str: 3 }, spd: -1, desc: '\u22121 SPD. Paint scraped off.' },
+  { id: 'coat',    name: 'Officer\u2019s Greatcoat', def: 8,  cost: 420, req: { cha: 4 }, desc: 'Lined with plate. Guards salute before they shoot.' },
   { id: 'weave',   name: 'Ballistic Weave',        def: 9,  cost: 560, req: { agi: 4 }, desc: 'Officer-grade. Light and quiet.' },
   { id: 'exo',     name: 'Foundry Exo-Frame',      def: 13, cost: 950, req: { str: 6 }, spd: -2, desc: '\u22122 SPD. A loader rig cut down to size.' },
 ];
@@ -85,7 +88,7 @@ export const ITEMS = {
   stim:    { name: 'Med Stim',       short: 'Heal 40%, stop bleeding', cost: 20, desc: 'Restore 40% max HP (+10% per INT).' },
   thermal: { name: 'Thermal Charge', short: 'Big blast, ignores armour', cost: 35, desc: 'Heavy damage that ignores armour.' },
   ion:     { name: 'Ion Pulse',      short: 'Stun 1 turn (droids 3)', cost: 30, desc: 'Stun 1 turn. Droids: stun 3 turns and damage.' },
-  smoke:   { name: 'Smoke Canister', short: 'Escape the raid, keep loot', cost: 25, desc: 'Guaranteed escape back to town.' },
+  smoke:   { name: 'Smoke Canister', short: 'Escape; drop half this raid\u2019s loot', cost: 25, desc: 'Guaranteed escape back to town, but you drop half the credits picked up this raid.' },
 };
 
 // Implants: installed at the clinic, lost on death. Slots: 2, +1 at INT 4 and INT 8.

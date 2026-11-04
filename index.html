@@ -373,6 +373,8 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .skill .sk-note { font-family: var(--body); text-transform: none; letter-spacing: 0; font-size: .76rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 2px 8px; }
 .skill .sk-status { font-family: var(--mono); font-size: .62rem; letter-spacing: .08em; text-transform: uppercase; color: var(--sodium); align-self: center; }
 .skill:disabled .sk-status { color: var(--muted); }
+
+.wanted { color: var(--danger); font-weight: 500; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 
@@ -421,7 +423,7 @@ function statusStrip() {
   return `<header class="status">
     <div class="head-top"><div class="brand">${esc(S.title)}</div>${headerTools()}</div>
     <div class="head-stats">
-    <div class="stat"><span class="label">Operative ${c.number} \u00B7 Lv ${c.level}</span><span class="v">${esc(c.name)}</span></div>
+    <div class="stat"><span class="label">Operative ${c.number} \u00B7 Lv ${c.level}${c.wanted ? ` \u00B7 <span class="wanted" title="Enemies +${Math.round(c.wanted * E.TUNE.wanted * 100)}% HP and ATK, +${Math.round(c.wanted * E.TUNE.wanted * 100)}% credits">Wanted ${c.wanted}</span>` : ''}</span><span class="v">${esc(c.name)}</span></div>
     <div class="stat hp"><span class="label">HP</span><span class="v">${Math.max(0, c.hp)} / ${st.maxHp}</span>${bar(c.hp, st.maxHp)}</div>
     <div class="stat"><span class="label">ATK \u00B7 DEF \u00B7 SPD</span><span class="v">${st.atk} \u00B7 ${st.def} \u00B7 ${st.spd}</span></div>
     <div class="stat"><span class="label">${esc(S.currency)}</span><span class="v">${c.credits.toLocaleString()}</span></div>
@@ -495,7 +497,7 @@ function createScreen() {
         <div class="rows">${attrRows}</div>
         <dl class="kv"><dt>Max HP</dt><dd>${st.maxHp}</dd><dt>ATK \u00B7 DEF \u00B7 SPD</dt><dd>${st.atk} \u00B7 ${st.def} \u00B7 ${st.spd}</dd><dt>Implant slots</dt><dd>${st.slots}</dd>
           <dt>Skills</dt><dd>${skills.map((k) => D.SKILLS[k].name).join(', ')}</dd></dl>
-        <p class="muted" style="font-size:.9rem">Higher attributes unlock skills: STR 5 Power Strike, INT 4 Overload, AGI 4 Suppressing Fire, CHA 4 Intimidate. You gain a point every level, and your choices in the field can raise or lower them.</p>
+        <p class="muted" style="font-size:.9rem">Higher attributes unlock skills: STR 6 Power Strike, INT 4 Overload, AGI 4 Suppressing Fire, CHA 4 Intimidate. You gain a point every level, and your choices in the field can raise or lower them.</p>
         <div><button class="btn primary big" data-a="create">${d.points ? `Start (keep ${d.points} point${d.points > 1 ? 's' : ''} for later)` : 'Start'}</button></div>
       </div>
     </div>
@@ -627,6 +629,7 @@ function gate() {
         <div class="ins">${ins.map((n) => `<button class="btn ${n === ins[ins.length - 1] ? 'primary' : ''}" data-a="deploy" data-v="${n}">Sector ${n} \u00B7 ${esc(E.sectorName(n, sel.id))}</button>`).join('')}</div>
         ${ins.length === 1 ? '<p class="muted" style="font-size:.88rem">Beat a boss to unlock a deeper insertion point on that map for this operative.</p>' : ''}
         ${warn}
+        ${c.wanted ? `<p class="muted" style="font-size:.88rem"><span class="wanted">Wanted ${c.wanted}</span>: the Directorate knows this face. Enemies +${Math.round(c.wanted * E.TUNE.wanted * 100)}% HP and ATK, credits +${Math.round(c.wanted * E.TUNE.wanted * 100)}%. Rises by 1 every raid you survive.</p>` : ''}
       </div>
       <div style="display:grid;gap:8px;min-width:0"><span class="label">Contracts from the cell</span><div class="contracts">${contracts || '<p class="muted">No jobs right now.</p>'}</div></div>
     </div>`;
@@ -671,7 +674,7 @@ function combatScreen() {
       <button class="btn primary twoline" data-a="act" data-v="attack"><span class="bt">Attack<span class="k">A</span></span><span class="bs">${esc(E.weaponOf(c).name)}</span></button>
       <button class="btn twoline" data-a="act" data-v="defend"><span class="bt">Defend<span class="k">D</span></span><span class="bs">Halve damage, aim next shot</span></button>
       <button class="btn twoline" data-a="act" data-v="stim" ${c.items.stim ? '' : 'disabled'}><span class="bt">${ico('item:stim', 'sm')}Stim <span class="num">\u00D7${c.items.stim}</span><span class="k">S</span></span><span class="bs">${esc(D.ITEMS.stim.short)}</span></button>
-      <button class="btn twoline" data-a="act" data-v="run"><span class="bt">Run<span class="k">R</span></span><span class="bs">${pct(E.runChance(state))} to escape${e.boss ? ' (boss)' : ''}</span></button>
+      <button class="btn twoline" data-a="act" data-v="run"><span class="bt">Run<span class="k">R</span></span><span class="bs">${pct(E.runChance(state))} to escape, drop half loot</span></button>
     </div>
     ${skills ? `<div class="skills">${skills}</div>` : ''}
     <div class="items">${items}</div>
@@ -791,6 +794,7 @@ function modalView() {
       <section><h3>Status effects</h3><ul>${Object.values(D.STATUSES).map((x) => `<li><b>${esc(x.name)}</b>: ${esc(x.desc)}</li>`).join('')}</ul></section>
       <section><h3>Elites and bosses</h3><p>Elites (veterans) carry a modifier, such as Regenerating or Volatile. Bosses enrage at half health. Bosses always carry <b>contraband</b> and elites sometimes do: pick one of three perks that last until your operative dies. You have four pockets, so a fifth piece means dropping one.</p></section>
       <section><h3>Quirks and bulletins</h3><p>Regular enemies often have a <b>quirk</b>, like a Drunk trooper whose shots go wild or an Overclocked droid that cooks itself. Every raid also rolls a <b>Directorate bulletin</b>, such as Payday or Staff Party, that bends the rules until you leave.</p></section>
+      <section><h3>Wanted and escaping</h3><p>Every raid an operative survives raises their <b>Wanted</b> level: enemies get 2.5% tougher per level, and pay 2.5% more. Extracting after a sector keeps all your loot. Escaping mid-fight with <b>Run</b> or <b>Smoke</b> drops half the credits you picked up that raid.</p></section>
       <section><h3>Getting stronger</h3><p><b>This operative</b>: levels (attribute points), gear, implants and contraband. All lost on death. <b>The cell</b>: Resolve buys permanent training and upgrades. Earn it from sectors (repeat clears pay only every other time), bosses, brave choices and contracts.</p></section>
       <section><h3>Controls</h3><p class="keys"><span><b>A</b> attack</span><span><b>D</b> defend</span><span><b>S</b> stim</span><span><b>R</b> run</span><span><b>Q W E</b> skills</span><span><b>2 3 4</b> items</span><span><b>1 2</b> doors</span><span><b>Enter</b> continue</span></p></section>
     </div>` : `

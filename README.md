@@ -14,6 +14,7 @@ A turn-based roguelite. Raid four occupied districts, lose operatives, keep the 
 | `portraits.js` | Code-drawn fallback sprites for characters without a PixelLab sheet |
 | `sprites/` | PixelLab sheets plus `manifest.json`. A character with a sheet uses it automatically |
 | `sim.mjs` | Balance simulator: a bot plays many full campaigns and reports the progression curve |
+| `sim-builds.mjs` | Build and play-style harness: compares Strength, Agility, Intellect, Charisma and mixed builds, plus cautious and greedy play, to find outliers |
 
 ## Balance
 
@@ -22,6 +23,7 @@ Difficulty knobs live in `TUNE` at the top of `engine.js`. After changing them, 
 ```bash
 node sim.mjs 100 30
 MAP=port node sim.mjs 50 40
+node sim-builds.mjs 200 25
 ```
 
 Current targets for the careful bot: the first boss falls around operative 2–3, sector 10 around operative 6, and the sector-15 finales between operative 11 and 22 depending on the map. Human players are slower.
