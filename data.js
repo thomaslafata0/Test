@@ -47,13 +47,13 @@ export const BACKGROUNDS = [
 // ---------- skills (combat abilities beyond Attack / Defend / Run) ----------
 // cd = your turns before it can be used again. Cooldowns carry over between fights and reset at each new sector.
 export const SKILLS = {
-  aimed:     { name: 'Aimed Shot',      cd: 3, desc: 'x1.5 damage, +25% crit chance.', from: 'Pistols and rifles' },
-  burst:     { name: 'Burst Fire',      cd: 2, desc: 'Three shots at 55% each. Shreds unarmoured targets, weak against armour.', from: 'Carbines' },
-  blast:     { name: 'Scatter Blast',   cd: 2, desc: 'x1.4 damage, doubled against unarmoured targets.', from: 'Scatterguns' },
-  smash:     { name: 'Power Strike',    cd: 3, desc: 'x1.6 damage plus 1 per STR, ignores half of armour.', from: 'Melee and heavy weapons, or STR 5' },
-  overload:  { name: 'Overload',        cd: 4, desc: 'Tech burst: 6 + 4 per INT, ignores armour. Droids take double and are stunned.', from: 'Tech weapons, or INT 4' },
-  suppress:  { name: 'Suppressing Fire', cd: 3, desc: '60% damage and pins the enemy: its next move is forced to be taking cover.', from: 'AGI 4' },
-  intimidate:{ name: 'Intimidate',      cd: 99, desc: 'Once per sector. A human enemy may run. If not, its ATK drops 25% for the fight.', from: 'CHA 4' },
+  aimed:     { name: 'Aimed Shot',      short: 'x1.5 damage, +25% crit', cd: 3, desc: 'x1.5 damage, +25% crit chance.', from: 'Pistols and rifles' },
+  burst:     { name: 'Burst Fire',      short: '3 quick shots', cd: 2, desc: 'Three shots at 55% each. Shreds unarmoured targets, weak against armour.', from: 'Carbines' },
+  blast:     { name: 'Scatter Blast',   short: 'Big spread, x2 vs unarmoured', cd: 2, desc: 'x1.4 damage, doubled against unarmoured targets.', from: 'Scatterguns' },
+  smash:     { name: 'Power Strike',    short: 'Heavy hit, ignores \u00BD armour', cd: 3, desc: 'x1.6 damage plus 1 per STR, ignores half of armour.', from: 'Melee and heavy weapons, or STR 5' },
+  overload:  { name: 'Overload',        short: 'Tech blast, stuns droids', cd: 4, desc: 'Tech burst: 6 + 4 per INT, ignores armour. Droids take double and are stunned.', from: 'Tech weapons, or INT 4' },
+  suppress:  { name: 'Suppressing Fire', short: 'Pins it in cover', cd: 3, desc: '60% damage and pins the enemy: its next move is forced to be taking cover.', from: 'AGI 4' },
+  intimidate:{ name: 'Intimidate',      short: 'Scare a human off', cd: 99, desc: 'Once per sector. A human enemy may run. If not, its ATK drops 25% for the fight.', from: 'CHA 4' },
 };
 export const WEAPON_SKILL = { pistol: 'aimed', rifle: 'aimed', carbine: 'burst', scatter: 'blast', melee: 'smash', heavy: 'smash', tech: 'overload' };
 
@@ -82,10 +82,10 @@ export const ARMOR = [
 ];
 
 export const ITEMS = {
-  stim:    { name: 'Med Stim',       cost: 20, desc: 'Restore 40% max HP (+10% per INT).' },
-  thermal: { name: 'Thermal Charge', cost: 35, desc: 'Heavy damage that ignores armour.' },
-  ion:     { name: 'Ion Pulse',      cost: 30, desc: 'Stun 1 turn. Droids: stun 3 turns and damage.' },
-  smoke:   { name: 'Smoke Canister', cost: 25, desc: 'Guaranteed escape back to town.' },
+  stim:    { name: 'Med Stim',       short: 'Heal 40%, stop bleeding', cost: 20, desc: 'Restore 40% max HP (+10% per INT).' },
+  thermal: { name: 'Thermal Charge', short: 'Big blast, ignores armour', cost: 35, desc: 'Heavy damage that ignores armour.' },
+  ion:     { name: 'Ion Pulse',      short: 'Stun 1 turn (droids 3)', cost: 30, desc: 'Stun 1 turn. Droids: stun 3 turns and damage.' },
+  smoke:   { name: 'Smoke Canister', short: 'Escape the raid, keep loot', cost: 25, desc: 'Guaranteed escape back to town.' },
 };
 
 // Implants: installed at the clinic, lost on death. Slots: 2, +1 at INT 4 and INT 8.

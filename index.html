@@ -362,6 +362,17 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .swap { display: grid; gap: 8px; padding: 12px; border: 1px dashed var(--danger); }
 .perk-mini.drop { text-align: left; border: 1px solid var(--line); border-left: 3px solid var(--danger); color: inherit; cursor: pointer; }
 .perk-mini.drop:hover { border-color: var(--danger); }
+
+.btn.twoline { display: grid; gap: 2px; justify-items: center; align-content: center; text-align: center; }
+.btn.twoline .bt { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.btn.twoline .bs { font-family: var(--body); font-size: .72rem; font-weight: 500; letter-spacing: 0; text-transform: none; opacity: .75; line-height: 1.2; }
+.actions .btn.twoline { padding: 10px 6px; }
+.btn.primary.twoline .bs { opacity: .8; }
+.btn.confirm { border-color: var(--danger); background: var(--danger-dim); }
+.btn.confirm .bs { color: #ff8a78; opacity: 1; font-weight: 600; }
+.skill .sk-note { font-family: var(--body); text-transform: none; letter-spacing: 0; font-size: .76rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 2px 8px; }
+.skill .sk-status { font-family: var(--mono); font-size: .62rem; letter-spacing: .08em; text-transform: uppercase; color: var(--sodium); align-self: center; }
+.skill:disabled .sk-status { color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 
@@ -634,10 +645,14 @@ function intentInfo(e) {
 function combatScreen() {
   const r = state.run, e = r.enemy, c = state.char, st = E.stats(state);
   const intent = intentInfo(e);
-  const items = ['thermal', 'ion', 'smoke'].map((id, i) => `<button class="btn" data-a="act" data-v="${id}" title="${esc(D.ITEMS[id].desc)}" ${c.items[id] ? '' : 'disabled'}>${ico(`item:${id}`, 'sm')}${esc(D.ITEMS[id].name)} <span class="num">\u00D7${c.items[id]}</span><span class="k">${i + 2}</span></button>`).join('');
+  const confirmSmoke = state.confirmSmoke && c.items.smoke;
+  const items = ['thermal', 'ion', 'smoke'].map((id, i) => `<button class="btn twoline ${id === 'smoke' && confirmSmoke ? 'confirm' : ''}" data-a="act" data-v="${id}" title="${esc(D.ITEMS[id].desc)}" ${c.items[id] ? '' : 'disabled'}>
+      <span class="bt">${ico(`item:${id}`, 'sm')}${esc(D.ITEMS[id].name)} <span class="num">\u00D7${c.items[id]}</span><span class="k">${i + 2}</span></span>
+      <span class="bs">${id === 'smoke' && confirmSmoke ? 'Tap again to leave the raid' : esc(D.ITEMS[id].short)}</span></button>`).join('');
   const skills = E.skillsOf(c).slice(0, 3).map((k, i) => {
     const cd = r.cooldowns[k] || 0, sk = D.SKILLS[k];
-    const note = k === 'intimidate' ? (cd ? 'used this sector' : e.tags.includes('human') ? `${pct(E.intimidateChance(state))} to break` : 'humans only') : cd ? `ready in ${cd}` : 'ready';
+    const status = k === 'intimidate' ? (cd ? 'used this sector' : e.tags.includes('human') ? `${pct(E.intimidateChance(state))} chance` : 'humans only') : cd ? `ready in ${cd}` : 'ready';
+    const note = `${esc(sk.short)} <span class="sk-status">${status}</span>`;
     return `<button class="btn skill ${cd ? '' : 'ready'}" data-a="act" data-v="${k}" title="${esc(sk.desc)}" ${E.canUse(state, k) && !(k === 'intimidate' && !e.tags.includes('human')) ? '' : 'disabled'}>
       <span class="sk-name">${ico(`skill:${k}`, 'sm')}${esc(sk.name)}<span class="k">${SKILL_KEYS[i].toUpperCase()}</span></span><span class="sk-note">${note}</span></button>`;
   }).join('');
@@ -653,10 +668,10 @@ function combatScreen() {
     ${e.affix ? `<div class="quirk-line"><span class="chip bad">${esc(D.AFFIXES[e.affix].name)}</span><span>${esc(D.AFFIXES[e.affix].desc)}</span></div>` : ''}
     ${tip('combat')}
     <div class="actions">
-      <button class="btn primary" data-a="act" data-v="attack">Attack<span class="k">A</span></button>
-      <button class="btn" data-a="act" data-v="defend">Defend<span class="k">D</span></button>
-      <button class="btn" data-a="act" data-v="stim" ${c.items.stim ? '' : 'disabled'}>${ico('item:stim', 'sm')}Stim <span class="num">\u00D7${c.items.stim}</span><span class="k">S</span></button>
-      <button class="btn" data-a="act" data-v="run">Run<span class="k">R</span></button>
+      <button class="btn primary twoline" data-a="act" data-v="attack"><span class="bt">Attack<span class="k">A</span></span><span class="bs">${esc(E.weaponOf(c).name)}</span></button>
+      <button class="btn twoline" data-a="act" data-v="defend"><span class="bt">Defend<span class="k">D</span></span><span class="bs">Halve damage, aim next shot</span></button>
+      <button class="btn twoline" data-a="act" data-v="stim" ${c.items.stim ? '' : 'disabled'}><span class="bt">${ico('item:stim', 'sm')}Stim <span class="num">\u00D7${c.items.stim}</span><span class="k">S</span></span><span class="bs">${esc(D.ITEMS.stim.short)}</span></button>
+      <button class="btn twoline" data-a="act" data-v="run"><span class="bt">Run<span class="k">R</span></span><span class="bs">${pct(E.runChance(state))} to escape${e.boss ? ' (boss)' : ''}</span></button>
     </div>
     ${skills ? `<div class="skills">${skills}</div>` : ''}
     <div class="items">${items}</div>
@@ -874,6 +889,9 @@ let busy = false;
 
 async function fight(v) {
   if (busy || !E.canUse(state, v)) return;
+  // Smoke ends the raid: ask for a second tap first.
+  if (v === 'smoke' && !state.confirmSmoke) { state.confirmSmoke = true; A.play('click'); render(); return; }
+  state.confirmSmoke = false;
   busy = true;
   document.getElementById('app').classList.add('busy');
   const alertBefore = state.run.alert;
@@ -897,6 +915,7 @@ function act(a, v, k) {
   if (a === 'closemodal') { modal = null; confirmReset = false; render(); return; }
   if (busy && !modal) return;
   if (a === 'act') return fight(v);
+  state.confirmSmoke = false;
   if (a !== 'reset') confirmReset = false;
   let ok = true;
   switch (a) {
