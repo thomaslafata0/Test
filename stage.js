@@ -301,7 +301,7 @@ export class Stage {
 
   async handle(ev) {
     const P = this.player, E = this.enemy, now = () => performance.now();
-    const START = { 'player:shoot': 'shot', 'player:burst': 'burst', 'player:blast': 'blast', 'player:smash': 'whoosh', 'player:overload': 'zap',
+    const START = { 'player:shoot': 'shot', 'player:burst': 'burst', 'player:blast': 'blast', 'player:smash': 'whoosh', 'player:strike': 'whoosh', 'player:overload': 'zap',
       'player:intimidate': 'status', 'player:defend': 'shield', 'player:stim': 'heal', 'player:thermal': 'throw', 'player:ion': 'zap',
       'player:smoke': 'smoke', 'player:run': 'whoosh', 'player:levelup': 'levelup', 'player:down': 'death', 'ally:shoot': 'shot',
       'enemy:repair': 'repair', 'enemy:down': 'enemyDown', 'enemy:flee': 'whoosh', 'enemy:stunned': 'zap', 'env:vent': 'vent', 'env:sniper': 'sniper',
@@ -360,6 +360,27 @@ export class Stage {
         this.setHp('enemy', ev.ehp);
         await this.hit(E, ev.dmg, { crit: ev.crit, heavy: true });
         await this.move(P, 0, 0, 260);
+        break;
+      }
+      case 'player:strike': {
+        P.setAnim('attack', now());
+        await this.move(P, 130, -60, 170);
+        const c = this.center(E);
+        this.ring(c.x, c.y, 18, ev.crit ? C.crit : C.amber, 180, 2);
+        this.setHp('enemy', ev.ehp);
+        await this.hit(E, ev.dmg, { crit: ev.crit });
+        await this.move(P, 0, 0, 220);
+        break;
+      }
+      case 'enemy:counter': {
+        E.setAnim('attack', now());
+        this.flash(E, C.red, 180);
+        this.popup('enemy', ev.text, 'quirk');
+        this.setHp('player', ev.php);
+        if (ev.dmg) await this.hit(P, ev.dmg, {});
+        else { this.flash(P); await this.wait(200); }
+        for (const k of ev.statuses || []) this.popup('player', k.toUpperCase(), `st-${k}`);
+        await this.wait(150);
         break;
       }
       case 'player:overload': {

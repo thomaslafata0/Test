@@ -375,6 +375,47 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .skill:disabled .sk-status { color: var(--muted); }
 
 .wanted { color: var(--danger); font-weight: 500; }
+
+/* ---------- gear: rarity frames, item cards, paper doll, loot ---------- */
+.r-common { --rar: #a3a7a4; } .r-rare { --rar: #5ea6e8; } .r-elite { --rar: #b77be8; } .r-legendary { --rar: #e8b23a; } .r-unique { --rar: #e8673a; } .r-none { --rar: var(--line); }
+.rf { display: inline-grid; place-items: center; flex: none; padding: 4px; background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--rar) 22%, transparent), var(--panel-2) 70%); border: 2px solid var(--rar); }
+.rf .ico { width: 40px; height: 40px; }
+.rf.sm .ico { width: 28px; height: 28px; }
+.rf.empty { width: 52px; height: 52px; border-style: dashed; background: var(--panel-2); }
+.rname { color: var(--rar); font-weight: 600; }
+.item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); gap: 10px; }
+.item { display: grid; gap: 8px; align-content: start; padding: 12px 14px; background: var(--panel-2); border: 1px solid var(--line); border-top: 3px solid var(--rar); min-width: 0; }
+.item-head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; align-items: center; }
+.item-head b { font-family: var(--display); font-size: 1.25rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--rar); line-height: 1.1; }
+.item .desc { font-size: .88rem; color: var(--muted); }
+.item ul { margin: 0; padding-left: 1.1em; font-size: .88rem; display: grid; gap: 2px; }
+.item ul .trait { color: var(--rar); list-style: '\2605  '; }
+.item ul .uq { color: var(--rar); list-style: '\25C6  '; }
+.item .stats { display: flex; flex-wrap: wrap; gap: 4px 12px; font-family: var(--mono); font-size: .74rem; }
+.item .stats b { color: var(--fg); font-weight: 500; }
+.item .cmp { display: flex; flex-wrap: wrap; gap: 4px; }
+.item .act { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.item .act .note { font-size: .8rem; color: var(--muted); }
+.doll { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 240px) minmax(0, 1fr); gap: 10px; align-items: start; }
+.doll .col { display: grid; gap: 8px; }
+.slot { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto auto; column-gap: 10px; align-items: center; text-align: left; padding: 8px 10px; background: var(--panel-2); border: 1px solid var(--line); border-left: 3px solid var(--rar); min-width: 0; }
+.slot > .rf { grid-row: 1 / span 3; }
+.slot b { font-weight: 600; color: var(--rar); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: .95rem; }
+.slot .ms { font-family: var(--mono); font-size: .7rem; color: var(--muted); }
+.slot.on { box-shadow: inset 0 0 0 1px var(--sodium); border-color: var(--sodium); border-left-color: var(--rar); }
+.doll .me { display: grid; gap: 10px; justify-items: center; padding: 10px; border: 1px dashed var(--line); }
+.doll .me img { width: 128px; height: 128px; image-rendering: pixelated; }
+.doll .me .kv { font-size: .78rem; width: 100%; }
+@media (max-width: 760px) { .doll { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .doll .me { grid-column: 1 / -1; grid-row: 1; grid-template-columns: auto minmax(0, 1fr); align-items: center; justify-items: start; } .doll .me img { width: 88px; height: 88px; } }
+.loot { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+@media (max-width: 640px) { .loot { grid-template-columns: minmax(0, 1fr); } }
+.loot .item.new { box-shadow: 0 0 0 1px var(--rar), 0 0 24px -8px var(--rar); }
+.odds { display: flex; flex-wrap: wrap; gap: 4px 12px; font-family: var(--mono); font-size: .7rem; }
+.actions { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+@media (max-width: 620px) { .actions { grid-template-columns: repeat(2, minmax(0, 1fr)); } .actions .btn:first-child { grid-column: 1 / -1; } }
+.skills { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.next-intent { font-family: var(--mono); font-size: .66rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ion); }
+.btn.warn .bs { color: #ff8a78; opacity: 1; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 
@@ -386,7 +427,7 @@ import * as E from './engine.js';
 import { portraitURL } from './portraits.js';
 import { Stage, loadSheets, sheetStill } from './stage.js';
 import * as A from './audio.js';
-import { iconURL } from './icons.js';
+import { iconURL, gearIconKey } from './icons.js';
 
 const SAVE_KEY = 'cinder-cell-save-v1';
 const rng = Math.random;
@@ -406,7 +447,7 @@ const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 const bar = (v, max, cls = '') => `<div class="bar ${cls} ${v / max < 0.3 ? 'low' : ''}"><i style="width:${Math.max(0, Math.min(100, (v / max) * 100))}%"></i></div>`;
 const cr = (n) => `${n.toLocaleString()} ${S.cur}`;
 const pct = (x) => `${Math.round(x * 100)}%`;
-const SKILL_KEYS = ['q', 'w', 'e'];
+const SKILL_KEYS = ['q', 'w', 'e', 't'];
 // Pixel icon as a decorative image. size: sm 24px, md 48px, lg 72px.
 const ico = (key, size = 'md') => { const src = iconURL(key); return src ? `<img class="ico ico-${size}" src="${src}" alt="" width="24" height="24">` : ''; };
 
@@ -425,7 +466,7 @@ function statusStrip() {
     <div class="head-stats">
     <div class="stat"><span class="label">Operative ${c.number} \u00B7 Lv ${c.level}${c.wanted ? ` \u00B7 <span class="wanted" title="Enemies +${Math.round(c.wanted * E.TUNE.wanted * 100)}% HP and ATK, +${Math.round(c.wanted * E.TUNE.wanted * 100)}% credits">Wanted ${c.wanted}</span>` : ''}</span><span class="v">${esc(c.name)}</span></div>
     <div class="stat hp"><span class="label">HP</span><span class="v">${Math.max(0, c.hp)} / ${st.maxHp}</span>${bar(c.hp, st.maxHp)}</div>
-    <div class="stat"><span class="label">ATK \u00B7 DEF \u00B7 SPD</span><span class="v">${st.atk} \u00B7 ${st.def} \u00B7 ${st.spd}</span></div>
+    <div class="stat"><span class="label">Shoot \u00B7 Strike \u00B7 DEF \u00B7 SPD</span><span class="v">${st.atk} \u00B7 ${st.atkM} \u00B7 ${st.def} \u00B7 ${st.spd}</span></div>
     <div class="stat"><span class="label">${esc(S.currency)}</span><span class="v">${c.credits.toLocaleString()}</span></div>
     <div class="stat"><span class="label">${esc(S.meta)}</span><span class="v" style="color:var(--sodium)">${state.meta.resolve}</span></div>
     </div>
@@ -438,6 +479,8 @@ const TIPS = {
   route: 'Pick a door. Each sector has three rooms, and at least two of them will be fights. A boss waits at the end of every fifth sector.',
   combat: 'Read the enemy\u2019s intent below the battle scene. Defend against heavy strikes and signature moves; it also steadies your next shot.',
   perk: 'Contraband stays with this operative until they die. Bosses always carry some, elites sometimes. You can hold four pieces.',
+  loot: 'Bosses always drop gear (their own Unique the first time) and elites sometimes do. Take it and your old piece is sold, or sell the drop. Death still takes all of it.',
+  gear: 'Six slots. Tap one to see the piece and upgrade it at Marrow\u2019s bench: each +1 adds about 8% (at least +1). Shoot uses the ranged weapon, Strike the melee one.',
 };
 function tip(id) {
   if (state.meta.tips[id] || !TIPS[id]) return '';
@@ -471,7 +514,7 @@ function createScreen() {
   const attrs = {};
   for (const k of Object.keys(D.ATTRS)) attrs[k] = E.draftAttr(d, k);
   // Preview stats with a throwaway character.
-  const fake = { attrs, level: 1, weapon: state.meta.cell.includes('cache') ? 'carbine' : 'holdout', armor: 'none', upgrades: [], implants: [], background: d.background };
+  const fake = { attrs, level: 1, gear: E.starterGear(state.meta), upgrades: [], implants: [], background: d.background };
   const st = E.statsOf(state.meta, fake);
   const skills = E.skillsOf(fake);
   const bgCards = D.BACKGROUNDS.map((b) => `<button class="choice ${b.id === d.background ? 'on' : ''}" data-a="bg" data-v="${b.id}" aria-pressed="${b.id === d.background}">
@@ -495,9 +538,9 @@ function createScreen() {
       <div style="display:grid;gap:16px;align-content:start;min-width:0">
         <div class="points"><span class="label">Attribute points left</span><span class="num big-num" style="color:${d.points ? 'var(--sodium)' : 'var(--muted)'}">${d.points}</span></div>
         <div class="rows">${attrRows}</div>
-        <dl class="kv"><dt>Max HP</dt><dd>${st.maxHp}</dd><dt>ATK \u00B7 DEF \u00B7 SPD</dt><dd>${st.atk} \u00B7 ${st.def} \u00B7 ${st.spd}</dd><dt>Implant slots</dt><dd>${st.slots}</dd>
+        <dl class="kv"><dt>Max HP</dt><dd>${st.maxHp}</dd><dt>Shoot \u00B7 Strike</dt><dd>${st.atk} \u00B7 ${st.atkM} ATK</dd><dt>DEF \u00B7 SPD</dt><dd>${st.def} \u00B7 ${st.spd}</dd><dt>Implant slots</dt><dd>${st.slots}</dd>
           <dt>Skills</dt><dd>${skills.map((k) => D.SKILLS[k].name).join(', ')}</dd></dl>
-        <p class="muted" style="font-size:.9rem">Higher attributes unlock skills: STR 6 Power Strike, INT 4 Overload, AGI 4 Suppressing Fire, CHA 4 Intimidate. You gain a point every level, and your choices in the field can raise or lower them.</p>
+        <p class="muted" style="font-size:.9rem">Higher attributes unlock skills: STR 6 Power Strike (or any real melee weapon), INT 4 Overload, AGI 4 Suppressing Fire, CHA 4 Intimidate. You gain a point every level, and your choices in the field can raise or lower them.</p>
         <div><button class="btn primary big" data-a="create">${d.points ? `Start (keep ${d.points} point${d.points > 1 ? 's' : ''} for later)` : 'Start'}</button></div>
       </div>
     </div>
@@ -506,11 +549,11 @@ function createScreen() {
 
 function townScreen() {
   const c = state.char;
-  const tabs = [['gate', 'Targets'], ['market', 'Black Market'], ['clinic', 'Clinic'], ['safehouse', 'Safehouse']];
-  const body = { market, clinic, safehouse, gate }[state.tab] || gate;
+  const tabs = [['gate', 'Targets'], ['gear', 'Gear'], ['market', 'Black Market'], ['clinic', 'Clinic'], ['safehouse', 'Safehouse']];
+  const body = { market, clinic, safehouse, gate, gear: gearTab }[state.tab] || gate;
   return `<section class="panel">
     <div style="display:grid;gap:4px"><span class="label">Town \u00B7 curfew in effect</span><h2>${esc(S.town)}</h2></div>
-    ${tip('town')}${notice()}
+    ${tip('town')}${state.tab === 'gear' ? tip('gear') : ''}${notice()}
     <nav class="tabs" role="tablist">${tabs.map(([id, l]) => `<button class="tab" role="tab" aria-selected="${state.tab === id}" data-a="tab" data-v="${id}">${l}${id === 'safehouse' && c.attrPoints ? ` <span class="badge">${c.attrPoints}</span>` : ''}</button>`).join('')}</nav>
     ${body()}
   </section>`;
@@ -521,17 +564,102 @@ function buyBtn(a, v, k, cost, extraDisabled = false) {
   return `<button class="btn" data-a="${a}" data-v="${v}" ${k ? `data-k="${k}"` : ''} ${state.char.credits < p || extraDisabled ? 'disabled' : ''}>${cr(p)}</button>`;
 }
 
-function gearRows(kind, list) {
-  const c = state.char, cur = list.find((x) => x.id === c[kind]);
-  return list.slice(1).map((g) => {
-    const owned = c[kind] === g.id, ok = E.meetsReq(c, g.req);
-    const stat = kind === 'weapon' ? `+${g.atk} ATK \u00B7 ${g.type}` : `+${g.def} DEF`;
-    const skill = kind === 'weapon' ? D.SKILLS[D.WEAPON_SKILL[g.type]] : null;
-    const weaker = kind === 'weapon' ? g.atk <= cur.atk && g.type === cur.type : g.def <= cur.def;
-    return `<div class="row i ${owned ? 'owned' : ''}">${ico(`${kind}:${g.id}`)}<div><div class="name">${esc(g.name)} <span class="num muted" style="font-size:.8rem">${stat}</span>${g.req ? ` <span class="chip ${ok ? '' : 'bad'}">needs ${E.reqText(g.req)}</span>` : ''}</div>
-      <div class="desc">${esc(g.desc)}${skill ? ` Skill: ${esc(skill.name)}.` : ''}</div></div>
-      ${owned ? '<span></span>' : weaker ? '<span class="label">no upgrade</span>' : buyBtn('gear', g.id, kind, g.cost, !ok)}</div>`;
+// ---------- gear ----------
+const SLOTS = D.SLOTS;
+function gearIco(it, cls = '') {
+  if (!it) return `<span class="rf empty ${cls}"></span>`;
+  return `<span class="rf r-${it.rarity} ${cls}">${ico(gearIconKey(it.base, E.baseOf(it)))}</span>`;
+}
+const signed = (v, unit = '') => `${v > 0 ? '+' : '\u2212'}${Math.abs(v)}${unit}`;
+// Fixed stats of a piece: main stat, crit, speed, requirements.
+function itemStatsLine(it) {
+  const b = E.baseOf(it), ms = E.mainStat(it), c = state.char, out = [];
+  if (ms) out.push(`<span>${ms.key === 'atk' ? 'ATK' : 'DEF'} <b>${ms.v}</b></span>`);
+  if (b.type) out.push(`<span>${b.type === 'melee' ? 'melee' : b.type}</span>`);
+  if (b.crit) out.push(`<span>crit <b>+${pct(b.crit)}</b></span>`);
+  if (b.spd) out.push(`<span>SPD <b>${signed(b.spd)}</b></span>`);
+  if (b.req) out.push(`<span class="chip ${E.meetsReq(c, b.req) ? '' : 'bad'}">needs ${E.reqText(b.req)}</span>`);
+  const sk = b.slot === 'ranged' ? D.WEAPON_SKILL[b.type] : b.slot === 'melee' && !b.noSkill ? 'smash' : b.overload ? 'overload' : null;
+  if (sk) out.push(`<span>skill <b>${esc(D.SKILLS[sk].name)}</b></span>`);
+  return out.join('');
+}
+// What would change if this piece replaced what's in its slot.
+function compareChips(it) {
+  const c = state.char, slot = E.baseOf(it).slot, old = c.gear[slot];
+  if (old === it) return '';
+  const before = E.stats(state), skB = E.skillsOf(c);
+  c.gear[slot] = it;
+  const after = E.stats(state), skA = E.skillsOf(c);
+  c.gear[slot] = old;
+  const rows = [['atk', 'Shoot ATK'], ['atkM', 'Strike ATK'], ['def', 'DEF'], ['spd', 'SPD'], ['maxHp', 'HP'], ['crit', 'shoot crit', true], ['critM', 'strike crit', true], ['carry', 'carry']];
+  const chips = rows.map(([k, l, isPct]) => {
+    const d = after[k] - before[k];
+    if (Math.abs(d) < (isPct ? 0.005 : 0.5)) return '';
+    return `<span class="chip ${d > 0 ? 'good' : 'bad'}">${isPct ? signed(Math.round(d * 100), '%') : signed(Math.round(d))} ${l}</span>`;
+  });
+  for (const k of skA) if (!skB.includes(k)) chips.push(`<span class="chip good">+ ${esc(D.SKILLS[k].name)}</span>`);
+  for (const k of skB) if (!skA.includes(k)) chips.push(`<span class="chip bad">\u2212 ${esc(D.SKILLS[k].name)}</span>`);
+  const list = chips.join('');
+  return `<div class="cmp"><span class="label" style="width:100%">vs your ${old ? esc(E.itemName(old)) : 'empty slot'}</span>${list || '<span class="chip">no stat change</span>'}</div>`;
+}
+function itemCard(it, { compare = true, actions = '', cls = '' } = {}) {
+  if (!it) return '';
+  const b = E.baseOf(it), R = D.RARITY[it.rarity];
+  const bonuses = it.bonuses.map((x) => `<li>${esc(E.bonusText(x))}</li>`).join('');
+  const trait = it.trait ? `<li class="trait"><b>${esc(D.TRAITS[it.trait].name)}</b>: ${esc(D.TRAITS[it.trait].desc)}</li>` : '';
+  const uq = b.unique ? `<li class="uq">${esc(b.desc)}</li>` : '';
+  return `<div class="item r-${it.rarity} ${cls}">
+    <div class="item-head">${gearIco(it)}<div style="display:grid;gap:2px;min-width:0"><span class="label">${esc(R.name)} \u00B7 ${esc(SLOTS[b.slot].name)}</span><b>${esc(E.itemName(it))}</b></div></div>
+    <div class="stats">${itemStatsLine(it)}</div>
+    ${b.unique ? '' : `<p class="desc">${esc(b.desc)}</p>`}
+    ${bonuses || trait || uq ? `<ul>${uq}${bonuses}${trait}</ul>` : ''}
+    ${compare ? compareChips(it) : ''}
+    ${actions ? `<div class="act">${actions}</div>` : ''}
+  </div>`;
+}
+
+function gearTab() {
+  const c = state.char, st = E.stats(state), sel = state.gearSlot && D.SLOT_ORDER.includes(state.gearSlot) ? state.gearSlot : 'ranged';
+  const slotBtn = (slot) => {
+    const it = c.gear[slot], ms = it && E.mainStat(it);
+    return `<button class="slot ${sel === slot ? 'on' : ''} r-${it ? it.rarity : 'none'}" data-a="gearslot" data-v="${slot}" aria-pressed="${sel === slot}">${gearIco(it, 'sm')}
+      <span class="label">${esc(SLOTS[slot].short)}</span><b>${it ? esc(E.itemName(it)) : 'Empty'}</b><span class="ms">${ms ? `${ms.key === 'atk' ? 'ATK' : 'DEF'} ${ms.v}` : it ? 'utility' : 'buy one at the market'}${it && it.bonuses.length ? ` \u00B7 ${it.bonuses.length} bonus${it.bonuses.length > 1 ? 'es' : ''}` : ''}</span></button>`;
+  };
+  const me = sheetStill('player') || portraitURL('player');
+  const it = c.gear[sel];
+  let actions = '';
+  if (it) {
+    if (E.canUpgrade(it)) {
+      const cost = E.price(state, E.upgradeCost(it)), ms = E.mainStat(it);
+      actions += `<button class="btn primary" data-a="upgradegear" data-v="${sel}" ${c.credits < cost ? 'disabled' : ''}>Upgrade to +${it.level + 1} \u00B7 ${ms.key.toUpperCase()} ${ms.v} \u2192 ${ms.v + E.upgradeGain(it)} \u00B7 ${cr(cost)}</button>`;
+    } else if (E.upgradeGain(it) > 0) actions += '<span class="note">Fully upgraded.</span>';
+    if (E.canReroll(it)) it.bonuses.forEach((x, i) => { if (!x.fixed) actions += `<button class="btn" data-a="reroll" data-v="${sel}" data-k="${i}" ${c.credits < E.price(state, E.rerollCost(it)) ? 'disabled' : ''} title="Replace this bonus with a random different one">Reroll \u201C${esc(E.bonusText(x))}\u201D \u00B7 ${cr(E.price(state, E.rerollCost(it)))}</button>`; });
+    actions += `<span class="note">Sells for ${cr(E.sellValue(it))} as a trade-in.</span>`;
+  }
+  const heir = state.meta.heirloom;
+  const locker = heir ? `<h3>Safehouse locker</h3><p class="muted" style="font-size:.9rem">Left behind by an earlier operative (Heirloom).</p>
+    ${itemCard(heir, { actions: E.canEquip(c, heir) ? `<button class="btn primary" data-a="equipheirloom">Equip${c.gear[E.baseOf(heir).slot] && E.baseOf(c.gear[E.baseOf(heir).slot]).tier > 0 ? ' (your current piece goes in the locker)' : ''}</button>` : `<span class="note">You need ${E.reqText(E.baseOf(heir).req)} to use it.</span>` })}` : '';
+  return `<p class="muted">Everything here dies with ${esc(c.name)}. Buy pieces at the Black Market, take them from elites and bosses, and upgrade them at Marrow\u2019s bench.</p>
+    <div class="doll">
+      <div class="col">${['ranged', 'melee', 'gadget'].map(slotBtn).join('')}</div>
+      <div class="me">${me ? `<img src="${me}" alt="${esc(c.name)}" width="128" height="128">` : ''}<dl class="kv"><dt>Shoot</dt><dd>${st.atk} ATK \u00B7 ${pct(st.crit)} crit</dd><dt>Strike</dt><dd>${st.atkM} ATK \u00B7 ${pct(st.critM)} crit</dd><dt>DEF \u00B7 SPD</dt><dd>${st.def} \u00B7 ${st.spd}</dd><dt>HP</dt><dd>${c.hp} / ${st.maxHp}</dd></dl></div>
+      <div class="col">${['head', 'chest', 'legs'].map(slotBtn).join('')}</div>
+    </div>
+    <span class="label">${esc(SLOTS[sel].name)} \u00B7 ${esc(SLOTS[sel].desc)}</span>
+    ${it ? itemCard(it, { compare: false, actions }) : '<p class="muted">Nothing in this slot. Check the Black Market.</p>'}
+    ${locker}`;
+}
+
+function marketGear() {
+  const c = state.char, o = E.shopOdds(state.meta);
+  const cards = (c.market || []).map((it, i) => {
+    const net = E.netPrice(state, it), back = E.tradeIn(c, it), ok = E.canEquip(c, it);
+    const btn = `<button class="btn primary" data-a="buygear" data-v="${i}" ${!ok || c.credits < net ? 'disabled' : ''}>${ok ? `Buy \u00B7 ${cr(net)}` : 'Requirements not met'}</button>`;
+    return itemCard(it, { actions: `${btn}<span class="note">${back ? `${cr(E.price(state, E.itemPrice(it)))}, less ${cr(back)} for your old piece` : 'Nothing to trade in'}</span>` });
   }).join('');
+  return `<h3>Gear <span class="num muted" style="font-size:.85rem">restocks after every raid</span></h3>
+    <div class="odds"><span>Odds:</span>${['common', 'rare', 'elite', 'legendary'].map((k) => `<span class="rname r-${k}">${D.RARITY[k].name} ${Math.round(o[k] * 1000) / 10}%</span>`).join('')}<span class="muted">better as the cell gets deeper</span></div>
+    ${cards ? `<div class="item-grid">${cards}</div>` : '<p class="muted">Sold out. Marrow restocks after your next raid.</p>'}`;
 }
 
 function market() {
@@ -543,9 +671,8 @@ function market() {
     return `<div class="row i ${owned ? 'owned' : ''}">${ico(`upgrade:${u.id}`)}<div><div class="name">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div></div>${owned ? '<span></span>' : buyBtn('upgrade', u.id, '', u.cost)}</div>`;
   }).join('');
   const disc = 1 - E.price(state, 100) / 100;
-  return `<p class="muted">Old Marrow\u2019s stall, behind the scrap scales. No receipts. Everything here is lost if you die.${disc > 0 ? ` Your Charisma gets you ${pct(disc)} off.` : ''}</p>
-    <h3>Weapons</h3><div class="rows">${gearRows('weapon', D.WEAPONS)}</div>
-    <h3>Armour</h3><div class="rows">${gearRows('armor', D.ARMOR)}</div>
+  return `<p class="muted">Old Marrow\u2019s stall, behind the scrap scales. No receipts. Buying a piece trades in the one it replaces. Upgrades are on the Gear tab. Everything is lost if you die.${disc > 0 ? ` Your Charisma gets you ${pct(disc)} off.` : ''}</p>
+    ${marketGear()}
     <h3>Supplies</h3><div class="rows">${items}</div>
     <h3>Contacts &amp; mods</h3><div class="rows">${ups}</div>`;
 }
@@ -589,6 +716,7 @@ function safehouse() {
         <h3>${esc(c.name)} <span class="num muted" style="font-size:.85rem">${esc(bg.name)} \u00B7 lost on death</span></h3>
         <p class="muted" style="font-size:.9rem">${esc(bg.perk)}${c.attrPoints ? ` <b style="color:var(--sodium)">${c.attrPoints} attribute point${c.attrPoints > 1 ? 's' : ''} to spend.</b>` : ' Level up to earn attribute points.'}</p>
         <div class="rows">${attrRows}</div>
+        <div><button class="btn" data-a="tab" data-v="gear">View gear</button></div>
         <span class="label">Skills</span><div class="rows">${skills}</div>
         <span class="label">Contraband \u00B7 ${c.perks.length} / ${E.CONTRABAND_SLOTS} pockets</span>${c.perks.length ? `<div class="perk-list">${c.perks.map((id) => { const pk = E.perkById(id); return `<div class="perk-mini ${pk.rare ? 'rare' : ''}">${ico(`perk:${id}`, 'sm2')}<div><b>${esc(pk.name)}</b><span>${esc(pk.desc)}</span></div></div>`; }).join('')}</div>` : '<p class="muted">None yet. Elites and bosses carry it.</p>'}
         <span class="label">Choices that changed you</span><div class="wall">${history}</div>
@@ -640,6 +768,7 @@ function portraitImg(e, cls = '') {
   return src ? `<img class="portrait ${cls}" src="${src}" alt="Portrait of ${esc(e.name)}" width="160" height="160">` : '';
 }
 
+function intentLabel(e, k) { return k === 'special' ? D.SPECIALS[e.id].name : D.INTENTS[k] ? D.INTENTS[k].label : k; }
 function intentInfo(e) {
   if (e.stun > 0) return { label: `Stunned \u00B7 ${e.stun} turn${e.stun > 1 ? 's' : ''}`, tone: 'calm', tip: 'It can\u2019t act. Free hits.' };
   if (e.intent === 'special') { const sp = D.SPECIALS[e.id]; return { label: sp.name, tone: 'danger', tip: sp.tip }; }
@@ -652,7 +781,7 @@ function combatScreen() {
   const items = ['thermal', 'ion', 'smoke'].map((id, i) => `<button class="btn twoline ${id === 'smoke' && confirmSmoke ? 'confirm' : ''}" data-a="act" data-v="${id}" title="${esc(D.ITEMS[id].desc)}" ${c.items[id] ? '' : 'disabled'}>
       <span class="bt">${ico(`item:${id}`, 'sm')}${esc(D.ITEMS[id].name)} <span class="num">\u00D7${c.items[id]}</span><span class="k">${i + 2}</span></span>
       <span class="bs">${id === 'smoke' && confirmSmoke ? 'Tap again to leave the raid' : esc(D.ITEMS[id].short)}</span></button>`).join('');
-  const skills = E.skillsOf(c).slice(0, 3).map((k, i) => {
+  const skills = E.skillsOf(c).slice(0, 4).map((k, i) => {
     const cd = r.cooldowns[k] || 0, sk = D.SKILLS[k];
     const status = k === 'intimidate' ? (cd ? 'used this sector' : e.tags.includes('human') ? `${pct(E.intimidateChance(state))} chance` : 'humans only') : cd ? `ready in ${cd}` : 'ready';
     const note = `${esc(sk.short)} <span class="sk-status">${status}</span>`;
@@ -665,13 +794,15 @@ function combatScreen() {
   return `<div class="columns"><section class="panel combat">
     <div class="combat-head"><span class="label">${esc(E.mapById(r.map).name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${roomPips(r)}</div>
     <div id="stage-slot"></div>
-    <div class="intent ${intent.tone}"><span class="dot"></span><b>${esc(intent.label)}</b><span class="tip">${esc(intent.tip)}</span><span class="intent-side">${mechanicChip(r)}${r.ready ? `<span class="chip good">Aim +${E.hasPerk(c, 'steady') ? 100 : 50}%</span>` : ''}</span></div>
+    <div class="intent ${intent.tone}"><span class="dot"></span><b>${esc(intent.label)}</b><span class="tip">${esc(intent.tip)}${st.scan && e.next ? ` <span class="next-intent">Scanner: then ${esc(intentLabel(e, e.next))}</span>` : ''}</span><span class="intent-side">${mechanicChip(r)}${r.ready ? `<span class="chip good">Aim +${E.hasPerk(c, 'steady') ? 100 : 50}%</span>` : ''}</span></div>
     <div class="statline">${meta}</div>
     ${e.quirk ? `<div class="quirk-line"><span class="chip quirk">${esc(E.quirkById(e.quirk).name)}</span><span>${esc(E.quirkById(e.quirk).desc)}</span></div>` : ''}
+    ${D.MELEE_COUNTER[e.id] ? `<div class="quirk-line"><span class="chip bad">${esc(D.MELEE_COUNTER[e.id].name)}</span><span>${esc(D.MELEE_COUNTER[e.id].desc)}</span></div>` : ''}
     ${e.affix ? `<div class="quirk-line"><span class="chip bad">${esc(D.AFFIXES[e.affix].name)}</span><span>${esc(D.AFFIXES[e.affix].desc)}</span></div>` : ''}
     ${tip('combat')}
     <div class="actions">
-      <button class="btn primary twoline" data-a="act" data-v="attack"><span class="bt">Attack<span class="k">A</span></span><span class="bs">${esc(E.weaponOf(c).name)}</span></button>
+      <button class="btn primary twoline" data-a="act" data-v="shoot" title="Ranged attack: ${st.atk} ATK, ${pct(E.critChance(st, e))} crit. Half damage against cover."><span class="bt">Shoot<span class="k">A</span></span><span class="bs">${esc(E.weaponOf(c).name)} \u00B7 ${st.atk}</span></button>
+      <button class="btn twoline ${D.MELEE_COUNTER[e.id] ? 'warn' : ''}" data-a="act" data-v="strike" title="Melee attack: ${st.atkM} ATK, ${pct(E.critChance(st, e, true))} crit. Ignores cover."><span class="bt">Strike<span class="k">F</span></span><span class="bs">${esc(E.meleeOf(c).name)} \u00B7 ${st.atkM}${D.MELEE_COUNTER[e.id] ? ' \u00B7 it hits back' : e.intent === 'guard' && !e.stun ? ' \u00B7 past cover' : ''}</span></button>
       <button class="btn twoline" data-a="act" data-v="defend"><span class="bt">Defend<span class="k">D</span></span><span class="bs">Halve damage, aim next shot</span></button>
       <button class="btn twoline" data-a="act" data-v="stim" ${c.items.stim ? '' : 'disabled'}><span class="bt">${ico('item:stim', 'sm')}Stim <span class="num">\u00D7${c.items.stim}</span><span class="k">S</span></span><span class="bs">${esc(D.ITEMS.stim.short)}</span></button>
       <button class="btn twoline" data-a="act" data-v="run"><span class="bt">Run<span class="k">R</span></span><span class="bs">${pct(E.runChance(state))} to escape, drop half loot</span></button>
@@ -742,9 +873,26 @@ function victoryScreen() {
     ${o.healed ? `<dt>Field medic</dt><dd class="ok-text">+${o.healed} HP</dd>` : ''}
     ${o.items && o.items.length ? `<dt>Scavenged</dt><dd class="ok-text">${o.items.map(esc).join(', ')}</dd>` : ''}
     ${(o.notes || []).map((n) => `<dt>Note</dt><dd>${esc(n)}</dd>`).join('')}
+    ${o.loot ? `<dt>Dropped</dt><dd class="ok-text">${esc(o.loot)}</dd>` : ''}
     ${o.resolve ? `<dt>${esc(S.meta)}</dt><dd style="color:var(--sodium)">+${o.resolve}, and a deeper insertion point</dd>` : ''}</dl>
     ${c.attrPoints ? `<div class="spend-inline"><span class="label">Spend ${c.attrPoints} attribute point${c.attrPoints > 1 ? 's' : ''}</span><div class="btnrow">${Object.entries(D.ATTRS).map(([k, a]) => `<button class="btn" data-a="spend" data-v="${k}" title="${esc(a.desc)}">${a.short} ${c.attrs[k]} \u2192 ${c.attrs[k] + 1}</button>`).join('')}</div></div>` : ''}
-    <div><button class="btn primary big" data-a="continue">${r && r.perkOffer ? 'Search the body' : 'Keep moving'}<span class="k">\u21B5</span></button></div>
+    <div><button class="btn primary big" data-a="continue">${r && r.lootOffer ? 'Check the drop' : r && r.perkOffer ? 'Search the body' : 'Keep moving'}<span class="k">\u21B5</span></button></div>
+  </section>${logPanel()}</div>`;
+}
+
+function lootScreen() {
+  const r = state.run, c = state.char, it = r.lootOffer, b = E.baseOf(it), old = c.gear[b.slot], ok = E.canEquip(c, it);
+  return `<div class="columns"><section class="panel">
+    <span class="label">Dropped \u00B7 ${esc(D.RARITY[it.rarity].name)} ${esc(SLOTS[b.slot].name.toLowerCase())}</span><h2>${b.unique ? 'Something with a name on it' : 'Something worth taking'}</h2>
+    ${tip('loot')}
+    <div class="loot">
+      <div style="display:grid;gap:6px;align-content:start"><span class="label">The drop</span>${itemCard(it, { cls: 'new' })}</div>
+      <div style="display:grid;gap:6px;align-content:start"><span class="label">What you\u2019re using</span>${old ? itemCard(old, { compare: false }) : '<p class="muted">Nothing in that slot.</p>'}</div>
+    </div>
+    <div class="btnrow">
+      <button class="btn primary big" data-a="loottake" ${ok ? '' : 'disabled'}>${ok ? `Take it${old && E.sellValue(old) ? ` \u00B7 sell old for ${cr(E.sellValue(old))}` : ''}` : `Needs ${E.reqText(b.req)}`}<span class="k">1</span></button>
+      <button class="btn big" data-a="lootsell">Sell it \u00B7 ${cr(E.sellValue(it))}<span class="k">2</span></button>
+    </div>
   </section>${logPanel()}</div>`;
 }
 
@@ -790,13 +938,15 @@ function modalView() {
         <li><b>Signature move</b>: every enemy has one, usually with a status effect. Defend halves it and blocks the status.</li>
         <li><b>Cover</b>: your attacks deal half. Heal or set up instead.</li>
         <li><b>Repair</b>: hit it hard before it heals.</li></ul></section>
+      <section><h3>Shoot or Strike</h3><p><b>Shoot</b> uses your ranged weapon and gets crit from Agility. <b>Strike</b> uses your melee weapon, adds your Strength and ignores cover, but some enemies hit back when you close in. Ranged skills use the ranged weapon; Power Strike uses the melee one.</p></section>
+      <section><h3>Gear and loot</h3><p>Six slots: ranged, melee, helmet, chest, legs and a gadget. Pieces come in <span class="rname r-common">Common</span>, <span class="rname r-rare">Rare</span>, <span class="rname r-elite">Elite</span> and <span class="rname r-legendary">Legendary</span>, with random bonuses; bosses drop their own <span class="rname r-unique">Unique</span>. The Black Market restocks after every raid. Upgrade pieces (+1 to +5) and reroll bonuses on the Gear tab. Death takes it all, unless the cell has the Heirloom upgrade.</p></section>
       <section><h3>Your turn</h3><p><b>Defend</b> also steadies your aim: your next shot deals +50%. <b>Skills</b> come from your weapon and high attributes; their cooldowns last for the whole sector, so choose your moment. <b>Stims</b> heal and stop bleeding and burning.</p></section>
       <section><h3>Status effects</h3><ul>${Object.values(D.STATUSES).map((x) => `<li><b>${esc(x.name)}</b>: ${esc(x.desc)}</li>`).join('')}</ul></section>
       <section><h3>Elites and bosses</h3><p>Elites (veterans) carry a modifier, such as Regenerating or Volatile. Bosses enrage at half health. Bosses always carry <b>contraband</b> and elites sometimes do: pick one of three perks that last until your operative dies. You have four pockets, so a fifth piece means dropping one.</p></section>
       <section><h3>Quirks and bulletins</h3><p>Regular enemies often have a <b>quirk</b>, like a Drunk trooper whose shots go wild or an Overclocked droid that cooks itself. Every raid also rolls a <b>Directorate bulletin</b>, such as Payday or Staff Party, that bends the rules until you leave.</p></section>
       <section><h3>Wanted and escaping</h3><p>Every raid an operative survives raises their <b>Wanted</b> level: enemies get 2.5% tougher per level, and pay 2.5% more. Extracting after a sector keeps all your loot. Escaping mid-fight with <b>Run</b> or <b>Smoke</b> drops half the credits you picked up that raid.</p></section>
       <section><h3>Getting stronger</h3><p><b>This operative</b>: levels (attribute points), gear, implants and contraband. All lost on death. <b>The cell</b>: Resolve buys permanent training and upgrades. Earn it from sectors (repeat clears pay only every other time), bosses, brave choices and contracts.</p></section>
-      <section><h3>Controls</h3><p class="keys"><span><b>A</b> attack</span><span><b>D</b> defend</span><span><b>S</b> stim</span><span><b>R</b> run</span><span><b>Q W E</b> skills</span><span><b>2 3 4</b> items</span><span><b>1 2</b> doors</span><span><b>Enter</b> continue</span></p></section>
+      <section><h3>Controls</h3><p class="keys"><span><b>A</b> shoot</span><span><b>F</b> strike</span><span><b>D</b> defend</span><span><b>S</b> stim</span><span><b>R</b> run</span><span><b>Q W E T</b> skills</span><span><b>2 3 4</b> items</span><span><b>1 2</b> doors</span><span><b>Enter</b> continue</span></p></section>
     </div>` : `
     <h2>Settings</h2>
     <div class="settings">
@@ -840,6 +990,17 @@ function sectorClearScreen() {
   </section>${logPanel()}</div>`;
 }
 
+function heirloomPick() {
+  const c = state.char;
+  if (!c || !state.meta.cell.includes('heirloom')) return '';
+  const pieces = D.SLOT_ORDER.map((sl) => [sl, c.gear[sl]]).filter(([, it]) => it && E.baseOf(it).tier > 0);
+  if (!pieces.length) return '';
+  const h = state.meta.heirloom;
+  return `<div class="spend-inline"><span class="label">Heirloom \u00B7 pick one piece for the locker</span>
+    <div class="btnrow">${pieces.map(([sl, it]) => `<button class="btn ${h && h.base === it.base && h.level === it.level ? 'primary' : ''}" data-a="heirloom" data-v="${sl}"><span class="rname r-${it.rarity}">${esc(E.itemName(it))}</span></button>`).join('')}</div>
+    ${h ? `<p class="muted" style="font-size:.88rem">In the locker: <span class="rname r-${h.rarity}">${esc(E.itemName(h))}</span>.</p>` : ''}</div>`;
+}
+
 function deathScreen() {
   const o = state.outcome;
   return `<section class="panel" style="padding:32px">
@@ -848,20 +1009,22 @@ function deathScreen() {
     ${o.killerId ? `<div class="killer">${portraitImg({ id: o.killerId, name: o.killer, portrait: o.killerPortrait })}<span class="label">Last seen<br>engaging a ${esc(o.killer)}</span></div>` : ''}
     <p class="story">Operative ${o.number} went down in the ${esc(E.sectorName(o.sector, o.map))}${o.killerId ? `, killed by a ${esc(o.killer)}` : `, taken by ${esc(o.killer)}`}. The ${o.credits.toLocaleString()} ${S.currency}, the gear, ${o.perks ? `${o.perks} piece${o.perks > 1 ? 's' : ''} of contraband, ` : ''}the implants and level ${o.level} went with them.</p>
     <dl class="kv"><dt>${esc(S.meta)} to spend</dt><dd style="color:var(--sodium)">${state.meta.resolve}</dd><dt>Deepest ever</dt><dd>Sector ${state.meta.bestSector}</dd></dl>
+    ${heirloomPick()}
     <p class="muted">Spend the Resolve in the Safehouse once your next operative is in town. Training and cell upgrades carry over.</p>
     <div><button class="btn primary big" data-a="recruit">Build the next operative</button></div>
   </section>`;
 }
 
 function render() {
-  const screens = { route: routeScreen, room: roomScreen, intro: introScreen, create: createScreen, town: townScreen, combat: combatScreen, victory: victoryScreen, event: eventScreen, sectorClear: sectorClearScreen, death: deathScreen, perk: perkScreen, ending: endingScreen };
+  const screens = { route: routeScreen, room: roomScreen, intro: introScreen, create: createScreen, town: townScreen, combat: combatScreen, victory: victoryScreen, event: eventScreen, sectorClear: sectorClearScreen, death: deathScreen, perk: perkScreen, loot: lootScreen, ending: endingScreen };
   // Recover from inconsistent saves instead of rendering a blank page.
   if (!state.char && !['intro', 'create'].includes(state.screen)) { state.screen = 'create'; if (!state.draft) state.draft = E.newDraft(state.meta, rng); }
-  if (!state.run && ['combat', 'victory', 'event', 'sectorClear', 'route', 'room', 'perk'].includes(state.screen)) state.screen = 'town';
+  if (!state.run && ['combat', 'victory', 'event', 'sectorClear', 'route', 'room', 'perk', 'loot'].includes(state.screen)) state.screen = 'town';
   if (state.screen === 'route' && !(state.run.choices && state.run.choices.length)) E.offerRoute(state, rng);
   if (state.screen === 'room' && !state.roomResult) E.offerRoute(state, rng);
   if (state.screen === 'combat' && !state.run.enemy) E.offerRoute(state, rng);
   if (state.screen === 'perk' && !state.run.perkOffer) E.offerRoute(state, rng);
+  if (state.screen === 'loot' && !state.run.lootOffer) E.continueAfterVictory(state, rng);
   if (state.screen === 'event' && !E.eventById(state.event)) state.screen = 'combat';
   const showStatus = state.screen !== 'intro';
   if (state.contractDone) { toast = `Contract complete: ${state.contractDone}`; state.contractDone = null; A.play('perk'); }
@@ -913,7 +1076,7 @@ async function fight(v) {
   }
 }
 
-const BUY = new Set(['gear', 'item', 'upgrade', 'implant', 'heal', 'train', 'cell', 'spend']);
+const BUY = new Set(['buygear', 'upgradegear', 'reroll', 'item', 'upgrade', 'implant', 'heal', 'train', 'cell', 'spend', 'equipheirloom']);
 function act(a, v, k) {
   A.unlock();
   if (a === 'closemodal') { modal = null; confirmReset = false; render(); return; }
@@ -939,7 +1102,14 @@ function act(a, v, k) {
     case 'randname': state.draft.name = D.OPERATIVE_NAMES[Math.floor(rng() * D.OPERATIVE_NAMES.length)]; break;
     case 'create': E.createChar(state, rng); state.gateMap = 'garrison'; break;
     case 'tab': state.tab = v; state.notice = null; break;
-    case 'gear': ok = E.buyGear(state, k, v); break;
+    case 'buygear': ok = E.buyGear(state, +v); break;
+    case 'gearslot': state.gearSlot = v; A.play('click'); break;
+    case 'upgradegear': ok = E.upgradeItem(state, v); break;
+    case 'reroll': ok = E.rerollBonus(state, v, +k, rng); break;
+    case 'equipheirloom': ok = E.equipHeirloom(state); break;
+    case 'heirloom': E.setHeirloom(state, v); A.play('click'); break;
+    case 'loottake': if (E.takeLoot(state, rng)) A.play('buy'); break;
+    case 'lootsell': if (E.sellLoot(state, rng)) A.play('coin'); break;
     case 'item': ok = E.buyItem(state, v); break;
     case 'upgrade': ok = E.buyUpgrade(state, v); break;
     case 'implant': ok = E.installImplant(state, v); break;
@@ -956,7 +1126,7 @@ function act(a, v, k) {
     case 'event': E.resolveEvent(state, +v, rng); break;
     case 'eventDone': E.nextEncounter(state, rng); break;
     case 'deeper': E.pushDeeper(state, rng); break;
-    case 'extract': E.endRun(state, 'extracted'); break;
+    case 'extract': E.endRun(state, 'extracted', rng); break;
     case 'recruit': E.recruit(state, rng); break;
     case 'reset':
       if (!confirmReset) { confirmReset = true; break; }
@@ -986,11 +1156,13 @@ document.addEventListener('keydown', (ev) => {
   A.unlock();
   const key = ev.key.toLowerCase();
   if (state.screen === 'combat') {
-    const map = { a: 'attack', d: 'defend', r: 'run', s: 'stim', 2: 'thermal', 3: 'ion', 4: 'smoke' };
-    E.skillsOf(state.char).slice(0, 3).forEach((sk, i) => { map[SKILL_KEYS[i]] = sk; });
+    const map = { a: 'shoot', f: 'strike', d: 'defend', r: 'run', s: 'stim', 2: 'thermal', 3: 'ion', 4: 'smoke' };
+    E.skillsOf(state.char).slice(0, 4).forEach((sk, i) => { map[SKILL_KEYS[i]] = sk; });
     if (map[key] && E.canUse(state, map[key])) { ev.preventDefault(); act('act', map[key]); }
   } else if (state.screen === 'route' && (key === '1' || key === '2') && state.run.choices[+key - 1]) {
     ev.preventDefault(); act('room', String(+key - 1));
+  } else if (state.screen === 'loot' && (key === '1' || key === '2')) {
+    ev.preventDefault(); act(key === '1' ? 'loottake' : 'lootsell');
   } else if (state.screen === 'perk' && ['1', '2', '3'].includes(key) && state.run.perkOffer[+key - 1]) {
     ev.preventDefault(); act('perk', state.run.perkOffer[+key - 1]);
   } else if (key === 'enter') {
