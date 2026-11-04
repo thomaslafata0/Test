@@ -118,9 +118,10 @@ export class Stage {
   }
 
   // Called after every render of the combat screen.
-  sync({ run, enemy, player, sector, boss, theme = 'garrison' }) {
+  sync({ run, enemy, player, sector, boss, theme = 'garrison', allies = 0 }) {
     const now = performance.now();
-    this.sector = sector; this.boss = boss; this.theme = theme;
+    this.sector = sector; this.boss = boss; this.theme = theme; this.allies = allies;
+    if (!this.allySprite) this.allySprite = portraitCanvas('prisoner');
     this.intent = enemy.intent; this.stun = enemy.stun;
     this.max.enemy = enemy.maxHp; this.max.player = player.maxHp;
     this.setHud('enemy', enemy.name, enemy.boss ? 'BOSS' : `SECTOR ${sector}`, enemy.hp);
@@ -291,6 +292,36 @@ export class Stage {
         if (!ev.ok) { this.popup('enemy', 'Shaken \u221225% ATK', 'info'); await this.move(E, 6, 0, 100); await this.move(E, 0, 0, 120); }
         break;
       }
+      case 'ally:shoot': {
+        const from = { x: 20 + Math.random() * 20, y: 150 }, c = this.center(E);
+        this.burst(from.x, from.y, 4, C.amber, 1, 100, 0);
+        await this.bolt(from, c, C.amber, 1, 160);
+        this.flash(E); this.burst(c.x, c.y, 5, C.spark, 1.5);
+        this.popup('enemy', `\u2212${ev.dmg}`, '');
+        this.setHp('enemy', ev.ehp);
+        await this.wait(120);
+        break;
+      }
+      case 'env:vent': {
+        this.popup('player', 'Vent!', 'heavy');
+        for (let i = 0; i < 26; i++) setTimeout(() => this.burst(Math.random() * W, 130 + Math.random() * 80, 2, i % 3 ? '#c9c2b6' : '#ff8a3c', 0.8, 900, -0.05, 5), i * 18);
+        this.shake(4, 400);
+        await this.wait(300);
+        if (ev.pdmg) { this.flash(P, '#ff8a3c', 250); this.popup('player', `\u2212${ev.pdmg}`, 'heavy'); } else this.popup('player', 'Behind cover', 'info');
+        if (ev.edmg) { this.flash(E, '#ff8a3c', 250); this.popup('enemy', `\u2212${ev.edmg}`, 'heavy'); }
+        this.setHp('player', ev.php); this.setHp('enemy', ev.ehp);
+        await this.wait(450);
+        break;
+      }
+      case 'env:sniper': {
+        const target = this.center(P);
+        await this.bolt({ x: W * 0.72, y: 0 }, target, C.red, 1, 140);
+        if (ev.dmg) { this.flash(P, C.red, 150); this.burst(target.x, target.y, 8, C.spark, 1.5); this.popup('player', `\u2212${ev.dmg} sniper`, 'heavy'); }
+        else { this.burst(target.x + 20, target.y, 8, C.spark, 1.5); this.popup('player', 'Sniper missed', 'info'); }
+        this.setHp('player', ev.php);
+        await this.wait(300);
+        break;
+      }
       case 'enemy:flee':
         this.popup('enemy', 'Fled!', 'info');
         await this.tween(500, (p) => { E.ox = 160 * ease(p); E.alpha = 1 - p; });
@@ -368,13 +399,17 @@ export class Stage {
         if (MELEE.has(E.id)) {
           await this.move(E, -80, 50, heavy ? 140 : 180);
         } else {
-          const m = this.muzzle(E), target = this.center(P);
+          const m = this.muzzle(E), target = ev.ally ? { x: 30, y: 160 } : this.center(P);
           this.burst(m.x, m.y, 6, C.red, 1.5, 120, 0);
           if (heavy) { this.bolt(m, target, C.red, 4, 200); await this.wait(70); this.bolt(m, { x: target.x + 8, y: target.y - 6 }, C.red, 2, 200); await this.wait(130); }
           else await this.bolt(m, target, C.red, 2, 190);
         }
         this.heavyBoost = false;
-        if (ev.dodged) {
+        if (ev.ally) {
+          this.popup('player', 'Ally down', 'heavy');
+          this.burst(30, 160, 14, C.red, 2, 400);
+          this.allies = Math.max(0, this.allies - 1);
+        } else if (ev.dodged) {
           const x0 = P.ox;
           this.popup('player', 'Dodged', 'info');
           await this.move(P, x0 - 16, 0, 90); await this.move(P, x0, 0, 160);
@@ -544,6 +579,12 @@ export class Stage {
 
     const pa = this.anchor('player');
     this.pad(pa.x, pa.y - 16, 84, 16);
+    if (this.allies && this.allySprite && this.player && this.player.alpha > 0) {
+      for (let i = 0; i < this.allies; i++) {
+        const x = 2 + i * 34, y = 216 - 70 + Math.round(Math.sin(t / 650 + i) * 1);
+        g.globalAlpha = this.player.alpha; g.drawImage(this.allySprite, 0, 0, 40, 40, x, y, 70, 70); g.globalAlpha = 1;
+      }
+    }
     this.drawActor(this.player, t);
     if (this.playerShield && this.player) {
       const pc = this.center(this.player);

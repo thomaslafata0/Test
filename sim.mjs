@@ -40,6 +40,7 @@ function combatBot(s) {
   if (c.hp < st.maxHp * 0.35 && c.items.stim > 0) return 'stim';
   if (c.hp < st.maxHp * 0.2 && c.items.smoke > 0) return 'smoke';
   if (e.boss && c.items.thermal > 0) return 'thermal';
+  if (E.mechanicOf(s.run) === 'vents' && s.run.vent === 1 && !e.tags.includes('droid')) return 'defend';
   if (e.intent === 'heavy' && e.stun === 0) return 'defend';
   if (e.intent === 'guard' && e.stun === 0) return 'defend';
   for (const k of ['overload', 'smash', 'aimed', 'blast', 'burst']) if (E.canUse(s, k)) return k;
@@ -64,6 +65,13 @@ function playLife(s, rng, stats) {
         ev.options.forEach((o, i) => { const ch = E.optionAvailable(s, o) ? E.checkChance(s, o.check) : -1; if (ch > bestCh) { bestCh = ch; best = i; } });
         E.resolveEvent(s, best, rng); E.nextEncounter(s, rng);
       }
+      else if (s.screen === 'route') {
+        const ch = s.run.choices, st = E.stats(s), low = s.char.hp < st.maxHp * 0.5;
+        const pref = low ? ['rest', 'supply', 'cells', 'cargo', 'event', 'fight', 'elite', 'boss'] : ['cells', 'supply', 'cargo', 'event', 'fight', 'rest', 'elite', 'boss'];
+        const idx = ch.map((k) => pref.indexOf(k)).reduce((best, v, i, arr) => (v < arr[best] ? i : best), 0);
+        E.enterRoom(s, idx, rng);
+      }
+      else if (s.screen === 'room') E.offerRoute(s, rng);
       else if (s.screen === 'sectorClear') {
         const st = E.stats(s), next = s.run.sector + 1;
         const weak = s.char.hp < st.maxHp * 0.5 && s.char.items.stim === 0;

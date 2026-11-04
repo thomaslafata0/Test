@@ -85,6 +85,16 @@ function outline(g) {
 const eyes = (g, y, l = 17, r = 23, mat = 'hair') => { g.dot(l, y, mat, 0); g.dot(r, y, mat, 0); };
 
 export const ART = {
+  // A freed prisoner, seen from behind (stands beside the player on the battle stage).
+  prisoner(g) {
+    g.ellipse(20, 42, 15, 11, 'grey');
+    g.rect(19, 31, 2, 9, 'grey', 0);
+    g.rect(16, 26, 8, 5, 'pale', 0);
+    g.ellipse(20, 18, 8, 9, 'pale');
+    for (let x = 14; x < 27; x += 2) g.dot(x, 12, 'hair', 0);
+    g.rect(11, 17, 1, 3, 'pale', 1); g.rect(28, 17, 1, 3, 'pale', 0);
+    g.line(28, 34, 36, 24, 'black', 1);
+  },
   welder(g) {
     g.rect(16, 30, 8, 6, 'grey');
     g.dot(18, 37, 'red', 2); g.dot(21, 37, 'red', 2);

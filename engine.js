@@ -24,9 +24,10 @@ export function seededRng(seed) {
 
 export const VERSION = 2;
 export const FIGHTS_PER_SECTOR = 3;
+export const MIN_FIGHTS = 2; // fights required per sector; the rest of the rooms can be anything
 // Enemy growth per sector past their first appearance: linear plus a quadratic tail.
 export const growth = (lvl, lin, quad) => 1 + lin * lvl + quad * lvl * lvl;
-export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.01, bossHp: 1.8, bossAtk: 1.35, enemyAtk: 1.35, enemyHp: 1.3, smashStr: 1, aimed: 1.5 };
+export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.01, bossHp: 1.8, bossAtk: 1.35, enemyAtk: 1.3, enemyHp: 1.3, smashStr: 1, aimed: 1.5 };
 export const isBossSector = (n) => n % 5 === 0;
 export const mapById = (id) => D.MAPS.find((m) => m.id === id) || D.MAPS[0];
 export const sectorName = (n, mapId = 'garrison') => {
@@ -58,7 +59,10 @@ export function newGame(rng) {
 
 // Older saves keep their permanent progress; the current operative is retired.
 export function migrate(s, rng) {
-  if (s && s.v === VERSION) return s;
+  if (s && s.v === VERSION) {
+    if (s.run && s.run.room === undefined) { s.run = null; s.screen = 'town'; s.tab = 'gate'; s.notice = 'The cell changed its routes. Your last raid was called off; you kept what you carried.'; }
+    return s;
+  }
   const fresh = newGame(rng);
   if (s && s.meta) {
     const m = s.meta;
@@ -272,12 +276,110 @@ export function deploy(s, mapId, startSector, rng) {
   if (!mapUnlocked(s, map)) return false;
   const prog = mapProgress(s.char, map.id);
   if (!prog.insertions.includes(startSector)) startSector = 1;
-  s.run = { map: map.id, sector: startSector, fight: 0, enemy: null, defending: false, ready: false, nextMod: null, sectorCredits: 0, cooldowns: {}, adrenalUsed: false };
+  s.run = { map: map.id, sector: startSector, room: 0, choices: null, enemy: null, defending: false, ready: false, nextMod: null, sectorCredits: 0, cooldowns: {}, adrenalUsed: false,
+    alert: 0, allies: 0, vent: 3, turns: 0 };
   s.log = [];
   s.notice = null;
   log(s, `You slip into the ${map.name}. ${sectorName(startSector, map.id)}.`, 'sys');
-  nextEncounter(s, rng);
+  beginSector(s, rng);
   return true;
+}
+
+export const mechanicOf = (r) => mapById(r.map).mechanic.id;
+export const roomName = (mapId, kind) => kind === 'boss' ? 'Boss' : (mapById(mapId).roomNames[kind] || kind);
+
+function raiseAlarm(s, n, why) {
+  const r = s.run;
+  if (!r || mechanicOf(r) !== 'alarm' || r.alert >= 5) return;
+  r.alert = Math.min(5, r.alert + n);
+  log(s, `${why} Alarm level ${r.alert}.`, 'bad');
+}
+
+// New sector: cooldowns reset, then pick the first room.
+function beginSector(s, rng) {
+  const r = s.run;
+  r.room = 0; r.fightsDone = 0; r.cooldowns = {}; r.sectorCredits = 0;
+  offerRoute(s, rng);
+}
+
+// Offer two doors (or the boss). At least one door is always a fight.
+export function offerRoute(s, rng) {
+  const r = s.run, map = mapById(r.map);
+  r.enemy = null;
+  if (r.room >= FIGHTS_PER_SECTOR) return clearSector(s);
+  const remaining = FIGHTS_PER_SECTOR - r.room, needed = MIN_FIGHTS - (r.fightsDone || 0);
+  r.forced = false;
+  if (r.room === FIGHTS_PER_SECTOR - 1 && isBossSector(r.sector)) r.choices = ['boss'];
+  else if (remaining <= needed) { r.choices = ['fight', 'elite']; r.forced = true; }
+  else {
+    r.forced = false;
+    const entries = Object.entries(map.rooms);
+    const a = pickWeighted(rng, entries);
+    let b = a;
+    for (let i = 0; i < 20 && b === a; i++) b = pickWeighted(rng, entries);
+    const choices = [a, b];
+    if (!choices.some((k) => D.ROOMS[k].fight)) choices[1] = 'fight';
+    if (choices[0] === choices[1]) choices[1] = choices[0] === 'fight' ? 'elite' : 'fight';
+    r.choices = choices;
+  }
+  s.screen = 'route';
+}
+export const nextEncounter = offerRoute;
+
+export function enterRoom(s, idx, rng) {
+  const r = s.run, kind = r.choices && r.choices[idx];
+  if (!kind) return;
+  r.choices = null; r.room += 1; r.roomType = kind;
+  const map = mapById(r.map), st = stats(s), c = s.char, name = roomName(r.map, kind);
+  if (D.ROOMS[kind].fight) { r.fightsDone = (r.fightsDone || 0) + 1; return startFight(s, rng, kind); }
+  if (kind === 'event') {
+    const pool = D.EVENTS.filter((ev) => ev.maps === 'any' || ev.maps.includes(r.map));
+    s.event = pick(rng, pool).id; s.eventResult = null; s.screen = 'event';
+    return;
+  }
+  const notes = [];
+  let text = '';
+  if (kind === 'supply' || kind === 'cargo') {
+    const range = kind === 'cargo' ? [20, 30] : [8, 15];
+    const cr = Math.round(randInt(rng, range[0], range[1]) * r.sector * map.credits);
+    c.credits += cr; r.sectorCredits += cr; notes.push(`+${cr} ${D.SETTING.cur}`);
+    if (kind === 'supply' && rng() < 0.5) {
+      const it = pick(rng, ['stim', 'thermal', 'ion']);
+      if (c.items[it] < st.carry) { c.items[it] += 1; notes.push(`+1 ${D.ITEMS[it].name}`); }
+    }
+    if (kind === 'cargo') { r.nextMod = 'alerted'; notes.push('next enemy alerted'); text = 'You crack two crates of confiscated goods. Someone heard the crowbar.'; }
+    else text = 'Shelves of requisitioned supplies. You take what fits in your pockets.';
+  } else if (kind === 'rest') {
+    const h = Math.min(st.maxHp - c.hp, Math.round(st.maxHp * 0.3));
+    c.hp += h; notes.push(`+${h} HP`);
+    text = 'Five quiet minutes. You rewrap the bandages and breathe.';
+    if (r.alert > 0) { r.alert = Math.max(0, r.alert - 2); notes.push(`alarm down to ${r.alert}`); text += ' Up on the wall, the alarm lights blink back to amber.'; }
+  } else if (kind === 'cells') {
+    if (r.allies < 2) { r.allies += 1; notes.push(`ally joins (${r.allies}/2)`); text = 'The lock gives. A prisoner grabs a fallen guard\u2019s baton and falls in behind you.'; }
+    else { s.meta.resolve += 1; s.meta.totalResolve += 1; notes.push(`+1 ${D.SETTING.meta}`); text = 'You can\u2019t take more with you. You open the doors and point them to the vents.'; }
+  }
+  s.roomResult = { kind, name, text, notes };
+  s.screen = 'room';
+}
+
+function startFight(s, rng, kind) {
+  const r = s.run, mech = mechanicOf(r);
+  const boss = kind === 'boss';
+  const e = makeEnemy(r.sector, boss, rng, r.map);
+  if (kind === 'elite') {
+    e.name = `Veteran ${e.name}`; e.elite = true;
+    e.hp = e.maxHp = Math.round(e.maxHp * 1.35);
+    e.atk = Math.round(e.atk * 1.15); e.def += 1;
+    e.cr = e.cr.map((v) => v * 2); e.xp = Math.round(e.xp * 1.5);
+  }
+  if (mech === 'alarm' && r.alert) { e.atk = Math.round(e.atk * (1 + 0.06 * r.alert)); e.cr = e.cr.map((v) => Math.round(v * (1 + 0.05 * r.alert))); }
+  r.enemy = e; r.defending = false; r.ready = false; r.adrenalUsed = false; r.vent = 3; r.turns = 0; r.alarmRaised = false;
+  if (r.room === 1 && has(s.char, 'forger') && !boss) { e.stun = 1; log(s, 'Your forged papers buy you a free moment.', 'good'); }
+  if (r.nextMod === 'stunned') { e.stun = Math.max(e.stun, 1); log(s, 'They don\u2019t see you coming.', 'good'); }
+  if (r.nextMod === 'alerted') { e.atk = Math.round(e.atk * 1.2); log(s, 'The alarm is still sounding. They\u2019re ready for you.', 'bad'); }
+  r.nextMod = null;
+  log(s, e.line, boss ? 'boss' : 'sys');
+  s.screen = 'combat';
 }
 
 export function makeEnemy(sector, boss, rng, mapId = 'garrison') {
@@ -317,21 +419,6 @@ function chooseIntent(e, rng) {
   const i = pickWeighted(rng, entries);
   e.lastIntent = i;
   return i;
-}
-
-export function nextEncounter(s, rng) {
-  const r = s.run;
-  r.fight += 1;
-  if (r.fight > FIGHTS_PER_SECTOR) return clearSector(s);
-  const boss = isBossSector(r.sector) && r.fight === FIGHTS_PER_SECTOR;
-  const e = makeEnemy(r.sector, boss, rng, r.map);
-  r.enemy = e; r.defending = false; r.ready = false; r.cooldowns = {}; r.adrenalUsed = false;
-  if (r.fight === 1 && has(s.char, 'forger') && !boss) { e.stun = 1; log(s, 'Your forged papers buy you a free moment.', 'good'); }
-  if (r.nextMod === 'stunned') { e.stun = Math.max(e.stun, 1); log(s, 'They don\u2019t see you coming.', 'good'); }
-  if (r.nextMod === 'alerted') { e.atk = Math.round(e.atk * 1.2); log(s, 'The alarm is still sounding. They\u2019re ready for you.', 'bad'); }
-  r.nextMod = null;
-  log(s, e.line, boss ? 'boss' : 'sys');
-  s.screen = 'combat';
 }
 
 // ---------- combat ----------
@@ -480,12 +567,56 @@ export function playerAct(s, act, rng) {
       fx(s, { who: 'player', type: 'run', ok });
       if (ok) { log(s, 'You break line of sight and run for the exit.', 'sys'); return endRun(s, 'escaped'); }
       log(s, 'You try to break away, but they cut you off.', 'bad');
+      raiseAlarm(s, 1, 'Your escape attempt was spotted.');
       break;
     }
   }
+  tick(r);
   if (e.hp <= 0) return winFight(s, rng);
+  if (r.allies > 0) {
+    for (let i = 0; i < r.allies && e.hp > 0; i++) {
+      const dmg = mitigate(st.atk * 0.3 * (0.85 + rng() * 0.3), e.def);
+      e.hp -= dmg;
+      fx(s, { who: 'ally', type: 'shoot', dmg });
+      log(s, `A freed prisoner hits ${e.name} for ${dmg}.`, 'hit');
+    }
+    if (e.hp <= 0) return winFight(s, rng);
+  }
   enemyTurn(s, rng);
-  if (s.run) for (const k of Object.keys(r.cooldowns)) if (r.cooldowns[k] > 0 && r.cooldowns[k] < 50) r.cooldowns[k] -= 1;
+  if (s.screen === 'combat') envTurn(s, rng);
+}
+
+// Skill cooldowns count down once per player turn and persist across fights in the same sector.
+function tick(r) {
+  for (const k of Object.keys(r.cooldowns)) if (r.cooldowns[k] > 0 && r.cooldowns[k] < 50) r.cooldowns[k] -= 1;
+}
+
+// Map mechanics that act at the end of each round.
+function envTurn(s, rng) {
+  const r = s.run, e = r.enemy, c = s.char, st = stats(s), mech = mechanicOf(r);
+  r.turns += 1;
+  if (mech === 'vents') {
+    r.vent -= 1;
+    if (r.vent <= 0) {
+      r.vent = 3;
+      const pdmg = r.defending ? 0 : Math.round(st.maxHp * 0.1);
+      const edmg = Math.round(e.maxHp * (e.tags.includes('droid') ? 0.06 : 0.12));
+      c.hp -= pdmg; e.hp -= edmg;
+      fx(s, { who: 'env', type: 'vent', pdmg, edmg, blocked: r.defending });
+      log(s, `The furnace vents blast the floor.${pdmg ? ` You take ${pdmg}.` : ' You were behind cover.'}${edmg ? ` ${e.name} takes ${edmg}.` : ''}`, 'bad');
+      if (c.hp <= 0) return die(s, { name: 'furnace vent', id: null });
+      if (e.hp <= 0) return winFight(s, rng);
+    }
+  } else if (mech === 'snipers' && rng() < 0.2) {
+    const dmg = r.defending ? 0 : Math.round(st.maxHp * 0.08);
+    c.hp -= dmg;
+    fx(s, { who: 'env', type: 'sniper', dmg, blocked: r.defending });
+    log(s, dmg ? `A tower sniper clips you for ${dmg}.` : 'A sniper round sparks off your cover.', dmg ? 'bad' : 'info');
+    if (c.hp <= 0) return die(s, { name: 'tower sniper', id: null });
+  } else if (mech === 'alarm' && r.turns === 5 && !r.alarmRaised) {
+    r.alarmRaised = true;
+    raiseAlarm(s, 1, 'The fight is dragging on. Someone hit the alarm.');
+  }
 }
 
 function enemyTurn(s, rng) {
@@ -496,7 +627,11 @@ function enemyTurn(s, rng) {
     log(s, `${e.name} is stunned and can\u2019t act.`, 'good');
   } else if (e.intent === 'attack' || e.intent === 'heavy') {
     const heavy = e.intent === 'heavy';
-    if (rng() < dodgeChance(st, e)) {
+    if (r.allies > 0 && rng() < 0.25) {
+      r.allies -= 1;
+      fx(s, { who: 'enemy', type: e.intent, ally: true, dmg: 0 });
+      log(s, `${e.name} guns down one of the freed prisoners.`, 'bad');
+    } else if (rng() < dodgeChance(st, e)) {
       fx(s, { who: 'enemy', type: e.intent, dodged: true, dmg: 0 });
       log(s, `${e.name} ${heavy ? 'unleashes a heavy strike' : 'fires'}, and you dodge.`, 'good');
     } else {
@@ -565,15 +700,7 @@ function winFight(s, rng, fled = false) {
 
 // ---------- events ----------
 export function continueAfterVictory(s, rng) {
-  const r = s.run, map = mapById(r.map);
-  if (r.fight < FIGHTS_PER_SECTOR && rng() < map.events) {
-    const pool = D.EVENTS.filter((ev) => ev.maps === 'any' || ev.maps.includes(r.map));
-    s.event = pick(rng, pool).id;
-    s.eventResult = null;
-    s.screen = 'event';
-    return;
-  }
-  nextEncounter(s, rng);
+  offerRoute(s, rng);
 }
 
 export const eventById = (id) => D.EVENTS.find((e) => e.id === id);
@@ -608,7 +735,11 @@ export function resolveEvent(s, index, rng) {
   if (fxs.resolve) { s.meta.resolve += fxs.resolve; s.meta.totalResolve += fxs.resolve; notes.push(`+${fxs.resolve} ${D.SETTING.meta}`); }
   if (fxs.next) r.nextMod = fxs.next;
   if (fxs.next === 'stunned') notes.push('next enemy surprised');
-  if (fxs.next === 'alerted') notes.push('next enemy alerted');
+  if (fxs.next === 'alerted') { notes.push('next enemy alerted'); raiseAlarm(s, 1, 'Your cover slipped.'); }
+  if (fxs.ally) {
+    if (r.allies < 2) { r.allies += 1; notes.push(`ally joins (${r.allies}/2)`); }
+    else { s.meta.resolve += 1; s.meta.totalResolve += 1; notes.push(`+1 ${D.SETTING.meta}`); }
+  }
   if (fxs.attrs) { const a = changeAttrs(s, fxs.attrs, opt.label); if (a) notes.push(a); }
   s.eventResult = { success, check: !!opt.check, text: fxs.text, notes, label: opt.label };
 }
@@ -630,15 +761,20 @@ function clearSector(s) {
 
 export function pushDeeper(s, rng) {
   const r = s.run;
-  r.sector += 1; r.fight = 0; r.sectorCredits = 0;
+  r.sector += 1;
   log(s, `You go deeper. ${sectorName(r.sector, r.map)}.`, 'sys');
-  nextEncounter(s, rng);
+  beginSector(s, rng);
 }
 
 export function endRun(s, how) {
   const r = s.run;
+  let home = '';
+  if (how === 'extracted' && r.allies > 0) {
+    s.meta.resolve += r.allies; s.meta.totalResolve += r.allies;
+    home = ` You brought ${r.allies} prisoner${r.allies > 1 ? 's' : ''} home: +${r.allies} ${D.SETTING.meta}.`;
+  }
   s.notice = how === 'extracted'
-    ? `You made it out of ${sectorName(r.sector, r.map)}. Spend it before your luck runs out.`
+    ? `You made it out of ${sectorName(r.sector, r.map)}.${home} Spend it before your luck runs out.`
     : `You escaped from ${sectorName(r.sector, r.map)} with what you were carrying.`;
   s.run = null;
   s.screen = 'town';

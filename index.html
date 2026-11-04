@@ -217,6 +217,21 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .notice.win { border-color: var(--ok); background: #8db57d22; }
 .notice.lose { border-color: var(--danger); background: var(--danger-dim); }
 .spend-inline { display: grid; gap: 8px; padding: 12px; border: 1px dashed var(--sodium); }
+.mech-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.mech { font-family: var(--mono); font-size: .72rem; letter-spacing: .06em; padding: 4px 8px; border: 1px solid var(--line); color: var(--fg); white-space: nowrap; }
+.mech b { color: var(--sodium); font-weight: 500; text-transform: uppercase; letter-spacing: .1em; margin-right: 4px; }
+.mech.hot { border-color: var(--danger); background: var(--danger-dim); }
+.mech.hot b { color: var(--danger); }
+.mech-line { font-size: .85rem; color: var(--fg); border-top: 1px dashed var(--line); padding-top: 6px; }
+.mech-line b { color: var(--map, var(--sodium)); font-weight: 600; }
+.pips.rooms i { width: 22px; height: 6px; }
+.doors { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.door { text-align: left; display: grid; gap: 6px; align-content: start; padding: 18px; min-height: 150px; background: var(--panel-2); border: 1px solid var(--line); border-top: 4px solid var(--door, var(--line)); }
+.door:hover { border-color: var(--sodium); border-top-color: var(--door, var(--sodium)); }
+.door b { font-family: var(--display); font-size: 1.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
+.door .desc { color: var(--muted); font-size: .92rem; }
+.door-fight { --door: var(--fg); } .door-elite { --door: var(--danger); } .door-boss { --door: var(--danger); background: var(--danger-dim); }
+.door-event { --door: var(--ion); } .door-supply, .door-cargo { --door: var(--sodium); } .door-rest { --door: var(--ok); } .door-cells { --door: var(--ion); }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 
@@ -428,6 +443,8 @@ function gate() {
     return `<button class="map-card ${m.id === sel.id ? 'on' : ''} theme-${m.theme}" data-a="pickmap" data-v="${m.id}" ${open ? '' : 'disabled'} aria-pressed="${m.id === sel.id}">
       <span class="label">${open ? `Best: sector ${state.meta.bestByMap[m.id] || 0}` : `Locked \u00B7 reach sector ${m.unlock} anywhere`}</span>
       <b>${esc(m.name)}</b><span class="desc">${esc(m.desc)}</span>
+      <span class="mech-line"><b>${esc(m.mechanic.name)}.</b> ${esc(m.mechanic.desc)}</span>
+      <span class="label">Rooms: ${Object.keys(m.rooms).filter((k) => k !== 'fight').map((k) => esc(m.roomNames[k])).join(' \u00B7 ')}</span>
       ${traits.length ? `<span class="chips">${traits.map((t) => `<span class="chip">${t}</span>`).join('')}</span>` : ''}
       ${prog && prog.deepest ? `<span class="label">This operative: sector ${prog.deepest}</span>` : ''}</button>`;
   }).join('');
@@ -454,13 +471,14 @@ function combatScreen() {
   const items = Object.entries(D.ITEMS).map(([id, it], i) => `<button class="btn" data-a="act" data-v="${id}" ${c.items[id] ? '' : 'disabled'}>${esc(it.name)} \u00D7${c.items[id]}<span class="k">${i + 1}</span></button>`).join('');
   const skills = E.skillsOf(c).slice(0, 3).map((k, i) => {
     const cd = r.cooldowns[k] || 0, sk = D.SKILLS[k];
-    const note = k === 'intimidate' ? (cd ? 'used' : e.tags.includes('human') ? `${pct(E.intimidateChance(state))} to break` : 'humans only') : cd ? `ready in ${cd}` : `cooldown ${E.skillCd(c, k)}`;
+    const note = k === 'intimidate' ? (cd ? 'used this sector' : e.tags.includes('human') ? `${pct(E.intimidateChance(state))} to break` : 'humans only') : cd ? `ready in ${cd} turn${cd > 1 ? 's' : ''}` : `cooldown ${E.skillCd(c, k)}`;
     return `<button class="btn skill" data-a="act" data-v="${k}" title="${esc(sk.desc)}" ${E.canUse(state, k) && !(k === 'intimidate' && !e.tags.includes('human')) ? '' : 'disabled'}>
       <span class="sk-name">${esc(sk.name)}<span class="k">${SKILL_KEYS[i].toUpperCase()}</span></span><span class="sk-note">${note}</span></button>`;
   }).join('');
   return `<div class="columns"><section class="panel">
-    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px"><span class="label">${esc(E.mapById(r.map).name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span><span class="label">Fight ${r.fight} / ${E.FIGHTS_PER_SECTOR}</span></div>
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px"><span class="label">${esc(E.mapById(r.map).name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${roomPips(r)}</div>
     <div id="stage-slot"></div>
+    <div class="mech-row">${mechanicChip(r)}${r.enemy.elite ? '<span class="chip bad">elite</span>' : ''}</div>
     <div class="foe-info">
       <div class="title">${e.tags.map((t) => `<span class="tag ${t}">${t}</span>`).join('')}<div class="statline"><span>ATK <b>${e.atk}</b></span><span>DEF <b>${e.def}</b></span><span>SPD <b>${e.spd}</b></span><span>Run <b>${pct(E.runChance(state))}</b></span><span>Dodge <b>${pct(E.dodgeChance(st, e))}</b></span></div></div>
       <div class="intent ${intent.tone}"><span class="dot"></span><b>${esc(e.name)}: ${esc(intent.label)}</b><span class="tip">${esc(intent.tip)}</span></div>
@@ -475,6 +493,50 @@ function combatScreen() {
     ${skills ? `<span class="label">Skills</span><div class="skills">${skills}</div>` : ''}
     <span class="label">Gear</span>
     <div class="items">${items}</div>
+  </section>${logPanel()}</div>`;
+}
+
+const ROOM_LABEL = { fight: 'Fight', elite: 'Elite fight', event: 'Event', supply: 'Supplies', rest: 'Rest', cells: 'Prisoners', cargo: 'Cargo', boss: 'Boss' };
+function mechanicChip(r) {
+  const m = E.mapById(r.map).mechanic;
+  let v = '';
+  if (m.id === 'alarm') v = `${'\u25A0'.repeat(r.alert)}${'\u25A1'.repeat(5 - r.alert)} ${r.alert}/5`;
+  if (m.id === 'vents') v = r.enemy ? (r.vent === 1 ? 'blast next turn' : `blast in ${r.vent} turns`) : 'every 3 turns';
+  if (m.id === 'allies') v = `${r.allies}/2 with you`;
+  if (m.id === 'snipers') v = '20% per turn';
+  const hot = (m.id === 'vents' && r.enemy && r.vent === 1) || (m.id === 'alarm' && r.alert >= 3);
+  return `<span class="mech ${hot ? 'hot' : ''}" title="${esc(m.desc)}"><b>${esc(m.name)}</b> ${v}</span>`;
+}
+function roomPips(r) {
+  return `<span class="pips rooms" aria-label="room ${r.room} of ${E.FIGHTS_PER_SECTOR}">${Array.from({ length: E.FIGHTS_PER_SECTOR }, (_, i) => `<i class="${i < r.room ? 'on' : ''}"></i>`).join('')}</span>`;
+}
+
+function routeScreen() {
+  const r = state.run, map = E.mapById(r.map), c = state.char, st = E.stats(state);
+  const doors = r.choices.map((k, i) => `<button class="door door-${k}" data-a="room" data-v="${i}">
+      <span class="label">${ROOM_LABEL[k]} <span class="k">${i + 1}</span></span>
+      <b>${esc(E.roomName(r.map, k))}</b><span class="desc">${esc(D.ROOMS[k].desc)}</span></button>`).join('');
+  const cds = Object.entries(r.cooldowns).filter(([, v]) => v > 0).map(([k, v]) => `${D.SKILLS[k].name} ${v >= 50 ? 'used' : `ready in ${v}`}`);
+  return `<div class="columns"><section class="panel">
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center"><span class="label">${esc(map.name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${roomPips(r)}</div>
+    <h2>${r.choices[0] === 'boss' ? 'No way around it' : r.room === 0 ? 'Which way in?' : 'Two doors'}</h2>
+    ${r.forced ? '<p class="muted" style="font-size:.9rem">Every sector takes at least two fights. Both doors are hot.</p>' : ''}
+    <div class="mech-row">${mechanicChip(r)}<span class="muted" style="font-size:.9rem">${esc(map.mechanic.desc)}</span></div>
+    <div class="doors">${doors}</div>
+    <dl class="kv"><dt>Condition</dt><dd class="${c.hp < st.maxHp * 0.4 ? 'danger-text' : ''}">${c.hp} / ${st.maxHp} HP \u00B7 ${c.items.stim} stims</dd>
+      <dt>Skills</dt><dd>${cds.length ? esc(cds.join(', ')) : 'All ready'}</dd></dl>
+    <p class="muted" style="font-size:.85rem">Skill cooldowns carry over between fights in a sector and reset when you enter a new one.</p>
+  </section>${logPanel()}</div>`;
+}
+
+function roomScreen() {
+  const r = state.run, res = state.roomResult;
+  return `<div class="columns"><section class="panel">
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center"><span class="label">${ROOM_LABEL[res.kind]} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${roomPips(r)}</div>
+    <h2>${esc(res.name)}</h2>
+    <p style="font-size:1.1rem;max-width:58ch">${esc(res.text)}</p>
+    ${res.notes.length ? `<div class="chips">${res.notes.map((n) => `<span class="chip ${/alerted/.test(n) ? 'bad' : 'good'}">${esc(n)}</span>`).join('')}</div>` : ''}
+    <div><button class="btn primary big" data-a="roomDone">Move on<span class="k">\u21B5</span></button></div>
   </section>${logPanel()}</div>`;
 }
 
@@ -534,10 +596,13 @@ function deathScreen() {
 }
 
 function render() {
-  const screens = { intro: introScreen, create: createScreen, town: townScreen, combat: combatScreen, victory: victoryScreen, event: eventScreen, sectorClear: sectorClearScreen, death: deathScreen };
+  const screens = { route: routeScreen, room: roomScreen, intro: introScreen, create: createScreen, town: townScreen, combat: combatScreen, victory: victoryScreen, event: eventScreen, sectorClear: sectorClearScreen, death: deathScreen };
   // Recover from inconsistent saves instead of rendering a blank page.
   if (!state.char && !['intro', 'create'].includes(state.screen)) { state.screen = 'create'; if (!state.draft) state.draft = E.newDraft(state.meta, rng); }
-  if (!state.run && ['combat', 'victory', 'event', 'sectorClear'].includes(state.screen)) state.screen = 'town';
+  if (!state.run && ['combat', 'victory', 'event', 'sectorClear', 'route', 'room'].includes(state.screen)) state.screen = 'town';
+  if (state.screen === 'route' && !(state.run.choices && state.run.choices.length)) E.offerRoute(state, rng);
+  if (state.screen === 'room' && !state.roomResult) E.offerRoute(state, rng);
+  if (state.screen === 'combat' && !state.run.enemy) E.offerRoute(state, rng);
   if (state.screen === 'event' && !E.eventById(state.event)) state.screen = 'combat';
   const showStatus = state.screen !== 'intro';
   document.getElementById('app').innerHTML = (showStatus ? statusStrip() : '') + screens[state.screen]();
@@ -545,7 +610,7 @@ function render() {
   if (slot) {
     slot.replaceWith(stage.el);
     const r = state.run, st = E.stats(state);
-    stage.sync({ run: r, enemy: r.enemy, sector: r.sector, boss: r.enemy.boss, theme: E.mapById(r.map).theme, player: { name: state.char.name, level: state.char.level, hp: state.char.hp, maxHp: st.maxHp } });
+    stage.sync({ run: r, enemy: r.enemy, sector: r.sector, boss: r.enemy.boss, theme: E.mapById(r.map).theme, allies: r.allies, player: { name: state.char.name, level: state.char.level, hp: state.char.hp, maxHp: st.maxHp } });
   }
   const log = document.getElementById('log');
   if (log) log.scrollTop = log.scrollHeight;
@@ -595,6 +660,8 @@ function act(a, v, k) {
     case 'pickmap': state.gateMap = v; break;
     case 'deploy': E.deploy(state, state.gateMap || 'garrison', +v, rng); break;
     case 'continue': E.continueAfterVictory(state, rng); break;
+    case 'room': E.enterRoom(state, +v, rng); break;
+    case 'roomDone': E.offerRoute(state, rng); break;
     case 'event': E.resolveEvent(state, +v, rng); break;
     case 'eventDone': E.nextEncounter(state, rng); break;
     case 'deeper': E.pushDeeper(state, rng); break;
@@ -623,8 +690,11 @@ document.addEventListener('keydown', (ev) => {
     const map = { a: 'attack', d: 'defend', r: 'run', s: 'stim', 1: 'stim', 2: 'thermal', 3: 'ion', 4: 'smoke' };
     E.skillsOf(state.char).slice(0, 3).forEach((sk, i) => { map[SKILL_KEYS[i]] = sk; });
     if (map[key] && E.canUse(state, map[key])) { ev.preventDefault(); act('act', map[key]); }
+  } else if (state.screen === 'route' && (key === '1' || key === '2') && state.run.choices[+key - 1]) {
+    ev.preventDefault(); act('room', String(+key - 1));
   } else if (key === 'enter') {
     if (state.screen === 'victory') { ev.preventDefault(); act('continue'); }
+    else if (state.screen === 'room') { ev.preventDefault(); act('roomDone'); }
     else if (state.screen === 'event' && state.eventResult) { ev.preventDefault(); act('eventDone'); }
   }
 });

@@ -45,7 +45,7 @@ export const BACKGROUNDS = [
 ];
 
 // ---------- skills (combat abilities beyond Attack / Defend / Run) ----------
-// cd = turns before it can be used again. Unlocked by weapon type or attribute.
+// cd = your turns before it can be used again. Cooldowns carry over between fights and reset at each new sector.
 export const SKILLS = {
   aimed:     { name: 'Aimed Shot',      cd: 3, desc: 'x1.5 damage, +25% crit chance.', from: 'Pistols and rifles' },
   burst:     { name: 'Burst Fire',      cd: 2, desc: 'Three shots at 55% each. Shreds unarmoured targets, weak against armour.', from: 'Carbines' },
@@ -53,7 +53,7 @@ export const SKILLS = {
   smash:     { name: 'Power Strike',    cd: 3, desc: 'x1.6 damage plus 1 per STR, ignores half of armour.', from: 'Melee and heavy weapons, or STR 5' },
   overload:  { name: 'Overload',        cd: 4, desc: 'Tech burst: 6 + 4 per INT, ignores armour. Droids take double and are stunned.', from: 'Tech weapons, or INT 4' },
   suppress:  { name: 'Suppressing Fire', cd: 3, desc: '60% damage and pins the enemy: its next move is forced to be taking cover.', from: 'AGI 4' },
-  intimidate:{ name: 'Intimidate',      cd: 99, desc: 'Once per fight. A human enemy may run. If not, its ATK drops 25% for the fight.', from: 'CHA 4' },
+  intimidate:{ name: 'Intimidate',      cd: 99, desc: 'Once per sector. A human enemy may run. If not, its ATK drops 25% for the fight.', from: 'CHA 4' },
 };
 export const WEAPON_SKILL = { pistol: 'aimed', rifle: 'aimed', carbine: 'burst', scatter: 'blast', melee: 'smash', heavy: 'smash', tech: 'overload' };
 
@@ -187,26 +187,51 @@ export const INTENTS = {
   repair: { label: 'Running self-repair',     tone: 'calm',   tip: 'Will restore 15% HP. Hit it hard now.' },
 };
 
+// ---------- rooms ----------
+// Each sector is three rooms. Between rooms you pick one of two doors; at least one is always a fight.
+export const ROOMS = {
+  fight:  { desc: 'A standard fight.', fight: true },
+  elite:  { desc: 'A veteran enemy: tougher, double credits, +50% XP.', fight: true },
+  event:  { desc: 'Something worth a look. Choices and consequences, no guaranteed fight.' },
+  supply: { desc: 'Credits and maybe an item. No fight.' },
+  rest:   { desc: 'Patch up: heal 30% of max HP.' },
+  cells:  { desc: 'Free a prisoner. They fight beside you until you leave.' },
+  cargo:  { desc: 'A big haul of credits, but the next enemy is alerted.' },
+  boss:   { desc: 'The sector boss. No way around it.', fight: true },
+};
+
 // ---------- maps ----------
 // pool: [enemy id, sector it first appears]. unlock: deepest sector reached anywhere.
 // level: extra enemy levels. events: chance of an event after a fight. theme: stage backdrop.
 export const MAPS = [
   { id: 'garrison', name: 'Directorate Garrison', unlock: 0, level: 0, credits: 1, xp: 1, events: 0.3, theme: 'garrison',
+    mechanic: { id: 'alarm', name: 'Alarm', desc: 'Long fights, failed escapes and botched checks raise the alarm. Each level gives enemies +6% ATK and you +5% credits. It never drops on its own; rest rooms lower it.' },
+    rooms: { fight: 5, elite: 2, event: 2, supply: 1, rest: 1 },
+    roomNames: { fight: 'Guard Post', elite: 'Armoury', event: 'Side Corridor', supply: 'Quartermaster', rest: 'Abandoned Bunk' },
     desc: 'Checkpoints, barracks and the regime\u2019s soldiers. The straight fight.',
     sectors: ['Outer Checkpoint', 'Barracks Ring', 'Motor Pool', 'Comms Spire', 'Warden\u2019s Gate', 'Ration Depot', 'Armoury Row', 'Reactor Annex', 'Archive Vault', 'Siege Hangar', 'Officers\u2019 Deck', 'Signal Core', 'Chancery Halls', 'Inner Keep', 'Supervisor\u2019s Spire'],
     pool: [['patrol', 1], ['probe', 1], ['officer', 1], ['hound', 2], ['riot', 3], ['marksman', 6], ['interrogator', 7], ['shock', 8], ['sentinel', 11]],
     bosses: ['halvek', 'crawler', 'ostrane'] },
   { id: 'foundry', name: 'Foundry Works', unlock: 0, level: 0, credits: 1.25, xp: 0.9, events: 0.3, theme: 'foundry',
+    mechanic: { id: 'vents', name: 'Furnace vents', desc: 'Every 3 turns the vents blast the floor: 10% of your max HP, 12% of the enemy\u2019s (6% for droids). Defend on vent turns to take none.' },
+    rooms: { fight: 4, elite: 2, event: 2, supply: 3, rest: 1 },
+    roomNames: { fight: 'Assembly Line', elite: 'Heavy Press', event: 'Catwalks', supply: 'Scrap Heap', rest: 'Cooling Room' },
     desc: 'The occupied foundry. Heat, machines and overtime. More droids, more credits.',
     sectors: ['Slag Yard', 'Conveyor Hall', 'Casting Floor', 'Smelter Gantry', 'Foreman\u2019s Office', 'Coolant Tunnels', 'Ore Crusher', 'Pattern Shop', 'Shipping Bay', 'Furnace Core', 'Rolling Mill', 'Quench Pits', 'Tapping Floor', 'Blast Furnace', 'Control Booth'],
     pool: [['welder', 1], ['probe', 1], ['foreman', 1], ['hound', 2], ['loader', 3], ['riot', 5], ['slagger', 6], ['shock', 9], ['sentinel', 10]],
     bosses: ['brask', 'crucible', 'crawler'] },
   { id: 'detention', name: 'Detention Complex', unlock: 5, level: 1, credits: 1, xp: 1.15, events: 0.5, theme: 'detention',
+    mechanic: { id: 'allies', name: 'Prisoners', desc: 'Freed prisoners fight beside you (up to 2), hitting for 30% of your ATK each turn. Enemies sometimes shoot them instead of you. Bring them home for +1 Resolve each.' },
+    rooms: { fight: 4, elite: 1, event: 3, cells: 2, rest: 1 },
+    roomNames: { fight: 'Guard Station', elite: 'Interrogation Room', event: 'Corridor', cells: 'Cell Block', rest: 'Laundry' },
     desc: 'Where the yard\u2019s people disappear. More prisoners, more choices, more Resolve.',
     sectors: ['Intake', 'Holding Pens', 'Processing', 'Cell Block A', 'Warden\u2019s Office', 'Isolation Wing', 'Infirmary', 'Cell Block C', 'Records Room', 'Interrogation Suite', 'Yard Gallery', 'Solitary', 'Transfer Dock', 'Deep Cells', 'Warden\u2019s Tower'],
     pool: [['jailer', 1], ['officer', 1], ['hound', 1], ['sedation', 2], ['riot', 3], ['interrogator', 4], ['marksman', 6], ['shock', 8], ['sentinel', 11]],
     bosses: ['kell', 'crawler', 'ostrane'] },
   { id: 'port', name: 'Orbital Lift Port', unlock: 10, level: 3, credits: 1.5, xp: 1.2, events: 0.25, theme: 'port',
+    mechanic: { id: 'snipers', name: 'Tower snipers', desc: 'Open landing pads. Each turn there is a 20% chance a tower sniper hits you for 8% of max HP unless you Defend.' },
+    rooms: { fight: 4, elite: 3, event: 1, cargo: 3, rest: 1 },
+    roomNames: { fight: 'Checkpoint', elite: 'Security Office', event: 'Crew Lounge', cargo: 'Cargo Stack', rest: 'Maintenance Bay' },
     desc: 'The regime\u2019s lifeline off-world. Elite guards and rich cargo.',
     sectors: ['Cargo Gate', 'Customs Hall', 'Fuel Depot', 'Landing Pad 3', 'Tower Base', 'Container Stacks', 'Lift Shaft', 'Hangar Deck', 'Crew Quarters', 'Control Tower', 'Tether Anchor', 'Gantry Ring', 'Flight Ops', 'Command Deck', 'The Lift'],
     pool: [['dockguard', 1], ['probe', 1], ['gunner', 2], ['marksman', 3], ['shock', 4], ['sentinel', 6]],
@@ -242,7 +267,7 @@ export const EVENTS = [
     ] },
   { id: 'prisoner', maps: ['garrison', 'detention'], text: 'Behind a holding-cell door, a prisoner looks up. The release panel is right there.',
     options: [
-      { label: 'Free them', win: { hp: -0.1, resolve: 2, attrs: { cha: 1 }, text: 'You take a graze covering their escape. Word will spread in the yard.' } },
+      { label: 'Free them', win: { hp: -0.1, resolve: 2, ally: 1, attrs: { cha: 1 }, text: 'You take a graze covering their escape. Word will spread in the yard.' } },
       { label: 'Ask what they know first', check: { attr: 'cha', base: 0.4, per: 0.1 },
         win: { credits: [15, 25], resolve: 1, text: 'A hidden credit stash, a guard rotation, and a promise to tell the others.' }, lose: { next: 'alerted', text: 'They panic and start shouting.' } },
       { label: 'Leave them', win: { text: 'You tell yourself you\u2019ll come back.' } },
@@ -281,7 +306,7 @@ export const EVENTS = [
   { id: 'interrogation', maps: ['detention'], text: 'Through the glass: an interrogation. The subject\u2019s face is one you know from the market.',
     options: [
       { label: 'Break in', check: { attr: 'str', base: 0.35, per: 0.1 },
-        win: { resolve: 3, attrs: { cha: 1 }, text: 'The interrogator runs. You carry them out on your shoulder.' }, lose: { hp: -0.2, resolve: 1, text: 'You get them out, but not cleanly.' } },
+        win: { resolve: 3, ally: 1, attrs: { cha: 1 }, text: 'The interrogator runs. They pick up his baton and follow you.' }, lose: { hp: -0.2, resolve: 1, text: 'You get them out, but not cleanly.' } },
       { label: 'Cut the power', check: { attr: 'int', base: 0.35, per: 0.1 },
         win: { resolve: 2, next: 'stunned', text: 'The lights die. When they come back, the chair is empty.' }, lose: { next: 'alerted', text: 'Backup generators kick in. So do the sirens.' } },
       { label: 'Walk on', win: { attrs: { cha: -1 }, text: 'You\u2019ll remember their face. They\u2019ll remember yours.' } },
