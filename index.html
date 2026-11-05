@@ -1,5 +1,12 @@
 <title>Cinder Cell</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#121518">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cinder Cell">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@600;800&family=Barlow+Semi+Condensed:wght@400;500;600&family=Martian+Mono:wght@400;500&display=swap">
@@ -454,6 +461,24 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .actions .btn.atk { display: grid; gap: 1px; }
 .actions .btn .wpn { font-family: var(--body); font-size: .74rem; font-weight: 600; letter-spacing: 0; text-transform: none; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .actions .btn .rng { font-family: var(--mono); font-weight: 500; }
+/* title and creation */
+.title { position: relative; min-height: min(78vh, 720px); display: grid; align-items: end; border: 1px solid var(--line); overflow: hidden; background: #0b0d10; }
+.title-art { position: absolute; inset: 0; background: url('town/buildings/terminal.png') no-repeat right 40px top 20px, url('town/buildings/market.png') no-repeat left 30px bottom 10px, radial-gradient(ellipse at 50% 100%, #e8973a22, transparent 60%); background-size: 320px auto, 240px auto, auto; image-rendering: pixelated; opacity: .55; filter: saturate(.7); }
+.title-art::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, #0b0d1000 20%, #0b0d10 85%), repeating-linear-gradient(0deg, #ffffff04 0 1px, transparent 1px 3px); }
+.title-body { position: relative; display: grid; gap: 14px; padding: 36px 28px 32px; max-width: 640px; }
+.tagline { font-size: 1.1rem; color: var(--muted); }
+.title-menu { display: grid; gap: 8px; max-width: 420px; }
+.title-menu .btn { display: flex; justify-content: space-between; align-items: center; gap: 12px; text-align: left; }
+.title-stats { font-size: .78rem; }
+.create-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
+.preview { display: grid; justify-items: center; gap: 4px; padding: 8px; border: 1px dashed var(--line); background: var(--panel-2); }
+.preview img { width: 128px; height: 128px; image-rendering: pixelated; }
+.choices.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 760px) { .choices.four { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.create-summary { display: flex; flex-wrap: wrap; gap: 4px; }
+.swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+.swatch { width: 32px; height: 32px; border: 2px solid var(--line); }
+.swatch.on { border-color: var(--sodium); box-shadow: 0 0 0 2px #1a1208, 0 0 0 3px var(--sodium); }
 /* character tab */
 .resolve-box { display: grid; gap: 14px; padding: 16px; border: 1px solid var(--sodium); background: linear-gradient(180deg, var(--sodium-dim), transparent 70%); }
 .resolve-head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 20px; align-items: center; }
@@ -480,6 +505,7 @@ import * as A from './audio.js';
 import { iconURL, gearIconKey } from './icons.js';
 import { Town } from './town.js';
 import { Net, getCoopPrefs, setCoopPrefs, makeCode } from './net.js';
+import { BODIES, HAIR, HAIR_NAMES, SKINS, HAIRS, defaultLook, loadLayers, hasLayers, lookStill } from './look.js';
 
 const SAVE_KEY = 'cinder-cell-save-v1';
 const rng = Math.random;
@@ -503,7 +529,7 @@ const isGuest = () => !!net && net.role === 'guest';
 const isHost = () => !!net && net.role === 'host';
 const myIdx = () => (isGuest() ? 1 : 0);
 // Actions that only touch this screen, never the game.
-const LOCAL = new Set(['modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'pickmap', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready']);
+const LOCAL = new Set(['continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'pickmap', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready']);
 function coopChip() {
   if (!net) return '';
   const who = net.peerName || (isHost() ? 'friend' : 'host');
@@ -600,6 +626,26 @@ function logPanel() {
 const notice = () => state.notice ? `<div class="notice">${esc(state.notice)}</div>` : '';
 
 // ---------- screens ----------
+// Title: shown on every load until the player presses Continue. Also the old intro for a brand-new cell.
+let titleOpen = true;
+function titleScreen() {
+  const m = state.meta, hasRun = state.char || m.operatives > 0;
+  return `<section class="title">
+    <div class="title-art"></div>
+    <div class="title-body">
+      <span class="label">${esc(S.town)} \u00B7 after curfew</span>
+      <h1 class="big-title">${esc(S.title)}</h1>
+      <p class="tagline">A resistance cell. One operative at a time.</p>
+      <div class="title-menu">
+        ${hasRun ? `<button class="btn primary big" data-a="continue-title">Continue <span class="muted" style="font-size:.8rem;text-transform:none;letter-spacing:0">${state.char ? `${esc(state.char.name)}, operative ${state.char.number}` : `${m.operatives} operative${m.operatives === 1 ? '' : 's'} so far`}</span></button>` : `<button class="btn primary big" data-a="continue-title">Begin</button>`}
+        ${hasRun ? `<button class="btn big" data-a="newcell">${confirmReset ? 'Click again: this erases everything' : 'New cell'}</button>` : ''}
+        <button class="btn big" data-a="modal" data-v="manual">Field manual</button>
+        <button class="btn big" data-a="modal" data-v="settings">Settings &amp; co-op</button>
+      </div>
+      ${m.operatives ? `<dl class="kv title-stats"><dt>Deepest</dt><dd>Sector ${m.bestSector}</dd><dt>Raids</dt><dd>${m.stats.raids}</dd><dt>${esc(S.meta)}</dt><dd>${m.resolve}</dd></dl>` : ''}
+    </div>
+  </section>`;
+}
 function introScreen() {
   return `<section class="panel intro" style="padding:32px">
     <span class="label">${esc(S.town)} \u00B7 after curfew</span>
@@ -617,39 +663,56 @@ function introScreen() {
 
 function createScreen() {
   const d = state.draft, bg = D.BACKGROUNDS.find((b) => b.id === d.background);
+  if (!d.look) d.look = defaultLook();
+  if (!d.step) d.step = 1;
   const attrs = {};
   for (const k of Object.keys(D.ATTRS)) attrs[k] = E.draftAttr(d, k);
-  // Preview stats with a throwaway character.
   const fake = { attrs, level: 1, gear: E.startingGear(state.meta, d.background), upgrades: [], implants: [], background: d.background };
   const st = E.statsOf(state.meta, fake);
   const skills = E.skillsOf(fake);
-  const bgCards = D.BACKGROUNDS.map((b) => `<button class="choice ${b.id === d.background ? 'on' : ''}" data-a="bg" data-v="${b.id}" aria-pressed="${b.id === d.background}">
+  const still = lookStill(d.look, d.background) || sheetStill('player') || portraitURL('player');
+  const preview = `<div class="preview"><img src="${still}" alt="" width="128" height="128">${hasLayers() ? '' : '<span class="label">Preview art coming</span>'}</div>`;
+  const steps = ['Body', 'Class', 'Details'].map((l, i) => `<button class="tab" aria-selected="${d.step === i + 1}" data-a="step" data-v="${i + 1}">${i + 1}. ${l}</button>`).join('');
+  let body = '';
+  if (d.step === 1) {
+    body = `<div class="choices four">${BODIES.map((b) => `<button class="choice ${b.id === d.look.body ? 'on' : ''}" data-a="look" data-v="body" data-k="${b.id}" aria-pressed="${b.id === d.look.body}"><b>${esc(b.name)}</b><span class="chip">${b.sex === 'm' ? 'man' : 'woman'}</span><span class="desc">${esc(b.desc)}</span></button>`).join('')}</div>
+      <div class="btnrow"><button class="btn primary big" data-a="step" data-v="2">Next: class</button></div>`;
+  } else if (d.step === 2) {
+    body = `<div class="choices">${D.BACKGROUNDS.map((b) => `<button class="choice ${b.id === d.background ? 'on' : ''}" data-a="bg" data-v="${b.id}" aria-pressed="${b.id === d.background}">
       <b>${esc(b.name)}</b><span class="chip">${Object.entries(b.attrs).map(([k, v]) => `+${v} ${D.ATTRS[k].short}`).join(', ')}</span>
-      <span class="desc">${esc(b.desc)}</span><span class="bg-perk">${esc(b.perk)}</span></button>`).join('');
-  const attrRows = Object.entries(D.ATTRS).map(([k, a]) => `<div class="attr-row">
+      <span class="desc">${esc(b.desc)}</span><span class="bg-perk">${esc(b.perk)}</span></button>`).join('')}</div>
+      <div class="btnrow"><button class="btn" data-a="step" data-v="1">Back</button><button class="btn primary big" data-a="step" data-v="3">Next: details</button></div>`;
+  } else {
+    const attrRows = Object.entries(D.ATTRS).map(([k, a]) => `<div class="attr-row">
       <div><div class="name">${esc(a.label)} <span class="num muted">${a.short}</span></div><div class="desc">${esc(a.desc)}</div></div>
       <div class="stepper"><button class="btn" data-a="attr" data-v="${k}" data-k="-1" aria-label="Lower ${a.label}" ${d.attrs[k] <= D.ATTR_START ? 'disabled' : ''}>\u2212</button>
       <span class="num big-num">${attrs[k]}</span>
       <button class="btn" data-a="attr" data-v="${k}" data-k="1" aria-label="Raise ${a.label}" ${d.points <= 0 || attrs[k] >= D.ATTR_CREATE_MAX ? 'disabled' : ''}>+</button></div></div>`).join('');
-  return `<section class="panel" style="padding:28px">
-    <div style="display:grid;gap:4px"><span class="label">New operative \u00B7 #${state.meta.operatives + 1}</span><h2>Who walks through the gate?</h2></div>
-    ${notice()}
-    <div class="create-grid">
-      <div style="display:grid;gap:16px;align-content:start;min-width:0">
+    const sw = (list, key, cur) => `<div class="swatches">${list.map((c, i) => `<button class="swatch ${i === cur ? 'on' : ''}" data-a="look" data-v="${key}" data-k="${i}" style="background:${c[1]}" aria-label="${key} ${i + 1}"></button>`).join('')}</div>`;
+    body = `<div class="create-grid">
+      <div style="display:grid;gap:14px;align-content:start;min-width:0">
         <label class="label" for="op-name">Name</label>
         <div class="btnrow"><input id="op-name" class="text" maxlength="24" value="${esc(d.name)}" autocomplete="off"><button class="btn" data-a="randname">Random</button></div>
-        <span class="label">Background</span>
-        <div class="choices">${bgCards}</div>
+        <span class="label">Hair</span><div class="btnrow">${HAIR.map((h) => `<button class="btn ${h === d.look.hair ? 'primary' : ''}" data-a="look" data-v="hair" data-k="${h}">${esc(HAIR_NAMES[h])}</button>`).join('')}</div>
+        <span class="label">Skin</span>${sw(SKINS, 'skin', d.look.skin)}
+        <span class="label">Hair colour</span>${sw(HAIRS, 'hairColor', d.look.hairColor)}
+        <p class="muted" style="font-size:.85rem">${hasLayers() ? 'What you see is what walks into the yard.' : 'Looks are saved now and drawn once the character art lands.'}</p>
       </div>
-      <div style="display:grid;gap:16px;align-content:start;min-width:0">
+      <div style="display:grid;gap:14px;align-content:start;min-width:0">
         <div class="points"><span class="label">Attribute points left</span><span class="num big-num" style="color:${d.points ? 'var(--sodium)' : 'var(--muted)'}">${d.points}</span></div>
         <div class="rows">${attrRows}</div>
-        <dl class="kv"><dt>Max HP</dt><dd>${st.maxHp}</dd><dt>Shoot \u00B7 Strike</dt><dd>${st.atk} \u00B7 ${st.atkM} ATK</dd><dt>DEF \u00B7 SPD</dt><dd>${st.def} \u00B7 ${st.spd}</dd><dt>Implant slots</dt><dd>${st.slots}</dd>
-          <dt>Skills</dt><dd>${skills.map((k) => D.SKILLS[k].name).join(', ')}</dd></dl>
-        <p class="muted" style="font-size:.9rem">Higher attributes unlock skills: STR 6 Power Strike (or any real melee weapon), INT 3 Overload, AGI 4 Suppressing Fire, CHA 3 Intimidate. Every background starts with one. You gain a point every level, and your choices in the field can raise or lower them.</p>
-        <div><button class="btn primary big" data-a="create">${d.points ? `Start (keep ${d.points} point${d.points > 1 ? 's' : ''} for later)` : 'Start'}</button></div>
+        <dl class="kv"><dt>Max HP</dt><dd>${st.maxHp}</dd><dt>Shoot \u00B7 Strike</dt><dd>${st.atk} \u00B7 ${st.atkM} ATK</dd><dt>DEF \u00B7 SPD</dt><dd>${st.def} \u00B7 ${st.spd}</dd><dt>Skills</dt><dd>${skills.map((k) => D.SKILLS[k].name).join(', ')}</dd></dl>
+        <p class="muted" style="font-size:.85rem">STR 6 Power Strike (or any real melee weapon), INT 3 Overload, AGI 4 Suppressing Fire, CHA 3 Intimidate. Every class starts with one. A point per level.</p>
+        <div class="btnrow"><button class="btn" data-a="step" data-v="2">Back</button><button class="btn primary big" data-a="create">${d.points ? `Start (keep ${d.points} point${d.points > 1 ? 's' : ''} for later)` : 'Start'}</button></div>
       </div>
-    </div>
+    </div>`;
+  }
+  return `<section class="panel" style="padding:28px">
+    <div class="create-head"><div style="display:grid;gap:4px"><span class="label">New operative \u00B7 #${state.meta.operatives + 1}</span><h2>Who walks through the gate?</h2></div>${preview}</div>
+    ${notice()}
+    <nav class="tabs">${steps}</nav>
+    <div class="create-summary"><span class="chip">${esc(BODIES.find((b) => b.id === d.look.body).name)}</span><span class="chip">${esc(bg.name)}</span><span class="chip">${esc(HAIR_NAMES[d.look.hair])}</span><span class="chip">${esc(d.name || 'unnamed')}</span></div>
+    ${body}
   </section>`;
 }
 
@@ -1179,6 +1242,9 @@ function modalView() {
         <div class="set-row"><span>Host a game${state.char ? '' : ' (build an operative first)'}</span><button class="btn primary" data-a="coophost" ${state.char ? '' : 'disabled'}>Host</button></div>
         <label class="set-row" for="coop-code"><span>Join with a code</span><span class="btnrow"><input id="coop-code" class="text" maxlength="8" placeholder="CODE" style="width:7ch;text-transform:uppercase"><button class="btn" data-a="coopjoin">Join</button></span></label>
       </div>`}
+      <h3>Save <span class="num muted" style="font-size:.85rem">move your cell between devices</span></h3>
+      <div class="set-row"><span>Copy a save code (also shown below) and paste it on the other device</span><button class="btn" data-a="savecode">Copy save code</button></div>
+      <div class="set-row"><span class="btnrow" style="flex:1"><input id="load-code" class="text" placeholder="Paste a save code" style="flex:1;min-width:120px"><button class="btn" data-a="loadcode">Load</button></span></div>
       <div class="set-row"><span>Run report: everything that happened, as text to paste into a chat for feedback (copied to the clipboard and shown below)</span><button class="btn" data-a="report">Copy run report</button></div>
       ${state.report ? `<textarea class="report" readonly aria-label="Run report">${esc(state.report)}</textarea>` : ''}
       <div class="set-row"><span>Erase all progress, including Resolve and training</span><button class="btn danger" data-a="reset">${confirmReset ? 'Click again to confirm' : 'Reset save'}</button></div>
@@ -1266,9 +1332,9 @@ function render() {
   if (state.screen === 'event' && !E.eventById(state.event)) state.screen = 'combat';
   if (state.coopFallen && state.coopFallen.idx === 0 && state.screen !== 'death') state.coopFallen = null;
   }
-  const showStatus = state.screen !== 'intro';
+  const showStatus = state.screen !== 'intro' && !titleOpen;
   if (state.contractDone) { toast = `Contract complete: ${state.contractDone}`; state.contractDone = null; A.play('perk'); }
-  document.getElementById('app').innerHTML = (showStatus ? statusStrip() : '') + screens[state.screen]() + modalView() +
+  document.getElementById('app').innerHTML = (titleOpen && !isGuest() ? titleScreen() : (showStatus ? statusStrip() : '') + screens[state.screen]()) + modalView() +
     (toast ? `<div class="toast" role="status">${esc(toast)}</div>` : '');
   toast = null;
   A.setAmbience(state.run ? E.mapById(state.run.map).theme : 'town');
@@ -1287,7 +1353,8 @@ function render() {
     const r = state.run, st = E.stats(state), map = E.mapById(r.map);
     const res = stage.sync({ run: r, enemy: r.enemy, sector: r.sector, boss: r.enemy.boss, theme: map.theme, allies: r.allies,
       pst: r.pst, est: r.enemy.st, affix: r.enemy.affix ? D.AFFIXES[r.enemy.affix].name : null, quirk: r.enemy.quirk ? E.quirkById(r.enemy.quirk).name : null,
-      player: { name: state.char.name, level: state.char.level, hp: state.char.hp, maxHp: st.maxHp } });
+      player: { name: state.char.name, level: state.char.level, hp: state.char.hp, maxHp: st.maxHp },
+      partner: E.isCoop(state) && E.charAt(state, 1 - myIdx()) ? (() => { const pc = E.charAt(state, 1 - myIdx()); return { idx: 1 - myIdx(), name: pc.name, hp: pc.hp, maxHp: E.statsOf(state.meta, pc).maxHp, acting: r.actor === 1 - myIdx() }; })() : null });
     if (res && res.isNewBoss) {
       busy = true; document.getElementById('app').classList.add('busy');
       const info = D.BOSS_INFO[r.enemy.id] || {};
@@ -1389,6 +1456,12 @@ function applyAct(a, v, k) {
   if (a !== 'reset') confirmReset = false;
   let ok = true;
   switch (a) {
+    case 'continue-title': titleOpen = false; if (state.screen === 'intro') state.screen = 'intro'; A.play('door'); break;
+    case 'newcell': if (!confirmReset) { confirmReset = true; break; } confirmReset = false; state = E.newGame(rng); titleOpen = false; break;
+    case 'step': state.draft.step = +v; A.play('click'); break;
+    case 'look': state.draft.look = state.draft.look || defaultLook(); state.draft.look[v] = v === 'skin' || v === 'hairColor' ? +k : k; A.play('click'); break;
+    case 'savecode': { const code = E.exportSave(state); state.report = code; try { navigator.clipboard.writeText(code).then(() => { toast = 'Save code copied.'; render(); }).catch(() => {}); } catch (e) {} A.play('click'); break; }
+    case 'loadcode': { const t = (document.getElementById('load-code') || {}).value || ''; const loaded = E.importSave(t, rng); if (loaded) { state = loaded; modal = null; titleOpen = false; toast = 'Save loaded.'; A.play('perk'); } else { toast = 'That is not a Cinder Cell save code.'; A.play('denied'); } break; }
     case 'coophost': { setCoopPrefs({ name: (document.getElementById('coop-name') || {}).value || '', relay: ((document.getElementById('coop-relay') || {}).value || '').trim() }); const code = makeCode(); startCoop('host', code, !getCoopPrefs().relay); break; }
     case 'coopjoin': { setCoopPrefs({ name: (document.getElementById('coop-name') || {}).value || '', relay: ((document.getElementById('coop-relay') || {}).value || '').trim() }); const code = ((document.getElementById('coop-code') || {}).value || '').trim().toUpperCase(); if (code.length >= 4) startCoop('guest', code, !getCoopPrefs().relay); else toast = 'Enter the room code.'; break; }
     case 'coopleave': leaveCoop(); return;
@@ -1454,7 +1527,7 @@ function applyAct(a, v, k) {
   if (BUY.has(a) && ok && state.notice) E.journal(state, state.notice, 'town');
   if (BUY.has(a)) A.play(ok ? 'buy' : 'denied');
   else if (['deploy', 'room', 'deeper'].includes(a)) A.play('door');
-  else if (['tab', 'popup', 'closepopup', 'pickmap', 'continue', 'roomDone', 'eventDone', 'event', 'bg', 'attr', 'create', 'begin', 'recruit', 'extract'].includes(a)) A.play('click');
+  else if (['step', 'look', 'tab', 'popup', 'closepopup', 'pickmap', 'continue', 'roomDone', 'eventDone', 'event', 'bg', 'attr', 'create', 'begin', 'recruit', 'extract'].includes(a)) A.play('click');
 }
 
 document.addEventListener('click', (ev) => {
@@ -1505,7 +1578,9 @@ function start(data) {
   state = E.migrate((data && data.state) || load(), rng);
   delete state.events;
   if (state.screen === 'create' && !state.draft) state.draft = E.newDraft(state.meta, rng);
+  titleOpen = !(data && data.state);
   render();
+  loadLayers().then((ok) => { if (ok && state.screen === 'create') render(); });
   // PixelLab sheets, if any have been delivered. Re-render so the stage picks them up.
   loadSheets().then((n) => { if (n && ['combat', 'victory', 'death'].includes(state.screen)) { stage.enemyRef = null; stage.player = null; render(); } });
 }

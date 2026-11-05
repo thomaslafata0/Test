@@ -1,161 +1,61 @@
 # Cinder Cell: project handoff
 
-Read this first in a new session. It summarises everything built so far, how it fits together, and what's next.
+Read this first in a new session. It describes the whole project as it stands, how the pieces fit, how to test and publish, and what is next.
 
 ## What it is
-A browser roguelite (HTML + JS modules, no build step) about a resistance cell raiding an occupied industrial town's four Directorate districts. Original IP **inspired by the tone of Andor; it must not use Star Wars names, characters, logos or iconic designs** (the owner asked for an Andor game; we deliberately made it original and kept all names in `data.js` so a licence holder could swap them).
+A browser roguelite (HTML + JS modules, no build step) about a resistance cell raiding an occupied industrial town's four Directorate districts. Original IP **inspired by the tone of Andor; it must not use Star Wars names, characters, logos or designs**. All names live in `data.js`.
 
-- **Live build:** https://claude.ai/artifact/6yZfDr97V6KXSHJs3fx9Pw (private artifact; publishing republishes to this URL).
-- **Owner preferences learned so far:** wants it challenging ("make it harder", "Resolve harder to get"); likes humour and run-to-run randomness; wants clear explanations on every button; plays on desktop and phone; uses ChatGPT + PixelLab for art, Claude for code.
-
-## Where the code lives (important)
-- GitHub: https://github.com/thomaslafata0/Test. `master` = the pre-loot game; branch `loot-and-gear` = loot + gear slots (published to the artifact). Merge it when the owner is happy.
+- **Live build:** https://claude.ai/artifact/6yZfDr97V6KXSHJs3fx9Pw (private; publishing republishes to this URL).
+- **GitHub:** https://github.com/thomaslafata0/Test. Branch `loot-and-gear` holds everything below; `master` is the old single-weapon game. Merge when the owner says so.
+- **Owner:** plays on desktop and phone; wants it challenging, funny, varied; uses ChatGPT + PixelLab for art, Claude for code; sends "run reports" (Settings) and a friend will play co-op with them.
 
 ## Files
 | File | Purpose |
 |---|---|
-| `index.html` | All screens, CSS, input, rendering glue. One `<script type="module">`. |
-| `engine.js` | All rules. Pure (no DOM), so the simulators import it. Save version `VERSION = 3`, `migrate()` upgrades old saves. |
-| `data.js` | All content: maps, enemies, signature moves, bosses, quirks, bulletins, gear, implants, perks (contraband), events, contracts, threat levels, training. |
-| `stage.js` | Animated battle canvas (384x216, pixelated), event playback, effects, boss intro cinematic, sprite-sheet loader (`sprites/manifest.json`). |
-| `audio.js` | Synthesised Web Audio SFX + ambience (no files). Prefs in localStorage `cinder-cell-audio`. |
-| `icons.js` | ~95 code-drawn 24x24 pixel icons (`weapon:`, `armor:`, `item:`, `implant:`, `upgrade:`, `perk:`, `cell:`, `train:`, `skill:`, `room:` keys). |
-| `portraits.js` | Code-drawn 40x40 fallback portraits + shared pixel grid helpers (`makeGrid`, `outline`, `RAMPS`). |
-| `sprites/` | PixelLab battle sheets for **all 26 characters** + `manifest.json` (96x96 frames, 128x128 bosses; anims idle/attack/charge/hit/defend/repair/death). |
-| `sim.mjs` | Progression simulator (`node sim.mjs 100 30`, `MAP=port node sim.mjs 50 40`). |
-| `sim-builds.mjs` | Build/play-style outlier harness (`node sim-builds.mjs 200 25`, ~10 s). |
-| `docs/TOWN_ART_PROMPT_CHATGPT.md`, `docs/TOWN_ART_PIXELLAB.md` | Art briefs for the upcoming walkable town. |
-| `README.md` | Short project overview. |
+| `index.html` | All screens, CSS, input, rendering glue, co-op client logic. One `<script type="module">`. |
+| `engine.js` | All rules, pure (no DOM). `VERSION = 4` saves; `migrate()` upgrades old ones. `TUNE` holds the balance knobs. |
+| `data.js` | Content: maps, enemies, bosses, quirks, bulletins, gear (`GEAR`, `RARITY`, `BONUSES`, `TRAITS`, `BOSS_UNIQUE`), implants, perks, events, contracts, backgrounds. |
+| `stage.js` | Animated battle canvas (384x216): sprites, effects, boss intro, partner sprite in co-op, Manual/Auto 1x/Auto 2x buttons. |
+| `town.js` | The walkable yard: layout, outline collision, doors to interiors, NPCs, hotspots, tap-to-walk. Art in `town/`. |
+| `look.js` | Character looks (body, class, hair, colours). Composites layered sheets from `chars2/` when the pack exists; falls back to the single player sprite. |
+| `net.js` | Co-op transports (WebSocket relay, BroadcastChannel for two tabs) and the `Net` session. |
+| `coop/worker.js`, `coop/wrangler.toml` | The Cloudflare relay (Durable Object per room code). Not yet deployed. |
+| `audio.js` | Synthesised SFX, optional drone/rain, and music (`music/town.mp3`, `music/raid.mp3`, crossfaded). |
+| `icons.js`, `portraits.js` | Code-drawn pixel icons and fallback portraits. `gearIconKey()` maps gear ids to icons. |
+| `sprites/` | PixelLab battle sheets for all characters + `manifest.json`. |
+| `town/` | Town art pack (tiles, buildings, interiors, props, chars) + `manifest.json`, `CHECKLIST.md`. |
+| `chars2/manifest.json` | Placeholder (`pending: true`). Replace with the character pack when delivered. |
+| `sim.mjs`, `sim-builds.mjs`, `sim-gear.mjs`, `sim-coop.mjs` | Simulators (see Balance). |
+| `docs/COOP.md` | Co-op design, protocol, Cloudflare deploy steps. |
+| `docs/CHARACTER_ART_PROMPT_CHATGPT.md` | The art brief for the character customisation pack. |
+| `docs/TOWN_ART_*.md` | The earlier town art briefs. |
+| `manifest.webmanifest`, `icon-*.png` | Add-to-home-screen support. |
 
-Conventions: keep JS/HTML-script source ASCII-only (non-ASCII written as `\uXXXX` escapes); 2-space indent; data-driven content; every new mechanic gets a simulator check.
+Conventions: ASCII-only JS/HTML (non-ASCII as `\uXXXX`); 2-space indent; data-driven content; every mechanic gets a simulator check; commits end with the session's attribution lines.
 
-## Game systems (all implemented)
-- **Meta loop:** operatives die permanently; **Resolve** (permanent currency) buys training (HP/ATK/DEF/SPD, 20 ranks each, cost 2+rank) and cell upgrades. Resolve is scarce: new sectors +1 (repeat clears pay every other time), bosses +3, events/contracts small amounts.
-- **Character creation:** name, background (Foundry Hand / Market Runner / Defector Clerk / Street Preacher, each with a perk), 4 points across STR/AGI/INT/CHA (cap 5 at creation, 10 max). +1 attribute point per level. Event choices can change attributes (logged as "choices that changed you").
-- **Four maps** (Garrison, Foundry, Detention [unlock sector 5], Orbital Lift Port [unlock sector 10]), 15 named sectors each, 3 rooms per sector chosen via two doors (min 2 fights), boss every 5th sector. Map mechanics: Alarm, Furnace vents, Prisoner allies, Tower snipers.
-- **Combat:** intents shown in advance (attack, heavy, signature move, cover, repair). Defend halves damage, blocks statuses, +50% next shot. Skills from weapon type and attributes (Aimed, Burst, Blast, Power Strike [STR 6 or melee], Overload [INT 4 or tech], Suppress [AGI 4], Intimidate [CHA 4]); cooldowns persist per sector and **a skill used last fight starts the next fight with at least 2 turns of cooldown**. Items: stim, thermal, ion, smoke (smoke needs a confirming second tap).
-- **Statuses:** bleed, burn, shaken, exposed. Every enemy has a signature move.
-- **Variety:** elite affixes (6), boss enrage at 50%, **21 enemy quirks** (Drunk, Corrupt, Glitchy, Pampered…), **7 per-raid bulletins** (Payday, Staff Party…).
-- **Contraband:** run perks (16). Bosses always drop, elites 40%. **4 pockets max**; taking a fifth means dropping one.
-- **Contracts:** 3 standing jobs paying Resolve + credits (fixed per type; the haul contract pays 25% of its target; a bug that paid ~10x was fixed).
-- **Wanted level:** +1 per raid survived; enemies +2.5% HP/ATK per level, credits +2.5%. Escaping via Run/Smoke drops half the credits picked up that raid.
-- **Endgame:** beating a map's sector-15 boss liberates it; all four = ending screen; liberations unlock Threat levels I-IV.
-- **Presentation:** animated battle stage with PixelLab sprites, boss intro cinematic, synthesised sound + ambience, field manual, one-time tips, settings modal, icons everywhere, short descriptions on every combat button.
+## Game systems
+- **Meta loop:** operatives die permanently; Resolve (permanent) buys training and cell upgrades (incl. Heirloom: keep one piece of gear on death). Journal of every event in `meta.journal`; Settings > "Copy run report" exports it with the full state. Settings > save codes move a cell between devices.
+- **Title screen** on load (Continue / New cell / Manual / Settings & co-op). **Creation** in three steps: body (4 placeholders until the art lands), class (the four backgrounds, each with +2 to an attribute, a lasting perk, starting gear and a starting skill), details (name, hair, skin and hair colour, attributes). Looks are stored in `c.look`.
+- **Town (Kessa Yard):** walk with arrows/WASD or tap; buildings use outline collision; freight terminal opens Missions on entry, the other shops open when you talk to their NPC (Marrow = Black Market, Ilse = Clinic, Cass = Character & Resolve with a Gear tab). Noodle vendor (+5% XP until next in town), tenement stim (once per operative), vending terminal, poster, barracks lines. Attribute points can be spent from the town screen. Escape closes any menu or leaves a room. Shortcut bar under the yard opens any menu.
+- **Gear:** six slots (ranged, melee, head, chest, legs, gadget). Items are `{ base, rarity, level, bonuses, trait }`; Common/Rare/Elite/Legendary plus boss Uniques. Black Market: six random pieces, restocks after each raid, Compare popup; nothing is ever sold (buying replaces, drops are take-or-leave). Upgrades +1..+5 and rerolls on the Gear tab.
+- **Combat:** Shoot (ranged, steady, take 15% less damage that turn) vs Strike (melee, swingy, ignores cover, next hit +15%, some enemies hit back). Skills from weapons/attributes (every class starts with one). Intents shown ahead; scanner gadgets show the next one too. Auto battle uses `E.autoAction`.
+- **Raids:** 3 rooms per sector via two doors, boss every 5th sector, four maps with mechanics; results show as a strip on the door screen; loot, contraband and sector-clear are popups. Extracting between bosses costs 30% of the raid's haul; after a boss it's free; Run/Smoke cost 50%. Wanted +1 per raid survived; lower it at the safehouse (Lie low).
+- **Co-op:** see `docs/COOP.md`. Host runs the game and broadcasts state; the friend's screen mirrors it with the operatives swapped (`E.setActor`). Turn-taking fights, enemy targets whoever hurt it most, second enemy action every 4th round; a death ends the raid for both. Tested in two tabs; the WebSocket path needs the owner to deploy the Worker (`cd coop && wrangler deploy`) and host the page on Cloudflare Pages so the friend can open it.
 
-## Balance (from simulators; bots play near-optimally, humans are slower)
-- Knobs: `TUNE` at the top of `engine.js` (enemy HP/ATK multipliers, boss multipliers, STR/AGI/INT/CHA scaling, Wanted, escape loss).
-- Main bot: first boss ~operative 2-3, sector-10 boss ~9, Garrison finale ~21, Port finale ~33 (84% within 40 operatives).
-- Builds to the sector-15 finale: Strength 18, Intellect 20, Agility 26, Charisma 26, balanced 21. Known gap: pure Charisma has a slow mid-game (~18 operatives to sector 10).
-- Cautious play needs fewer operatives but ~35% more raids; greedy play is fast but unreliable. Considered acceptable.
+## Balance (final solo pass, owner asked to stop here)
+Knobs in `engine.js` `TUNE`. Commands: `node sim.mjs 100 30`, `MAP=port node sim.mjs 100 40`, `node sim-builds.mjs 200 100` (or `ONLY=a,b`), `ECON=1 node sim.mjs ...` for the economy, `ABLATE=perk:x|unique:x|trait:x|bonus:x|loot` for outliers, `TUNE='{...}'` overrides, `node sim-coop.mjs` / `SOLO=1 node sim-coop.mjs`.
+- Main bot: first boss at operative 3, sector 10 at 9, Garrison finale 20 (100%), Port finale 27 (99%).
+- Builds at 100 campaigns (operatives to the sector-15 boss): strength 17, balanced 16, tank 17, intellect 19, strAgi/hybrid/dotBuild 19, meleeOnly 22, charisma 24, critStack 25, rangedOnly 25, agility 27, glass 30 (88%). Spread 1.6x; all finish.
+- No single perk, Unique, trait or bonus moves the finale by more than one operative.
+- Co-op knobs (`coopHp` 1.5, `coopAtk` 1, `coopExtra` 4) are a first guess.
 
-## Testing and publishing workflow
-- Local server: `python3 -m http.server 8765` in the project; Playwright (pre-installed; `require('playwright')`) scripts drive the UI, take screenshots, and check for page errors and horizontal overflow at 1200px and 390px widths.
-- Publish with the Artifact tool using `file_path: index.html` and `files` listing every JS module plus `sprites/manifest.json` and every sprite PNG (~158 paths). Unlisted files already published are kept on update.
-- Commit messages end with the attribution lines from the session's system reminder.
+## Testing and publishing
+- Local: `python3 -m http.server 8765` in the project; Playwright is pre-installed. Test scripts lived in the session scratchpad (title/creation, town flows, screens at 1200 and 390 px, compare popup, run report, random-play "monkey", two-tab co-op). Recreate as needed: they drive buttons by `data-a` attributes and read the save from `localStorage['cinder-cell-save-v1']`. The title screen must be dismissed first (`button[data-a="continue-title"]`).
+- Publish with the Artifact tool: `file_path: index.html` plus `files` for changed modules; unlisted files already published are kept. All art (`sprites/`, `town/`, `music/`) is already published.
+- Save version 4; any new per-operative field must default via `||` or be set in `migrate()`.
 
-## Next up: walkable top-down town (agreed design)
-Replace the town tabs with a top-down 2D hub you walk around (Stardew/Pokémon-style), keeping a shortcut menu.
-- Code plan: canvas town scene with camera follow, arrow/WASD + tap-to-walk, collisions, depth sorting (`above` layer), door zones opening the existing Market / Clinic / Safehouse / Targets (freight terminal) / Contracts (notice board) screens as overlays, NPCs with one-liners, a patrolling guard, rain/lamp ambience, footstep sounds. Build it first with placeholder art, then drop in the delivered art.
-- Art spec (sent to the owner): 32x32 tiles, 64x64 character frames (feet 4 px above bottom), 4 directions, player idle(4)/walk(6), NPC idle_down(4) (+ patrol walk), buildings `market` `clinic` `safehouse` `terminal` `barracks` `tenement_a/b`, props list, `town/manifest.json`, optional Tiled map `town/map.tmj` with layers `ground decor above buildings props collision doors npcs spawn` (doors carry property `target`). Full spec in `docs/TOWN_ART_PROMPT_CHATGPT.md`.
-
-## Other ideas discussed but not built
-- iPhone app via Capacitor (bundle fonts, native storage for saves, touch hold-for-info, haptics, needs a Mac/Xcode + Apple developer account). A free "Add to Home Screen" web build is the cheaper first step.
-- "Copy run report" button so the owner can paste their save/log into a session for debugging.
-
-## Proposed next feature: randomised loot (design agreed in principle, not built)
-Goal: more run-to-run variety, a credit sink, and exciting drops.
-1. **Rarity tiers for weapons and armour:** Common (grey, main stat x1.0), Rare (blue, x1.2, 1 random bonus), Elite (purple, x1.45, 2 bonuses), Legendary (gold, x1.75, 2 bonuses + a special trait), and **Unique** boss items (fixed, signature effect).
-2. **Bonus pool:** +crit, +SPD, +DEF, bleed-on-hit chance, +damage vs droids/humans, heal on kill, shorter skill cooldowns, status resistance, +credits.
-3. **Wider base gaps** between item tiers so rarity creates overlap (a Legendary Carbine can beat a Common Repeater).
-4. **Rotating Black Market:** 4-6 random pieces restocked after each raid; rarity odds improve with the cell's best sector. No more buying the whole catalogue.
-5. **Upgrades (credit sink):** pay to raise an item +1..+5 (about +8% main stat each, escalating cost) or reroll one bonus.
-6. **Drops:** elites ~30% chance of gear; bosses always drop their Unique (ideas: Halvek's Service Pistol: crits refund a skill cooldown; Crucible Core Plate: burning enemies take extra damage; Kell's Cell Key: Intimidate works on bosses; Vane's Ornate Pistol: Aimed Shot always crits; plus Brask, Crawler, Ostrane). After a drop: take it (side-by-side comparison) or sell it.
-7. **Death still loses gear;** optional Resolve cell upgrade "Heirloom" keeps one piece for the next operative.
-8. **UI:** rarity-coloured names and icon frames, item cards with +/- comparison against equipped gear, a loot screen after drops.
-Implementation notes: gear becomes item instances (`{ base, rarity, level, bonuses[] }`) instead of ids; bump save `VERSION` to 4 and migrate equipped ids to Common instances; update `statsOf`, the market/victory/safehouse screens, `icons.js` (rarity frames), and both simulators (shop RNG, upgrades, drop rates); re-run `sim.mjs` and `sim-builds.mjs` to retune prices and drop rates.
-
-## Proposed next feature: gear slots and a character gear screen (build together with the loot system)
-Replace the single weapon + armour with a paper-doll gear screen. Every slot uses the loot system above (rarity, bonuses, upgrades, boss Uniques).
-
-**Slots**
-| Slot | Main stat | Notes |
-|---|---|---|
-| Ranged weapon | ATK (ranged) | pistols, carbines, scatterguns, rifles, heavy, tech (Arc Projector) |
-| Melee weapon | ATK (melee) | baton, maul, knives, prods; new bases needed (e.g. combat knife, shock prod, breaching axe) |
-| Helmet | DEF | bonuses lean to crit resistance, status resistance, Shaken immunity |
-| Chest armour | DEF (largest share) | current armour list becomes chest pieces |
-| Leg armour | DEF + SPD | heavy legs cost SPD, light legs add it |
-| Gadget (optional, 1 slot) | utility | e.g. grenade belt (+1 item carry), scanner (see enemy's next 2 intents), stim injector (stims heal more) |
-Implants stay as they are (separate slots in the Clinic).
-
-**Combat changes**
-- Two basic attacks instead of one: **Shoot** (ranged weapon ATK) and **Strike** (melee weapon ATK). Keys: A = Shoot, F = Strike.
-- Each skill uses the weapon of its type: Aimed Shot, Burst Fire, Scatter Blast and Suppressing Fire use the **ranged** weapon; Power Strike uses the **melee** weapon; Overload uses a tech weapon or gadget. A strong rifle with a basic knife makes your melee skills weak, and vice versa.
-- Give each a reason to exist: **melee** ignores the enemy's cover penalty and is boosted by STR (+1 ATK per STR point, as now); **ranged** gets AGI-based crit and is the only way to hit without risking melee-specific counters (optional: some enemies like the Riot Enforcer punish melee).
-- Defence = sum of helmet + chest + legs DEF; SPD modifiers from legs (and heavy chest) apply.
-- Stat requirements stay per item (STR for heavy melee and heavy armour, AGI for rifles and light legs, INT for tech, CHA for officer gear).
-
-**UI**
-- New **Gear** screen (tab in town, and viewable from the Safehouse): a paper-doll layout with the slots around the operative's portrait, each slot showing the item icon in its rarity frame, name, main stat and bonuses; tap a slot to see an item card and compare.
-- Market and loot screens show which slot an item goes in and a +/- comparison against what's equipped in that slot.
-- Combat buttons: Shoot and Strike each show the weapon name underneath, like Attack does now.
-- Needs new icons in `icons.js` for helmets, leg armour, melee weapons and gadgets (same 24x24 style), with rarity-coloured frames.
-
-**Save migration:** existing `weapon` becomes the ranged slot (or melee if its type is melee/heavy melee), existing `armor` becomes chest; other slots start empty (or with Common starter pieces: work cap, trousers, kitchen knife).
-
-## Required balance check after building loot + gear slots
-1. **Before changing anything,** run and save the baseline:
-   ```bash
-   node sim.mjs 100 30
-   MAP=port node sim.mjs 50 40
-   node sim-builds.mjs 200 25
-   ```
-2. Update both simulators' bots to the new systems: buy and equip per slot (prefer items meeting their build's requirements; ranged-focused bots for AGI, melee-focused for STR), use market upgrades with spare credits, take loot drops when they're better, choose Shoot vs Strike sensibly (Strike against enemies in cover, otherwise the stronger one). Add bot profiles for **melee-only**, **ranged-only** and **hybrid** builds.
-3. Re-run all three commands and report a before/after table.
-4. **Targets** (adjust `TUNE`, item stats, rarity odds, drop rates and upgrade costs until they hold):
-   - main bot: first boss around operative 2-3; sector-10 boss around 7-10; Garrison finale 18-25 operatives; Port finale 25-35 with at least 80% of campaigns finishing within 40.
-   - builds: every pure build (STR, AGI, INT, CHA) and melee-only / ranged-only / hybrid finishes in 100% of campaigns; slowest build within about 1.5x of the fastest at the sector-15 finale.
-   - economy: credits shouldn't let one operative max every slot early. Check average credits per raid by source (fights, rooms, events, contracts, selling loot) with an instrumented run, and make sure upgrades remain a meaningful sink.
-   - flag any single item, bonus or Unique whose presence changes the bot's finale time by more than about 20% as an outlier and tone it down.
-5. Play-test the new screens in a browser (desktop 1200px and phone 390px, no page errors, no horizontal overflow), then publish to the artifact and commit.
-
-## Built: randomised loot + six gear slots (branch `loot-and-gear`, save VERSION 4)
-- Data: `D.GEAR` (bases with `slot`, `tier`, `atk`/`def`, `req`), `D.SLOTS`, `D.RARITY`, `D.BONUSES`, `D.TRAITS` (Legendary), 7 boss Uniques (`D.BOSS_UNIQUE`), `D.MELEE_COUNTER` (riot, crucible, hound, slagger, shock, sentinel, brask hit back when you Strike), `heirloom` cell upgrade.
-- Engine: items are `{ base, rarity, level, bonuses, trait, spent }` in `c.gear[slot]`; `statsOf` returns `atk` (Shoot) and `atkM` (Strike) plus `crit`/`critM`. Market `c.market` (6 pieces: one per armour/weapon slot plus one matched to the operative's best attribute or a gadget) restocks on `createChar` and `endRun`. Loot: bosses always drop (Unique first time), elites `TUNE.eliteGear` 30%; screen `loot` before contraband. Upgrades +1..+5 (8%, min +1), rerolls, trade-in when buying. v3 saves migrate (weapon -> ranged or melee slot, armour -> chest).
-- Combat: `shoot` (A, alias `attack`) and `strike` (F, ignores cover, +STR). Ranged gets AGI crit and `TUNE.agiAtk` (+1 ATK per 2 AGI). Skills now show 4 (Q W E T). Threat Scanner/Ostrane's Datapad show the next intent (`e.next`).
-- Simulators: shared bot logic in `sim-gear.mjs`; profiles meleeOnly / rangedOnly / hybrid added. `ECON=1 node sim.mjs` prints credits per raid by source; `TUNE='{...}'` and `ABLATE=bonus:x,unique:y,...` env overrides; `ONLY=a,b node sim-builds.mjs` runs selected builds.
-- Balance status (owner asked to stop tuning here): main bot 3 / 10 / 20 (Garrison finale), Port finale 25 (98%). Builds at 100 campaigns: Strength 17, Intellect 18, Hybrid 20, Balanced 20, Charisma 21, strAgi 21, meleeOnly 23, rangedOnly 25, Agility 27, Glass 30 (97%). Agility is 1.59x Strength (target 1.5x). The per-item outlier ablation was not run.
-
-## Built after that (same branch)
-- Backgrounds: +2 to their attribute, lasting perks and starting gear (Foundry Wrench, Slug Pistol, Directorate Datapad; Street Preacher gets a follower ally each raid that doesn't count as a rescued prisoner). `E.startingGear(meta, bg)`.
-- Harder opening: `TUNE.early` (+50% enemy HP/ATK in sector 1, fading out by sector 6); enemies 1.62 HP / 1.62 ATK. Main bot: 2 / 9 / 18.
-- Battle mode buttons are 1x / Auto. Auto plays `E.autoAction(s)` (never runs or smokes) at double animation speed; stored in localStorage `cinder-cell-speed`.
-- Rain is its own sound toggle, off by default (`rain` pref in audio.js).
-- Safehouse tab became Character: Resolve spending at the top, operative and Retrain (`E.respec`, cost 80 x level, +50% per retrain; refunds only level-up points tracked in `c.spent`), fixed things at the bottom. The header Resolve is a link to it in town; the tab shows R when Resolve can be spent.
-- Between fights: the victory and room-result screens are gone. Their summary becomes a strip at the top of the door screen (`afterAction()`, `state.lastResult`, with inline attribute buttons). Loot, contraband and sector clear are popups (`popupView()`) over a slim raid view; keys 1/2 for push/extract. The engine still uses the `victory`/`room` screens (the sims need them); the UI steps past them.
-- Shoot vs Strike: `TUNE.rangedSpread` 0.15 / `meleeSpread` 0.3 damage rolls; Shoot sets `r.keepDistance` (take 15% less damage that turn); Strike sets `r.momentum` (next attack +15%). Buttons show `E.attackRange(s, melee)`.
-
-## Built: walkable town (`town.js`, art in `town/`)
-- The town tabs are gone. `townScreen()` shows the canvas town plus a shortcut bar; menus open as popups (`state.popup`: missions, market, clinic, character, gear). "Targets" is now "Missions".
-- Layout lives in code at the top of `town.js` (`BUILDINGS`, `PROPS`, `LAMPS`, `TOWNSFOLK`, `PATROL`), laid out like `preview_town.png`; there is no `map.tmj`. Ground is auto-tiled from the manifest's corner data (deck inside a sand border, a landing pad in the middle).
-- Doors: walking up into an enterable building's door switches to its interior (`town/interiors/*.png`) and opens its menu at once; talking to the NPC (E, Space, or tap) reopens it; walking out the bottom exit returns to the street. Freight terminal = Missions, Marrow's container = Black Market, clinic = Clinic, safehouse (Cass) = Character & Resolve with a Gear tab. The noticeboard also opens Missions. Barracks and tenements are locked and say so.
-- Controls: arrows/WASD, tap-to-walk (BFS on an 8 px grid), tap a person to walk over and talk. The view resizes to a whole-pixel scale (about 2x desktop, 1x phone); interiors zoom one step further on wide screens.
-- After a raid you appear outside the freight terminal; new operatives appear outside the safehouse. `globalThis.cinderTown` exposes the scene for debugging.
-- Not done: furniture collision inside rooms (only the floor rectangle is used), and a Tiled map.
-
-## Built: polish pass (same branch)
-- Wanted: `E.lieLow` at the safehouse (50 + 40 x level credits, Wanted -2); the header badge and Missions point there.
-- No selling: `sellValue()` is 0, loot is take-or-leave (`E.leaveLoot`), buying replaces the old piece.
-- Extracting between bosses loses `TUNE.extractLoss` (30%) of the raid's haul; after a boss sector it's free (`E.extractLoss`).
-- Battle modes: Manual / Auto 1x / Auto 2x (`stage.mode`, localStorage `cinder-cell-speed`).
-- Yard: compact 22x16 map, outline collision from the buildings' alpha (`masks`), `HOTSPOTS` for props and doors, noodles (`E.buyNoodles`, +5% XP until next in town, `c.fed`), tenement stim once per operative (`E.tenementGift`), vending terminal, barracks lines. Only the terminal auto-opens (`SHOPS.*.auto`); Escape leaves a room; the compare popup (`state.compare`) sits over the Black Market.
-- Attribute points can be spent from the town screen (`townSpend()`).
-- Music: `music/town.mp3` and `music/raid.mp3`, crossfaded in `audio.js` (`setMusic`), prefs `music` and `musicVolume`; ambience drone now off by default.
-- Run report: `E.journal` records every log line into `meta.journal` (cap 700); Settings > "Copy run report" builds `E.runReport(s)` (clipboard + .txt download).
-- Balance (final): bosses 2.1/1.4, enemies 1.78/1.74, early 0.35, Ambusher x1.5, strHp 1.5, strAtk 0.6, agiAtk 1, intOverload 5, chaHesitate 0.055, Overload at INT 3, Intimidate at CHA 3. Ablation sweep (`ABLATE=perk:x|unique:x|trait:x|bonus:x|loot` on sim.mjs) found no single item moving the finale by more than one operative. Build table at 100 campaigns: strength 17, balanced 16, tank 17, intellect 19, strAgi 19, dotBuild 19, hybrid 19, meleeOnly 22, charisma 24, critStack 25, rangedOnly 25, agility 27, glass 30 (88%). Main bot 3/9/20, Port 27 (99%).
-
-## Built: co-op (first pass) and the character-art brief
-- See `docs/COOP.md` for the design, the engine's actor swap (`withActor`), the message protocol and the Cloudflare steps (relay Worker in `coop/`, page on Pages). Tested in two tabs with the BroadcastChannel transport (`scratchpad coop-test`): join, create, ready, deploy, alternating turns, extraction. The relay has not been deployed (needs the owner's Cloudflare login); the WebSocket transport is untested against a live Worker.
-- Co-op balance is a first guess (`coopHp` 1.5, `coopAtk` 1, `coopExtra` 4); `node sim-coop.mjs` and `SOLO=1 node sim-coop.mjs` compare pace. Not done: the friend's sprite on the battle stage (events carry `actor` but the stage draws one player), per-player door votes (either player's click wins), furniture collision indoors.
-- `docs/CHARACTER_ART_PROMPT_CHATGPT.md`: the layered-sprite brief (4 bodies, 4 class outfits, 6 hairstyles, 8 weapons) for the planned title screen and creation screen. Game-side plan: a compositor that stacks body/outfit/hair/weapon per frame with palette swaps for skin and hair, a three-step creation flow, and showing the equipped weapon in battle.
-- Music default volume lowered to 0.2.
+## Next
+1. **Character art pack** (`docs/CHARACTER_ART_PROMPT_CHATGPT.md`): drop into `chars2/`, replace the placeholder manifest. Then: make `look.js` composite town walk strips and battle strips (today it only builds the idle_down still), draw the composite in `town.js` and `stage.js` instead of the `player` sheet, show the equipped weapon layer, and add portraits to the creation screen.
+2. **Co-op:** deploy the Worker, bake its URL into `net.js` as the default, test over the internet, then balance with `sim-coop.mjs`. Door votes, each player's own contraband pick, a "spectate" state when the host is building a new operative.
+3. **Furniture collision** indoors (only the floor rectangle is used), and a Tiled map for the yard if the artist makes one.
+4. Owner feedback from run reports.

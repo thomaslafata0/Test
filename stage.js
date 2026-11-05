@@ -62,7 +62,7 @@ class Actor {
   }
   get scale() {
     // Sheet characters fill about half their frame, so they're drawn larger than the frame size.
-    if (this.sheet) return this.side === 'player' ? 2 : this.side === 'ally' ? 1.1 : this.sheet.size >= 128 ? 1.1 : 1.6;
+    if (this.sheet) return this.side === 'player' ? 2 : this.side === 'partner' ? 1.7 : this.side === 'ally' ? 1.1 : this.sheet.size >= 128 ? 1.1 : 1.6;
     return this.side === 'player' ? 3 : this.boss ? 2.5 : 2;
   }
   get size() { return (this.sheet ? this.sheet.size : 40) * this.scale; }
@@ -136,6 +136,7 @@ export class Stage {
   anchor(side, actor) {
     const sheet = actor ? actor.sheet : (side === 'enemy' ? this.enemy : this.player)?.sheet;
     if (side === 'enemy') return { x: 290, y: sheet ? 126 : 122 };
+    if (side === 'partner') return { x: 38, y: 198 };
     return sheet ? { x: 104, y: 206 } : { x: 98, y: 228 };
   }
   // Pixels from the frame's bottom edge to the character's feet (8px in the source sheet).
@@ -153,8 +154,12 @@ export class Stage {
   }
 
   // Called after every render of the combat screen.
-  sync({ run, enemy, player, sector, boss, theme = 'garrison', allies = 0, pst = {}, est = {}, affix = null, quirk = null, label = '' }) {
+  sync({ run, enemy, player, partner = null, sector, boss, theme = 'garrison', allies = 0, pst = {}, est = {}, affix = null, quirk = null, label = '' }) {
     const now = performance.now();
+    // Co-op: the friend's operative stands at your shoulder. partner = { idx, name, hp, maxHp, acting }.
+    this.partnerInfo = partner;
+    if (partner && !this.partner) this.partner = new Actor('player', 'partner', false);
+    if (!partner) this.partner = null;
     this.sector = sector; this.boss = boss; this.theme = theme; this.allies = allies;
     if (!this.allySprite) this.allySprite = portraitCanvas('prisoner');
     if (sheets.prisoner) {
@@ -253,7 +258,7 @@ export class Stage {
     const el = document.createElement('span');
     el.className = `pop ${cls}`;
     el.textContent = text;
-    const [x, y] = side === 'enemy' ? [75, 22] : [26, 52];
+    const [x, y] = side === 'enemy' ? [75, 22] : side === 'partner' ? [10, 48] : [26, 52];
     el.style.left = `${x + (Math.random() * 8 - 4)}%`; el.style.top = `${y + (Math.random() * 6 - 3)}%`;
     el.style.animationDuration = `${1000 / (this.speed || 1)}ms`;
     this.pops.append(el);
@@ -304,7 +309,9 @@ export class Stage {
   apply(ev) { this.setHp('enemy', ev.ehp); this.setHp('player', ev.php); }
 
   async handle(ev) {
-    const P = this.player, E = this.enemy, now = () => performance.now();
+    // In co-op, events tagged with the friend's index animate the friend's sprite.
+    const P = this.partner && this.partnerInfo && ev.actor === this.partnerInfo.idx ? this.partner : this.player, E = this.enemy, now = () => performance.now();
+    if (ev.type === 'handoff' || ev.type === 'target') { if (ev.type === 'target' && this.partnerInfo) this.popup(ev.actor === this.partnerInfo.idx ? 'partner' : 'player', 'Targeted', 'info'); return; }
     const START = { 'player:shoot': 'shot', 'player:burst': 'burst', 'player:blast': 'blast', 'player:smash': 'whoosh', 'player:strike': 'whoosh', 'player:overload': 'zap',
       'player:intimidate': 'status', 'player:defend': 'shield', 'player:stim': 'heal', 'player:thermal': 'throw', 'player:ion': 'zap',
       'player:smoke': 'smoke', 'player:run': 'whoosh', 'player:levelup': 'levelup', 'player:down': 'death', 'ally:shoot': 'shot',
@@ -774,6 +781,11 @@ export class Stage {
         const x = 2 + i * 34, y = 216 - 70 + Math.round(Math.sin(t / 650 + i) * 1);
         g.globalAlpha = this.player.alpha; g.drawImage(this.allySprite, 0, 0, 40, 40, x, y, 70, 70); g.globalAlpha = 1;
       }
+    }
+    if (this.partner && this.player && this.player.alpha > 0) {
+      this.partner.alpha = this.player.alpha;
+      this.drawActor(this.partner, t);
+      if (this.partnerInfo) { const pc = this.center(this.partner); g.fillStyle = this.partnerInfo.acting ? C.amber : 'rgba(221,214,198,.7)'; g.font = '7px monospace'; g.textAlign = 'center'; g.fillText(this.partnerInfo.name.toUpperCase().slice(0, 12), Math.round(pc.x), Math.round(pc.y - this.partner.size * 0.45)); g.textAlign = 'left'; }
     }
     this.drawActor(this.player, t);
     if (this.playerShield && this.player) {

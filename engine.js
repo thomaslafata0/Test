@@ -165,7 +165,8 @@ function pickTarget(s, rng) {
 // ---------- character creation ----------
 export function newDraft(meta, rng) {
   return {
-    name: pick(rng, D.OPERATIVE_NAMES), background: 'foundry',
+    name: pick(rng, D.OPERATIVE_NAMES), background: 'foundry', step: 1,
+    look: { body: pick(rng, ['body_m1', 'body_m2', 'body_f1', 'body_f2']), hair: pick(rng, ['hair_short', 'hair_cropped', 'hair_long_tied', 'hair_shaved', 'hair_mohawk', 'hair_bob']), skin: randInt(rng, 0, 5), hairColor: randInt(rng, 0, 5) },
     attrs: { str: D.ATTR_START, agi: D.ATTR_START, int: D.ATTR_START, cha: D.ATTR_START },
     points: D.ATTR_POINTS + (hasCell(meta, 'mentor') ? 1 : 0),
   };
@@ -189,7 +190,7 @@ export function createChar(s, rng, draft = null, slot = 'char') {
     attrs, attrPoints: d.points, level: 1, xp: 0, credits: 25 + (bg.start.credits || 0) + (hasCell(m, 'stash') ? 60 : 0),
     gear: starterGear(m), market: [],
     items: { stim: 2, thermal: 0, ion: 0, smoke: 0 }, upgrades: [], implants: [],
-    maps: {}, deepest: 0, hp: 1, history: [], perks: [],
+    maps: {}, deepest: 0, hp: 1, history: [], perks: [], look: d.look || null,
   };
   for (const k of ['smoke', 'ion']) if (bg.start[k]) c.items[k] += bg.start[k];
   c.gear = startingGear(m, bg.id);
@@ -490,6 +491,13 @@ export function journal(s, text, kind = 'info') {
   if (j.length > 700) j.splice(0, j.length - 700);
 }
 
+// Save codes: the whole state as base64 text, for moving a cell between devices.
+export const exportSave = (s) => { const copy = { ...s, events: undefined, report: null }; return 'CC1.' + btoa(unescape(encodeURIComponent(JSON.stringify(copy)))); };
+export function importSave(text, rng) {
+  const t = (text || '').trim();
+  if (!t.startsWith('CC1.')) return null;
+  try { const o = JSON.parse(decodeURIComponent(escape(atob(t.slice(4))))); if (!o || !o.meta) return null; return migrate(o, rng); } catch (e) { return null; }
+}
 // The run report: everything a tester needs to say what happened. Plain text for pasting into a chat.
 export function runReport(s) {
   const m = s.meta, c = s.char, lines = [];
