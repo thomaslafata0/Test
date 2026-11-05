@@ -187,7 +187,7 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .choice { text-align: left; display: grid; gap: 4px; align-content: start; padding: 12px; background: var(--panel-2); border: 1px solid var(--line); }
 .choice b { font-family: var(--display); font-size: 1.2rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
 .choice .desc { font-size: .88rem; color: var(--muted); }
-.choice .perk { font-size: .85rem; color: var(--sodium); }
+.choice .bg-perk { font-size: .85rem; color: var(--sodium); }
 .choice.on, .map-card.on { border-color: var(--sodium); box-shadow: inset 0 0 0 1px var(--sodium); }
 .chip { display: inline-block; font-family: var(--mono); font-size: .62rem; letter-spacing: .08em; text-transform: uppercase; padding: 2px 6px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
 .chip.bad { color: var(--danger); border-color: var(--danger); }
@@ -416,6 +416,17 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .skills { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
 .next-intent { font-family: var(--mono); font-size: .66rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ion); }
 .btn.warn .bs { color: #ff8a78; opacity: 1; }
+/* character tab */
+.resolve-box { display: grid; gap: 14px; padding: 16px; border: 1px solid var(--sodium); background: linear-gradient(180deg, var(--sodium-dim), transparent 70%); }
+.resolve-head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 20px; align-items: center; }
+@media (max-width: 560px) { .resolve-head { grid-template-columns: minmax(0, 1fr); } }
+.resolve-num { font-family: var(--display); font-weight: 800; font-size: 2.6rem; line-height: 1; color: var(--sodium); }
+.resolve-num span { font-size: 1rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.respec { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; align-items: center; padding: 10px 12px; border: 1px dashed var(--line); font-size: .9rem; }
+@media (max-width: 560px) { .respec { grid-template-columns: minmax(0, 1fr); } }
+.resolve-link { background: none; border: 1px solid transparent; padding: 2px 6px; margin: -3px -7px; text-align: left; }
+.resolve-link:hover { border-color: var(--sodium); }
+.auto-note { font-family: var(--mono); font-size: .66rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ion); }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 
@@ -468,14 +479,14 @@ function statusStrip() {
     <div class="stat hp"><span class="label">HP</span><span class="v">${Math.max(0, c.hp)} / ${st.maxHp}</span>${bar(c.hp, st.maxHp)}</div>
     <div class="stat"><span class="label">Shoot \u00B7 Strike \u00B7 DEF \u00B7 SPD</span><span class="v">${st.atk} \u00B7 ${st.atkM} \u00B7 ${st.def} \u00B7 ${st.spd}</span></div>
     <div class="stat"><span class="label">${esc(S.currency)}</span><span class="v">${c.credits.toLocaleString()}</span></div>
-    <div class="stat"><span class="label">${esc(S.meta)}</span><span class="v" style="color:var(--sodium)">${state.meta.resolve}</span></div>
+    ${state.screen === 'town' ? `<button class="stat resolve-link" data-a="tab" data-v="character" title="Spend Resolve on the Character tab"><span class="label">${esc(S.meta)} \u00B7 spend</span><span class="v" style="color:var(--sodium)">${state.meta.resolve}</span></button>` : `<div class="stat"><span class="label">${esc(S.meta)}</span><span class="v" style="color:var(--sodium)">${state.meta.resolve}</span></div>`}
     </div>
   </header>`;
 }
 
 // ---------- one-time tips ----------
 const TIPS = {
-  town: 'Start on the Targets tab. When you come back with credits, gear up at the Black Market and Clinic. Resolve is spent in the Safehouse and is never lost.',
+  town: 'Start on the Targets tab. When you come back with credits, gear up at the Black Market and Clinic. Resolve is spent on the Character tab and is never lost.',
   route: 'Pick a door. Each sector has three rooms, and at least two of them will be fights. A boss waits at the end of every fifth sector.',
   combat: 'Read the enemy\u2019s intent below the battle scene. Defend against heavy strikes and signature moves; it also steadies your next shot.',
   perk: 'Contraband stays with this operative until they die. Bosses always carry some, elites sometimes. You can hold four pieces.',
@@ -514,12 +525,12 @@ function createScreen() {
   const attrs = {};
   for (const k of Object.keys(D.ATTRS)) attrs[k] = E.draftAttr(d, k);
   // Preview stats with a throwaway character.
-  const fake = { attrs, level: 1, gear: E.starterGear(state.meta), upgrades: [], implants: [], background: d.background };
+  const fake = { attrs, level: 1, gear: E.startingGear(state.meta, d.background), upgrades: [], implants: [], background: d.background };
   const st = E.statsOf(state.meta, fake);
   const skills = E.skillsOf(fake);
   const bgCards = D.BACKGROUNDS.map((b) => `<button class="choice ${b.id === d.background ? 'on' : ''}" data-a="bg" data-v="${b.id}" aria-pressed="${b.id === d.background}">
-      <b>${esc(b.name)}</b><span class="chip">+1 ${Object.keys(b.attrs).map((k) => D.ATTRS[k].short).join(', ')}</span>
-      <span class="desc">${esc(b.desc)}</span><span class="perk">${esc(b.perk)}</span></button>`).join('');
+      <b>${esc(b.name)}</b><span class="chip">${Object.entries(b.attrs).map(([k, v]) => `+${v} ${D.ATTRS[k].short}`).join(', ')}</span>
+      <span class="desc">${esc(b.desc)}</span><span class="bg-perk">${esc(b.perk)}</span></button>`).join('');
   const attrRows = Object.entries(D.ATTRS).map(([k, a]) => `<div class="attr-row">
       <div><div class="name">${esc(a.label)} <span class="num muted">${a.short}</span></div><div class="desc">${esc(a.desc)}</div></div>
       <div class="stepper"><button class="btn" data-a="attr" data-v="${k}" data-k="-1" aria-label="Lower ${a.label}" ${d.attrs[k] <= D.ATTR_START ? 'disabled' : ''}>\u2212</button>
@@ -549,12 +560,14 @@ function createScreen() {
 
 function townScreen() {
   const c = state.char;
-  const tabs = [['gate', 'Targets'], ['gear', 'Gear'], ['market', 'Black Market'], ['clinic', 'Clinic'], ['safehouse', 'Safehouse']];
-  const body = { market, clinic, safehouse, gate, gear: gearTab }[state.tab] || gate;
+  if (state.tab === 'safehouse') state.tab = 'character';
+  const tabs = [['gate', 'Targets'], ['character', 'Character'], ['gear', 'Gear'], ['market', 'Black Market'], ['clinic', 'Clinic']];
+  const body = { market, clinic, character, gate, gear: gearTab }[state.tab] || gate;
+  const badge = (id) => id !== 'character' ? '' : c.attrPoints ? ` <span class="badge" title="Attribute points to spend">${c.attrPoints}</span>` : canSpendResolve() ? ' <span class="badge" title="You can spend Resolve here">R</span>' : '';
   return `<section class="panel">
     <div style="display:grid;gap:4px"><span class="label">Town \u00B7 curfew in effect</span><h2>${esc(S.town)}</h2></div>
     ${tip('town')}${state.tab === 'gear' ? tip('gear') : ''}${notice()}
-    <nav class="tabs" role="tablist">${tabs.map(([id, l]) => `<button class="tab" role="tab" aria-selected="${state.tab === id}" data-a="tab" data-v="${id}">${l}${id === 'safehouse' && c.attrPoints ? ` <span class="badge">${c.attrPoints}</span>` : ''}</button>`).join('')}</nav>
+    <nav class="tabs" role="tablist">${tabs.map(([id, l]) => `<button class="tab" role="tab" aria-selected="${state.tab === id}" data-a="tab" data-v="${id}">${l}${badge(id)}</button>`).join('')}</nav>
     ${body()}
   </section>`;
 }
@@ -693,8 +706,11 @@ function clinic() {
     <div class="rows">${imps}</div>`;
 }
 
-function safehouse() {
-  const m = state.meta, c = state.char;
+// Cheapest thing Resolve can buy right now (training rank or cell upgrade), for the tab badge.
+const canSpendResolve = () => { const m = state.meta; return Object.entries(D.TRAINING).some(([k, t]) => m.training[k] < t.max && m.resolve >= E.trainingCost(m.training[k])) || D.CELL.some((u) => !m.cell.includes(u.id) && m.resolve >= u.cost); };
+
+function character() {
+  const m = state.meta, c = state.char, st = E.stats(state);
   const attrRows = Object.entries(D.ATTRS).map(([k, a]) => `<div class="attr-row"><div><div class="name">${esc(a.label)} <span class="num muted">${a.short}</span></div><div class="desc">${esc(a.desc)}</div></div>
     <div class="stepper"><span class="num big-num">${E.attr(c, k)}</span>${c.attrPoints ? `<button class="btn" data-a="spend" data-v="${k}" aria-label="Raise ${a.label}" ${c.attrs[k] >= D.ATTR_MAX ? 'disabled' : ''}>+</button>` : ''}</div></div>`).join('');
   const skills = E.skillsOf(c).map((k) => `<div class="row i">${ico(`skill:${k}`)}<div><div class="name">${esc(D.SKILLS[k].name)} <span class="num muted" style="font-size:.8rem">cooldown ${E.skillCd(c, k)}</span></div><div class="desc">${esc(D.SKILLS[k].desc)}</div></div><span class="label">${esc(D.SKILLS[k].from)}</span></div>`).join('');
@@ -703,30 +719,47 @@ function safehouse() {
     const lvl = m.training[k], cost = E.trainingCost(lvl), maxed = lvl >= t.max;
     return `<div class="row i">${ico(`train:${k}`)}<div><div class="name">${esc(t.label)} <span class="num muted" style="font-size:.8rem">+${t.per} ${t.stat} per rank</span></div>
       <div class="desc">${esc(t.note)}</div><div class="pips" aria-label="rank ${lvl} of ${t.max}">${Array.from({ length: t.max }, (_, i) => `<i class="${i < lvl ? 'on' : ''}"></i>`).join('')}</div></div>
-      ${maxed ? '<span class="label">mastered</span>' : `<button class="btn" data-a="train" data-v="${k}" ${m.resolve < cost ? 'disabled' : ''}>${cost} ${esc(S.meta)}</button>`}</div>`;
+      ${maxed ? '<span class="label">mastered</span>' : `<button class="btn ${m.resolve >= cost ? 'primary' : ''}" data-a="train" data-v="${k}" ${m.resolve < cost ? 'disabled' : ''}>${cost} ${esc(S.meta)}</button>`}</div>`;
   }).join('');
   const cell = D.CELL.map((u) => {
     const owned = m.cell.includes(u.id);
-    return `<div class="row i ${owned ? 'owned' : ''}">${ico(`cell:${u.id}`)}<div><div class="name">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div></div>${owned ? '<span></span>' : `<button class="btn" data-a="cell" data-v="${u.id}" ${m.resolve < u.cost ? 'disabled' : ''}>${u.cost} ${esc(S.meta)}</button>`}</div>`;
+    return `<div class="row i ${owned ? 'owned' : ''}">${ico(`cell:${u.id}`)}<div><div class="name">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div></div>${owned ? '<span></span>' : `<button class="btn ${m.resolve >= u.cost ? 'primary' : ''}" data-a="cell" data-v="${u.id}" ${m.resolve < u.cost ? 'disabled' : ''}>${u.cost} ${esc(S.meta)}</button>`}</div>`;
   }).join('');
   const wall = m.fallen.length ? m.fallen.map((f) => `<div><span>${esc(f.name)} <span class="muted">\u00B7 Lv ${f.level}</span></span><span class="muted">${esc(E.sectorName(f.sector, f.map))}, ${esc(f.killer)}</span></div>`).join('') : '<p class="muted">No names yet. Keep it that way.</p>';
   const bg = D.BACKGROUNDS.find((b) => b.id === c.background);
-  return `<div class="two-col">
+  const n = E.respecPoints(c), rcost = E.price(state, E.respecCost(c));
+  return `<section class="resolve-box">
+      <div class="resolve-head"><div><span class="label">${esc(S.meta)} \u00B7 permanent, survives death</span><div class="resolve-num">${m.resolve} <span>banked</span></div></div>
+        <p class="muted">Spend it here. Training and cell upgrades help every operative from now on. Earned from new sectors, bosses, contracts and brave choices.</p></div>
+      <div class="two-col">
+        <div style="display:grid;gap:8px;align-content:start;min-width:0"><span class="label">Training</span><div class="rows">${rows}</div></div>
+        <div style="display:grid;gap:8px;align-content:start;min-width:0"><span class="label">Cell upgrades</span><div class="rows">${cell}</div></div>
+      </div>
+    </section>
+    <div class="two-col">
       <div style="display:grid;gap:14px;align-content:start;min-width:0">
-        <h3>${esc(c.name)} <span class="num muted" style="font-size:.85rem">${esc(bg.name)} \u00B7 lost on death</span></h3>
-        <p class="muted" style="font-size:.9rem">${esc(bg.perk)}${c.attrPoints ? ` <b style="color:var(--sodium)">${c.attrPoints} attribute point${c.attrPoints > 1 ? 's' : ''} to spend.</b>` : ' Level up to earn attribute points.'}</p>
+        <h3>${esc(c.name)} <span class="num muted" style="font-size:.85rem">${esc(bg.name)} \u00B7 Lv ${c.level} \u00B7 lost on death</span></h3>
+        <p class="muted" style="font-size:.9rem">${esc(bg.perk)}</p>
+        ${c.attrPoints ? `<p style="color:var(--sodium)"><b>${c.attrPoints} attribute point${c.attrPoints > 1 ? 's' : ''} to spend.</b></p>` : '<p class="muted" style="font-size:.9rem">Level up to earn attribute points.</p>'}
         <div class="rows">${attrRows}</div>
-        <div><button class="btn" data-a="tab" data-v="gear">View gear</button></div>
-        <span class="label">Skills</span><div class="rows">${skills}</div>
-        <span class="label">Contraband \u00B7 ${c.perks.length} / ${E.CONTRABAND_SLOTS} pockets</span>${c.perks.length ? `<div class="perk-list">${c.perks.map((id) => { const pk = E.perkById(id); return `<div class="perk-mini ${pk.rare ? 'rare' : ''}">${ico(`perk:${id}`, 'sm2')}<div><b>${esc(pk.name)}</b><span>${esc(pk.desc)}</span></div></div>`; }).join('')}</div>` : '<p class="muted">None yet. Elites and bosses carry it.</p>'}
-        <span class="label">Choices that changed you</span><div class="wall">${history}</div>
+        <div class="respec"><div><b>Retrain</b> <span class="muted">\u00B7 take back the ${n || ''} point${n === 1 ? '' : 's'} you spent on levelling and spend ${n === 1 ? 'it' : 'them'} again. Gets dearer with level and every retrain.</span></div>
+          <button class="btn" data-a="respec" ${!n || c.credits < rcost ? 'disabled' : ''}>${n ? `Retrain \u00B7 ${cr(rcost)}` : 'Nothing to retrain'}</button></div>
       </div>
       <div style="display:grid;gap:14px;align-content:start;min-width:0">
-        <h3>The cell <span class="num muted" style="font-size:.85rem">permanent</span></h3>
-        <div class="kv"><dt>${esc(S.meta)} banked</dt><dd style="color:var(--sodium)">${m.resolve}</dd><dt>Deepest sector</dt><dd>${m.bestSector || '\u2014'}</dd><dt>Operatives</dt><dd>${m.operatives}</dd></div>
-        <span class="label">Training</span><div class="rows">${rows}</div>
-        <span class="label">Cell upgrades</span><div class="rows">${cell}</div>
-        <span class="label">The wall</span><div class="wall">${wall}</div>
+        <h3>Kit</h3>
+        <dl class="kv"><dt>Shoot \u00B7 Strike</dt><dd>${st.atk} \u00B7 ${st.atkM} ATK</dd><dt>DEF \u00B7 SPD</dt><dd>${st.def} \u00B7 ${st.spd}</dd><dt>HP</dt><dd>${c.hp} / ${st.maxHp}</dd><dt>Implants</dt><dd>${c.implants.length} / ${st.slots}</dd></dl>
+        <div><button class="btn" data-a="tab" data-v="gear">Open gear</button></div>
+      </div>
+    </div>
+    <h3>Fixed for this operative</h3>
+    <div class="two-col">
+      <div style="display:grid;gap:14px;align-content:start;min-width:0">
+        <span class="label">Skills \u00B7 from your weapons and attributes</span><div class="rows">${skills}</div>
+        <span class="label">Contraband \u00B7 ${c.perks.length} / ${E.CONTRABAND_SLOTS} pockets</span>${c.perks.length ? `<div class="perk-list">${c.perks.map((id) => { const pk = E.perkById(id); return `<div class="perk-mini ${pk.rare ? 'rare' : ''}">${ico(`perk:${id}`, 'sm2')}<div><b>${esc(pk.name)}</b><span>${esc(pk.desc)}</span></div></div>`; }).join('')}</div>` : '<p class="muted">None yet. Elites and bosses carry it.</p>'}
+      </div>
+      <div style="display:grid;gap:14px;align-content:start;min-width:0">
+        <span class="label">Choices that changed you</span><div class="wall">${history}</div>
+        <span class="label">The wall \u00B7 ${m.operatives} operative${m.operatives === 1 ? '' : 's'} so far</span><div class="wall">${wall}</div>
       </div>
     </div>`;
 }
@@ -792,7 +825,7 @@ function combatScreen() {
     `<span>ATK <b>${e.atk}</b></span>`, `<span>DEF <b>${e.def}</b></span>`, `<span>SPD <b>${e.spd}</b></span>`,
     `<span>Dodge <b>${pct(E.dodgeChance(st, e))}</b></span>`, `<span>Run <b>${pct(E.runChance(state))}</b></span>`].join('');
   return `<div class="columns"><section class="panel combat">
-    <div class="combat-head"><span class="label">${esc(E.mapById(r.map).name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${roomPips(r)}</div>
+    <div class="combat-head"><span class="label">${esc(E.mapById(r.map).name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${stage.auto ? '<span class="auto-note">Auto battle \u00B7 tap 1\u00D7 to take over</span>' : ''}${roomPips(r)}</div>
     <div id="stage-slot"></div>
     <div class="intent ${intent.tone}"><span class="dot"></span><b>${esc(intent.label)}</b><span class="tip">${esc(intent.tip)}${st.scan && e.next ? ` <span class="next-intent">Scanner: then ${esc(intentLabel(e, e.next))}</span>` : ''}</span><span class="intent-side">${mechanicChip(r)}${r.ready ? `<span class="chip good">Aim +${E.hasPerk(c, 'steady') ? 100 : 50}%</span>` : ''}</span></div>
     <div class="statline">${meta}</div>
@@ -951,9 +984,10 @@ function modalView() {
     <h2>Settings</h2>
     <div class="settings">
       <label class="set-row"><span>Sound effects</span><button class="btn" data-a="setpref" data-v="sfx" aria-pressed="${p.sfx}">${p.sfx ? 'On' : 'Off'}</button></label>
-      <label class="set-row"><span>Ambience (rain and drone)</span><button class="btn" data-a="setpref" data-v="ambience" aria-pressed="${p.ambience}">${p.ambience ? 'On' : 'Off'}</button></label>
+      <label class="set-row"><span>Ambience (low drone)</span><button class="btn" data-a="setpref" data-v="ambience" aria-pressed="${p.ambience}">${p.ambience ? 'On' : 'Off'}</button></label>
+      <label class="set-row"><span>Rain</span><button class="btn" data-a="setpref" data-v="rain" aria-pressed="${p.rain}">${p.rain ? 'On' : 'Off'}</button></label>
       <label class="set-row" for="vol"><span>Volume</span><input id="vol" type="range" min="0" max="1" step="0.05" value="${p.volume}"></label>
-      <p class="muted" style="font-size:.88rem">Battle speed (1\u00D7, 2\u00D7, Skip) is in the corner of the battle scene.</p>
+      <p class="muted" style="font-size:.88rem">Battle mode (1\u00D7 or Auto) is in the corner of the battle scene. Auto fights for you with a fixed routine until the fight ends.</p>
       <div class="set-row"><span>Erase all progress, including Resolve and training</span><button class="btn danger" data-a="reset">${confirmReset ? 'Click again to confirm' : 'Reset save'}</button></div>
     </div>`;
   return `<div class="modal-wrap" data-a="closemodal"><div class="modal" role="dialog" aria-modal="true" aria-label="${modal === 'manual' ? 'Field manual' : 'Settings'}">
@@ -1010,7 +1044,7 @@ function deathScreen() {
     <p class="story">Operative ${o.number} went down in the ${esc(E.sectorName(o.sector, o.map))}${o.killerId ? `, killed by a ${esc(o.killer)}` : `, taken by ${esc(o.killer)}`}. The ${o.credits.toLocaleString()} ${S.currency}, the gear, ${o.perks ? `${o.perks} piece${o.perks > 1 ? 's' : ''} of contraband, ` : ''}the implants and level ${o.level} went with them.</p>
     <dl class="kv"><dt>${esc(S.meta)} to spend</dt><dd style="color:var(--sodium)">${state.meta.resolve}</dd><dt>Deepest ever</dt><dd>Sector ${state.meta.bestSector}</dd></dl>
     ${heirloomPick()}
-    <p class="muted">Spend the Resolve in the Safehouse once your next operative is in town. Training and cell upgrades carry over.</p>
+    <p class="muted">Spend the Resolve on the Character tab once your next operative is in town. Training and cell upgrades carry over.</p>
     <div><button class="btn primary big" data-a="recruit">Build the next operative</button></div>
   </section>`;
 }
@@ -1042,13 +1076,25 @@ function render() {
     if (res && res.isNewBoss) {
       busy = true; document.getElementById('app').classList.add('busy');
       const info = D.BOSS_INFO[r.enemy.id] || {};
-      stage.bossIntro({ name: r.enemy.name, epithet: info.epithet, label: `${map.name} \u00B7 Sector ${r.sector}` }).then(() => { busy = false; document.getElementById('app').classList.remove('busy'); });
+      stage.bossIntro({ name: r.enemy.name, epithet: info.epithet, label: `${map.name} \u00B7 Sector ${r.sector}` }).then(() => { busy = false; document.getElementById('app').classList.remove('busy'); scheduleAuto(); });
     }
   }
   const log = document.getElementById('log');
   if (log) log.scrollTop = log.scrollHeight;
   save();
+  scheduleAuto();
 }
+
+// Auto battle: when the stage is in Auto mode, play the engine's fixed routine one move at a time.
+let autoTimer = null;
+function scheduleAuto() {
+  if (autoTimer || !stage.auto || busy || modal || !state || state.screen !== 'combat' || !state.run || !state.run.enemy) return;
+  autoTimer = setTimeout(() => {
+    autoTimer = null;
+    if (stage.auto && !busy && !modal && state.screen === 'combat' && state.run && state.run.enemy) fight(E.autoAction(state));
+  }, 350);
+}
+document.addEventListener('automode', () => { A.play('click'); if (state.screen === 'combat') render(); });
 
 // ---------- input ----------
 const stage = new Stage();
@@ -1076,7 +1122,7 @@ async function fight(v) {
   }
 }
 
-const BUY = new Set(['buygear', 'upgradegear', 'reroll', 'item', 'upgrade', 'implant', 'heal', 'train', 'cell', 'spend', 'equipheirloom']);
+const BUY = new Set(['respec', 'buygear', 'upgradegear', 'reroll', 'item', 'upgrade', 'implant', 'heal', 'train', 'cell', 'spend', 'equipheirloom']);
 function act(a, v, k) {
   A.unlock();
   if (a === 'closemodal') { modal = null; confirmReset = false; render(); return; }
@@ -1118,6 +1164,7 @@ function act(a, v, k) {
     case 'train': ok = E.train(state, v); break;
     case 'cell': ok = E.buyCell(state, v); break;
     case 'spend': ok = E.spendAttr(state, v); break;
+    case 'respec': ok = E.respec(state); break;
     case 'pickmap': state.gateMap = v; break;
     case 'deploy': E.deploy(state, state.gateMap || 'garrison', +v, rng); break;
     case 'continue': E.continueAfterVictory(state, rng); break;

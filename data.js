@@ -34,13 +34,17 @@ export const ATTRS = {
 export const ATTR_START = 1, ATTR_POINTS = 4, ATTR_CREATE_MAX = 5, ATTR_MAX = 10;
 
 export const BACKGROUNDS = [
-  { id: 'foundry', name: 'Foundry Hand', attrs: { str: 1 }, perk: 'Tough: +10 max HP.', start: {},
+  { id: 'foundry', name: 'Foundry Hand', attrs: { str: 2 }, start: { gear: { melee: 'wrench' } },
+    perk: 'Tough: +15 max HP, plus 2 more every level, and +1 DEF. Starts with a Foundry Wrench (melee, Power Strike).',
     desc: 'Twelve years on the casting floor before the Directorate came. Strong back, short temper.' },
-  { id: 'runner', name: 'Market Runner', attrs: { agi: 1 }, perk: 'Slippery: +15% escape chance.', start: { smoke: 1 },
+  { id: 'runner', name: 'Market Runner', attrs: { agi: 2 }, start: { smoke: 1, gear: { ranged: 'slugpistol' } },
+    perk: 'Slippery: +25% escape chance, +1 SPD and +5% dodge. Starts with a Slug Pistol and a smoke canister.',
     desc: 'Grew up moving goods past checkpoints. Knows every gap in every fence.' },
-  { id: 'clerk', name: 'Defector Clerk', attrs: { int: 1 }, perk: 'Codes: +15% on Intellect checks.', start: { ion: 1 },
+  { id: 'clerk', name: 'Defector Clerk', attrs: { int: 2 }, start: { ion: 1, gear: { gadget: 'datapad' } },
+    perk: 'Codes: +15% on Intellect checks and one extra implant slot. Starts with a Directorate Datapad (see the enemy\u2019s next move, items +15%).',
     desc: 'Filed the arrest orders for two years. Still remembers the passwords.' },
-  { id: 'preacher', name: 'Street Preacher', attrs: { cha: 1 }, perk: 'Voice: +1 extra Resolve from every boss.', start: { credits: 40 },
+  { id: 'preacher', name: 'Street Preacher', attrs: { cha: 2 }, start: { credits: 40 }, follower: true,
+    perk: 'Voice: +1 Resolve from every boss and 10% off at the market. A follower walks into every raid with you and fights at your side.',
     desc: 'People listen when they talk. The Directorate has noticed.' },
 ];
 
@@ -76,6 +80,7 @@ export const SLOT_ORDER = ['ranged', 'melee', 'head', 'chest', 'legs', 'gadget']
 export const GEAR = {
   // ranged
   holdout:  { slot: 'ranged', tier: 0, name: 'Holdout Pistol',        type: 'pistol',  atk: 2,  cost: 0,    desc: 'Fits in a boot.' },
+  slugpistol: { slot: 'ranged', tier: 0, name: 'Slug Pistol',         type: 'pistol',  atk: 4,  cost: 0,    crit: 0.05, desc: 'Cheap, reliable, easy to hide. Market Runner starting gear. +5% crit.' },
   carbine:  { slot: 'ranged', tier: 1, name: 'Salvaged Carbine',      type: 'carbine', atk: 4,  cost: 60,   desc: 'Rebuilt from three broken ones.' },
   scatter:  { slot: 'ranged', tier: 2, name: 'Foundry Scattergun',    type: 'scatter', atk: 7,  cost: 150,  req: { str: 3 }, desc: 'Ugly, loud, effective.' },
   longbore: { slot: 'ranged', tier: 2, name: 'Longbore Rifle',        type: 'rifle',   atk: 8,  cost: 250,  req: { agi: 3 }, crit: 0.1, desc: '+10% crit chance.' },
@@ -86,6 +91,7 @@ export const GEAR = {
   marksman: { slot: 'ranged', tier: 5, name: 'Directorate Long Rifle', type: 'rifle',  atk: 17, cost: 760,  req: { agi: 6 }, crit: 0.15, desc: '+15% crit chance. Officer issue.' },
   cannon:   { slot: 'ranged', tier: 5, name: 'Shoulder Cannon',       type: 'heavy',   atk: 17, cost: 1000, req: { str: 7 }, spd: -1, desc: '\u22121 SPD. Adds STR to ATK like a melee weapon.' },
   // melee
+  wrench:   { slot: 'melee', tier: 0, name: 'Foundry Wrench',         type: 'melee', atk: 2,  cost: 0,   desc: 'Two kilos of steel and a grudge. Foundry Hand starting gear.' },
   knife:    { slot: 'melee', tier: 0, name: 'Kitchen Knife',          type: 'melee', atk: 0,  cost: 0,   noSkill: true, desc: 'From the canteen. Better than nothing, barely.' },
   baton:    { slot: 'melee', tier: 1, name: 'Shock Baton',            type: 'melee', atk: 2,  cost: 50,  desc: 'Stolen off a riot cop.' },
   shiv:     { slot: 'melee', tier: 2, name: 'Combat Knife',           type: 'melee', atk: 4,  cost: 140, req: { agi: 3 }, crit: 0.1, desc: 'Quick and quiet. +10% crit.' },
@@ -119,6 +125,7 @@ export const GEAR = {
   trooperlegs:{ slot: 'legs', tier: 3, name: 'Trooper Greaves',       def: 3, cost: 280, req: { str: 3 }, desc: 'Armoured from hip to ankle.' },
   exolegs:  { slot: 'legs', tier: 5, name: 'Exo Leg Struts',          def: 4, cost: 640, req: { str: 6 }, spd: -1, desc: '\u22121 SPD. Hydraulic and very sure of itself.' },
   // gadgets (no main stat; they do one thing)
+  datapad:  { slot: 'gadget', tier: 0, name: 'Directorate Datapad',     cost: 0, scan: true, techBoost: 0.15, desc: 'Still logged in. Shows the enemy\u2019s next move; items work 15% better. Defector Clerk starting gear.' },
   grenadebelt:{ slot: 'gadget', tier: 1, name: 'Grenade Belt',        cost: 120, carry: 1, desc: 'Carry 1 more of each item.' },
   injector: { slot: 'gadget', tier: 2, name: 'Stim Injector',         cost: 200, stimBoost: 0.5, desc: 'Stims heal 50% more.' },
   scanner:  { slot: 'gadget', tier: 2, name: 'Threat Scanner',        cost: 260, req: { int: 3 }, scan: true, desc: 'Shows the enemy\u2019s next two moves.' },

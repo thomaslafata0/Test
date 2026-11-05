@@ -125,3 +125,10 @@ Implants stay as they are (separate slots in the Clinic).
 - Combat: `shoot` (A, alias `attack`) and `strike` (F, ignores cover, +STR). Ranged gets AGI crit and `TUNE.agiAtk` (+1 ATK per 2 AGI). Skills now show 4 (Q W E T). Threat Scanner/Ostrane's Datapad show the next intent (`e.next`).
 - Simulators: shared bot logic in `sim-gear.mjs`; profiles meleeOnly / rangedOnly / hybrid added. `ECON=1 node sim.mjs` prints credits per raid by source; `TUNE='{...}'` and `ABLATE=bonus:x,unique:y,...` env overrides; `ONLY=a,b node sim-builds.mjs` runs selected builds.
 - Balance status (owner asked to stop tuning here): main bot 3 / 10 / 20 (Garrison finale), Port finale 25 (98%). Builds at 100 campaigns: Strength 17, Intellect 18, Hybrid 20, Balanced 20, Charisma 21, strAgi 21, meleeOnly 23, rangedOnly 25, Agility 27, Glass 30 (97%). Agility is 1.59x Strength (target 1.5x). The per-item outlier ablation was not run.
+
+## Built after that (same branch)
+- Backgrounds: +2 to their attribute, lasting perks and starting gear (Foundry Wrench, Slug Pistol, Directorate Datapad; Street Preacher gets a follower ally each raid that doesn't count as a rescued prisoner). `E.startingGear(meta, bg)`.
+- Harder opening: `TUNE.early` (+50% enemy HP/ATK in sector 1, fading out by sector 6); enemies 1.62 HP / 1.62 ATK. Main bot: 2 / 9 / 18.
+- Battle mode buttons are 1x / Auto. Auto plays `E.autoAction(s)` (never runs or smokes) at double animation speed; stored in localStorage `cinder-cell-speed`.
+- Rain is its own sound toggle, off by default (`rain` pref in audio.js).
+- Safehouse tab became Character: Resolve spending at the top, operative and Retrain (`E.respec`, cost 80 x level, +50% per retrain; refunds only level-up points tracked in `c.spent`), fixed things at the bottom. The header Resolve is a link to it in town; the tab shows R when Resolve can be spent.

@@ -74,6 +74,10 @@ const DRAW = {
   'weapon:marksman': (g) => gun(g, { x: 2, y: 11, len: 17, h: 3, bl: 4, body: 'silver', barrel: 'black', stock: 'silver', grip: 'black', scope: 'black' }),
   'weapon:cannon': (g) => { g.rect(2, 8, 18, 7, 'olive'); g.ellipse(20, 11, 2, 4, 'black'); for (let x = 5; x < 18; x += 5) g.rect(x, 8, 2, 7, 'yellow', 1); g.rect(9, 15, 3, 5, 'black'); },
 
+  // background starting gear
+  'weapon:wrench': (g) => { g.line(5, 21, 15, 8, 'grey', 1); g.line(6, 21, 16, 8, 'grey', 2); g.ellipse(17, 6, 4, 4, 'grey'); g.rect(16, 2, 3, 4, 'black', 0); g.rect(4, 19, 4, 3, 'rust', 1); },
+  'weapon:slugpistol': (g) => { gun(g, { x: 5, len: 10, h: 5, bl: 4, body: 'brown', barrel: 'grey', grip: 'black' }); g.rect(7, 11, 6, 1, 'tan', 2); },
+  'gadget:datapad': (g) => { g.rect(4, 3, 16, 19, 'black'); g.rect(6, 5, 12, 13, 'ion', 0); for (let y = 7; y < 16; y += 3) g.rect(7, y, 9, 1, 'ion', 2); g.ellipse(12, 20, 1, 1, 'grey', 2); g.rect(15, 5, 3, 2, 'red', 2); },
   // melee weapons (new)
   'weapon:knife': (g) => blade(g, 'silver', 'brown', 10),
   'weapon:shiv': (g) => { blade(g, 'grey', 'black', 13); g.dot(12, 12, 'white', 2); },

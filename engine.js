@@ -30,8 +30,8 @@ export const CARRY_CD = 2;       // minimum cooldown a skill used last fight sta
 export const MIN_FIGHTS = 2; // fights required per sector; the rest of the rooms can be anything
 // Enemy growth per sector past their first appearance: linear plus a quadratic tail.
 export const growth = (lvl, lin, quad) => 1 + lin * lvl + quad * lvl * lvl;
-export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.01, bossHp: 2.4, bossAtk: 1.5, enemyAtk: 1.55, enemyHp: 1.52, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 2, strAtk: 1, agiCrit: 0.04, agiDodge: 0.025, intOverload: 3.5, chaHesitate: 0.04, chaCredits: 0.05, wanted: 0.025, escapeLoss: 0.5,
-  upgradeCost: 60, eliteGear: 0.3, shopLegendary: 0.06, cover: 0.5, agiAtk: 0.5 };
+export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.01, bossHp: 2.4, bossAtk: 1.5, enemyAtk: 1.62, enemyHp: 1.62, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 2, strAtk: 1, agiCrit: 0.04, agiDodge: 0.025, intOverload: 3.5, chaHesitate: 0.04, chaCredits: 0.05, wanted: 0.025, escapeLoss: 0.5,
+  upgradeCost: 60, eliteGear: 0.3, shopLegendary: 0.06, cover: 0.5, agiAtk: 0.5, early: 0.5 };
 export const isBossSector = (n) => n % 5 === 0;
 // Optional credit accounting for the simulators: set s.ledger = {} and every credit gain or spend is tallied by source.
 const ledger = (s, k, n) => { if (s.ledger && n) s.ledger[k] = (s.ledger[k] || 0) + n; };
@@ -71,7 +71,7 @@ export function migrate(s, rng) {
   }
   if (s && s.v === 3 && s.meta) {
     // v3 -> v4: single weapon + armour become item instances in six gear slots.
-    if (s.char) migrateGear(s, rng);
+    if (s.char) { migrateGear(s, rng); s.char.spent = {}; }
     s.meta.heirloom = s.meta.heirloom || null;
     if (s.run) { s.run.lootOffer = null; }
     s.v = 4;
@@ -150,6 +150,7 @@ export function createChar(s, rng) {
     maps: {}, deepest: 0, hp: 1, history: [], perks: [],
   };
   for (const k of ['smoke', 'ion']) if (bg.start[k]) c.items[k] += bg.start[k];
+  c.gear = startingGear(m, bg.id);
   if (hasCell(m, 'kit')) { c.items.stim += 1; c.items.thermal += 1; }
   c.hp = statsOf(m, c).maxHp;
   s.char = c; s.draft = null;
@@ -190,6 +191,12 @@ export function makeItem(baseId, rarity = 'common', rng = null) {
     if (R.trait) it.trait = pick(rng, Object.keys(D.TRAITS).filter((t) => D.TRAITS[t].group === traitGroup(b.slot)));
   }
   return it;
+}
+// Starter kit plus the background's piece, which replaces a plain starter (a Weapons Cache piece is better, so it stays).
+export function startingGear(meta, bgId) {
+  const g = starterGear(meta), bg = D.BACKGROUNDS.find((b) => b.id === bgId);
+  for (const [slot, id] of Object.entries((bg && bg.start.gear) || {})) if (!g[slot] || D.GEAR[g[slot].base].tier === 0) g[slot] = makeItem(id);
+  return g;
 }
 export function starterGear(meta) {
   const g = {};
@@ -376,25 +383,25 @@ export function statsOf(meta, c) {
   const common = B.atk + t.atk * D.TRAINING.atk.per + (c.level - 1) + (has(c, 'drill') ? 2 : 0);
   const rMain = (mainStat(gearIn(c, 'ranged')) || { v: 0 }).v, mMain = (mainStat(gearIn(c, 'melee')) || { v: 0 }).v;
   const optic = hasImp(c, 'optic') ? 0.08 : 0, gadget = baseOf(gearIn(c, 'gadget')) || {};
-  const hp = B.hp + t.hp * D.TRAINING.hp.per + (c.level - 1) * 5 + Math.round(str * TUNE.strHp) + (c.background === 'foundry' ? 10 : 0) + (hasImp(c, 'pain') ? 20 : 0) + gearBonus(c, 'hp');
+  const hp = B.hp + t.hp * D.TRAINING.hp.per + (c.level - 1) * 5 + Math.round(str * TUNE.strHp) + (c.background === 'foundry' ? 15 + 2 * (c.level - 1) : 0) + (hasImp(c, 'pain') ? 20 : 0) + gearBonus(c, 'hp');
   return {
     maxHp: Math.round(hp * (hasTrait(c, 'stalwart') ? 1.12 : 1)),
     atk: common + rMain + (w.type === 'heavy' ? Math.floor(str * TUNE.strAtk) : Math.floor(agi * TUNE.agiAtk)),
     atkM: common + mMain + Math.floor(str * TUNE.strAtk),
-    def: B.def + t.def * D.TRAINING.def.per + Math.floor((c.level - 1) / 2) + def + gearBonus(c, 'def') + (hasImp(c, 'dermal') ? 3 : 0),
-    spd: B.spd + t.spd * D.TRAINING.spd.per + Math.floor((c.level - 1) / 3) + agi + (hasImp(c, 'reflex') ? 2 : 0) + spd + gearBonus(c, 'spd'),
-    dodge: (agi - 1) * TUNE.agiDodge,
+    def: B.def + (c.background === 'foundry' ? 1 : 0) + t.def * D.TRAINING.def.per + Math.floor((c.level - 1) / 2) + def + gearBonus(c, 'def') + (hasImp(c, 'dermal') ? 3 : 0),
+    spd: B.spd + (c.background === 'runner' ? 1 : 0) + t.spd * D.TRAINING.spd.per + Math.floor((c.level - 1) / 3) + agi + (hasImp(c, 'reflex') ? 2 : 0) + spd + gearBonus(c, 'spd'),
+    dodge: (agi - 1) * TUNE.agiDodge + (c.background === 'runner' ? 0.05 : 0),
     crit: 0.05 + (w.crit || 0) + critAll + optic + (agi - 1) * TUNE.agiCrit + gearBonus(c, 'crit', 'ranged') / 100,
     critM: 0.05 + (mw.crit || 0) + critAll + optic + gearBonus(c, 'crit', 'melee') / 100,
     carry: 4 + (has(c, 'belt') ? 3 : 0) + carry,
-    slots: 2 + (attr(c, 'int') >= 4 ? 1 : 0) + (attr(c, 'int') >= 8 ? 1 : 0),
-    tech: (1 + 0.1 * attr(c, 'int')) * (hasTrait(c, 'overcharge') ? 1.2 : 1),
+    slots: 2 + (attr(c, 'int') >= 4 ? 1 : 0) + (attr(c, 'int') >= 8 ? 1 : 0) + (c.background === 'clerk' ? 1 : 0),
+    tech: (1 + 0.1 * attr(c, 'int')) * (hasTrait(c, 'overcharge') ? 1.2 : 1) * (1 + (gadget.techBoost || 0)),
     stimBoost: gadget.stimBoost || 0,
     scan: !!gadget.scan,
   };
 }
 export const stats = (s) => statsOf(s.meta, s.char);
-export const price = (s, cost) => Math.round(cost * Math.max(0.6, 1 - 0.04 * (attr(s.char, 'cha') - 1)));
+export const price = (s, cost) => Math.round(cost * Math.max(0.6, 1 - 0.04 * (attr(s.char, 'cha') - 1)) * (s.char.background === 'preacher' ? 0.9 : 1));
 export const meetsReq = (c, req) => !req || Object.entries(req).every(([k, v]) => attr(c, k) >= v);
 export const reqText = (req) => req ? Object.entries(req).map(([k, v]) => `${D.ATTRS[k].short} ${v}`).join(', ') : '';
 
@@ -442,8 +449,23 @@ export function spendAttr(s, k) {
   c.attrPoints -= 1;
   const before = stats(s).maxHp;
   c.attrs[k] += 1;
+  c.spent = c.spent || {}; c.spent[k] = (c.spent[k] || 0) + 1;
   c.hp += Math.max(0, stats(s).maxHp - before);
   s.notice = `${D.ATTRS[k].label} raised to ${c.attrs[k]}.`;
+  return true;
+}
+
+// Reset the attribute points earned from levelling. Expensive, and dearer each time and each level.
+export const respecPoints = (c) => Object.values(c.spent || {}).reduce((t, v) => t + v, 0);
+export const respecCost = (c) => Math.round(80 * c.level * (1 + 0.5 * (c.respecs || 0)));
+export function respec(s) {
+  const c = s.char, n = respecPoints(c), cost = price(s, respecCost(c));
+  if (!n || c.credits < cost) return false;
+  c.credits -= cost; ledger(s, 'spend:respec', cost);
+  for (const [k, v] of Object.entries(c.spent)) c.attrs[k] = Math.max(1, c.attrs[k] - v);
+  c.attrPoints += n; c.spent = {}; c.respecs = (c.respecs || 0) + 1;
+  c.hp = Math.max(1, Math.min(c.hp, stats(s).maxHp));
+  s.notice = `Doc talks you through it for ${cost} ${D.SETTING.cur}. ${n} attribute point${n > 1 ? 's' : ''} to spend again.`;
   return true;
 }
 
@@ -551,6 +573,7 @@ export function deploy(s, mapId, startSector, rng) {
   s.run = { wanted: s.char.wanted, startCredits: s.char.credits, map: map.id, sector: startSector, room: 0, choices: null, enemy: null, defending: false, ready: false, nextMod: null, sectorCredits: 0, cooldowns: {}, adrenalUsed: false,
     alert: 0, allies: 0, vent: 3, turns: 0, threat: s.meta.threat || 0, pst: {}, pfresh: [], deadmanUsed: false, perkOffer: null };
   s.meta.stats.raids += 1;
+  if (D.BACKGROUNDS.find((b) => b.id === s.char.background).follower) { s.run.allies = 1; s.run.follower = true; }
   if (hasTrait(s.char, 'surplus') && s.char.items.stim < stats(s).carry) s.char.items.stim += 1;
   s.run.bulletin = pickWeighted(rng, D.BULLETINS.map((b) => [b.id, b.weight]));
   refreshContracts(s, rng);
@@ -726,7 +749,8 @@ export function makeEnemy(sector, boss, rng, mapId = 'garrison', threat = 0) {
     id = pid; lvl = sector - min + map.level;
   }
   const base = D.ENEMIES[id];
-  const tm = 1 + 0.12 * threat;
+  // Sectors 1-5 get extra bite (fading out by sector 6) so the stronger backgrounds don't trivialise the opening.
+  const tm = (1 + 0.12 * threat) * (1 + TUNE.early * Math.max(0, 6 - sector) / 5);
   const hp = Math.round(base.hp * TUNE.enemyHp * tm * growth(lvl, TUNE.hpLin, TUNE.hpQuad) * (boss ? TUNE.bossHp : 1));
   const e = {
     id, name: base.name, tags: base.tags || [], line: base.line, portrait: base.portrait || null, boss,
@@ -762,9 +786,35 @@ function chooseIntent(e, rng) {
 }
 
 // ---------- combat ----------
+// Shoot or Strike, whichever should hit harder right now (Strike past cover, Shoot at enemies that punish melee).
+export function bestAttack(s) {
+  const e = s.run.enemy, st = stats(s);
+  const guard = e.intent === 'guard' && !e.stun, counter = D.MELEE_COUNTER[e.id] && !e.stun;
+  const r = st.atk * (1 + critChance(st, e) * 0.6) * (guard ? TUNE.cover : 1);
+  const m = st.atkM * (1 + critChance(st, e, true) * 0.6) * (counter ? 0.65 : 1);
+  return m > r ? 'strike' : 'shoot';
+}
+// Auto battle: a fixed, sensible routine. Never runs or uses smoke.
+export function autoAction(s) {
+  const r = s.run, e = r.enemy, c = s.char, st = stats(s), free = e.stun > 0;
+  if (c.hp < st.maxHp * 0.35 && c.items.stim > 0) return 'stim';
+  if (!free && mechanicOf(r) === 'vents' && r.vent === 1) return 'defend';
+  if (!free && (e.intent === 'heavy' || (e.intent === 'special' && D.SPECIALS[e.id] && D.SPECIALS[e.id].status))) return 'defend';
+  if ((e.boss || e.elite) && c.items.thermal > 0 && e.hp > e.maxHp * 0.3) return 'thermal';
+  if (e.tags.includes('droid') && c.items.ion > 0 && !free && e.hp > e.maxHp * 0.5) return 'ion';
+  if (canUse(s, 'intimidate') && intimidateChance(s) > 0.5) return 'intimidate';
+  const hit = bestAttack(s);
+  if (!free && e.intent === 'guard' && hit === 'shoot') return 'defend';
+  for (const k of ['overload', 'smash', 'aimed', 'blast', 'burst', 'suppress']) {
+    if (!canUse(s, k) || !skillsOf(c).includes(k)) continue;
+    if (k === 'smash' && D.MELEE_COUNTER[e.id] && !free) continue;
+    return k;
+  }
+  return hit;
+}
 export function runChance(s) {
   const st = stats(s), e = s.run.enemy;
-  const ch = clamp(0.45 + (st.spd - e.spd) * 0.06 + (s.char.background === 'runner' ? 0.15 : 0), 0.1, 0.95);
+  const ch = clamp(0.45 + (st.spd - e.spd) * 0.06 + (s.char.background === 'runner' ? 0.25 : 0), 0.1, 0.95);
   return e.boss ? ch * 0.5 : ch;
 }
 export function dodgeChance(st, e) { return clamp(0.05 + (st.spd - e.spd) * 0.03 + (st.dodge || 0), 0, 0.45); }
@@ -1339,11 +1389,12 @@ export function endRun(s, how, rngForRestock = Math.random) {
   c.wanted = (c.wanted || 0) + 1;
   if (rngForRestock) restockMarket(s, rngForRestock);
   let home = '';
-  if (how === 'extracted' && r.allies > 0) {
-    s.meta.resolve += r.allies; s.meta.totalResolve += r.allies;
-    home = ` You brought ${r.allies} prisoner${r.allies > 1 ? 's' : ''} home: +${r.allies} ${D.SETTING.meta}.`;
+  const freed = Math.max(0, r.allies - (r.follower ? 1 : 0)); // the Preacher's follower isn't a rescued prisoner
+  if (how === 'extracted' && freed > 0) {
+    s.meta.resolve += freed; s.meta.totalResolve += freed;
+    home = ` You brought ${freed} prisoner${freed > 1 ? 's' : ''} home: +${freed} ${D.SETTING.meta}.`;
   }
-  if (how === 'extracted') contractEvent(s, 'extract', { credits: s.char.credits, allies: r.allies });
+  if (how === 'extracted') contractEvent(s, 'extract', { credits: s.char.credits, allies: freed });
   s.notice = how === 'extracted'
     ? `You made it out of ${sectorName(r.sector, r.map)}.${home} Spend it before your luck runs out.`
     : `You escaped from ${sectorName(r.sector, r.map)}${lost ? `, but dropped ${lost} ${D.SETTING.cur} on the way out` : ''}.`;

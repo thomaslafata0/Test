@@ -3,7 +3,7 @@
 
 let ctx = null, master = null, sfxBus = null, ambBus = null, noiseBuf = null;
 let ambNodes = null;
-const prefs = { sfx: true, ambience: true, volume: 0.7 };
+const prefs = { sfx: true, ambience: true, rain: false, volume: 0.7 };
 try { Object.assign(prefs, JSON.parse(localStorage.getItem('cinder-cell-audio')) || {}); } catch (e) {}
 
 function save() { try { localStorage.setItem('cinder-cell-audio', JSON.stringify(prefs)); } catch (e) {} }
@@ -31,6 +31,7 @@ export function setPref(k, v) {
   if (!ensure()) return;
   master.gain.value = prefs.volume;
   sfxBus.gain.value = prefs.sfx ? 1 : 0;
+  if (ambNodes) ambNodes.rainGain.gain.setTargetAtTime(prefs.rain ? 0.35 : 0, ctx.currentTime, 0.3);
   setAmbience(currentTheme);
 }
 
@@ -114,7 +115,7 @@ export function play(name) {
   try { SFX[name](); } catch (e) {}
 }
 
-// ---------- ambience: filtered rain plus a low drone that changes per map ----------
+// ---------- ambience: a low drone that changes per map, plus optional filtered rain (off by default) ----------
 let currentTheme = null;
 const DRONES = { garrison: [55, 82.4], foundry: [49, 73.4], detention: [61.7, 92.5], port: [65.4, 98], town: [58.3, 87.3] };
 export function setAmbience(theme) {
@@ -127,7 +128,7 @@ export function setAmbience(theme) {
   if (ambNodes) { const old = ambNodes; setTimeout(() => old.stop(), 1500); old.fade(); }
   const t = ctx.currentTime, g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(1, t + 1.5); g.connect(ambBus);
   const rain = ctx.createBufferSource(), rf = ctx.createBiquadFilter(), rg = ctx.createGain();
-  rain.buffer = noiseBuf; rain.loop = true; rf.type = 'bandpass'; rf.frequency.value = theme === 'foundry' ? 500 : 2500; rf.Q.value = 0.4; rg.gain.value = 0.35;
+  rain.buffer = noiseBuf; rain.loop = true; rf.type = 'bandpass'; rf.frequency.value = theme === 'foundry' ? 500 : 2500; rf.Q.value = 0.4; rg.gain.value = prefs.rain ? 0.35 : 0;
   rain.connect(rf); rf.connect(rg); rg.connect(g); rain.start();
   const oscs = (DRONES[theme] || DRONES.town).map((f, i) => {
     const o = ctx.createOscillator(), og = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain();
@@ -137,7 +138,7 @@ export function setAmbience(theme) {
     return [o, lfo];
   });
   ambNodes = {
-    theme,
+    theme, rainGain: rg,
     fade: () => g.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.4),
     stop: () => { try { rain.stop(); oscs.forEach(([o, l]) => { o.stop(); l.stop(); }); g.disconnect(); } catch (e) {} },
   };
