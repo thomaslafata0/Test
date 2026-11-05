@@ -528,7 +528,11 @@ export function runReport(s) {
   lines.push(`Cell: ${m.operatives} operatives, ${m.stats.raids} raids, ${m.stats.kills} kills, ${m.stats.bosses} bosses, Resolve ${m.resolve} banked / ${m.totalResolve} earned, deepest sector ${m.bestSector}`);
   lines.push(`Best by map: ${Object.entries(m.bestByMap).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}; liberated: ${Object.keys(m.liberated).join(', ') || 'none'}; threat ${m.threat}`);
   lines.push(`Training: ${Object.entries(m.training).map(([k, v]) => `${k} ${v}`).join(', ')}; cell upgrades: ${m.cell.join(', ') || 'none'}`);
-  lines.push(`Tuning: ${JSON.stringify(TUNE)}`);
+  const F = m.feats || { counters: {}, tiers: {} }, fb = featBuffs(m);
+  lines.push(`Feats: ${Object.values(F.tiers).filter(Boolean).length} tiers across ${Object.keys(F.tiers).filter((k) => F.tiers[k]).length} feats; buffs ${Object.entries(fb).filter(([k, v]) => k !== 'vs' && v).map(([k, v]) => `${k} +${(v * 100).toFixed(1)}%`).join(', ') || 'none'}; top counters ${Object.entries(F.counters).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}`);
+  if (m.ship) lines.push(`Shuttle: hull ${m.ship.hull} guns ${m.ship.guns} shields ${m.ship.shields} engines ${m.ship.engines}; fittings ${m.ship.cell.join(', ') || 'none'}; orbit wins ${m.orbitWins || 0}; ventures ${Object.entries(m.ventures || {}).filter(([, v]) => v).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}; wheel ${m.wheel ? `${m.wheel.spins} spins net ${m.wheel.net}` : 'unplayed'}`);
+  if (c) lines.push(`Marks: ${(c.marks || []).map((k) => D.MARKS[k].name).join(', ') || 'none'}; look ${c.look ? `${c.look.body}/${c.look.hair}` : 'default'}`);
+  lines.push(`Tuning: ${JSON.stringify(TUNE)} hard ${JSON.stringify(HARD)}`);
   if (c) {
     const st = statsOf(m, c);
     lines.push('');
@@ -1735,7 +1739,7 @@ function die(s, foe) {
   fx(s, { who: 'player', type: 'down' });
   const c = s.char, r = s.run;
   c.fed = false;
-  const record = { name: c.name, number: c.number, level: c.level, sector: r.sector, map: r.map, killer: foe.name, killerId: foe.id, killerPortrait: foe.portrait, credits: c.credits, background: c.background };
+  const record = { name: c.name, number: c.number, level: c.level, sector: r.sector, map: r.map, killer: foe.name, killerId: foe.id, killerPortrait: foe.portrait, credits: c.credits, background: c.background, look: c.look || null, marks: [...(c.marks || [])] };
   s.meta.fallen.unshift(record); feat(s, 'fallen');
   s.meta.fallen = s.meta.fallen.slice(0, 12);
   record.perks = (c.perks || []).length;

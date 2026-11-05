@@ -471,6 +471,8 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .tagline { font-size: 1.1rem; color: var(--muted); }
 .title-menu { display: grid; gap: 8px; max-width: 420px; }
 .title-menu .btn { display: flex; justify-content: space-between; align-items: center; gap: 12px; text-align: left; }
+.title-me { width: 48px; height: 48px; image-rendering: pixelated; flex: none; }
+.killer .label.vs { align-self: center; font-size: 1rem; color: var(--sodium); }
 .title-stats { font-size: .78rem; }
 .create-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
 .preview { display: grid; justify-items: center; gap: 4px; padding: 8px; border: 1px dashed var(--line); background: var(--panel-2); }
@@ -713,7 +715,7 @@ function titleScreen() {
       <h1 class="big-title">${esc(S.title)}</h1>
       <p class="tagline">A resistance cell. One operative at a time.</p>
       <div class="title-menu">
-        ${hasRun ? `<button class="btn primary big" data-a="continue-title">Continue <span class="muted" style="font-size:.8rem;text-transform:none;letter-spacing:0">${state.char ? `${esc(state.char.name)}, operative ${state.char.number}` : `${m.operatives} operative${m.operatives === 1 ? '' : 's'} so far`}</span></button>` : `<button class="btn primary big" data-a="continue-title">Begin</button>`}
+        ${hasRun ? `<button class="btn primary big" data-a="continue-title">${state.char && lookStill(state.char.look, state.char.background) ? `<img class="title-me" src="${lookStill(state.char.look, state.char.background)}" alt="" width="48" height="48">` : ''}Continue <span class="muted" style="font-size:.8rem;text-transform:none;letter-spacing:0">${state.char ? `${esc(state.char.name)}, operative ${state.char.number}` : `${m.operatives} operative${m.operatives === 1 ? '' : 's'} so far`}</span></button>` : `<button class="btn primary big" data-a="continue-title">Begin</button>`}
         ${hasRun ? `<button class="btn big" data-a="newcell">${confirmReset ? 'Click again: this erases everything' : 'New cell'}</button>` : ''}
         <button class="btn big" data-a="modal" data-v="board">Leaderboard</button>
         <button class="btn big" data-a="modal" data-v="manual">Field manual</button>
@@ -913,7 +915,7 @@ function gearTab() {
     return `<button class="slot ${sel === slot ? 'on' : ''} r-${it ? it.rarity : 'none'}" data-a="gearslot" data-v="${slot}" aria-pressed="${sel === slot}">${gearIco(it, 'sm')}
       <span class="label">${esc(SLOTS[slot].short)}</span><b>${it ? esc(E.itemName(it)) : 'Empty'}</b><span class="ms">${ms ? `${ms.key === 'atk' ? 'ATK' : 'DEF'} ${ms.v}` : it ? 'utility' : 'buy one at the market'}${it && it.bonuses.length ? ` \u00B7 ${it.bonuses.length} bonus${it.bonuses.length > 1 ? 'es' : ''}` : ''}</span></button>`;
   };
-  const me = lookBattleStill(c.look, c.background, weaponLayer(E.baseOf(c.gear.ranged))) || sheetStill('player') || portraitURL('player');
+  const me = lookStill(c.look, c.background) || sheetStill('player') || portraitURL('player');
   const it = c.gear[sel];
   let actions = '';
   if (it) {
@@ -1530,7 +1532,7 @@ function deathScreen() {
   return `<section class="panel" style="padding:32px">
     <span class="label">Signal lost \u00B7 ${o.orbit ? 'the lift corridor' : `${esc(E.mapById(o.map).name)} \u00B7 Sector ${o.sector}`}</span>
     <h1 class="big-title" style="color:var(--danger)">${esc(o.name)}</h1>
-    ${o.killerId ? `<div class="killer">${portraitImg({ id: o.killerId, name: o.killer, portrait: o.killerPortrait })}<span class="label">Last seen<br>engaging a ${esc(o.killer)}</span></div>` : ''}
+    ${o.killerId ? `<div class="killer">${(() => { const me = o.look ? lookStill(o.look, o.background) : null; return me ? `<img class="portrait" src="${me}" alt="" width="160" height="160"><span class="label vs">vs</span>` : ''; })()}${portraitImg({ id: o.killerId, name: o.killer, portrait: o.killerPortrait })}<span class="label">Last seen<br>engaging a ${esc(o.killer)}</span></div>` : ''}
     <p class="story">Operative ${o.number} ${o.orbit ? `was lost in orbit when a ${esc(o.killer)} broke the shuttle apart` : `went down in the ${esc(E.sectorName(o.sector, o.map))}${o.killerId ? `, killed by a ${esc(o.killer)}` : `, taken by ${esc(o.killer)}`}`}. The ${o.credits.toLocaleString()} ${S.currency}, the gear, ${o.perks ? `${o.perks} piece${o.perks > 1 ? 's' : ''} of contraband, ` : ''}the implants and level ${o.level} went with them.</p>
     <dl class="kv"><dt>${esc(S.meta)} to spend</dt><dd style="color:var(--sodium)">${state.meta.resolve}</dd><dt>Deepest ever</dt><dd>Sector ${state.meta.bestSector}</dd>${o.rank ? `<dt>Leaderboard</dt><dd style="color:var(--sodium)">#${o.rank} of ${E.BOARD_SIZE} \u00B7 ${o.score} points <button class="btn" data-a="modal" data-v="board" style="margin-left:8px">View</button></dd>` : o.score ? `<dt>Last raid</dt><dd>${o.score} points <span class="muted">(#${E.BOARD_SIZE} holds ${E.boardFloor(state.meta)})</span></dd>` : ''}</dl>
     ${heirloomPick()}
