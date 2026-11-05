@@ -30,7 +30,18 @@ export const CARRY_CD = 2;       // minimum cooldown a skill used last fight sta
 export const MIN_FIGHTS = 2; // fights required per sector; the rest of the rooms can be anything
 // Enemy growth per sector past their first appearance: linear plus a quadratic tail.
 export const growth = (lvl, lin, quad) => 1 + lin * lvl + quad * lvl * lvl;
-export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.01, bossHp: 2.1, bossAtk: 1.4, enemyAtk: 1.74, enemyHp: 1.78, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 1.5, strAtk: 0.6, agiCrit: 0.04, agiDodge: 0.025, intOverload: 5, chaHesitate: 0.055, chaCredits: 0.05, wanted: 0.025, escapeLoss: 0.5, extractLoss: 0.3, ambush: 1.5,
+// Difficulty tiers: the Directorate tightens its grip as the cell goes deeper. Tier 0 through sector 5, tier 1 after sector 5, tier 2 after sector 10.
+// extract: haul lost leaving between bosses; escape: haul lost running mid-fight; hp: enemy HP multiplier; price: multiplier on every credit price.
+export const HARD = [
+  { extract: 0.45, escape: 0.65, hp: 1.1, price: 1.1 },
+  { extract: 0.5, escape: 0.7, hp: 1.12, price: 1.12 },
+  { extract: 0.55, escape: 0.75, hp: 1.15, price: 1.15 },
+];
+export const hardTier = (sector) => (sector > 10 ? 2 : sector > 5 ? 1 : 0);
+export const hardAt = (sector) => HARD[hardTier(sector)];
+// In a raid the current sector sets the tier; in the yard, the deepest sector the cell has reached.
+export const hard = (s) => hardAt(s.run ? s.run.sector : (s.meta && s.meta.bestSector) || 0);
+export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.01, bossHp: 2.1, bossAtk: 1.4, enemyAtk: 1.74, enemyHp: 1.78, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 1.5, strAtk: 0.6, agiCrit: 0.04, agiDodge: 0.025, intOverload: 5, chaHesitate: 0.055, chaCredits: 0.05, wanted: 0.025, ambush: 1.5,
   upgradeCost: 60, eliteGear: 0.3, shopLegendary: 0.06, cover: 0.5, agiAtk: 1, early: 0.35,
   rangedSpread: 0.15, meleeSpread: 0.3, shootGuard: 0.15, momentum: 0.15, coopHp: 1.5, coopAtk: 1, coopExtra: 4 };
 export const isBossSector = (n) => n % 5 === 0;
@@ -452,7 +463,7 @@ export function statsOf(meta, c) {
   };
 }
 export const stats = (s) => statsOf(s.meta, s.char);
-export const price = (s, cost) => Math.round(cost * Math.max(0.6, 1 - 0.04 * (attr(s.char, 'cha') - 1)) * (s.char.background === 'preacher' ? 0.9 : 1));
+export const price = (s, cost) => Math.round(cost * hard(s).price * Math.max(0.6, 1 - 0.04 * (attr(s.char, 'cha') - 1)) * (s.char.background === 'preacher' ? 0.9 : 1));
 export const meetsReq = (c, req) => !req || Object.entries(req).every(([k, v]) => attr(c, k) >= v);
 export const reqText = (req) => req ? Object.entries(req).map(([k, v]) => `${D.ATTRS[k].short} ${v}`).join(', ') : '';
 
@@ -563,11 +574,11 @@ export function respec(s) {
 }
 
 // Lie low: Cass burns your papers and spreads a rumour you're dead. Costs credits, drops Wanted by 2.
-export const lieLowCost = (c) => 50 + 40 * (c.wanted || 0);
+export const lieLowCost = (c, s) => Math.round((50 + 40 * (c.wanted || 0)) * (s ? hard(s).price : 1));
 export function lieLow(s) {
   const c = s.char;
-  if (!c.wanted || c.credits < lieLowCost(c)) return false;
-  const cost = lieLowCost(c);
+  if (!c.wanted || c.credits < lieLowCost(c, s)) return false;
+  const cost = lieLowCost(c, s);
   c.credits -= cost; ledger(s, 'spend:lielow', cost);
   c.wanted = Math.max(0, c.wanted - 2);
   s.notice = `Cass burns your old papers. Wanted level ${c.wanted}.`;
@@ -592,7 +603,7 @@ export function tenementGift(s) {
 // ---------- town ----------
 export function healCost(s) {
   const st = stats(s);
-  return Math.ceil((st.maxHp - s.char.hp) * 0.5 * (hasCell(s.meta, 'ledger') ? 0.5 : 1));
+  return Math.ceil((st.maxHp - s.char.hp) * 0.5 * hard(s).price * (hasCell(s.meta, 'ledger') ? 0.5 : 1));
 }
 export function heal(s) {
   const cost = healCost(s);
@@ -882,7 +893,7 @@ export function makeEnemy(sector, boss, rng, mapId = 'garrison', threat = 0) {
   const base = D.ENEMIES[id];
   // Sectors 1-5 get extra bite (fading out by sector 6) so the stronger backgrounds don't trivialise the opening.
   const tm = (1 + 0.12 * threat) * (1 + TUNE.early * Math.max(0, 6 - sector) / 5);
-  const hp = Math.round(base.hp * TUNE.enemyHp * tm * growth(lvl, TUNE.hpLin, TUNE.hpQuad) * (boss ? TUNE.bossHp : 1));
+  const hp = Math.round(base.hp * TUNE.enemyHp * hardAt(sector).hp * tm * growth(lvl, TUNE.hpLin, TUNE.hpQuad) * (boss ? TUNE.bossHp : 1));
   const e = {
     id, name: base.name, tags: base.tags || [], line: base.line, portrait: base.portrait || null, boss,
     hp, maxHp: hp,
@@ -1585,7 +1596,7 @@ export function endRun(s, how, rngForRestock = Math.random) {
   forEachActor(s, (a, i) => {
     let l = 0;
     if (how === 'escaped' || early) {
-      l = Math.max(0, Math.round((a.credits - (a.startCredits ?? r.startCredits ?? 0)) * (early ? TUNE.extractLoss : TUNE.escapeLoss)));
+      l = Math.max(0, Math.round((a.credits - (a.startCredits ?? r.startCredits ?? 0)) * (early ? hardAt(r.sector).extract : hardAt(r.sector).escape)));
       a.credits -= l; ledger(s, 'escape loss', -l);
     }
     if (i === actorIdx(s)) lost = l;
@@ -1609,7 +1620,7 @@ export function endRun(s, how, rngForRestock = Math.random) {
 }
 
 // What extracting right now would cost: 30% of this raid's haul, unless you've just beaten a boss.
-export const extractLoss = (s) => { const r = s.run, c = s.char; return r && !isBossSector(r.sector) ? Math.max(0, Math.round((c.credits - (r.startCredits || 0)) * TUNE.extractLoss)) : 0; };
+export const extractLoss = (s) => { const r = s.run, c = s.char; return r && !isBossSector(r.sector) ? Math.max(0, Math.round((c.credits - (r.startCredits || 0)) * hardAt(r.sector).extract)) : 0; };
 export const allLiberated = (s) => D.MAPS.every((m) => s.meta.liberated[m.id]);
 export const maxThreat = (s) => Math.min(D.THREAT.length - 1, Object.keys(s.meta.liberated).length);
 

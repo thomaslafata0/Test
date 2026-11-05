@@ -945,7 +945,7 @@ function character() {
         <div class="respec"><div><b>Retrain</b> <span class="muted">\u00B7 take back the ${n || ''} point${n === 1 ? '' : 's'} you spent on levelling and spend ${n === 1 ? 'it' : 'them'} again. Gets dearer with level and every retrain.</span></div>
           <button class="btn" data-a="respec" ${!n || c.credits < rcost ? 'disabled' : ''}>${n ? `Retrain \u00B7 ${cr(rcost)}` : 'Nothing to retrain'}</button></div>
         <div class="respec ${c.wanted ? 'hot' : ''}"><div><b>Lie low</b> <span class="muted">\u00B7 ${c.wanted ? `you are <span class="wanted">Wanted ${c.wanted}</span>: enemies +${Math.round(c.wanted * E.TUNE.wanted * 100)}% HP and ATK. Cass burns your papers: Wanted \u22122.` : 'nobody is looking for you right now. Every raid you survive raises your Wanted level by 1.'}</span></div>
-          <button class="btn ${c.wanted ? 'primary' : ''}" data-a="lielow" ${!c.wanted || c.credits < E.price(state, E.lieLowCost(c)) ? 'disabled' : ''}>${c.wanted ? `Lie low \u00B7 ${cr(E.lieLowCost(c))}` : 'Not wanted'}</button></div>
+          <button class="btn ${c.wanted ? 'primary' : ''}" data-a="lielow" ${!c.wanted || c.credits < E.price(state, E.lieLowCost(c, state)) ? 'disabled' : ''}>${c.wanted ? `Lie low \u00B7 ${cr(E.lieLowCost(c, state))}` : 'Not wanted'}</button></div>
       </div>
       <div style="display:grid;gap:14px;align-content:start;min-width:0">
         <h3>Kit</h3>
@@ -1220,7 +1220,7 @@ function modalView() {
       <section><h3>Status effects</h3><ul>${Object.values(D.STATUSES).map((x) => `<li><b>${esc(x.name)}</b>: ${esc(x.desc)}</li>`).join('')}</ul></section>
       <section><h3>Elites and bosses</h3><p>Elites (veterans) carry a modifier, such as Regenerating or Volatile. Bosses enrage at half health. Bosses always carry <b>contraband</b> and elites sometimes do: pick one of three perks that last until your operative dies. You have four pockets, so a fifth piece means dropping one.</p></section>
       <section><h3>Quirks and bulletins</h3><p>Regular enemies often have a <b>quirk</b>, like a Drunk trooper whose shots go wild or an Overclocked droid that cooks itself. Every raid also rolls a <b>Directorate bulletin</b>, such as Payday or Staff Party, that bends the rules until you leave.</p></section>
-      <section><h3>Wanted and escaping</h3><p>Every raid an operative survives raises their <b>Wanted</b> level: enemies get 2.5% tougher per level, and pay 2.5% more. Lower it by lying low at the safehouse. Extracting right after a boss keeps the whole haul; slipping out between bosses costs 30% of it in bribes, and escaping mid-fight with <b>Run</b> or <b>Smoke</b> costs half.</p></section>
+      <section><h3>Wanted and escaping</h3><p>Every raid an operative survives raises their <b>Wanted</b> level: enemies get 2.5% tougher per level, and pay 2.5% more. Lower it by lying low at the safehouse. Extracting right after a boss keeps the whole haul; slipping out between bosses costs 45% of it in bribes, and escaping mid-fight with <b>Run</b> or <b>Smoke</b> costs 65%. Past sector 5 the Directorate tightens its grip: bribes rise to 50% and 70%, enemies get 12% tougher and every price goes up 12%; past sector 10 it is 55%, 75%, 15% and 15%.</p></section>
       <section><h3>Getting stronger</h3><p><b>This operative</b>: levels (attribute points), gear, implants and contraband. All lost on death. <b>The cell</b>: Resolve buys permanent training and upgrades. Earn it from sectors (repeat clears pay only every other time), bosses, brave choices and contracts.</p></section>
       <section><h3>The yard</h3><p>Walk with the arrows or WASD, or tap where to go. Walk into a door to go inside; talk to the person there (<b>E</b>, Space or a tap) to open their menu. The freight terminal opens straight away. Most things in the yard can be poked at, and the noodle vendor sells a hot meal worth +5% XP for the next raid.</p></section>
       <section><h3>Controls</h3><p class="keys"><span><b>A</b> shoot</span><span><b>F</b> strike</span><span><b>D</b> defend</span><span><b>S</b> stim</span><span><b>R</b> run</span><span><b>Q W E T</b> skills</span><span><b>2 3 4</b> items</span><span><b>1 2</b> doors</span><span><b>Enter</b> continue</span><span><b>Esc</b> close any menu</span></p></section>
@@ -1281,7 +1281,7 @@ function sectorClearScreen() {
       <button class="btn primary big" data-a="deeper">Push to sector ${next}<span class="k">1</span></button>
       <button class="btn big" data-a="extract">Extract with ${cr(c.credits - E.extractLoss(state))}<span class="k">2</span></button>
     </div>
-    <p class="muted" style="font-size:.88rem">${E.extractLoss(state) ? `Slipping out between bosses costs bribes at the gate: ${Math.round(E.TUNE.extractLoss * 100)}% of this raid\u2019s haul (${cr(E.extractLoss(state))}). Extract right after a boss and you keep it all.` : 'You\u2019ve just taken down a boss: the gate is in chaos and you can extract with everything.'}</p>
+    <p class="muted" style="font-size:.88rem">${E.extractLoss(state) ? `Slipping out between bosses costs bribes at the gate: ${Math.round(E.hard(state).extract * 100)}% of this raid\u2019s haul (${cr(E.extractLoss(state))}). Extract right after a boss and you keep it all.` : 'You\u2019ve just taken down a boss: the gate is in chaos and you can extract with everything.'}</p>
   `);
 }
 
