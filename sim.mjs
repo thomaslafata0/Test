@@ -20,6 +20,7 @@ for (const a of (process.env.ABLATE || '').split(',').filter(Boolean)) {
   else if (kind === 'trait') delete D.TRAITS[id];
   else if (kind === 'unique') { for (const [b, u] of Object.entries(D.BOSS_UNIQUE)) if (u === id || b === id) delete D.BOSS_UNIQUE[b]; }
   else if (kind === 'base') D.GEAR[id].tier = 99;
+  else if (kind === 'perk') D.PERKS.splice(D.PERKS.findIndex((p) => p.id === id), 1);
   else if (kind === 'loot') E.TUNE.eliteGear = 0, Object.keys(D.BOSS_UNIQUE).forEach((b) => delete D.BOSS_UNIQUE[b]);
 }
 

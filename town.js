@@ -6,54 +6,70 @@ import { play } from './audio.js';
 const BASE = 'town/';
 const T = 32;                      // tile size
 let VIEW_W = 416, VIEW_H = 256;    // native resolution; resized to a whole-pixel scale of the element's width
-const MAP_COLS = 30, MAP_ROWS = 22, MAP_W = MAP_COLS * T, MAP_H = MAP_ROWS * T;
+const MAP_COLS = 22, MAP_ROWS = 16, MAP_W = MAP_COLS * T, MAP_H = MAP_ROWS * T;
 const CELL = 8;                    // collision grid
-const SPEED = 78;                  // px per second
+const SPEED = 84;                  // px per second
 const FEET = { x: 32, y: 59 };     // feet position inside a 64x64 frame
 const reduceMotion = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// ---------- layout (top-left of each image, world pixels) ----------
+// ---------- layout (top-left of each image, world pixels). A tight yard: the four shops ring one plaza. ----------
 const BUILDINGS = [
-  { id: 'tenement_b', x: 40, y: 40 },
-  { id: 'terminal', x: 352, y: 16 },
-  { id: 'tenement_a', x: 776, y: 24 },
-  { id: 'market', x: 80, y: 228 },
-  { id: 'clinic', x: 716, y: 196 },
-  { id: 'safehouse', x: 708, y: 428 },
-  { id: 'barracks', x: 56, y: 486 },
+  { id: 'tenement_a', x: 36, y: 0 },
+  { id: 'terminal', x: 224, y: 0 },
+  { id: 'tenement_b', x: 512, y: 0 },
+  { id: 'market', x: 16, y: 166 },
+  { id: 'clinic', x: 528, y: 166 },
+  { id: 'barracks', x: 16, y: 340 },
+  { id: 'safehouse', x: 528, y: 336 },
 ];
-// The screen each building's NPC opens, and how the town labels it.
+// What each building is. opens: the menu its NPC opens. auto: the menu opens as soon as you walk in.
 export const SHOPS = {
-  terminal: { name: 'Freight terminal', opens: 'missions', label: 'Missions' },
+  terminal: { name: 'Freight terminal', opens: 'missions', label: 'Missions', auto: true },
   market: { name: 'Marrow\u2019s container', opens: 'market', label: 'Black Market' },
   clinic: { name: 'Doc Ilse\u2019s clinic', opens: 'clinic', label: 'Clinic' },
   safehouse: { name: 'The safehouse', opens: 'character', label: 'Character & Resolve' },
-  barracks: { name: 'Directorate barracks', locked: 'Directorate barracks. You don\u2019t want to go in there.' },
-  tenement_a: { name: 'Tenement', locked: 'Someone\u2019s asleep in there. Probably.' },
-  tenement_b: { name: 'Tenement', locked: 'The door is welded shut. Curfew rules.' },
+  barracks: { name: 'Directorate barracks', hotspot: 'barracks' },
+  tenement_a: { name: 'Tenement', hotspot: 'tenement_a' },
+  tenement_b: { name: 'Tenement', hotspot: 'tenement_b' },
 };
 const PROPS = [
-  ['poster_wall', 216, 150], ['steam_vent', 280, 200], ['holosign', 276, 256], ['console', 640, 150], ['noticeboard', 616, 200],
-  ['queue_barrier', 380, 300], ['queue_barrier', 540, 300], ['vending_terminal', 680, 360], ['junction_box', 640, 360],
-  ['streetlamp', 300, 290], ['streetlamp', 604, 290], ['streetlamp', 300, 500], ['streetlamp', 604, 500],
-  ['crate', 300, 446], ['cargo_crate', 332, 446], ['cargo_crawler', 460, 460], ['cargo_pile', 590, 440], ['barrels', 650, 600],
-  ['noodle_stall', 430, 560], ['barrel_fire', 330, 612], ['lockers', 180, 600], ['workbench', 212, 610], ['trash_pile', 168, 440],
-  ['generator', 680, 640], ['water_tower', 872, 620], ['fuel_tank', 900, 360], ['power_unit', 880, 420], ['sat_dish', 912, 260],
-  ['antenna', 24, 250], ['air_unit', 260, 60], ['cargo_crate', 20, 420], ['barrels', 24, 660],
+  ['noticeboard', 176, 186], ['queue_barrier', 288, 214], ['queue_barrier', 356, 214], ['holosign', 100, 150], ['console', 476, 190],
+  ['streetlamp', 236, 258], ['streetlamp', 452, 258], ['streetlamp', 236, 420], ['streetlamp', 452, 420],
+  ['poster_wall', 212, 336], ['vending_terminal', 500, 300], ['junction_box', 500, 332],
+  ['crate', 388, 452], ['cargo_crate', 420, 452], ['barrels', 356, 462], ['cargo_crawler', 436, 376],
+  ['noodle_stall', 272, 444], ['barrel_fire', 244, 476], ['trash_pile', 180, 470], ['lockers', 200, 300],
+  ['water_tower', 672, 440], ['antenna', 680, 160], ['sat_dish', 8, 310], ['fuel_tank', 680, 250], ['air_unit', 200, 20], ['generator', 680, 20],
+  ['steam_vent', 320, 300], ['cargo_pile', 640, 60],
 ];
-const LAMPS = [[300, 290], [604, 290], [300, 500], [604, 500]];
-// Townsfolk: feet position and what they say.
+const LAMPS = [[236, 258], [452, 258], [236, 420], [452, 420]];
+// Townsfolk: feet position and what they say. talk: a hotspot id for something to do.
 const TOWNSFOLK = [
-  { id: 'vendor', x: 462, y: 650, lines: ['Noodles. Real broth, mostly.', 'Two credits a bowl. Curfew prices.', 'Eat. You look like you\u2019re going somewhere.'] },
-  { id: 'worker', x: 624, y: 560, lines: ['Double shift again. The quota went up.', 'Crawler\u2019s been broken for a month. They fine us for it.', 'Heard someone hit the garrison last night. Wasn\u2019t me.'] },
-  { id: 'kid', x: 366, y: 650, lines: ['Are you one of them? The cell?', 'I can run messages. I\u2019m fast.', 'My dad worked the casting floor. Before.'] },
+  { id: 'vendor', x: 304, y: 500, talk: 'noodles', lines: ['Noodles. Real broth, mostly.', 'Two credits a bowl. Curfew prices.'] },
+  { id: 'worker', x: 400, y: 490, lines: ['Double shift again. The quota went up.', 'Crawler\u2019s been broken for a month. They fine us for it.', 'Heard someone hit the garrison last night. Wasn\u2019t me.', 'Don\u2019t stand near the vent. It bites.'] },
+  { id: 'kid', x: 228, y: 500, lines: ['Are you one of them? The cell?', 'I can run messages. I\u2019m fast.', 'My dad worked the casting floor. Before.', 'The guard\u2019s scared of the dark. I saw him.'] },
 ];
-const PATROL = { id: 'patrol', route: [[240, 400], [560, 400], [560, 690], [240, 690]], lines: ['Papers.', 'Curfew\u2019s at dusk. Move along.', 'Keep walking, citizen.'] };
+const PATROL = { id: 'patrol', route: [[300, 260], [420, 260], [420, 420], [300, 420]], lines: ['Papers.', 'Curfew\u2019s at dusk. Move along.', 'Keep walking, citizen.', 'Nothing to see. Keep moving.'] };
+// Things in the yard you can poke at. Each has a position, a radius, a prompt and either lines or an action for the game.
+const HOTSPOTS = [
+  { id: 'noticeboard', x: 208, y: 248, r: 30, prompt: 'read the board (Missions)', open: 'missions' },
+  { id: 'poster', x: 244, y: 398, r: 26, prompt: 'read the poster', lines: ['\u201CPRODUCTIVITY IS LOYALTY.\u201D Someone has drawn a moustache on the Supervisor.', '\u201CREPORT UNUSUAL MOVEMENT.\u201D Below it, in marker: \u201Clike your bowels?\u201D', '\u201CCURFEW: DUSK.\u201D The word DUSK has been scratched out and replaced with NEVER.', 'A reward notice. The face is smudged. Could be anyone. Could be you.'] },
+  { id: 'vending', x: 516, y: 332, r: 26, prompt: 'use the vending terminal (1 cr)', action: 'vending' },
+  { id: 'fire', x: 260, y: 508, r: 24, prompt: 'warm your hands', lines: ['You warm your hands. The rain hisses on the rim.', 'Someone has burned a stack of ration cards in here.', 'Warm. For a moment nothing is chasing you.'] },
+  { id: 'holosign', x: 132, y: 190, r: 26, prompt: 'read the sign', lines: ['MARROW\u2019S. OPEN. (The word CLOSED flickers underneath.)', 'The sign buzzes: NO REFUNDS. NO RECEIPTS. NO RUNNING.'] },
+  { id: 'crawler', x: 468, y: 436, r: 30, prompt: 'look at the crawler', lines: ['A cargo crawler, three wheels and a prayer. Someone has keyed REPAIR ME into the door.', 'The crawler\u2019s cab smells of coolant and old noodles.'] },
+  { id: 'vent', x: 336, y: 328, r: 22, prompt: 'look at the vent', lines: ['Steam. The foundry runs under half the town now.', 'The vent sighs. It sounds tired.'] },
+  { id: 'lockers', x: 216, y: 330, r: 22, prompt: 'check the lockers', lines: ['Shift lockers, padlocked. One has a name you recognise from the wall.', 'Empty. Someone has scratched a tally of days into the door. It stops at ninety.'] },
+  { id: 'tower', x: 704, y: 500, r: 30, prompt: 'look up', lines: ['The water tower. The Directorate tested the water last month and nobody saw the results.', 'A kid has climbed it and painted a fist on the tank. Nobody has painted over it yet.'] },
+  // Buildings with no inside.
+  { id: 'barracks', door: true, prompt: 'knock', action: 'barracks' },
+  { id: 'tenement_a', door: true, prompt: 'knock', action: 'tenement_a' },
+  { id: 'tenement_b', door: true, prompt: 'knock', lines: ['The door is welded shut. Curfew rules.', 'Someone inside is singing, badly. You leave them to it.', 'A note on the door: GONE TO THE FOUNDRY. BACK NEVER.'] },
+];
 // Interior NPC one-liners.
 const INSIDE = {
-  marrow: ['No receipts. No refunds. No questions.', 'Fresh stock after every job you pull.', 'Trade in the old piece, I\u2019ll knock it off the price.'],
+  marrow: ['No receipts. No refunds. No questions.', 'Fresh stock after every job you pull.', 'I don\u2019t buy. I sell. Old kit goes on the heap.'],
   ilse: ['Sit. Don\u2019t bleed on the floor.', 'Hardware under the skin costs extra.', 'You again. Good. Means you\u2019re alive.'],
-  handler: ['The cell remembers. Spend what you\u2019ve earned.', 'Training keeps the next one alive.', 'Sit down. Tell me what you saw.'],
+  handler: ['The cell remembers. Spend what you\u2019ve earned.', 'Training keeps the next one alive.', 'Too many eyes on you? I can make you disappear. For a price.'],
   dispatcher: ['Freight manifests, patrol rotas, the lot. Pick a target.', 'Contracts on the board. The cell pays.', 'The lift port\u2019s open once you\u2019ve been deep enough.'],
 };
 
@@ -81,6 +97,8 @@ export class Town {
     this.player = { x: 780, y: 600, dir: 'up', moving: false, t: 0, path: null, goal: null };
     this.cam = { x: 0, y: 0 };
     this.say = null;        // { text, who, until }
+    this.offer = null;      // a yes/no waiting on Enter: { accept }
+    this.onAction = null;   // (id) => { text, ok?, sfx? } from the game
     this.stepT = 0;
     this.ready = false;
     this.rain = Array.from({ length: reduceMotion ? 0 : 60 }, (_, i) => ({ x: (i * 67) % VIEW_W, y: (i * 41) % VIEW_H, v: 120 + (i % 5) * 30 }));
@@ -135,11 +153,7 @@ export class Town {
   buildTown() {
     const m = this.m;
     // Corner terrain grid: metal deck inside a border of sand, with a landing pad in the middle.
-    const corner = (cx, cy) => {
-      if (cx >= 13 && cx <= 17 && cy >= 14 && cy <= 17) return 'landing_pad';
-      const notch = cx >= 21 && cx <= 22 && cy >= 2 && cy <= 4; // a sand bay by the tenements
-      return cx >= 1 && cx <= MAP_COLS - 1 && cy >= 2 && cy <= MAP_ROWS - 1 && !notch ? 'metal_deck' : 'sand';
-    };
+    const corner = (cx, cy) => (cx >= 1 && cx <= MAP_COLS - 1 && cy >= 1 && cy <= MAP_ROWS - 1 ? 'metal_deck' : 'sand');
     const lookup = {};
     for (const set of Object.values(m.tilesets)) for (const t of set.tiles) {
       const k = [t.corners.nw, t.corners.ne, t.corners.sw, t.corners.se].join('|');
@@ -158,14 +172,14 @@ export class Town {
     this.ground = ground;
 
     // Objects for depth sorting, collision rectangles and door triggers.
-    this.objects = []; this.blocks = []; this.doors = [];
+    this.objects = []; this.blocks = []; this.doors = []; this.masks = [];
     for (const b of BUILDINGS) {
       const info = m.buildings[b.id], im = this.img[`b:${b.id}`];
       if (!info || !im) continue;
       const doorBottom = b.y + info.door.y + info.door.h;
-      const top = b.y + Math.round(info.h * 0.42);
       this.objects.push({ kind: 'building', bid: b.id, im, x: b.x, y: b.y, sortY: doorBottom });
-      this.blocks.push({ x: b.x + 6, y: top, w: info.w - 12, h: doorBottom - 3 - top });
+      // Footprint from the art itself: opaque pixels in the lower part of the image block, except the doorway.
+      this.masks.push({ x: b.x, y: b.y, w: info.w, h: info.h, top: Math.round(info.h * 0.28), alpha: alphaOf(im), door: { x: info.door.x - 6, y: info.door.y, w: info.door.w + 12 } });
       this.doors.push({ id: b.id, enterable: info.enterable, x: b.x + info.door.x - 8, y: doorBottom - 8, w: info.door.w + 16, h: 14, front: { x: b.x + info.door.x + info.door.w / 2, y: doorBottom + 14 } });
     }
     for (const [id, x, y] of PROPS) {
@@ -197,8 +211,16 @@ export class Town {
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
       const x = c * CELL + CELL / 2, y = r * CELL + CELL / 2;
       let open = floor ? x >= floor.x && x <= floor.x + floor.w && y >= floor.y && y <= floor.y + floor.h + 24 : x > 12 && x < w - 12 && y > 30 && y < h - 6;
-      if (floor) { const ex = this.m.interiors[scene.slice(9)].exit; if (x >= ex.x && x <= ex.x + ex.w && y >= ex.y && y <= ex.y + ex.h) open = true; }
+      if (floor) { const ex = this.m.interiors[scene.slice(9)].exit; if (x >= ex.x - 12 && x <= ex.x + ex.w + 12 && y >= ex.y && y <= ex.y + ex.h) open = true; }
       if (open) for (const b of rects) if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) { open = false; break; }
+      if (open && scene === 'town') for (const mk of this.masks) {
+        const lx = x - mk.x, ly = y - mk.y;
+        if (lx < 0 || ly < mk.top || lx >= mk.w || ly >= mk.h) continue;
+        if (lx >= mk.door.x && lx <= mk.door.x + mk.door.w && ly >= mk.door.y) continue;
+        let hits = 0;
+        for (const [dx, dy] of [[0, 0], [-3, 0], [3, 0], [0, -3], [0, 3]]) { const px = lx + dx, py = ly + dy; if (px >= 0 && py >= 0 && px < mk.w && py < mk.h && mk.alpha[py * mk.w + px]) hits++; }
+        if (hits >= 3) { open = false; break; }
+      }
       grid[r * cols + c] = open ? 1 : 0;
     }
     this.grid = { cols, rows, cells: grid, w, h };
@@ -220,7 +242,7 @@ export class Town {
     const d = this.doors.find((x) => x.id === where);
     const p = this.player;
     if (d) { p.x = d.front.x; p.y = d.front.y + 6; p.dir = 'down'; }
-    p.path = null; p.goal = null; this.say = null;
+    p.path = null; p.goal = null; this.say = null; this.offer = null;
     this.snapCamera();
   }
   setScene(scene) {
@@ -239,8 +261,8 @@ export class Town {
     p.x = it.spawn.x; p.y = it.spawn.y - 4; p.dir = 'up'; p.path = null; p.goal = null; this.say = null;
     this.snapCamera();
     const shop = SHOPS[door.id];
-    // The shop's menu opens as soon as you walk in.
-    if (shop && shop.opens && this.onOpen) setTimeout(() => this.onOpen(shop.opens, door.id), 180);
+    // Only the freight terminal opens its menu as you walk in; everywhere else you talk to the person inside.
+    if (shop && shop.auto && this.onOpen) setTimeout(() => this.onOpen(shop.opens, door.id), 180);
   }
   exit() {
     play('door');
@@ -264,7 +286,8 @@ export class Town {
       if (/^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName)) return;
       const k = ev.key.toLowerCase();
       if (DIR[k]) { this.keys.add(DIR[k]); this.player.path = null; this.player.goal = null; ev.preventDefault(); }
-      else if (k === 'e' || k === ' ' || k === 'enter') { if (this.interact()) ev.preventDefault(); }
+      else if (k === 'e' || k === ' ' || k === 'enter') { this.interact(); if (k === ' ') ev.preventDefault(); }
+      else if (k === 'escape' && this.offer) { this.offer = null; this.say = null; }
     });
     window.addEventListener('keyup', (ev) => { const k = DIR[ev.key.toLowerCase()]; if (k) this.keys.delete(k); });
     window.addEventListener('blur', () => this.keys.clear());
@@ -288,25 +311,36 @@ export class Town {
     }
     for (const f of this.folk) if (near(f.x, f.y)) return { kind: 'folk', who: f };
     if (near(this.patrol.x, this.patrol.y)) return { kind: 'folk', who: this.patrol };
-    const board = PROPS.find((p) => p[0] === 'noticeboard');
-    if (board && near(board[1] + 32, board[2] + 62, 30)) return { kind: 'board' };
+    for (const h of HOTSPOTS) {
+      if (h.door) { const d = this.doors.find((dd) => dd.id === h.id); if (d && near(d.front.x, d.front.y, 22)) return { kind: 'spot', spot: h, x: d.front.x, y: d.front.y - 20 }; }
+      else if (near(h.x, h.y, h.r)) return { kind: 'spot', spot: h, x: h.x, y: h.y - 16 };
+    }
     return null;
   }
   interact() {
+    if (this.offer) { const o = this.offer; this.offer = null; o.accept(); return true; }
     const n = this.nearby();
     if (!n) return false;
     if (n.kind === 'npc') {
       this.speak(n.id, pick(INSIDE[n.id] || ['...']), n.x, n.y);
       if (this.onOpen) this.onOpen(n.opens, this.interiorId);
     } else if (n.kind === 'folk') {
-      this.speak(n.who.id, pick(n.who.lines), n.who.x, n.who.y);
+      const f = n.who;
+      if (f.talk === 'noodles') {
+        const can = this.onAction ? this.onAction('noodles:can') : null;
+        if (can && can.ok) { this.speak(f.id, `A bowl? ${can.text}`, f.x, f.y, 6000); this.offer = { accept: () => { const r = this.onAction('noodles'); this.speak(f.id, r ? r.text : 'Yum.', f.x, f.y); play('coin'); } }; }
+        else this.speak(f.id, can ? can.text : pick(f.lines), f.x, f.y);
+      } else this.speak(f.id, pick(f.lines), f.x, f.y);
       play('click');
-    } else if (n.kind === 'board') {
-      if (this.onOpen) this.onOpen('missions', 'terminal');
+    } else if (n.kind === 'spot') {
+      const h = n.spot;
+      if (h.open) { if (this.onOpen) this.onOpen(h.open, 'terminal'); }
+      else if (h.action) { const r = this.onAction ? this.onAction(h.action) : null; this.speak(h.id, r ? r.text : '...', n.x, n.y); play(r && r.sfx ? r.sfx : 'click'); }
+      else { this.speak(h.id, pick(h.lines), n.x, n.y); play('click'); }
     }
     return true;
   }
-  speak(who, text, x, y) { this.say = { text, x, y, until: performance.now() + 2600 }; }
+  speak(who, text, x, y, ms = 2800) { this.say = { text, x, y, until: performance.now() + ms }; }
 
   tapAt(x, y) {
     const p = this.player;
@@ -314,6 +348,8 @@ export class Town {
     // Tap a person: walk next to them and talk.
     const targets = it ? [{ x: it.npc.x, y: it.npc.y, talk: true }] : [...this.folk, this.patrol].map((f) => ({ x: f.x, y: f.y, talk: true }));
     for (const t of targets) if (Math.abs(x - t.x) < 14 && y > t.y - 44 && y < t.y + 4) { this.walkTo(t.x, t.y + 14, () => this.interact()); return; }
+    if (this.offer) { this.offer = null; this.say = null; }
+    if (!it) for (const h of HOTSPOTS) if (!h.door && Math.hypot(x - h.x, y - (h.y - 12)) < h.r) { this.walkTo(h.x, h.y + 4, () => this.interact()); return; }
     if (!it) {
       // Tap a building: walk to its door.
       for (const o of this.objects) if (o.kind === 'building' && x >= o.x && x <= o.x + o.im.width && y >= o.y && y <= o.sortY) {
@@ -360,11 +396,7 @@ export class Town {
 
   tryDoor(d, tapped = false) {
     if (d.enterable && this.m.interiors[d.id]) { this.enter(d); return true; }
-    const shop = SHOPS[d.id];
-    if (shop && shop.locked && (tapped || !this.lockedSaid || performance.now() - this.lockedSaid > 3000)) {
-      this.lockedSaid = performance.now();
-      this.speak('player', shop.locked, this.player.x, this.player.y);
-    }
+    if (tapped || !this.lockedSaid || performance.now() - this.lockedSaid > 3000) { this.lockedSaid = performance.now(); this.interact(); }
     return false;
   }
 
@@ -395,7 +427,7 @@ export class Town {
         for (const d of this.doors) if (p.x > d.x && p.x < d.x + d.w && p.y > d.y && p.y < d.y + d.h && vy < 0) { this.tryDoor(d); break; }
       } else {
         const ex = this.interior.exit;
-        if (p.x > ex.x && p.x < ex.x + ex.w && p.y > ex.y + 6 && vy > 0) this.exit();
+        if (p.x > ex.x - 12 && p.x < ex.x + ex.w + 12 && p.y > ex.y + 4 && vy > 0) this.exit();
       }
     }
     p.t += dt;
@@ -483,19 +515,29 @@ export class Town {
     } else if (!b.hidden) { b.hidden = true; this.say = null; }
     const n = this.nearby();
     let text = '';
-    if (n && n.kind === 'npc') text = `E \u00B7 talk to ${npcName(n.id)} (${SHOPS[this.interiorId].label})`;
-    else if (n && n.kind === 'folk') text = 'E \u00B7 talk';
+    if (this.offer) text = 'Enter \u00B7 yes \u00B7 Esc \u00B7 no';
+    else if (n && n.kind === 'npc') text = `E \u00B7 talk to ${npcName(n.id)} (${SHOPS[this.interiorId].label})`;
+    else if (n && n.kind === 'folk') text = n.who.talk ? 'E \u00B7 talk to the vendor' : 'E \u00B7 talk';
+    else if (n && n.kind === 'spot') text = `E \u00B7 ${n.spot.prompt}`;
     else if (n && n.kind === 'board') text = 'E \u00B7 read the contracts (Missions)';
-    else if (this.interior) text = `${SHOPS[this.interiorId].name} \u00B7 exit at the bottom`;
+    else if (this.interior) text = `${SHOPS[this.interiorId].name} \u00B7 talk to ${npcName(this.interior.npc.id)} \u00B7 Esc or the bottom door to leave`;
     else {
       const p = this.player;
       const d = this.doors.find((dd) => Math.hypot(dd.front.x - p.x, dd.front.y - p.y) < 40);
-      if (d) text = SHOPS[d.id] && SHOPS[d.id].label ? `${SHOPS[d.id].name} \u00B7 walk in for ${SHOPS[d.id].label}` : `${SHOPS[d.id].name}`;
+      if (d) text = SHOPS[d.id] && SHOPS[d.id].label ? `${SHOPS[d.id].name} \u00B7 walk in for ${SHOPS[d.id].label}` : SHOPS[d.id].name;
     }
     if (this.prompt.textContent !== text) { this.prompt.textContent = text; this.prompt.hidden = !text; }
   }
 }
 
+// Alpha channel of an image as a Uint8Array (1 = opaque), for footprint collision.
+function alphaOf(im) {
+  const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+  const g = c.getContext('2d'); g.drawImage(im, 0, 0);
+  const d = g.getImageData(0, 0, im.width, im.height).data, out = new Uint8Array(im.width * im.height);
+  for (let i = 0; i < out.length; i++) out[i] = d[i * 4 + 3] > 40 ? 1 : 0;
+  return out;
+}
 const NPC_NAMES = { marrow: 'Marrow', ilse: 'Doc Ilse', handler: 'Cass', dispatcher: 'the dispatcher' };
 const npcName = (id) => NPC_NAMES[id] || id;
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];

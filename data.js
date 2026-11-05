@@ -26,10 +26,10 @@ export const BASE_STATS = { hp: 34, atk: 6, def: 2, spd: 4 };
 
 // ---------- attributes (per operative, lost on death) ----------
 export const ATTRS = {
-  str: { label: 'Strength',  short: 'STR', desc: '+2 max HP per point. Melee and heavy weapons get +1 ATK per point. Power Strike at 6. Forcing doors, carrying people.' },
-  agi: { label: 'Agility',   short: 'AGI', desc: '+1 SPD, +2.5% dodge and +3.5% ranged crit per point. Escaping and sneaking past guards.' },
-  int: { label: 'Intellect', short: 'INT', desc: 'Items work 10% better per point. Slicing consoles. An extra implant slot at 4 and 8.' },
-  cha: { label: 'Charisma',  short: 'CHA', desc: 'Prices 4% lower and credits 5% higher per point. People and hounds may hesitate to attack (4% per point; half against bosses). Bluffing and rallying.' },
+  str: { label: 'Strength',  short: 'STR', desc: '+1.5 max HP per point. Melee and heavy weapons get +0.6 ATK per point. Power Strike at 6. Forcing doors, carrying people.' },
+  agi: { label: 'Agility',   short: 'AGI', desc: '+1 SPD, +1 ranged ATK, +2.5% dodge and +3.5% ranged crit per point. Escaping and sneaking past guards.' },
+  int: { label: 'Intellect', short: 'INT', desc: 'Items work 10% better per point. Overload at 3. Slicing consoles. An extra implant slot at 4 and 8.' },
+  cha: { label: 'Charisma',  short: 'CHA', desc: 'Prices 4% lower and credits 5% higher per point. Intimidate at 3. People and hounds may hesitate to attack (5.5% per point; half against bosses). Bluffing and rallying.' },
 };
 export const ATTR_START = 1, ATTR_POINTS = 4, ATTR_CREATE_MAX = 5, ATTR_MAX = 10;
 
@@ -55,9 +55,9 @@ export const SKILLS = {
   burst:     { name: 'Burst Fire',      short: '3 quick shots', cd: 2, desc: 'Three shots at 55% each. Shreds unarmoured targets, weak against armour.', from: 'Carbines' },
   blast:     { name: 'Scatter Blast',   short: 'Big spread, x2 vs unarmoured', cd: 2, desc: 'x1.4 damage, doubled against unarmoured targets.', from: 'Scatterguns and heavy weapons' },
   smash:     { name: 'Power Strike',    short: 'Melee: heavy hit, ignores \u00BD armour', cd: 3, desc: 'Uses your melee weapon. x1.6 damage plus 1 per STR, ignores half of armour and the enemy\u2019s cover.', from: 'Melee weapons, or STR 6' },
-  overload:  { name: 'Overload',        short: 'Tech blast, stuns droids', cd: 4, desc: 'Tech burst: 6 + 4 per INT, ignores armour. Droids take double and are stunned.', from: 'Tech weapons, the Arc Coil, or INT 4' },
+  overload:  { name: 'Overload',        short: 'Tech blast, stuns droids', cd: 4, desc: 'Tech burst: 6 + 5 per INT, ignores armour. Droids take double and are stunned.', from: 'Tech weapons, the Arc Coil, or INT 3' },
   suppress:  { name: 'Suppressing Fire', short: 'Pins it in cover', cd: 3, desc: '60% damage and pins the enemy: its next move is forced to be taking cover.', from: 'AGI 4' },
-  intimidate:{ name: 'Intimidate',      short: 'Scare a human off', cd: 99, desc: 'Once per sector. A human enemy may run. If not, its ATK drops 25% for the fight.', from: 'CHA 4' },
+  intimidate:{ name: 'Intimidate',      short: 'Scare a human off', cd: 99, desc: 'Once per sector. A human enemy may run. If not, its ATK drops 25% for the fight.', from: 'CHA 3' },
 };
 export const WEAPON_SKILL = { pistol: 'aimed', rifle: 'aimed', carbine: 'burst', scatter: 'blast', heavy: 'blast', tech: 'overload' };
 // Power Strike comes from any real melee weapon (not the starter knife) or STR 6.
@@ -521,7 +521,7 @@ export const PERKS = [
   { id: 'scavenger', name: 'Scavenger',          rare: false, desc: '35% chance to find an item after each fight.' },
   { id: 'spotter',   name: 'Spotter',            rare: false, desc: 'Enemies start every fight Exposed for 2 turns.' },
   { id: 'thick',     name: 'Thick Skin',         rare: false, desc: 'Status effects on you last 1 turn less.' },
-  { id: 'ambush',    name: 'Ambusher',           rare: true,  desc: 'Your first attack in every fight deals double damage.' },
+  { id: 'ambush',    name: 'Ambusher',           rare: true,  desc: 'Your first attack in every fight deals +50% damage.' },
   { id: 'deadman',   name: 'Dead Man\u2019s Switch', rare: true, desc: 'Once per raid, survive a killing blow with 1 HP.' },
   { id: 'grudge',    name: 'Grudge',             rare: true,  desc: '+30% damage against elites and bosses.' },
   { id: 'quickdraw', name: 'Quickdraw',          rare: true,  desc: 'Killing an enemy cuts all skill cooldowns by 2.' },

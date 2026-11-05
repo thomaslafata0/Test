@@ -22,6 +22,10 @@ const BUILDS = {
   meleeOnly:  { bg: 'foundry',  attrs: ['str', 'str', 'agi'], style: 'melee', implants: ['myomer', 'dermal', 'pain', 'adrenal'] },
   rangedOnly: { bg: 'runner',   attrs: ['agi', 'agi', 'str'], style: 'ranged', implants: ['reflex', 'optic', 'dermal', 'adrenal'] },
   hybrid:     { bg: 'foundry',  attrs: ['str', 'agi'], style: 'hybrid', implants: ['dermal', 'reflex', 'pain', 'adrenal'] },
+  // item-driven playstyles: what the bot hunts for in the shop and in drops
+  critStack:  { bg: 'runner',   attrs: ['agi', 'agi', 'str'], style: 'rangedFocus', implants: ['optic', 'reflex', 'dermal', 'adrenal'], w: { crit: 3, human: 2 } },
+  tank:       { bg: 'foundry',  attrs: ['str', 'str', 'cha'], style: 'auto', implants: ['dermal', 'pain', 'adrenal', 'myomer'], w: { def: 2.5, hp: 2, resist: 3, healkill: 2 } },
+  dotBuild:   { bg: 'foundry',  attrs: ['str', 'agi'], style: 'hybrid', implants: ['dermal', 'reflex', 'pain', 'adrenal'], w: { bleed: 4, droid: 1.5 } },
 };
 const ARMOR_SLOTS = ['head', 'chest', 'legs'];
 const STYLES = {
@@ -40,13 +44,13 @@ function shop(s, b, st) {
   const c = s.char;
   E.heal(s);
   let i = 0; while (c.attrPoints > 0 && i++ < 40) if (!E.spendAttr(s, b.attrs[i % b.attrs.length])) for (const k of Object.keys(D.ATTRS)) if (E.spendAttr(s, k)) break;
-  G.shopGear(s, b.style, 60, b.noArmor ? ARMOR_SLOTS : []);
+  G.shopGear(s, b.style, 60, b.noArmor ? ARMOR_SLOTS : [], b.w || {});
   while (c.items.stim < 3 && E.buyItem(s, 'stim'));
   for (const [it, n] of Object.entries(b.items || {})) while (c.items[it] < n && c.credits > 80 && E.buyItem(s, it));
   while (c.items.smoke < st.smoke && E.buyItem(s, 'smoke'));
   for (const id of b.implants) if (c.credits > 120) E.installImplant(s, id);
   for (const u of D.UPGRADES) if (c.credits > u.cost + 80) E.buyUpgrade(s, u.id);
-  G.upgradeGear(s, b.style, 150, b.noArmor ? ARMOR_SLOTS : []);
+  G.upgradeGear(s, b.style, 150, b.noArmor ? ARMOR_SLOTS : [], b.w || {});
 }
 
 function act(s, st, b) {
@@ -76,7 +80,7 @@ function playOperative(s, rng, b, st, map = 'garrison') {
     while (s.run && s.screen !== 'death' && steps++ < 4000) {
       if (s.screen === 'combat') { const a = act(s, st, b); if (a === 'smoke' || a === 'run') escapes++; E.playerAct(s, a, rng); }
       else if (s.screen === 'victory') E.continueAfterVictory(s, rng);
-      else if (s.screen === 'loot') G.lootChoice(s, rng, b.style, b.noArmor ? ARMOR_SLOTS : []);
+      else if (s.screen === 'loot') G.lootChoice(s, rng, b.style, b.noArmor ? ARMOR_SLOTS : [], b.w || {});
       else if (s.screen === 'perk') E.choosePerk(s, s.run.perkOffer[0], rng, s.char.perks[0]);
       else if (s.screen === 'route') {
         const ch = s.run.choices, low = s.char.hp < E.stats(s).maxHp * 0.5;

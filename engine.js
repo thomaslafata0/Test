@@ -30,8 +30,8 @@ export const CARRY_CD = 2;       // minimum cooldown a skill used last fight sta
 export const MIN_FIGHTS = 2; // fights required per sector; the rest of the rooms can be anything
 // Enemy growth per sector past their first appearance: linear plus a quadratic tail.
 export const growth = (lvl, lin, quad) => 1 + lin * lvl + quad * lvl * lvl;
-export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.01, bossHp: 2.4, bossAtk: 1.5, enemyAtk: 1.62, enemyHp: 1.62, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 2, strAtk: 1, agiCrit: 0.04, agiDodge: 0.025, intOverload: 3.5, chaHesitate: 0.04, chaCredits: 0.05, wanted: 0.025, escapeLoss: 0.5,
-  upgradeCost: 60, eliteGear: 0.3, shopLegendary: 0.06, cover: 0.5, agiAtk: 0.5, early: 0.5,
+export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.01, bossHp: 2.1, bossAtk: 1.4, enemyAtk: 1.74, enemyHp: 1.78, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 1.5, strAtk: 0.6, agiCrit: 0.04, agiDodge: 0.025, intOverload: 5, chaHesitate: 0.055, chaCredits: 0.05, wanted: 0.025, escapeLoss: 0.5, extractLoss: 0.3, ambush: 1.5,
+  upgradeCost: 60, eliteGear: 0.3, shopLegendary: 0.06, cover: 0.5, agiAtk: 1, early: 0.35,
   rangedSpread: 0.15, meleeSpread: 0.3, shootGuard: 0.15, momentum: 0.15 };
 export const isBossSector = (n) => n % 5 === 0;
 // Optional credit accounting for the simulators: set s.ledger = {} and every credit gain or spend is tallied by source.
@@ -215,7 +215,7 @@ export function mainStat(it) {
 }
 export const itemName = (it) => `${baseOf(it).name}${it.level ? ` +${it.level}` : ''}`;
 export const itemPrice = (it) => Math.round(baseOf(it).cost * D.RARITY[it.rarity].price);
-export const sellValue = (it) => (it ? Math.round(0.35 * (itemPrice(it) + (it.spent || 0))) : 0);
+export const sellValue = () => 0; // gear is never sold: the fence doesn't buy, he only sells
 export const canUpgrade = (it) => !!it && upgradeGain(it) > 0 && it.level < D.UPGRADE_MAX;
 export const upgradeCost = (it) => Math.round(TUNE.upgradeCost * upgradeGain(it) * (it.level + 1) * D.RARITY[it.rarity].up);
 export const canReroll = (it) => !!it && it.bonuses.some((x) => !x.fixed);
@@ -286,17 +286,16 @@ function equip(s, it, verb) {
   c.hp = Math.max(1, c.hp);
   return old;
 }
-// Buy from the Black Market. The piece it replaces is traded in for its sale value.
-export const tradeIn = (c, it) => sellValue(gearIn(c, baseOf(it).slot));
-export const netPrice = (s, it) => Math.max(0, price(s, itemPrice(it)) - tradeIn(s.char, it));
+// Buy from the Black Market. The piece it replaces is gone: Marrow doesn't buy, he only sells.
+export const netPrice = (s, it) => price(s, itemPrice(it));
 export function buyGear(s, idx) {
   const c = s.char, it = c.market && c.market[idx];
   if (!it || !canEquip(c, it) || c.credits < netPrice(s, it)) return false;
-  const cost = netPrice(s, it), back = tradeIn(c, it);
+  const cost = netPrice(s, it);
   c.credits -= cost; ledger(s, 'spend:gear', cost);
   c.market.splice(idx, 1);
   const old = equip(s, it);
-  s.notice = `Bought ${itemName(it)}.${back ? ` Marrow took your ${itemName(old)} for ${back} ${D.SETTING.cur}.` : ''}`;
+  s.notice = `Bought ${itemName(it)}.${old && baseOf(old).tier > 0 ? ` The old ${itemName(old)} goes on the scrap heap.` : ''}`;
   return true;
 }
 export function upgradeItem(s, slot) {
@@ -323,27 +322,25 @@ export function rerollBonus(s, slot, idx, rng) {
   s.notice = `${before} became ${bonusText(it.bonuses[idx])}.`;
   return true;
 }
-// Loot drop after a fight: take it (the old piece is sold) or sell it.
+// Loot drop after a fight: take it (the old piece is left behind) or leave it.
 export function takeLoot(s, rng) {
   const r = s.run, c = s.char, it = r && r.lootOffer;
   if (!it || !canEquip(c, it)) return false;
-  const old = equip(s, it), back = sellValue(old);
-  c.credits += back; ledger(s, 'loot', back);
+  const old = equip(s, it);
   r.lootOffer = null;
-  log(s, `You take the ${itemName(it)}.${back ? ` The old ${itemName(old)} goes in the sack: +${back} ${D.SETTING.cur}.` : ''}`, 'reward');
+  log(s, `You take the ${itemName(it)}.${old && baseOf(old).tier > 0 ? ` The ${itemName(old)} stays on the floor.` : ''}`, 'reward');
   afterLoot(s, rng);
   return true;
 }
-export function sellLoot(s, rng) {
-  const r = s.run, c = s.char, it = r && r.lootOffer;
+export function leaveLoot(s, rng) {
+  const r = s.run, it = r && r.lootOffer;
   if (!it) return false;
-  const v = sellValue(it);
-  c.credits += v; r.sectorCredits += v; ledger(s, 'loot', v);
   r.lootOffer = null;
-  log(s, `You bag the ${itemName(it)} for the fence: +${v} ${D.SETTING.cur}.`, 'reward');
+  log(s, `You leave the ${itemName(it)} where it fell.`, 'info');
   afterLoot(s, rng);
   return true;
 }
+export const sellLoot = leaveLoot;
 function afterLoot(s, rng) { if (s.run.perkOffer) s.screen = 'perk'; else offerRoute(s, rng); }
 
 // Heirloom (cell upgrade): on death, pick one piece to leave for the next operative.
@@ -411,9 +408,9 @@ export function skillsOf(c) {
   const w = weaponOf(c), ws = D.WEAPON_SKILL[w.type], mw = meleeOf(c), gad = baseOf(gearIn(c, 'gadget'));
   if (ws) out.push(ws);
   if ((!mw.noSkill || attr(c, 'str') >= 6) && !out.includes('smash')) out.push('smash');
-  if ((attr(c, 'int') >= 4 || (gad && gad.overload)) && !out.includes('overload')) out.push('overload');
+  if ((attr(c, 'int') >= 3 || (gad && gad.overload)) && !out.includes('overload')) out.push('overload');
   if (attr(c, 'agi') >= 4) out.push('suppress');
-  if (attr(c, 'cha') >= 4) out.push('intimidate');
+  if (attr(c, 'cha') >= 3) out.push('intimidate');
   return out;
 }
 export const skillCd = (c, id) => Math.max(1, D.SKILLS[id].cd - (hasImp(c, 'synapse') && id !== 'intimidate' ? 1 : 0));
@@ -429,6 +426,41 @@ function fx(s, ev) {
 function log(s, text, kind = 'info') {
   s.log.push({ text, kind });
   if (s.log.length > 60) s.log.splice(0, s.log.length - 60);
+  journal(s, text, kind);
+}
+// Journal: a long record of what happened, for the exportable run report. Capped so saves stay small.
+export function journal(s, text, kind = 'info') {
+  if (!s.meta) return;
+  const j = s.meta.journal || (s.meta.journal = []);
+  const r = s.run, where = r ? `${mapById(r.map).name.split(' ')[0]} S${r.sector}` : 'Town';
+  const hp = s.char ? `${Math.max(0, s.char.hp)}hp` : '';
+  j.push(`[${where} ${hp}] ${text}`);
+  if (j.length > 700) j.splice(0, j.length - 700);
+}
+
+// The run report: everything a tester needs to say what happened. Plain text for pasting into a chat.
+export function runReport(s) {
+  const m = s.meta, c = s.char, lines = [];
+  lines.push(`CINDER CELL run report (save v${s.v}, ${new Date().toISOString().slice(0, 16).replace('T', ' ')})`);
+  lines.push(`Cell: ${m.operatives} operatives, ${m.stats.raids} raids, ${m.stats.kills} kills, ${m.stats.bosses} bosses, Resolve ${m.resolve} banked / ${m.totalResolve} earned, deepest sector ${m.bestSector}`);
+  lines.push(`Best by map: ${Object.entries(m.bestByMap).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}; liberated: ${Object.keys(m.liberated).join(', ') || 'none'}; threat ${m.threat}`);
+  lines.push(`Training: ${Object.entries(m.training).map(([k, v]) => `${k} ${v}`).join(', ')}; cell upgrades: ${m.cell.join(', ') || 'none'}`);
+  lines.push(`Tuning: ${JSON.stringify(TUNE)}`);
+  if (c) {
+    const st = statsOf(m, c);
+    lines.push('');
+    lines.push(`Operative ${c.number}: ${c.name}, ${c.background}, level ${c.level}, ${c.hp}/${st.maxHp} HP, ${c.credits} cr, Wanted ${c.wanted || 0}${c.fed ? ', fed' : ''}`);
+    lines.push(`Attributes: ${Object.entries(c.attrs).map(([k, v]) => `${k.toUpperCase()} ${v}`).join(' ')} (${c.attrPoints} unspent); Shoot ${st.atk} / Strike ${st.atkM}, DEF ${st.def}, SPD ${st.spd}, crit ${Math.round(st.crit * 100)}%/${Math.round(st.critM * 100)}%`);
+    lines.push(`Gear: ${D.SLOT_ORDER.map((sl) => { const it = c.gear[sl]; return it ? `${sl}=${itemName(it)} [${it.rarity}${it.bonuses.length ? '; ' + it.bonuses.map(bonusText).join(', ') : ''}${it.trait ? '; ' + D.TRAITS[it.trait].name : ''}]` : `${sl}=empty`; }).join('; ')}`);
+    lines.push(`Implants: ${c.implants.join(', ') || 'none'}; contacts: ${c.upgrades.join(', ') || 'none'}; contraband: ${c.perks.join(', ') || 'none'}; items: ${Object.entries(c.items).map(([k, v]) => `${k} ${v}`).join(', ')}`);
+    lines.push(`Skills: ${skillsOf(c).join(', ')}`);
+  }
+  if (s.run) lines.push(`In the field: ${mapById(s.run.map).name} sector ${s.run.sector}, room ${s.run.room}, bulletin ${s.run.bulletin}, ${s.run.enemy ? `fighting ${s.run.enemy.name} (${s.run.enemy.hp}/${s.run.enemy.maxHp})` : 'between rooms'}`);
+  if (m.fallen.length) { lines.push(''); lines.push('The wall:'); for (const f of m.fallen.slice(0, 12)) lines.push(`  #${f.number} ${f.name} (${f.background}, lv ${f.level}) died in ${f.map} sector ${f.sector} to ${f.killer} with ${f.credits} cr`); }
+  lines.push(''); lines.push(`Journal (last ${Math.min(400, (m.journal || []).length)} events):`);
+  for (const l of (m.journal || []).slice(-400)) lines.push('  ' + l);
+  lines.push(''); lines.push('Tester notes (fill in): too easy / too hard / what felt wrong:');
+  return lines.join('\n');
 }
 
 function changeAttrs(s, delta, why) {
@@ -467,6 +499,33 @@ export function respec(s) {
   c.attrPoints += n; c.spent = {}; c.respecs = (c.respecs || 0) + 1;
   c.hp = Math.max(1, Math.min(c.hp, stats(s).maxHp));
   s.notice = `Doc talks you through it for ${cost} ${D.SETTING.cur}. ${n} attribute point${n > 1 ? 's' : ''} to spend again.`;
+  return true;
+}
+
+// Lie low: Cass burns your papers and spreads a rumour you're dead. Costs credits, drops Wanted by 2.
+export const lieLowCost = (c) => 50 + 40 * (c.wanted || 0);
+export function lieLow(s) {
+  const c = s.char;
+  if (!c.wanted || c.credits < lieLowCost(c)) return false;
+  const cost = lieLowCost(c);
+  c.credits -= cost; ledger(s, 'spend:lielow', cost);
+  c.wanted = Math.max(0, c.wanted - 2);
+  s.notice = `Cass burns your old papers. Wanted level ${c.wanted}.`;
+  return true;
+}
+// Noodles: a hot meal before the raid. +5% XP until you're next back in town.
+export const NOODLE_COST = 2;
+export function buyNoodles(s) {
+  const c = s.char;
+  if (c.fed || c.credits < NOODLE_COST) return false;
+  c.credits -= NOODLE_COST; c.fed = true;
+  return true;
+}
+// A neighbour in the tenement slips you a stim, once per operative.
+export function tenementGift(s) {
+  const c = s.char;
+  if (c.gifted || c.items.stim >= stats(s).carry) return false;
+  c.gifted = true; c.items.stim += 1;
   return true;
 }
 
@@ -849,7 +908,7 @@ function hitMult(s, melee, { mult = 1, unarmoredBonus = 1 } = {}) {
   if (hasTrait(c, 'executioner', mode) && e.hp < e.maxHp * 0.3) mult *= 1.4;
   if (hasUnique(c, 'crucible') && e.st.burn) mult *= 1.25;
   if (!e.tags.includes('armored')) mult *= unarmoredBonus;
-  if (hasPerk(c, 'ambush') && !r.struck) mult *= 2;
+  if (hasPerk(c, 'ambush') && !r.struck) mult *= TUNE.ambush;
   if (hasPerk(c, 'grudge') && (e.elite || e.boss)) mult *= 1.3;
   return mult * outMult(r.pst, e.st);
 }
@@ -1233,6 +1292,7 @@ function enemyTurn(s, rng) {
 
 function gainXp(s, amount, out) {
   const c = s.char;
+  if (c.fed) amount = Math.round(amount * 1.05);
   c.xp += amount;
   while (c.xp >= xpToNext(c.level)) {
     const before = stats(s).maxHp;
@@ -1401,11 +1461,13 @@ export function pushDeeper(s, rng) {
 export function endRun(s, how, rngForRestock = Math.random) {
   const r = s.run, c = s.char;
   let lost = 0;
-  if (how === 'escaped') {
-    lost = Math.max(0, Math.round((c.credits - (r.startCredits || 0)) * TUNE.escapeLoss));
+  const early = how === 'extracted' && !isBossSector(r.sector);
+  if (how === 'escaped' || early) {
+    lost = Math.max(0, Math.round((c.credits - (r.startCredits || 0)) * (early ? TUNE.extractLoss : TUNE.escapeLoss)));
     c.credits -= lost; ledger(s, 'escape loss', -lost);
   }
   c.wanted = (c.wanted || 0) + 1;
+  c.fed = false;
   if (rngForRestock) restockMarket(s, rngForRestock);
   let home = '';
   const freed = Math.max(0, r.allies - (r.follower ? 1 : 0)); // the Preacher's follower isn't a rescued prisoner
@@ -1415,13 +1477,15 @@ export function endRun(s, how, rngForRestock = Math.random) {
   }
   if (how === 'extracted') contractEvent(s, 'extract', { credits: s.char.credits, allies: freed });
   s.notice = how === 'extracted'
-    ? `You made it out of ${sectorName(r.sector, r.map)}.${home} Spend it before your luck runs out.`
+    ? `You made it out of ${sectorName(r.sector, r.map)}.${lost ? ` Slipping out early cost ${lost} ${D.SETTING.cur} in bribes at the gate.` : ''}${home} Spend it before your luck runs out.`
     : `You escaped from ${sectorName(r.sector, r.map)}${lost ? `, but dropped ${lost} ${D.SETTING.cur} on the way out` : ''}.`;
   s.run = null;
   s.screen = allLiberated(s) && !s.meta.endingSeen ? 'ending' : 'town';
   s.tab = 'clinic';
 }
 
+// What extracting right now would cost: 30% of this raid's haul, unless you've just beaten a boss.
+export const extractLoss = (s) => { const r = s.run, c = s.char; return r && !isBossSector(r.sector) ? Math.max(0, Math.round((c.credits - (r.startCredits || 0)) * TUNE.extractLoss)) : 0; };
 export const allLiberated = (s) => D.MAPS.every((m) => s.meta.liberated[m.id]);
 export const maxThreat = (s) => Math.min(D.THREAT.length - 1, Object.keys(s.meta.liberated).length);
 
@@ -1474,6 +1538,7 @@ function contractEvent(s, kind, data) {
 function die(s, foe) {
   fx(s, { who: 'player', type: 'down' });
   const c = s.char, r = s.run;
+  c.fed = false;
   const record = { name: c.name, number: c.number, level: c.level, sector: r.sector, map: r.map, killer: foe.name, killerId: foe.id, killerPortrait: foe.portrait, credits: c.credits, background: c.background };
   s.meta.fallen.unshift(record);
   s.meta.fallen = s.meta.fallen.slice(0, 12);

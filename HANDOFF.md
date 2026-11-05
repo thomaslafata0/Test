@@ -142,3 +142,14 @@ Implants stay as they are (separate slots in the Clinic).
 - Controls: arrows/WASD, tap-to-walk (BFS on an 8 px grid), tap a person to walk over and talk. The view resizes to a whole-pixel scale (about 2x desktop, 1x phone); interiors zoom one step further on wide screens.
 - After a raid you appear outside the freight terminal; new operatives appear outside the safehouse. `globalThis.cinderTown` exposes the scene for debugging.
 - Not done: furniture collision inside rooms (only the floor rectangle is used), and a Tiled map.
+
+## Built: polish pass (same branch)
+- Wanted: `E.lieLow` at the safehouse (50 + 40 x level credits, Wanted -2); the header badge and Missions point there.
+- No selling: `sellValue()` is 0, loot is take-or-leave (`E.leaveLoot`), buying replaces the old piece.
+- Extracting between bosses loses `TUNE.extractLoss` (30%) of the raid's haul; after a boss sector it's free (`E.extractLoss`).
+- Battle modes: Manual / Auto 1x / Auto 2x (`stage.mode`, localStorage `cinder-cell-speed`).
+- Yard: compact 22x16 map, outline collision from the buildings' alpha (`masks`), `HOTSPOTS` for props and doors, noodles (`E.buyNoodles`, +5% XP until next in town, `c.fed`), tenement stim once per operative (`E.tenementGift`), vending terminal, barracks lines. Only the terminal auto-opens (`SHOPS.*.auto`); Escape leaves a room; the compare popup (`state.compare`) sits over the Black Market.
+- Attribute points can be spent from the town screen (`townSpend()`).
+- Music: `music/town.mp3` and `music/raid.mp3`, crossfaded in `audio.js` (`setMusic`), prefs `music` and `musicVolume`; ambience drone now off by default.
+- Run report: `E.journal` records every log line into `meta.journal` (cap 700); Settings > "Copy run report" builds `E.runReport(s)` (clipboard + .txt download).
+- Balance (final): bosses 2.1/1.4, enemies 1.78/1.74, early 0.35, Ambusher x1.5, strHp 1.5, strAtk 0.6, agiAtk 1, intOverload 5, chaHesitate 0.055, Overload at INT 3, Intimidate at CHA 3. Ablation sweep (`ABLATE=perk:x|unique:x|trait:x|bonus:x|loot` on sim.mjs) found no single item moving the finale by more than one operative. Build table at 100 campaigns: strength 17, balanced 16, tank 17, intellect 19, strAgi 19, dotBuild 19, hybrid 19, meleeOnly 22, charisma 24, critStack 25, rangedOnly 25, agility 27, glass 30 (88%). Main bot 3/9/20, Port 27 (99%).

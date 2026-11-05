@@ -90,7 +90,7 @@ export class Stage {
       <div class="hud hud-player"><div class="hud-row"><b class="hud-name"></b><span class="hud-tag"></span></div><div class="bar"><i></i></div><div class="hud-row"><span class="hud-st"></span><span class="hud-hp num"></span></div></div>
       <div class="cine" hidden><i class="bar-top"></i><i class="bar-bot"></i><div class="cine-card"><span class="cine-label"></span><b class="cine-name"></b><span class="cine-epithet"></span></div><span class="cine-skip">Click to skip</span></div>
       <div class="pops" aria-hidden="true"></div>
-      <div class="speed" role="group" aria-label="Battle mode"><button data-speed="1" title="You choose every move">1\u00D7</button><button data-speed="auto" title="Auto battle: the operative fights on their own with a fixed routine, at double speed. Tap 1\u00D7 to take over.">Auto</button></div>`;
+      <div class="speed" role="group" aria-label="Battle mode"><button data-speed="manual" title="You choose every move">Manual</button><button data-speed="auto1" title="Auto battle: the operative fights with a fixed routine. Tap Manual to take over.">Auto 1\u00D7</button><button data-speed="auto2" title="Auto battle at double speed.">Auto 2\u00D7</button></div>`;
     this.canvas = this.el.querySelector('canvas');
     this.ctx = this.canvas.getContext('2d');
     this.ctx.imageSmoothingEnabled = false;
@@ -105,15 +105,15 @@ export class Stage {
     this.enemy = null; this.player = null; this.enemyRef = null; this.runRef = null;
     this.intent = 'attack'; this.stun = 0; this.sector = 1; this.boss = false;
     this.playerShield = false; this.heavyBoost = false;
-    // Battle mode: '1' (manual) or 'auto' (auto battle, animations at double speed).
-    try { this.auto = JSON.parse(localStorage.getItem('cinder-cell-speed')) === 'auto'; } catch (e) { this.auto = false; }
-    this.speed = this.auto ? 2 : 1;
+    // Battle mode: 'manual', 'auto1' (auto battle) or 'auto2' (auto battle, animations at double speed).
+    try { this.mode = JSON.parse(localStorage.getItem('cinder-cell-speed')); } catch (e) { this.mode = 'manual'; }
+    if (!['manual', 'auto1', 'auto2'].includes(this.mode)) this.mode = this.mode === 'auto' ? 'auto1' : 'manual';
+    this.auto = this.mode !== 'manual'; this.speed = this.mode === 'auto2' ? 2 : 1;
     this.el.addEventListener('click', (ev) => {
       const b = ev.target.closest('[data-speed]');
       if (!b) return;
-      this.auto = b.dataset.speed === 'auto';
-      this.speed = this.auto ? 2 : 1;
-      try { localStorage.setItem('cinder-cell-speed', JSON.stringify(this.auto ? 'auto' : 1)); } catch (e) {}
+      this.mode = b.dataset.speed; this.auto = this.mode !== 'manual'; this.speed = this.mode === 'auto2' ? 2 : 1;
+      try { localStorage.setItem('cinder-cell-speed', JSON.stringify(this.mode)); } catch (e) {}
       this.syncSpeed();
       this.el.dispatchEvent(new CustomEvent('automode', { bubbles: true, detail: this.auto }));
     });
@@ -122,7 +122,7 @@ export class Stage {
     requestAnimationFrame(loop);
   }
 
-  syncSpeed() { this.el.querySelectorAll('[data-speed]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.speed === (this.auto ? 'auto' : '1')))); }
+  syncSpeed() { this.el.querySelectorAll('[data-speed]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.speed === this.mode))); }
   get skip() { return false; }
   wait(ms) { return this.skip ? Promise.resolve() : new Promise((r) => setTimeout(r, ms / this.speed)); }
   tween(ms, fn) {

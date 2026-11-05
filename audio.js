@@ -3,7 +3,7 @@
 
 let ctx = null, master = null, sfxBus = null, ambBus = null, noiseBuf = null;
 let ambNodes = null;
-const prefs = { sfx: true, ambience: true, rain: false, volume: 0.7 };
+const prefs = { sfx: true, ambience: false, rain: false, music: true, musicVolume: 0.5, volume: 0.7 };
 try { Object.assign(prefs, JSON.parse(localStorage.getItem('cinder-cell-audio')) || {}); } catch (e) {}
 
 function save() { try { localStorage.setItem('cinder-cell-audio', JSON.stringify(prefs)); } catch (e) {} }
@@ -23,8 +23,8 @@ function ensure() {
   return ctx;
 }
 
-// Call from any user gesture: unlocks audio and starts ambience if enabled.
-export function unlock() { if (ensure()) setAmbience(currentTheme); }
+// Call from any user gesture: unlocks audio and starts ambience and music if enabled.
+export function unlock() { unlocked = true; if (ensure()) setAmbience(currentTheme); startMusic(); }
 
 export function setPref(k, v) {
   prefs[k] = v; save();
@@ -33,6 +33,33 @@ export function setPref(k, v) {
   sfxBus.gain.value = prefs.sfx ? 1 : 0;
   if (ambNodes) ambNodes.rainGain.gain.setTargetAtTime(prefs.rain ? 0.35 : 0, ctx.currentTime, 0.3);
   setAmbience(currentTheme);
+  startMusic();
+}
+
+// ---------- music: two looping tracks (town, raid), crossfaded. Quiet by design. ----------
+const TRACKS = { town: 'music/town.mp3', raid: 'music/raid.mp3' };
+const music = {}; // id -> HTMLAudioElement
+let unlocked = false, wantTrack = 'town', fadeTimer = null;
+function trackFor(theme) { return theme === 'town' || !theme ? 'town' : 'raid'; }
+export function setMusic(theme) { wantTrack = trackFor(theme); startMusic(); }
+function startMusic() {
+  if (!unlocked) return;
+  const target = prefs.music ? prefs.musicVolume * prefs.volume : 0;
+  for (const id of Object.keys(TRACKS)) {
+    if (!music[id]) { const a = new Audio(TRACKS[id]); a.loop = true; a.preload = 'auto'; a.volume = 0; music[id] = a; }
+    const a = music[id], want = id === wantTrack ? target : 0;
+    if (want > 0 && a.paused) { a.play().catch(() => {}); }
+  }
+  if (fadeTimer) clearInterval(fadeTimer);
+  fadeTimer = setInterval(() => {
+    let done = true;
+    for (const id of Object.keys(music)) {
+      const a = music[id], want = id === wantTrack ? target : 0, d = want - a.volume;
+      if (Math.abs(d) < 0.02) { a.volume = want; if (want === 0 && !a.paused) a.pause(); }
+      else { a.volume = Math.max(0, Math.min(1, a.volume + Math.sign(d) * 0.02)); done = false; }
+    }
+    if (done) { clearInterval(fadeTimer); fadeTimer = null; }
+  }, 60);
 }
 
 // ---------- building blocks ----------
