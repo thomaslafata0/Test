@@ -103,9 +103,21 @@ export class OrbitScene {
     const g = this.g, W = this.el.width, H = this.el.height, now = performance.now(), t = (now - this.t0) / 1000;
     g.fillStyle = '#05070c'; g.fillRect(0, 0, W, H);
     for (const s of this.stars) { s.x -= s.v; if (s.x < 0) s.x += W; g.fillStyle = s.s === 3 ? '#cfd6e6' : '#6a7390'; g.fillRect(s.x | 0, s.y | 0, s.s === 3 ? 2 : 1, s.s === 3 ? 2 : 1); }
-    // a planet limb
-    g.fillStyle = '#1a2436'; g.beginPath(); g.arc(W / 2, H + 220, 290, 0, TAU); g.fill();
-    g.fillStyle = '#243249'; g.beginPath(); g.arc(W / 2, H + 220, 282, 0, TAU); g.fill();
+    const bg = artFor('bg:orbit');
+    if (bg) g.drawImage(bg, 0, 0, W, H);
+    else {
+      // The smog-brown home world, its lift cable climbing to a Directorate station, and the station's lights.
+      g.fillStyle = '#3a2a1e'; g.beginPath(); g.arc(W / 2, H + 230, 296, 0, TAU); g.fill();
+      g.fillStyle = '#4e3826'; g.beginPath(); g.arc(W / 2, H + 230, 290, 0, TAU); g.fill();
+      g.fillStyle = '#5e4630'; for (let i = 0; i < 5; i++) { g.beginPath(); g.ellipse(W / 2 + Math.sin(t * 0.05 + i * 1.7) * 140, H - 12 + i * 4, 60 - i * 6, 2, 0, 0, TAU); g.fill(); }
+      g.fillStyle = 'rgba(232,151,58,0.18)'; g.fillRect(0, H - 6, W, 6);
+      g.fillStyle = '#1b1e26'; g.fillRect(W - 46, 0, 3, H);
+      g.fillStyle = '#2b2f3a'; g.fillRect(W - 62, 18, 36, 10); g.fillRect(W - 52, 12, 16, 22);
+      const blink = Math.floor(t * 2) % 2;
+      g.fillStyle = blink ? '#ff4a4a' : '#5a1a1a'; g.fillRect(W - 60, 20, 2, 2); g.fillRect(W - 30, 20, 2, 2);
+      g.fillStyle = '#ffd166'; for (let i = 0; i < 5; i++) g.fillRect(W - 50 + i * 3, 24, 1, 1);
+      for (let i = 0; i < 6; i++) { g.fillStyle = (Math.floor(t * 3) + i) % 6 === 0 ? '#ffd166' : '#6a5a3a'; g.fillRect(W - 45, 40 + i * 22 + ((t * 12) % 22), 1, 2); }
+    }
     g.save();
     if (this.shake > 0) { g.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake); this.shake *= 0.85; if (this.shake < 0.3) this.shake = 0; }
     const roll = this.fx.find((f) => f.kind === 'roll');
@@ -126,7 +138,13 @@ export class OrbitScene {
   drawShip(who, x, y, tilt) {
     const g = this.g, key = who === 'me' ? 'shuttle' : this.enemy, im = artFor(`ship:${key}`);
     g.save(); g.translate(x, y); g.rotate(tilt * 0.3);
-    if (im) { const sc = who === 'me' ? 1 : 1; g.drawImage(im, -im.width / 2 * sc, -im.height / 2 * sc, im.width * sc, im.height * sc); g.restore(); return; }
+    if (im) {
+      // Ship art faces right; enemies are mirrored to face the shuttle.
+      if (who !== 'me') g.scale(-1, 1);
+      g.imageSmoothingEnabled = false;
+      g.drawImage(im, Math.round(-im.width / 2), Math.round(-im.height / 2));
+      g.restore(); return;
+    }
     const flip = who === 'me' ? 1 : -1, size = 1.5 * (who === 'me' ? 1 : this.enemy === 'frigate' ? 1.7 : this.enemy === 'corvette' ? 1.3 : 1);
     g.scale(flip * size, size);
     const hull = who === 'me' ? '#8a8f9a' : this.enemy === 'frigate' ? '#5a3a3a' : this.enemy === 'corvette' ? '#4a4f6a' : '#5f6b5a', dark = '#2a2d33', light = who === 'me' ? '#d9a53a' : '#ff6a4a';

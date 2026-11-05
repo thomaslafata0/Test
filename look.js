@@ -92,7 +92,7 @@ function frameBoxes(bodyId, scene, anim) {
   return (boxCache[key] = out);
 }
 function offsetFor(bodyId, scene, anim, f, kind) {
-  if (bodyId === 'body_m1') return { dx: 0, dy: 0 };
+  if (bodyId === 'body_m1' || kind === 'fitted') return { dx: 0, dy: 0 };
   const a = frameBoxes(bodyId, scene, anim), b = frameBoxes('body_m1', scene, anim);
   if (!a || !b || !a[f] || !b[f]) return { dx: 0, dy: 0 };
   if (kind === 'hair') return { dx: Math.round(a[f].hcx - b[f].hcx), dy: a[f].top - b[f].top };
@@ -113,7 +113,13 @@ function compose(scene, anim, look, background, weapon) {
     const { dx, dy } = offsetFor(look.body, scene, anim, f, kind);
     const tmp = document.createElement('canvas'); tmp.width = fw; tmp.height = fh;
     const tg = tmp.getContext('2d'); tg.drawImage(L.img, f * fw, 0, fw, fh, 0, 0, fw, fh);
-    if (ramp) { const d = tg.getImageData(0, 0, fw, fh); if (kind === 'hair') swapByLight(d.data, ramp); else swapExact(d.data, manifest.skinRamp, ramp); tg.putImageData(d, 0, 0); }
+    if (ramp) {
+      const d = tg.getImageData(0, 0, fw, fh);
+      // Hair art uses exactly the pack's three hair shades: swap them exactly, so the colour can't drift frame to frame.
+      if (kind === 'hair' || kind === 'fitted') { if (manifest.hairRamp) swapExact(d.data, manifest.hairRamp, ramp); else swapByLight(d.data, ramp); }
+      else swapExact(d.data, manifest.skinRamp, ramp);
+      tg.putImageData(d, 0, 0);
+    }
     g.drawImage(tmp, f * fw + dx, dy);
   };
   const skin = SKINS[look.skin] || SKINS[1], hair = HAIRS[look.hairColor] || HAIRS[1], outfit = OUTFITS[background];
@@ -121,6 +127,8 @@ function compose(scene, anim, look, background, weapon) {
     paint(look.body, 'body', skin, f);
     if (outfit) paint(outfit, 'outfit', skin, f);       // outfits show hands: same skin swap
     if (scene === 'town' && look.hair) paint(look.hair, 'hair', hair, f);
+    // Battle hair is pre-fitted to each body's head, frame by frame (falls included), so it is painted without an offset.
+    if (scene === 'battle' && look.hair && layers[`${look.hair}@${look.body}`]) paint(`${look.hair}@${look.body}`, 'fitted', hair, f);
     if (scene === 'battle' && weapon) paint(weapon, 'weapon', skin, f);
   }
   return { img: c, frames: body.frames, fps: body.fps, tip: weapon && layers[weapon] && layers[weapon].battle[anim] ? layers[weapon].battle[anim].tip : null };

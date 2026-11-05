@@ -1574,6 +1574,846 @@
     "scale": "1/5",
     "note": "same sprite pinned to the right fist every frame; tip moves only with the fist"
    }
+  },
+  "hair_short@body_m1": {
+   "kind": "hair",
+   "battle": {
+    "idle": {
+     "file": "hair/hair_short/battle/body_m1/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "hair/hair_short/battle/body_m1/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "hair/hair_short/battle/body_m1/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "hair/hair_short/battle/body_m1/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "hair/hair_short/battle/body_m1/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "hair/hair_short/battle/body_m1/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "hair_short@body_m2": {
+   "kind": "hair",
+   "battle": {
+    "idle": {
+     "file": "hair/hair_short/battle/body_m2/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "hair/hair_short/battle/body_m2/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "hair/hair_short/battle/body_m2/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "hair/hair_short/battle/body_m2/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "hair/hair_short/battle/body_m2/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "hair/hair_short/battle/body_m2/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "hair_short@body_f1": {
+   "kind": "hair",
+   "battle": {
+    "idle": {
+     "file": "hair/hair_short/battle/body_f1/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "hair/hair_short/battle/body_f1/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "hair/hair_short/battle/body_f1/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "hair/hair_short/battle/body_f1/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "hair/hair_short/battle/body_f1/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "hair/hair_short/battle/body_f1/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "hair_short@body_f2": {
+   "kind": "hair",
+   "battle": {
+    "idle": {
+     "file": "hair/hair_short/battle/body_f2/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "hair/hair_short/battle/body_f2/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "hair/hair_short/battle/body_f2/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "hair/hair_short/battle/body_f2/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "hair/hair_short/battle/body_f2/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "hair/hair_short/battle/body_f2/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "hair_cropped@body_m1": {
+   "kind": "hair",
+   "battle": {
+    "idle": {
+     "file": "hair/hair_cropped/battle/body_m1/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "hair/hair_cropped/battle/body_m1/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "hair/hair_cropped/battle/body_m1/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "hair/hair_cropped/battle/body_m1/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "hair/hair_cropped/battle/body_m1/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "hair/hair_cropped/battle/body_m1/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "hair_cropped@body_m2": {
+   "kind": "hair",
+   "battle": {
+    "idle": {
+     "file": "hair/hair_cropped/battle/body_m2/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "hair/hair_cropped/battle/body_m2/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "hair/hair_cropped/battle/body_m2/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "hair/hair_cropped/battle/body_m2/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "hair/hair_cropped/battle/body_m2/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "hair/hair_cropped/battle/body_m2/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "hair_cropped@body_f1": {
+   "kind": "hair",
+   "battle": {
+    "idle": {
+     "file": "hair/hair_cropped/battle/body_f1/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "hair/hair_cropped/battle/body_f1/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "hair/hair_cropped/battle/body_f1/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "hair/hair_cropped/battle/body_f1/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "hair/hair_cropped/battle/body_f1/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "hair/hair_cropped/battle/body_f1/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "hair_cropped@body_f2": {
+   "kind": "hair",
+   "battle": {
+    "idle": {
+     "file": "hair/hair_cropped/battle/body_f2/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "hair/hair_cropped/battle/body_f2/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "hair/hair_cropped/battle/body_f2/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "hair/hair_cropped/battle/body_f2/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "hair/hair_cropped/battle/body_f2/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "hair/hair_cropped/battle/body_f2/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "hair_long_tied@body_m1": {
+   "kind": "hair",
+   "battle": {
+    "idle": {
+     "file": "hair/hair_long_tied/battle/body_m1/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "hair/hair_long_tied/battle/body_m1/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "hair/hair_long_tied/battle/body_m1/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "hair/hair_long_tied/battle/body_m1/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "hair/hair_long_tied/battle/body_m1/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "hair/hair_long_tied/battle/body_m1/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "hair_long_tied@body_m2": {
+   "kind": "hair",
+   "battle": {
+    "idle": {
+     "file": "hair/hair_long_tied/battle/body_m2/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "hair/hair_long_tied/battle/body_m2/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "hair/hair_long_tied/battle/body_m2/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "hair/hair_long_tied/battle/body_m2/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "hair/hair_long_tied/battle/body_m2/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "hair/hair_long_tied/battle/body_m2/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "hair_long_tied@body_f1": {
+   "kind": "hair",
+   "battle": {
+    "idle": {
+     "file": "hair/hair_long_tied/battle/body_f1/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "hair/hair_long_tied/battle/body_f1/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "hair/hair_long_tied/battle/body_f1/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "hair/hair_long_tied/battle/body_f1/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "hair/hair_long_tied/battle/body_f1/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "hair/hair_long_tied/battle/body_f1/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "hair_long_tied@body_f2": {
+   "kind": "hair",
+   "battle": {
+    "idle": {
+     "file": "hair/hair_long_tied/battle/body_f2/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "hair/hair_long_tied/battle/body_f2/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "hair/hair_long_tied/battle/body_f2/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "hair/hair_long_tied/battle/body_f2/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "hair/hair_long_tied/battle/body_f2/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "hair/hair_long_tied/battle/body_f2/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "hair_shaved@body_m1": {
+   "kind": "hair",
+   "battle": {
+    "idle": {
+     "file": "hair/hair_shaved/battle/body_m1/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "hair/hair_shaved/battle/body_m1/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "hair/hair_shaved/battle/body_m1/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "hair/hair_shaved/battle/body_m1/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "hair/hair_shaved/battle/body_m1/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "hair/hair_shaved/battle/body_m1/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "hair_shaved@body_m2": {
+   "kind": "hair",
+   "battle": {
+    "idle": {
+     "file": "hair/hair_shaved/battle/body_m2/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "hair/hair_shaved/battle/body_m2/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "hair/hair_shaved/battle/body_m2/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "hair/hair_shaved/battle/body_m2/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "hair/hair_shaved/battle/body_m2/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "hair/hair_shaved/battle/body_m2/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "hair_shaved@body_f1": {
+   "kind": "hair",
+   "battle": {
+    "idle": {
+     "file": "hair/hair_shaved/battle/body_f1/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "hair/hair_shaved/battle/body_f1/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "hair/hair_shaved/battle/body_f1/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "hair/hair_shaved/battle/body_f1/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "hair/hair_shaved/battle/body_f1/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "hair/hair_shaved/battle/body_f1/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "hair_shaved@body_f2": {
+   "kind": "hair",
+   "battle": {
+    "idle": {
+     "file": "hair/hair_shaved/battle/body_f2/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "hair/hair_shaved/battle/body_f2/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "hair/hair_shaved/battle/body_f2/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "hair/hair_shaved/battle/body_f2/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "hair/hair_shaved/battle/body_f2/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "hair/hair_shaved/battle/body_f2/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "hair_mohawk@body_m1": {
+   "kind": "hair",
+   "battle": {
+    "idle": {
+     "file": "hair/hair_mohawk/battle/body_m1/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "hair/hair_mohawk/battle/body_m1/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "hair/hair_mohawk/battle/body_m1/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "hair/hair_mohawk/battle/body_m1/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "hair/hair_mohawk/battle/body_m1/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "hair/hair_mohawk/battle/body_m1/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "hair_mohawk@body_m2": {
+   "kind": "hair",
+   "battle": {
+    "idle": {
+     "file": "hair/hair_mohawk/battle/body_m2/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "hair/hair_mohawk/battle/body_m2/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "hair/hair_mohawk/battle/body_m2/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "hair/hair_mohawk/battle/body_m2/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "hair/hair_mohawk/battle/body_m2/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "hair/hair_mohawk/battle/body_m2/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "hair_mohawk@body_f1": {
+   "kind": "hair",
+   "battle": {
+    "idle": {
+     "file": "hair/hair_mohawk/battle/body_f1/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "hair/hair_mohawk/battle/body_f1/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "hair/hair_mohawk/battle/body_f1/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "hair/hair_mohawk/battle/body_f1/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "hair/hair_mohawk/battle/body_f1/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "hair/hair_mohawk/battle/body_f1/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "hair_mohawk@body_f2": {
+   "kind": "hair",
+   "battle": {
+    "idle": {
+     "file": "hair/hair_mohawk/battle/body_f2/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "hair/hair_mohawk/battle/body_f2/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "hair/hair_mohawk/battle/body_f2/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "hair/hair_mohawk/battle/body_f2/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "hair/hair_mohawk/battle/body_f2/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "hair/hair_mohawk/battle/body_f2/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "hair_bob@body_m1": {
+   "kind": "hair",
+   "battle": {
+    "idle": {
+     "file": "hair/hair_bob/battle/body_m1/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "hair/hair_bob/battle/body_m1/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "hair/hair_bob/battle/body_m1/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "hair/hair_bob/battle/body_m1/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "hair/hair_bob/battle/body_m1/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "hair/hair_bob/battle/body_m1/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "hair_bob@body_m2": {
+   "kind": "hair",
+   "battle": {
+    "idle": {
+     "file": "hair/hair_bob/battle/body_m2/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "hair/hair_bob/battle/body_m2/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "hair/hair_bob/battle/body_m2/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "hair/hair_bob/battle/body_m2/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "hair/hair_bob/battle/body_m2/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "hair/hair_bob/battle/body_m2/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "hair_bob@body_f1": {
+   "kind": "hair",
+   "battle": {
+    "idle": {
+     "file": "hair/hair_bob/battle/body_f1/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "hair/hair_bob/battle/body_f1/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "hair/hair_bob/battle/body_f1/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "hair/hair_bob/battle/body_f1/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "hair/hair_bob/battle/body_f1/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "hair/hair_bob/battle/body_f1/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "hair_bob@body_f2": {
+   "kind": "hair",
+   "battle": {
+    "idle": {
+     "file": "hair/hair_bob/battle/body_f2/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "hair/hair_bob/battle/body_f2/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "hair/hair_bob/battle/body_f2/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "hair/hair_bob/battle/body_f2/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "hair/hair_bob/battle/body_f2/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "hair/hair_bob/battle/body_f2/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
   }
  },
  "portraits": {
@@ -1597,5 +2437,6 @@
    "w": 64,
    "h": 64
   }
- }
+ },
+ "note_battle_hair": "Battle hair is pre-fitted per body: layer '<hair>@<body>' (no offset needed). Built by tools/bhair_build.py from PixelLab hair states of battle body_m1."
 }

@@ -67,7 +67,7 @@ export const perkById = (id) => D.PERKS.find((p) => p.id === id);
 // ---------- state ----------
 export function newMeta() {
   return { resolve: 0, totalResolve: 0, training: { hp: 0, atk: 0, def: 0, spd: 0 }, cell: [], operatives: 0, bestSector: 0, bestByMap: {},
-    fallen: [], contracts: [], liberated: {}, threat: 0, heirloom: null, tips: {}, endingSeen: false, stats: { kills: 0, bosses: 0, raids: 0 }, board: [], boardSeeded: false, ship: { hull: 0, guns: 0, shields: 0, engines: 0, cell: [] }, ventures: {}, orbitWins: 0, feats: { counters: {}, tiers: {}, v: 0 } };
+    fallen: [], contracts: [], liberated: {}, threat: 0, heirloom: null, tips: {}, endingSeen: false, stats: { kills: 0, bosses: 0, raids: 0 }, board: [], boardSeeded: false, ship: { hull: 0, guns: 0, shields: 0, engines: 0, cell: [] }, ventures: {}, orbitWins: 0, orbitTierWins: {}, feats: { counters: {}, tiers: {}, v: 0 } };
 }
 
 export function newGame(rng) {
@@ -95,6 +95,8 @@ export function migrate(s, rng) {
     if (s.meta && !s.meta.ship) s.meta.ship = { hull: 0, guns: 0, shields: 0, engines: 0, cell: [] };
     if (s.meta && !s.meta.ventures) s.meta.ventures = {};
     if (s.meta && !s.meta.feats) s.meta.feats = { counters: {}, tiers: {}, v: 0 };
+    // Orbit wins from before tiers were tracked count as low-orbit wins, so older cells keep the blockade line open.
+    if (s.meta && !s.meta.orbitTierWins) s.meta.orbitTierWins = s.meta.orbitWins ? { low: s.meta.orbitWins } : {};
     for (const k of (s.meta && s.meta.contracts) || []) if (!k.done) k.credits = contractCredits(k.kind, k.n);
     return s;
   }
@@ -212,7 +214,13 @@ export function createChar(s, rng, draft = null, slot = 'char') {
   c.gear = startingGear(m, bg.id);
   if (hasCell(m, 'kit')) { c.items.stim += 1; c.items.thermal += 1; }
   c.hp = statsOf(m, c).maxHp;
-  if (m.heirloom && canEquip(c, m.heirloom)) { const it = m.heirloom; m.heirloom = null; c.gear[baseOf(it).slot] = it; c.hp = statsOf(m, c).maxHp; }
+  let heir = '';
+  if (m.heirloom && canEquip(c, m.heirloom)) {
+    // The heirloom takes its slot; whatever the background or Weapons Cache put there is not kept.
+    const it = m.heirloom, sl = baseOf(it).slot, was = c.gear[sl];
+    m.heirloom = null; c.gear[sl] = it; c.hp = statsOf(m, c).maxHp;
+    heir = ` The heirloom ${itemName(it)} comes out of the locker with them${was ? ` (in place of the starting ${baseOf(was).name})` : ''}.`;
+  }
   if (slot === 'char2') {
     // The friend's operative: created from a draft they sent, without touching the host's screen.
     s.char2 = c;
@@ -225,7 +233,7 @@ export function createChar(s, rng, draft = null, slot = 'char') {
   restockMarket(s, rng);
   refreshContracts(s, rng);
   s.screen = 'town'; s.tab = 'gate';
-  s.notice = `${c.name} takes the empty bunk. Gear up, then take a mission at the freight terminal.`;
+  s.notice = `${c.name} takes the empty bunk.${heir} Gear up, then take a mission at the freight terminal.`;
   return c;
 }
 
@@ -413,9 +421,32 @@ export const sellLoot = leaveLoot;
 function afterLoot(s, rng) { if (s.run.perkOffer) s.screen = 'perk'; else offerRoute(s, rng); }
 
 // Heirloom (cell upgrade): on death, pick one piece to leave for the next operative.
+// Any piece that isn't plain stock qualifies: bought gear, and starter gear that was upgraded, rerolled or found at a
+// better rarity. Stock Weapons Cache issue (a plain carbine or baton) is skipped when the cell owns the cache, since the
+// next operative is handed one anyway.
+export function heirloomWorthy(m, it) {
+  if (!it || !baseOf(it)) return false;
+  const stock = (it.level || 0) === 0 && (it.rarity || 'common') === 'common' && !(it.bonuses || []).length && !it.trait;
+  if (stock && baseOf(it).tier === 0) return false;
+  if (stock && hasCell(m, 'cache') && ['carbine', 'baton'].includes(it.base)) return false;
+  return true;
+}
+const heirloomValue = (it) => (baseOf(it).tier || 0) * 10 + D.RARITY_ORDER.indexOf(it.rarity || 'common') * 6 + (it.level || 0) * 3 + (it.bonuses || []).length * 2 + (it.trait ? 3 : 0);
+export function heirloomChoices(s) {
+  const c = s.char;
+  if (!c || !hasCell(s.meta, 'heirloom')) return [];
+  return D.SLOT_ORDER.map((sl) => [sl, gearIn(c, sl)]).filter(([, it]) => heirloomWorthy(s.meta, it));
+}
+// On death the most valuable piece goes in the locker by default, so the heirloom isn't lost by forgetting to pick.
+function autoHeirloom(s) {
+  const ch = heirloomChoices(s);
+  if (!ch.length) return;
+  const [, best] = ch.reduce((a, b) => (heirloomValue(b[1]) > heirloomValue(a[1]) ? b : a));
+  s.meta.heirloom = JSON.parse(JSON.stringify(best));
+}
 export function setHeirloom(s, slot) {
   const c = s.char, it = gearIn(c, slot);
-  if (!hasCell(s.meta, 'heirloom') || s.screen !== 'death' || !it || baseOf(it).tier === 0) return false;
+  if (!hasCell(s.meta, 'heirloom') || s.screen !== 'death' || !heirloomWorthy(s.meta, it)) return false;
   s.meta.heirloom = JSON.parse(JSON.stringify(it));
   s.notice = `${itemName(it)} goes in the safehouse locker.`;
   return true;
@@ -424,7 +455,7 @@ export function equipHeirloom(s) {
   const c = s.char, it = s.meta.heirloom;
   if (!c || !it || !canEquip(c, it)) return false;
   const old = equip(s, it);
-  s.meta.heirloom = old && baseOf(old).tier > 0 ? old : null;
+  s.meta.heirloom = heirloomWorthy(s.meta, old) ? old : null;
   s.notice = `${itemName(it)} is yours now.`;
   return true;
 }
@@ -1755,6 +1786,7 @@ function die(s, foe) {
   s.outcome = record;
   s.run = null;
   s.screen = 'death';
+  autoHeirloom(s);
 }
 // Called with the host's operative active, after the action that killed someone has unwound.
 function finishCoopDeath(s, rng) {
@@ -1887,11 +1919,27 @@ export function buyShipCell(s, id) {
 export const marksLeft = (c) => Object.keys(D.MARKS).filter((k) => !(c.marks || []).includes(k));
 
 // An orbit run: a turn-based ship fight kept in s.orbit. Losing the shuttle kills the operative.
-export function orbitStart(s, tierId, rng) {
+// Orbit gating. The cell's first flight is a shakedown: a lighter cutter, and a lost shuttle is towed home instead of
+// killing the pilot. After that, every run is permadeath and the harder lines need a refitted shuttle and a win below.
+export const shipRefit = (m) => ['hull', 'guns', 'shields', 'engines'].reduce((a, k) => a + (m.ship[k] || 0), 0);
+export const orbitShakedown = (m, tierId) => tierId === 'low' && !(m.orbitWins || 0);
+export function orbitLock(m, tierId) {
+  const t = D.ORBIT_TIERS.find((x) => x.id === tierId), wins = m.orbitTierWins || {};
+  if (!t || orbitShakedown(m, tierId)) return null;
+  const need = [];
+  if (shipRefit(m) < t.refit) need.push(`${t.refit} refit level${t.refit > 1 ? 's' : ''} (have ${shipRefit(m)})`);
+  if (t.after && !(wins[t.after] || 0)) need.push(`a win on ${D.ORBIT_TIERS.find((x) => x.id === t.after).name.toLowerCase()}`);
+  return need.length ? `Needs ${need.join(' and ')}.` : null;
+}
+export function orbitFoe(m, tierId) {
   const t = D.ORBIT_TIERS.find((x) => x.id === tierId);
-  if (!t || !inTown(s) || s.orbit) return false;
-  const me = shipStats(s.meta);
-  s.orbit = { tier: t.id, hull: me.hull, maxHull: me.hull, eHull: t.hull, eMaxHull: t.hull, step: 0, intent: t.fx[0], evading: false, aimed: false, locked: false, round: 1, log: [], over: null, events: [] };
+  return orbitShakedown(m, tierId) ? { ...t, ...D.ORBIT_SHAKEDOWN } : t;
+}
+export function orbitStart(s, tierId, rng) {
+  const t0 = D.ORBIT_TIERS.find((x) => x.id === tierId);
+  if (!t0 || !inTown(s) || s.orbit || orbitLock(s.meta, tierId)) return false;
+  const t = orbitFoe(s.meta, tierId), me = shipStats(s.meta);
+  s.orbit = { tier: t.id, shakedown: orbitShakedown(s.meta, tierId), hull: me.hull, maxHull: me.hull, eHull: t.hull, eMaxHull: t.hull, step: 0, intent: t.fx[0], evading: false, aimed: false, locked: false, round: 1, log: [], over: null, events: [] };
   s.orbit.log.push(`${t.shipName} on an intercept course. ${D.ORBIT_INTENTS[s.orbit.intent].label}.`);
   journal(s, `${s.char.name} takes the shuttle up: ${t.name}.`);
   return true;
@@ -1900,7 +1948,7 @@ const olog = (o, text, kind = 'info') => o.log.push(kind === 'info' ? text : `${
 export function orbitAct(s, act, rng) {
   const o = s.orbit, c = s.char;
   if (!o || o.over) return false;
-  const t = D.ORBIT_TIERS.find((x) => x.id === o.tier), me = shipStats(s.meta);
+  const t = o.shakedown ? { ...D.ORBIT_TIERS.find((x) => x.id === o.tier), ...D.ORBIT_SHAKEDOWN } : D.ORBIT_TIERS.find((x) => x.id === o.tier), me = shipStats(s.meta);
   o.events = [];
   const hitEnemy = (mult, label) => {
     if (rng() < t.evade) { olog(o, `${label}: the ${t.shipName} rolls clear.`); o.events.push({ t: 'miss', who: 'enemy' }); return; }
@@ -1940,8 +1988,9 @@ export function orbitAct(s, act, rng) {
   return true;
 }
 function finishOrbit(s, rng) {
-  const o = s.orbit, c = s.char, m = s.meta, t = D.ORBIT_TIERS.find((x) => x.id === o.tier);
+  const o = s.orbit, c = s.char, m = s.meta, t = o.shakedown ? { ...D.ORBIT_TIERS.find((x) => x.id === o.tier), ...D.ORBIT_SHAKEDOWN } : D.ORBIT_TIERS.find((x) => x.id === o.tier);
   o.result = { credits: 0, mark: null, survived: true };
+  if (o.over === 'won') { m.orbitTierWins = m.orbitTierWins || {}; m.orbitTierWins[o.tier] = (m.orbitTierWins[o.tier] || 0) + 1; }
   if (o.over === 'won') {
     const cr = Math.round(randInt(rng, t.credits[0], t.credits[1]) * (m.ship.cell.includes('salvager') ? 1.25 : 1) * (1 + markSum(c).credits));
     c.credits += cr; ledger(s, 'orbit', cr); o.result.credits = cr; m.orbitWins = (m.orbitWins || 0) + 1; feat(s, 'orbit'); feat(s, 'credits', cr);
@@ -1951,7 +2000,11 @@ function finishOrbit(s, rng) {
     olog(o, `Salvage: +${o.result.credits} ${D.SETTING.cur}.${o.result.mark ? ` The Mark of ${D.MARKS[o.result.mark].name}.` : ''}`, 'good');
     journal(s, `${c.name} wins in orbit (${t.name}): +${o.result.credits} ${D.SETTING.cur}.`, 'reward');
   } else if (o.over === 'lost') {
-    if (m.ship.cell.includes('ejector') && !c.ejected && rng() < 0.5) {
+    if (o.shakedown) {
+      o.over = 'towed';
+      olog(o, 'The shuttle goes dead in the water. Sable\u2019s tug hauls it home. That was the practice run: the next one is for real.', 'bad');
+      journal(s, `${c.name}'s shakedown flight ends on a tow line.`, 'bad');
+    } else if (m.ship.cell.includes('ejector') && !c.ejected && rng() < 0.5) {
       c.ejected = true; o.result.survived = true; o.over = 'ejected';
       olog(o, 'The shuttle comes apart. The pod fires. You drift home with nothing.', 'bad');
       journal(s, `${c.name}'s shuttle is destroyed; the pod brings them home.`, 'bad');

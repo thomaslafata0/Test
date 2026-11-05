@@ -636,10 +636,12 @@ export const SHIP_CELL = [
 ];
 // Enemy ships by run tier. mark: chance a win grants a Mark.
 export const ORBIT_TIERS = [
-  { id: 'low', name: 'Low orbit', ship: 'cutter', shipName: 'Patrol Cutter', hull: 40, atk: 8, shield: 1, evade: 0.1, credits: [70, 130], mark: 0, desc: 'A customs cutter on a lazy loop. Credits, no glory.', fx: ['fire', 'fire', 'volley', 'repair'] },
-  { id: 'mid', name: 'The blockade line', ship: 'corvette', shipName: 'Customs Corvette', hull: 70, atk: 11, shield: 2, evade: 0.15, credits: [160, 280], mark: 0.4, desc: 'A corvette that shoots first. A real chance of a Mark.', fx: ['fire', 'volley', 'fire', 'lock', 'repair'] },
-  { id: 'high', name: 'The Warden\u2019s watch', ship: 'frigate', shipName: 'Blockade Frigate', hull: 100, atk: 15, shield: 2, evade: 0.12, credits: [320, 520], mark: 1, desc: 'The frigate that owns the lift corridor. A Mark if you live; the pilot if you don\u2019t.', fx: ['fire', 'lock', 'volley', 'fire', 'volley', 'repair'] },
+  { id: 'low', name: 'Low orbit', ship: 'cutter', shipName: 'Patrol Cutter', hull: 40, atk: 8, shield: 1, evade: 0.1, credits: [70, 130], mark: 0, refit: 1, desc: 'A customs cutter on a lazy loop. Credits, no glory.', fx: ['fire', 'fire', 'volley', 'repair'] },
+  { id: 'mid', name: 'The blockade line', ship: 'corvette', shipName: 'Customs Corvette', hull: 70, atk: 11, shield: 2, evade: 0.15, credits: [160, 280], mark: 0.4, refit: 3, after: 'low', desc: 'A corvette that shoots first. A real chance of a Mark.', fx: ['fire', 'volley', 'fire', 'lock', 'repair'] },
+  { id: 'high', name: 'The Warden\u2019s watch', ship: 'frigate', shipName: 'Blockade Frigate', hull: 100, atk: 15, shield: 2, evade: 0.12, credits: [320, 520], mark: 1, refit: 8, after: 'mid', desc: 'The frigate that owns the lift corridor. A Mark if you live; the pilot if you don\u2019t.', fx: ['fire', 'lock', 'volley', 'fire', 'volley', 'repair'] },
 ];
+// The cell's first flight: a lame cutter limping home, and a tug on standby if it goes wrong.
+export const ORBIT_SHAKEDOWN = { shipName: 'Limping Cutter', hull: 26, atk: 6, shield: 0, evade: 0.05, credits: [50, 80], desc: 'Shakedown flight. A damaged cutter on its way to the yards. If the shuttle goes down, Sable\u2019s tug tows you home: this is the only run that can\u2019t kill you.' };
 export const ORBIT_INTENTS = { fire: { label: 'Firing', desc: 'A normal volley.' }, volley: { label: 'Full broadside', desc: 'x1.8 damage. Evade it.' }, lock: { label: 'Target lock', desc: 'Its next shot cannot miss and ignores half your deflector.' }, repair: { label: 'Damage control', desc: 'It repairs 15% of its hull. Hit it hard now.' } };
 // Ventures: the cell's money working while operatives die. Ticked after every raid.
 export const VENTURES = [

@@ -527,6 +527,15 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .doors.tiers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .door.tier { display: grid; gap: 6px; align-content: start; padding: 12px; }
 .door.tier.danger { border-color: var(--danger-dim); }
+.door.tier.locked { opacity: .55; }
+.door.tier.safe { border-color: var(--sodium); }
+.door.tier .ship-art { justify-self: center; height: 56px; width: auto; max-width: 100%; object-fit: contain; image-rendering: pixelated; transform: scaleX(-1); }
+.orbit-stakes { font-family: var(--mono); font-size: .72rem; letter-spacing: .04em; text-transform: uppercase; color: var(--danger); border: 1px solid var(--danger-dim); background: var(--danger-dim); padding: 4px 8px; border-radius: 4px; }
+.orbit-stakes.safe { color: var(--sodium); border-color: var(--sodium); background: transparent; }
+.orbit-stakes.big { font-size: .82rem; padding: 8px 12px; margin: 8px 0; text-transform: none; letter-spacing: 0; }
+.orbit-confirm { display: grid; gap: 6px; font-size: .85rem; border: 1px solid var(--danger); padding: 8px; border-radius: 4px; }
+.orbit-confirm b { font-family: inherit; font-size: .85rem; text-transform: none; letter-spacing: 0; color: var(--danger); }
+.intent .tip { color: var(--sodium); }
 .door.tier .chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .door.tier .odds { font-family: var(--mono); font-size: .72rem; }
 .row.i.venture > div { min-width: 0; }
@@ -595,7 +604,7 @@ const isHost = () => !!net && net.role === 'host';
 const myIdx = () => (isGuest() ? 1 : 0);
 // Actions that only touch this screen, never the game.
 const DOWNTIME = new Set(['drink', 'barchat', 'bet', 'stake', 'spin', 'invest', 'withdraw', 'shippart', 'shipcell', 'orbitgo', 'orbitact', 'orbitclose']);
-const LOCAL = new Set(['continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'pickmap', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready']);
+const LOCAL = new Set(['continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'pickmap', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'orbitarm']);
 function coopChip() {
   if (!net) return '';
   const who = net.peerName || (isHost() ? 'friend' : 'host');
@@ -929,7 +938,7 @@ function gearTab() {
   }
   const heir = state.meta.heirloom;
   const locker = heir ? `<h3>Safehouse locker</h3><p class="muted" style="font-size:.9rem">Left behind by an earlier operative (Heirloom).</p>
-    ${itemCard(heir, { actions: E.canEquip(c, heir) ? `<button class="btn primary" data-a="equipheirloom">Equip${c.gear[E.baseOf(heir).slot] && E.baseOf(c.gear[E.baseOf(heir).slot]).tier > 0 ? ' (your current piece goes in the locker)' : ''}</button>` : `<span class="note">You need ${E.reqText(E.baseOf(heir).req)} to use it.</span>` })}` : '';
+    ${itemCard(heir, { actions: E.canEquip(c, heir) ? `<button class="btn primary" data-a="equipheirloom">Equip${E.heirloomWorthy(state.meta, c.gear[E.baseOf(heir).slot]) ? ' (your current piece goes in the locker)' : ''}</button>` : `<span class="note">You need ${E.reqText(E.baseOf(heir).req)} to use it.</span>` })}` : '';
   return `<p class="muted">Everything here dies with ${esc(c.name)}. Buy pieces at the Black Market, take them from elites and bosses, and upgrade them at Marrow\u2019s bench.</p>
     <div class="doll">
       <div class="col">${['ranged', 'melee', 'gadget'].map(slotBtn).join('')}</div>
@@ -1432,16 +1441,18 @@ function wheelView() {
       <p class="muted small">You have ${c.credits.toLocaleString()} ${esc(S.cur)}. Sable says the dozens pay two to one and the house still wins.</p>
     </div></div>`;
 }
-let orbitScene = null, orbitBusy = false;
+let orbitScene = null, orbitBusy = false, orbitArm = null;
+const ORBIT_TIP = { fire: 'Fire away.', volley: 'Evade now: a broadside does x1.8.', lock: 'Evade now to line up a +50% shot; the locked shot that follows can\u2019t be dodged.', repair: 'Overcharge now while it patches up.' };
 function orbitOdds(tier) {
   // A quick simulation of this tier with the current shuttle and a sensible pilot, for the odds line.
   const N = 120; let w = 0, j = 0;
   for (let i = 0; i < N; i++) {
     const r = E.seededRng(777 + i), c = { ...state.char, marks: [...(state.char.marks || [])], credits: 0, ejected: true };
     const t = { meta: { ...state.meta, journal: [], ship: { ...state.meta.ship, cell: [...state.meta.ship.cell] } }, char: c, run: null, screen: 'town', orbit: null };
-    E.orbitStart(t, tier, r); let n = 0;
+    if (!E.orbitStart(t, tier, r)) return null;
+    let n = 0;
     while (!t.orbit.over && n++ < 80) { const o = t.orbit; E.orbitAct(t, o.hull <= o.maxHull * 0.2 && o.eHull > o.eMaxHull * 0.5 ? 'jump' : (o.intent === 'volley' || o.intent === 'lock') ? 'evade' : o.intent === 'repair' ? 'overcharge' : 'fire', r); }
-    if (t.orbit.over === 'won') w++; else if (t.orbit.over === 'jumped') j++;
+    if (t.orbit.over === 'won') w++; else if (t.orbit.over === 'jumped' || t.orbit.over === 'towed') j++;
   }
   return { win: Math.round(w / N * 100), jump: Math.round(j / N * 100), dead: Math.round((N - w - j) / N * 100) };
 }
@@ -1455,8 +1466,9 @@ function orbitView() {
     return `<div class="dt-orbit">
       <div id="orbit-slot"></div>
       <div class="orbit-huds"><div class="hud-line"><b>Shuttle</b><span class="num">${o.hull} / ${o.maxHull}</span>${bar(o.hull, o.maxHull)}</div><div class="hud-line"><b>${esc(t.shipName)}</b><span class="num">${o.eHull} / ${o.eMaxHull}</span>${bar(o.eHull, o.eMaxHull, 'enemy')}</div></div>
-      ${done ? `<div class="aa ${o.over === 'won' ? 'good' : o.over === 'jumped' || o.over === 'ejected' ? '' : 'bad'}"><div class="aa-main"><b>${o.over === 'won' ? 'Target destroyed.' : o.over === 'jumped' ? 'You jumped clear.' : o.over === 'ejected' ? 'Shuttle lost. The pod brought you home.' : 'Shuttle lost with all hands.'}</b> ${o.result && o.result.credits ? `+${o.result.credits} ${esc(S.cur)}.` : ''} ${o.result && o.result.mark ? `<span class="good">Mark earned: ${esc(D.MARKS[o.result.mark].name)}.</span>` : ''}</div><span></span><button class="btn primary" data-a="orbitclose">${o.result && !o.result.survived ? 'Signal lost' : 'Back to the yard'}</button></div>`
-        : `<div class="intent ${o.intent === 'volley' || o.intent === 'lock' ? 'danger' : ''}"><span class="dot"></span><div><b>${esc(I.label)}</b><div class="muted small">${esc(I.desc)}</div></div></div>
+          ${done ? `<div class="aa ${o.over === 'won' ? 'good' : o.over === 'jumped' || o.over === 'ejected' || o.over === 'towed' ? '' : 'bad'}"><div class="aa-main"><b>${o.over === 'won' ? 'Target destroyed.' : o.over === 'jumped' ? 'You jumped clear.' : o.over === 'ejected' ? 'Shuttle lost. The pod brought you home.' : o.over === 'towed' ? 'Shuttle disabled. The tug brought you home: next time there is no tug.' : 'Shuttle lost with all hands.'}</b> ${o.result && o.result.credits ? `+${o.result.credits} ${esc(S.cur)}.` : ''} ${o.result && o.result.mark ? `<span class="good">Mark earned: ${esc(D.MARKS[o.result.mark].name)}.</span>` : ''}</div><span></span><button class="btn primary" data-a="orbitclose">${o.result && !o.result.survived ? 'Signal lost' : 'Back to the yard'}</button></div>`
+        : `${o.shakedown ? '<div class="orbit-stakes safe">Shakedown flight \u00b7 the tug is on standby: losing the shuttle won\u2019t kill you</div>' : `<div class="orbit-stakes">Permadeath \u00b7 if the hull hits 0, ${esc(c.name)} dies${m.ship.cell.includes('ejector') && !c.ejected ? ' (ejection pod: 50% to survive)' : ''}</div>`}
+      <div class="intent ${o.intent === 'volley' || o.intent === 'lock' ? 'danger' : ''}"><span class="dot"></span><div><b>Next: ${esc(I.label)}</b><div class="muted small">${esc(I.desc)} <span class="tip">${esc(ORBIT_TIP[o.intent])}</span></div></div></div>
       <div class="actions ${orbitBusy ? 'locked' : ''}">
         <button class="btn primary twoline" data-a="orbitact" data-v="fire"><span class="bt">Fire<span class="k">1</span></span><span class="bs">${me.atk} dmg \u00b7 ${Math.round(t.evade * 100)}% it rolls clear</span></button>
         <button class="btn twoline" data-a="orbitact" data-v="evade"><span class="bt">Evade<span class="k">2</span></span><span class="bs">70% to dodge, next shot +50%</span></button>
@@ -1468,13 +1480,24 @@ function orbitView() {
   }
   const parts = Object.entries(D.SHIP_PARTS).map(([k, p]) => { const lvl = m.ship[k], cost = E.shipPartCost(state, k); return `<div class="row i">${ico('ship:' + k)}<div><div class="name">${esc(p.name)} <span class="num muted small">${lvl} / 3</span></div><div class="desc">${esc(p.desc)}</div><div class="pips">${[0, 1, 2].map((i) => `<i class="${i < lvl ? 'on' : ''}"></i>`).join('')}</div></div>${cost ? `<button class="btn" data-a="shippart" data-v="${k}" ${c.credits < cost ? 'disabled' : ''}>${cr(cost)}</button>` : '<span class="label">maxed</span>'}</div>`; }).join('');
   const cell = D.SHIP_CELL.map((u) => { const own = m.ship.cell.includes(u.id); return `<div class="row i ${own ? 'owned' : ''}">${ico('ship:' + u.id)}<div><div class="name">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div></div>${own ? '<span class="label">fitted</span>' : `<button class="btn ${m.resolve >= u.cost ? 'primary' : ''}" data-a="shipcell" data-v="${u.id}" ${m.resolve < u.cost ? 'disabled' : ''}>${u.cost} ${esc(S.meta)}</button>`}</div>`; }).join('');
-  const tiers = D.ORBIT_TIERS.map((t) => { const od = orbitOdds(t.id); return `<div class="door tier ${od.dead >= 50 ? 'danger' : ''}"><span class="label">${esc(t.name)}</span><b>${esc(t.shipName)}</b><div class="desc">${esc(t.desc)}</div>
-    <div class="chips"><span class="chip">hull ${t.hull} \u00b7 guns ${t.atk}</span><span class="chip">${t.credits[0]}\u2013${t.credits[1]} ${esc(S.cur)}</span><span class="chip ${t.mark ? 'good' : ''}">${t.mark ? `${Math.round(t.mark * 100)}% Mark` : 'no Mark'}</span></div>
-    <div class="odds"><span class="good">${od.win}% win</span> \u00b7 <span>${od.jump}% jump clear</span> \u00b7 <span class="bad">${od.dead}% lost with the pilot</span></div>
-    <button class="btn ${od.dead >= 50 ? '' : 'primary'}" data-a="orbitgo" data-v="${t.id}">Launch</button></div>`; }).join('');
-  return `<p class="muted">The cell keeps a shuttle in a collapsed lift shaft. It flies badly, which is why the Directorate has not found it. Runs past the blockade pay in credits and, if you live, in <b>Marks</b>: permanent edges only orbit gives. Lose the shuttle and you lose the pilot.</p>
+  const tiers = D.ORBIT_TIERS.map((t) => {
+    const lock = E.orbitLock(m, t.id), shake = E.orbitShakedown(m, t.id), f = E.orbitFoe(m, t.id), od = lock ? null : orbitOdds(t.id);
+    const armed = orbitArm === t.id && !lock;
+    const odds = lock ? `<div class="odds bad">Locked. ${esc(lock)}</div>`
+      : shake ? `<div class="odds"><span class="good">${od.win}% win</span> \u00b7 <span>no risk: the tug tows you home</span></div>`
+      : `<div class="odds"><span class="good">${od.win}% win</span> \u00b7 <span>${od.jump}% jump clear</span> \u00b7 <span class="bad">${od.dead}% ${esc(c.name)} dies</span></div>`;
+    const go = lock ? `<button class="btn" disabled>Locked</button>`
+      : shake ? `<button class="btn primary" data-a="orbitgo" data-v="${t.id}">Fly the shakedown</button>`
+      : armed ? `<div class="orbit-confirm"><b>${esc(c.name)} dies if the shuttle is destroyed.</b> Credits, gear and level go with them.${m.ship.cell.includes('ejector') && !c.ejected ? ' The ejection pod gives a 50% chance to drift home.' : ''}<div class="btnrow"><button class="btn danger" data-a="orbitgo" data-v="${t.id}">Launch: risk ${esc(c.name)}\u2019s life</button><button class="btn" data-a="orbitarm" data-v="">Stay in the yard</button></div></div>`
+      : `<button class="btn ${od.dead >= 50 ? '' : 'primary'}" data-a="orbitarm" data-v="${t.id}">Launch\u2026</button>`;
+    return `<div class="door tier ${lock ? 'locked' : shake ? 'safe' : 'danger'}"><span class="label">${esc(t.name)}${shake ? ' \u00b7 shakedown' : ''}</span><img class="ship-art" src="downtime/ships/${t.ship}.png" alt="" onerror="this.remove()"><b>${esc(f.shipName)}</b><div class="desc">${esc(shake ? f.desc : t.desc)}</div>
+    ${shake ? '<div class="orbit-stakes safe">Practice run \u00b7 can\u2019t kill you</div>' : '<div class="orbit-stakes">Permadeath \u00b7 lose the shuttle, lose the pilot</div>'}
+    <div class="chips"><span class="chip">hull ${f.hull} \u00b7 guns ${f.atk}</span><span class="chip">${f.credits[0]}\u2013${f.credits[1]} ${esc(S.cur)}</span><span class="chip ${t.mark ? 'good' : ''}">${t.mark ? `${Math.round(t.mark * 100)}% Mark` : 'no Mark'}</span></div>
+    ${odds}${go}</div>`; }).join('');
+  return `<p class="muted">The cell keeps a shuttle in a collapsed lift shaft. It flies badly, which is why the Directorate has not found it. Runs past the blockade pay in credits and, if you live, in <b>Marks</b>: permanent edges only orbit gives.</p>
+    <div class="orbit-stakes big">Orbit is permadeath. If the shuttle is destroyed, ${esc(c.name)} dies: the run ends exactly like dying on a raid.${m.orbitWins ? '' : ' Your first flight is a shakedown with a tug on standby.'}</div>
     <div class="kv-strip"><div class="stat"><span class="label">Shuttle</span><span class="v">hull ${me.hull} \u00b7 guns ${me.atk} \u00b7 deflector ${me.shield} \u00b7 evade ${Math.round(me.evade * 100)}%</span></div><div class="stat"><span class="label">Marks</span><span class="v">${(c.marks || []).length} / 5</span></div></div>
-    <h3>Runs <span class="muted small">odds are simulated for your current shuttle</span></h3>
+    <h3>Runs <span class="muted small">odds are simulated for your current shuttle; refit to unlock and improve them</span></h3>
     <div class="doors tiers">${tiers}</div>
     <h3>Refit <span class="muted small">${esc(S.currency)}, this operative</span></h3>${parts}
     <h3>Cell fittings <span class="muted small">${esc(S.meta)}, survive death</span></h3>${cell}
@@ -1523,12 +1546,14 @@ function sectorClearScreen() {
 function heirloomPick() {
   const c = state.char;
   if (!c || !state.meta.cell.includes('heirloom')) return '';
-  const pieces = D.SLOT_ORDER.map((sl) => [sl, c.gear[sl]]).filter(([, it]) => it && E.baseOf(it).tier > 0);
-  if (!pieces.length) return '';
+  const pieces = E.heirloomChoices(state);
+  const cache = state.meta.cell.includes('cache');
+  if (!pieces.length) return `<div class="spend-inline"><span class="label">Heirloom</span><p class="muted" style="font-size:.88rem">Nothing worth the locker: only stock issue gear${cache ? ' (the Weapons Cache hands out a fresh carbine and baton anyway)' : ''}. Upgrade, buy or find better gear and it can be passed on.</p></div>`;
   const h = state.meta.heirloom;
-  return `<div class="spend-inline"><span class="label">Heirloom \u00B7 pick one piece for the locker</span>
-    <div class="btnrow">${pieces.map(([sl, it]) => `<button class="btn ${h && h.base === it.base && h.level === it.level ? 'primary' : ''}" data-a="heirloom" data-v="${sl}"><span class="rname r-${it.rarity}">${esc(E.itemName(it))}</span></button>`).join('')}</div>
-    ${h ? `<p class="muted" style="font-size:.88rem">In the locker: <span class="rname r-${h.rarity}">${esc(E.itemName(h))}</span>.</p>` : ''}</div>`;
+  const same = (it) => h && h.base === it.base && (h.level || 0) === (it.level || 0) && h.rarity === it.rarity;
+  return `<div class="spend-inline"><span class="label">Heirloom \u00B7 one piece goes to the next operative</span>
+    <div class="btnrow">${pieces.map(([sl, it]) => `<button class="btn ${same(it) ? 'primary' : ''}" data-a="heirloom" data-v="${sl}"><span class="rname r-${it.rarity}">${esc(E.itemName(it))}</span></button>`).join('')}</div>
+    ${h ? `<p class="muted" style="font-size:.88rem">In the locker: <span class="rname r-${h.rarity}">${esc(E.itemName(h))}</span> (picked the best piece for you; tap another to swap).${cache && ['ranged', 'melee'].includes(E.baseOf(h).slot) ? ` The next operative carries it instead of the cache's ${E.baseOf(h).slot === 'ranged' ? 'carbine' : 'baton'}.` : ''}</p>` : ''}</div>`;
 }
 
 function deathScreen() {
@@ -1739,7 +1764,8 @@ function applyAct(a, v, k) {
     case 'withdraw': ok = E.withdraw(state, v); break;
     case 'shippart': ok = E.buyShipPart(state, v); break;
     case 'shipcell': ok = E.buyShipCell(state, v); if (ok) A.play('perk'); break;
-    case 'orbitgo': ok = E.orbitStart(state, v, rng); if (ok) A.play('door'); break;
+    case 'orbitarm': orbitArm = v || null; A.play('click'); render(); return;
+    case 'orbitgo': orbitArm = null; ok = E.orbitStart(state, v, rng); if (ok) A.play('door'); break;
     case 'orbitact': {
       ok = E.orbitAct(state, v, rng);
       if (ok && orbitScene) { const o = state.orbit; const ms = orbitScene.play(o.events); orbitBusy = true; save(); setTimeout(() => { orbitBusy = false; if (o.over === 'lost') { orbitScene.set(D.ORBIT_TIERS.find((x) => x.id === o.tier).ship, { me: true, enemy: false }); } render(); }, ms + 150); return; }
