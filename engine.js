@@ -25,18 +25,18 @@ export function seededRng(seed) {
 export const VERSION = 4;
 export const FIGHTS_PER_SECTOR = 3;
 export const CONTRABAND_SLOTS = 4; // pieces of contraband one operative can carry
-export const ELITE_DROP = 0.4;   // chance an elite carries contraband (bosses always do)
+export const ELITE_DROP = 0.3;   // chance an elite carries contraband (bosses always do)
 export const CARRY_CD = 2;       // minimum cooldown a skill used last fight starts the next fight with
 export const MIN_FIGHTS = 2; // fights required per sector; the rest of the rooms can be anything
 // Enemy growth per sector past their first appearance: linear plus a quadratic tail.
 export const growth = (lvl, lin, quad) => 1 + lin * lvl + quad * lvl * lvl;
 // Difficulty tiers: the Directorate tightens its grip as the cell goes deeper. Tier 0 through sector 5, tier 1 after sector 5, tier 2 after sector 10.
-// extract: haul lost leaving between bosses; escape: haul lost running mid-fight; hp: enemy HP multiplier; price: multiplier on every credit price.
+// hp: enemy HP multiplier; price: multiplier on every credit price.
 export const HARD = [
-  // hp carries an extra +8% per tier to offset the Feats buffs over a long campaign (sim: finale at operative 21 vs 22 without Feats).
-  { extract: 0.45, escape: 0.65, hp: 1.18, price: 1.1 },
-  { extract: 0.5, escape: 0.7, hp: 1.21, price: 1.12 },
-  { extract: 0.55, escape: 0.75, hp: 1.25, price: 1.15 },
+  // hp carries an extra +8% per tier to offset the achievement buffs over a long campaign.
+  { hp: 1.18, price: 1.1 },
+  { hp: 1.21, price: 1.12 },
+  { hp: 1.25, price: 1.15 },
 ];
 export const hardTier = (sector) => (sector > 10 ? 2 : sector > 5 ? 1 : 0);
 export const hardAt = (sector) => HARD[hardTier(sector)];
@@ -44,7 +44,12 @@ export const hardAt = (sector) => HARD[hardTier(sector)];
 export const hard = (s) => hardAt(s.run ? s.run.sector : (s.meta && s.meta.bestSector) || 0);
 export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.01, bossHp: 2.1, bossAtk: 1.4, enemyAtk: 1.74, enemyHp: 1.78, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 1.5, strAtk: 0.6, agiCrit: 0.04, agiDodge: 0.025, intOverload: 5, chaHesitate: 0.055, chaCredits: 0.05, wanted: 0.025, ambush: 1.5,
   upgradeCost: 60, eliteGear: 0.3, shopLegendary: 0.06, cover: 0.5, agiAtk: 1, early: 0.35,
-  rangedSpread: 0.15, meleeSpread: 0.3, shootGuard: 0.15, momentum: 0.15, coopHp: 1.5, coopAtk: 1, coopExtra: 4, reviveHp: 0.2, reviveAfter: 0.15, downsPerRaid: 2, bleedRounds: 3 };
+  rangedSpread: 0.15, meleeSpread: 0.3, shootGuard: 0.15, momentum: 0.15, coopHp: 1.5, coopAtk: 1, coopExtra: 4, reviveHp: 0.2, reviveAfter: 0.15, downsPerRaid: 2, bleedRounds: 3,
+  // Share of unsecured credits and XP lost, by position in the five-sector run to the next boss. Beating the boss secures everything.
+  extractRates: [0.8, 0.65, 0.5, 0.4, 0], escapeRates: [0.9, 0.85, 0.75, 0.65, 0.6],
+  itemScale: 0.3, allyGrit: 3 };
+export const extractRate = (sector) => TUNE.extractRates[(sector - 1) % 5];
+export const escapeRate = (sector) => TUNE.escapeRates[(sector - 1) % 5];
 export const isBossSector = (n) => n % 5 === 0;
 // Optional credit accounting for the simulators: set s.ledger = {} and every credit gain or spend is tallied by source.
 const ledger = (s, k, n) => { if (s.ledger && n) s.ledger[k] = (s.ledger[k] || 0) + n; };
@@ -63,6 +68,12 @@ const hasImp = (c, id) => c.implants.includes(id);
 const hasCell = (m, id) => m.cell.includes(id);
 export const hasPerk = (c, id) => !!c && (c.perks || []).includes(id);
 export const perkById = (id) => D.PERKS.find((p) => p.id === id);
+export const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI'];
+// Contraband carried from before tiers existed counts as tier III, which is what it used to do.
+export const perkLevel = (c, id) => { const v = c && c.perkLv && c.perkLv[id]; return v === undefined || v === null ? 2 : v; };
+const pv = (c, id) => (hasPerk(c, id) ? perkById(id).vals[perkLevel(c, id)] : 0);
+export const perkName = (id, lv) => `${perkById(id).name} ${ROMAN[lv]}`;
+export const perkText = (id, lv) => { const p = perkById(id); return p.desc.replace('{v}', p.vals[lv]); };
 
 // ---------- state ----------
 export function newMeta() {
@@ -95,7 +106,8 @@ export function migrate(s, rng) {
     if (s.meta && !s.meta.ship) s.meta.ship = { hull: 0, guns: 0, shields: 0, engines: 0, cell: [] };
     if (s.meta && !s.meta.ventures) s.meta.ventures = {};
     if (s.meta && !s.meta.feats) s.meta.feats = { counters: {}, tiers: {}, v: 0 };
-    if (s.meta && !s.meta.lockup) s.meta.lockup = [];
+    // The Lockup used to belong to the cell. It belongs to the operative now: anything on the old shelf goes to the current one.
+    if (s.meta && s.meta.lockup) { if (s.char) s.char.lockup = [...(s.char.lockup || []), ...s.meta.lockup]; delete s.meta.lockup; }
     s.trade = null;
     // Orbit wins from before tiers were tracked count as low-orbit wins, so older cells keep the blockade line open.
     if (s.meta && !s.meta.orbitTierWins) s.meta.orbitTierWins = s.meta.orbitWins ? { low: s.meta.orbitWins } : {};
@@ -145,8 +157,8 @@ function migrateOld(s, rng) {
 // s.char is the host's operative, s.char2 the friend's. The engine always acts on s.char, so to act as the
 // friend we swap the two references (and the per-operative combat fields in s.run) for the duration of a call.
 // Saves are always written with s.actorIdx === 0, so the swap never leaks into a save.
-const BAG = ['pst', 'pfresh', 'defending', 'ready', 'momentum', 'keepDistance', 'struck', 'cooldowns', 'usedThisFight', 'adrenalUsed', 'deadmanUsed', 'lootOffer', 'perkOffer'];
-const freshBag = () => ({ pst: {}, pfresh: [], defending: false, ready: false, momentum: false, keepDistance: false, struck: false, cooldowns: {}, usedThisFight: [], adrenalUsed: false, deadmanUsed: false, lootOffer: null, perkOffer: null });
+const BAG = ['pst', 'pfresh', 'defending', 'ready', 'momentum', 'keepDistance', 'struck', 'cooldowns', 'usedThisFight', 'adrenalUsed', 'deadmanUsed', 'lootOffer', 'perkOffer', 'perkTiers'];
+const freshBag = () => ({ pst: {}, pfresh: [], defending: false, ready: false, momentum: false, keepDistance: false, struck: false, cooldowns: {}, usedThisFight: [], adrenalUsed: false, deadmanUsed: false, lootOffer: null, perkOffer: null, perkTiers: null });
 const saveBag = (r) => { const b = {}; for (const k of BAG) b[k] = r[k]; return b; };
 const loadBag = (r, b) => { for (const k of BAG) r[k] = b[k]; };
 export const isCoop = (s) => !!(s.coop && s.char && s.char2);
@@ -210,7 +222,7 @@ export function createChar(s, rng, draft = null, slot = 'char') {
     attrs, attrPoints: d.points, level: 1, xp: 0, credits: 25 + (bg.start.credits || 0) + (hasCell(m, 'stash') ? 60 : 0),
     gear: starterGear(m), market: [],
     items: { stim: 2, thermal: 0, ion: 0, smoke: 0 }, upgrades: [], implants: [],
-    maps: {}, deepest: 0, hp: 1, history: [], perks: [], look: d.look || null,
+    maps: {}, deepest: 0, hp: 1, history: [], perks: [], perkLv: {}, lockup: [], xpBank: 0, look: d.look || null,
   };
   for (const k of ['smoke', 'ion']) if (bg.start[k]) c.items[k] += bg.start[k];
   c.gear = startingGear(m, bg.id);
@@ -382,8 +394,8 @@ export function buyGear(s, idx, stash = false) {
   c.credits -= cost; ledger(s, 'spend:gear', cost);
   c.market.splice(idx, 1);
   const old = equip(s, it);
-  if (old && stash && lockupFree(s.meta) > 0) {
-    s.meta.lockup.push(old);
+  if (old && stash && lockupFree(s) > 0) {
+    shelf(c).push(old);
     s.notice = `Bought ${itemName(it)}. The old ${itemName(old)} goes in the Lockup.`;
     return true;
   }
@@ -438,11 +450,12 @@ export function leaveLoot(s, rng) {
 export const sellLoot = leaveLoot;
 
 // ---------- the Lockup and trading ----------
-// The Lockup: spare gear under the safehouse floor. It belongs to the cell, so it outlives operatives and both players
-// can reach it. Whatever is in it isn't helping anyone on a raid, and it's town only: no couriers out of a raid.
+// The Lockup: an operative's spare gear under the safehouse floor. It dies with them: only the one heirloom passes on.
+// Whatever is in it isn't helping on a raid, and it's town only: no couriers out of a raid.
 const LOCKUP_BASE = 4, LOCKUP_STEP = 2;
 export const lockupCap = (m) => LOCKUP_BASE + (hasCell(m, 'lockup1') ? LOCKUP_STEP : 0) + (hasCell(m, 'lockup2') ? LOCKUP_STEP : 0);
-export const lockupFree = (m) => lockupCap(m) - (m.lockup = m.lockup || []).length;
+export const lockupFree = (s, c = s.char) => lockupCap(s.meta) - ((c && c.lockup) || []).length;
+const shelf = (c) => c.lockup || (c.lockup = []);
 function setGear(s, slot, it) {
   const c = s.char, old = gearIn(c, slot), before = stats(s).maxHp;
   c.gear[slot] = it;
@@ -452,16 +465,16 @@ function setGear(s, slot, it) {
 }
 export function lockupStore(s, slot) {
   const it = gearIn(s.char, slot);
-  if (s.run || !it || lockupFree(s.meta) <= 0) return false;
+  if (s.run || !it || lockupFree(s) <= 0) return false;
   setGear(s, slot, null);
-  s.meta.lockup.push(it);
+  shelf(s.char).push(it);
   s.notice = `${itemName(it)} goes in the Lockup.`;
   return true;
 }
 // Equip a stored piece; what it replaces takes its place on the shelf. base guards against the shelf having shifted
-// since the player's screen last updated (the other player may just have taken something).
+// since the player's screen last updated.
 export function lockupTake(s, idx, base = null) {
-  const list = s.meta.lockup || [], it = list[idx];
+  const list = shelf(s.char), it = list[idx];
   if (s.run || !it || (base && it.base !== base) || !canEquip(s.char, it)) return false;
   const old = equip(s, it);
   if (old) list[idx] = old; else list.splice(idx, 1);
@@ -469,7 +482,7 @@ export function lockupTake(s, idx, base = null) {
   return true;
 }
 export function lockupScrap(s, idx, base = null) {
-  const list = s.meta.lockup || [], it = list[idx];
+  const list = shelf(s.char), it = list[idx];
   if (s.run || !it || (base && it.base !== base)) return false;
   list.splice(idx, 1);
   s.notice = `${itemName(it)} goes on the scrap heap.`;
@@ -481,19 +494,21 @@ const tradeSide = () => ({ credits: 0, slots: [], ok: false });
 export function tradeProblem(s, offers) {
   const c = [charAt(s, 0), charAt(s, 1)];
   if (!c[0] || !c[1]) return 'Your partner has no operative yet.';
-  let shelved = 0;
+  const shelved = [0, 0];
   for (const i of [0, 1]) {
     const o = offers[i], r = c[1 - i], other = offers[1 - i];
     if (o.credits > c[i].credits) return `${c[i].name} doesn\u2019t have ${o.credits} ${D.SETTING.cur} any more.`;
     for (const slot of o.slots) {
       const it = gearIn(c[i], slot);
       if (!it) return 'One of those pieces has moved.';
-      if (!canEquip(r, it)) shelved += 1;
-      else if (gearIn(r, slot) && !other.slots.includes(slot)) shelved += 1;
+      if (!canEquip(r, it)) shelved[1 - i] += 1;
+      else if (gearIn(r, slot) && !other.slots.includes(slot)) shelved[1 - i] += 1;
     }
   }
-  const free = lockupFree(s.meta);
-  if (shelved > free) return `That sends ${shelved} replaced piece${shelved > 1 ? 's' : ''} to the Lockup, which has room for ${free}. Clear a shelf first.`;
+  for (const i of [0, 1]) {
+    const free = lockupFree(s, c[i]);
+    if (shelved[i] > free) return `That sends ${shelved[i]} replaced piece${shelved[i] > 1 ? 's' : ''} to ${c[i].name.split(' ')[0]}\u2019s Lockup, which has room for ${free}. Clear a shelf first.`;
+  }
   return null;
 }
 function tradeApply(s, offers) {
@@ -505,9 +520,9 @@ function tradeApply(s, offers) {
     if (give.length) said.push(`${c[i].name.split(' ')[0]} hands over ${give.join(' and ')}`);
   }
   for (const m of moving) withActor(s, m.to, () => {
-    if (!canEquip(s.char, m.it)) { s.meta.lockup.push(m.it); return; }
+    if (!canEquip(s.char, m.it)) { shelf(s.char).push(m.it); return; }
     const old = setGear(s, m.slot, m.it);
-    if (old) s.meta.lockup.push(old);
+    if (old) shelf(s.char).push(old);
   });
   s.sharedToast = `${said.join('. ') || 'Nothing changes hands'}.`;
 }
@@ -604,36 +619,40 @@ function afterLoot(s, rng) {
 // next operative is handed one anyway.
 export function heirloomWorthy(m, it) {
   if (!it || !baseOf(it)) return false;
-  const stock = (it.level || 0) === 0 && (it.rarity || 'common') === 'common' && !(it.bonuses || []).length && !it.trait;
+  // Upgrades don't pass down, so only what the piece is underneath counts.
+  const stock = (it.rarity || 'common') === 'common' && !(it.bonuses || []).length && !it.trait;
   if (stock && baseOf(it).tier === 0) return false;
   if (stock && hasCell(m, 'cache') && ['carbine', 'baton'].includes(it.base)) return false;
   return true;
 }
-const heirloomValue = (it) => (baseOf(it).tier || 0) * 10 + D.RARITY_ORDER.indexOf(it.rarity || 'common') * 6 + (it.level || 0) * 3 + (it.bonuses || []).length * 2 + (it.trait ? 3 : 0);
+const heirloomValue = (it) => (baseOf(it).tier || 0) * 10 + D.RARITY_ORDER.indexOf(it.rarity || 'common') * 6 + (it.bonuses || []).length * 2 + (it.trait ? 3 : 0);
+// A passed-down piece keeps its rarity and bonuses but comes back to base level.
+const asHeirloom = (it) => { const h = JSON.parse(JSON.stringify(it)); h.level = 0; h.spent = 0; delete h.premium; return h; };
+// One piece passes on: anything worn, or anything in that operative's Lockup. Keys: a slot name, or lockup:<index>.
 export function heirloomChoices(s) {
   const c = s.char;
   if (!c || !hasCell(s.meta, 'heirloom')) return [];
-  return D.SLOT_ORDER.map((sl) => [sl, gearIn(c, sl)]).filter(([, it]) => heirloomWorthy(s.meta, it));
+  return [...D.SLOT_ORDER.map((sl) => [sl, gearIn(c, sl)]), ...(c.lockup || []).map((it, i) => [`lockup:${i}`, it])].filter(([, it]) => heirloomWorthy(s.meta, it));
 }
 // On death the most valuable piece goes in the locker by default, so the heirloom isn't lost by forgetting to pick.
 function autoHeirloom(s) {
   const ch = heirloomChoices(s);
   if (!ch.length) return;
   const [, best] = ch.reduce((a, b) => (heirloomValue(b[1]) > heirloomValue(a[1]) ? b : a));
-  s.meta.heirloom = JSON.parse(JSON.stringify(best));
+  s.meta.heirloom = asHeirloom(best);
 }
-export function setHeirloom(s, slot) {
-  const c = s.char, it = gearIn(c, slot);
+export function setHeirloom(s, key) {
+  const c = s.char, it = String(key).startsWith('lockup:') ? (c.lockup || [])[+key.slice(7)] : gearIn(c, key);
   if (!hasCell(s.meta, 'heirloom') || s.screen !== 'death' || !heirloomWorthy(s.meta, it)) return false;
-  s.meta.heirloom = JSON.parse(JSON.stringify(it));
-  s.notice = `${itemName(it)} goes in the safehouse locker.`;
+  s.meta.heirloom = asHeirloom(it);
+  s.notice = `${itemName(s.meta.heirloom)} goes in the safehouse locker, stripped back to base.`;
   return true;
 }
 export function equipHeirloom(s) {
   const c = s.char, it = s.meta.heirloom;
   if (!c || !it || !canEquip(c, it)) return false;
   const old = equip(s, it);
-  s.meta.heirloom = heirloomWorthy(s.meta, old) ? old : null;
+  s.meta.heirloom = heirloomWorthy(s.meta, old) ? asHeirloom(old) : null;
   s.notice = `${itemName(it)} is yours now.`;
   return true;
 }
@@ -662,12 +681,12 @@ export function statsOf(meta, c) {
   const hp = B.hp + t.hp * D.TRAINING.hp.per + (c.level - 1) * 5 + Math.round(str * TUNE.strHp) + (c.background === 'foundry' ? 15 + 2 * (c.level - 1) : 0) + (hasImp(c, 'pain') ? 20 : 0) + gearBonus(c, 'hp');
   const mk = markSum(c), drink = c.drink ? 1 : 0, fb = featBuffs(meta);
   return {
-    maxHp: Math.round(hp * (hasTrait(c, 'stalwart') ? 1.12 : 1) * (hasPerk(c, 'ironlung') ? 1.1 : 1) * (1 + mk.hp + fb.hp)),
+    maxHp: Math.round(hp * (hasTrait(c, 'stalwart') ? 1.12 : 1) * (1 + pv(c, 'ironlung') / 100) * (1 + mk.hp + fb.hp)),
     atk: common + rMain + drink + (w.type === 'heavy' ? Math.floor(str * TUNE.strAtk) : Math.floor(agi * TUNE.agiAtk)),
     atkM: common + mMain + drink + Math.floor(str * TUNE.strAtk),
-    def: B.def + (c.background === 'foundry' ? 1 : 0) + t.def * D.TRAINING.def.per + Math.floor((c.level - 1) / 2) + def + gearBonus(c, 'def') + (hasImp(c, 'dermal') ? 3 : 0) + mk.def + (hasPerk(c, 'padding') ? 2 : 0),
+    def: B.def + (c.background === 'foundry' ? 1 : 0) + t.def * D.TRAINING.def.per + Math.floor((c.level - 1) / 2) + def + gearBonus(c, 'def') + (hasImp(c, 'dermal') ? 3 : 0) + mk.def + pv(c, 'padding'),
     spd: B.spd + (c.background === 'runner' ? 1 : 0) + t.spd * D.TRAINING.spd.per + Math.floor((c.level - 1) / 3) + agi + (hasImp(c, 'reflex') ? 2 : 0) + spd + gearBonus(c, 'spd') + mk.spd,
-    dodge: (agi - 1) * TUNE.agiDodge + (c.background === 'runner' ? 0.05 : 0) + fb.dodge + (hasPerk(c, 'ghost') ? 0.1 : 0),
+    dodge: (agi - 1) * TUNE.agiDodge + (c.background === 'runner' ? 0.05 : 0) + fb.dodge + pv(c, 'ghost') / 100,
     crit: 0.05 + (w.crit || 0) + critAll + optic + (agi - 1) * TUNE.agiCrit + gearBonus(c, 'crit', 'ranged') / 100 + mk.crit + drink * 0.04 + fb.crit,
     critM: 0.05 + (mw.crit || 0) + critAll + optic + gearBonus(c, 'crit', 'melee') / 100 + mk.crit + drink * 0.04 + fb.crit,
     carry: 4 + (has(c, 'belt') ? 3 : 0) + carry,
@@ -738,14 +757,14 @@ export function runReport(s) {
   lines.push(`Best by map: ${Object.entries(m.bestByMap).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}; liberated: ${Object.keys(m.liberated).join(', ') || 'none'}; threat ${m.threat}`);
   lines.push(`Training: ${Object.entries(m.training).map(([k, v]) => `${k} ${v}`).join(', ')}; cell upgrades: ${m.cell.join(', ') || 'none'}`);
   const F = m.feats || { counters: {}, tiers: {} }, fb = featBuffs(m);
-  lines.push(`Feats: ${Object.values(F.tiers).filter(Boolean).length} tiers across ${Object.keys(F.tiers).filter((k) => F.tiers[k]).length} feats; buffs ${Object.entries(fb).filter(([k, v]) => k !== 'vs' && v).map(([k, v]) => `${k} +${(v * 100).toFixed(1)}%`).join(', ') || 'none'}; top counters ${Object.entries(F.counters).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}`);
+  lines.push(`Achievements: ${Object.values(F.tiers).filter(Boolean).length} tiers across ${Object.keys(F.tiers).filter((k) => F.tiers[k]).length} feats; buffs ${Object.entries(fb).filter(([k, v]) => k !== 'vs' && v).map(([k, v]) => `${k} +${(v * 100).toFixed(1)}%`).join(', ') || 'none'}; top counters ${Object.entries(F.counters).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}`);
   if (m.ship) lines.push(`Shuttle: hull ${m.ship.hull} guns ${m.ship.guns} shields ${m.ship.shields} engines ${m.ship.engines}; fittings ${m.ship.cell.join(', ') || 'none'}; orbit wins ${m.orbitWins || 0}; ventures ${Object.entries(m.ventures || {}).filter(([, v]) => v).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}; wheel ${m.wheel ? `${m.wheel.spins} spins net ${m.wheel.net}` : 'unplayed'}`);
   if (c) lines.push(`Marks: ${(c.marks || []).map((k) => D.MARKS[k].name).join(', ') || 'none'}; look ${c.look ? `${c.look.body}/${c.look.hair}` : 'default'}`);
   lines.push(`Tuning: ${JSON.stringify(TUNE)} hard ${JSON.stringify(HARD)}`);
   if (c) {
     const st = statsOf(m, c);
     lines.push('');
-    lines.push(`Operative ${c.number}: ${c.name}, ${c.background}, level ${c.level}, ${c.hp}/${st.maxHp} HP, ${c.credits} cr, Wanted ${c.wanted || 0}${c.fed ? ', fed' : ''}`);
+    lines.push(`Operative ${c.number}: ${c.name}, ${c.background}, level ${c.level}, ${c.hp}/${st.maxHp} HP, ${c.credits} cr${c.fed ? ', fed' : ''}`);
     lines.push(`Attributes: ${Object.entries(c.attrs).map(([k, v]) => `${k.toUpperCase()} ${v}`).join(' ')} (${c.attrPoints} unspent); Shoot ${st.atk} / Strike ${st.atkM}, DEF ${st.def}, SPD ${st.spd}, crit ${Math.round(st.crit * 100)}%/${Math.round(st.critM * 100)}%`);
     lines.push(`Gear: ${D.SLOT_ORDER.map((sl) => { const it = c.gear[sl]; return it ? `${sl}=${itemName(it)} [${it.rarity}${it.bonuses.length ? '; ' + it.bonuses.map(bonusText).join(', ') : ''}${it.trait ? '; ' + D.TRAITS[it.trait].name : ''}]` : `${sl}=empty`; }).join('; ')}`);
     lines.push(`Implants: ${c.implants.join(', ') || 'none'}; contacts: ${c.upgrades.join(', ') || 'none'}; contraband: ${c.perks.join(', ') || 'none'}; items: ${Object.entries(c.items).map(([k, v]) => `${k} ${v}`).join(', ')}`);
@@ -798,23 +817,12 @@ export function respec(s) {
   return true;
 }
 
-// Lie low: Cass burns your papers and spreads a rumour you're dead. Costs credits, drops Wanted by 2.
-export const lieLowCost = (c, s) => Math.round((50 + 40 * (c.wanted || 0)) * (s ? hard(s).price : 1));
-export function lieLow(s) {
-  const c = s.char;
-  if (!c.wanted || c.credits < lieLowCost(c, s)) return false;
-  const cost = lieLowCost(c, s);
-  c.credits -= cost; ledger(s, 'spend:lielow', cost);
-  c.wanted = Math.max(0, c.wanted - 2); feat(s, 'lielow');
-  s.notice = `Cass burns your old papers. Wanted level ${c.wanted}.`;
-  return true;
-}
 // Noodles: a hot meal before the raid. +5% XP until you're next back in town.
-export const NOODLE_COST = 2;
+export const noodleCost = (s) => Math.round(2 * consumableScale(s.char));
 export function buyNoodles(s) {
   const c = s.char;
-  if (c.fed || c.credits < NOODLE_COST) return false;
-  c.credits -= NOODLE_COST; c.fed = true;
+  if (c.fed || c.credits < noodleCost(s)) return false;
+  c.credits -= noodleCost(s); c.fed = true;
   return true;
 }
 // A neighbour in the tenement slips you a stim, once per operative.
@@ -838,10 +846,13 @@ export function heal(s) {
   return true;
 }
 
+// Consumables cost more the deeper this operative has been: a stim has to stay a decision at sector 15.
+const consumableScale = (c) => 1 + TUNE.itemScale * Math.max(0, ((c && c.deepest) || 0) - 1);
+export const itemCost = (s, id) => Math.round(D.ITEMS[id].cost * consumableScale(s.char));
 export function buyItem(s, id) {
-  const item = D.ITEMS[id], c = s.char;
-  if (!item || c.credits < price(s, item.cost) || c.items[id] >= stats(s).carry) return false;
-  c.credits -= price(s, item.cost); c.items[id] += 1; ledger(s, 'spend:items', price(s, item.cost));
+  const item = D.ITEMS[id], c = s.char, due = item ? price(s, itemCost(s, id)) : 0;
+  if (!item || c.credits < due || c.items[id] >= stats(s).carry) return false;
+  c.credits -= due; c.items[id] += 1; ledger(s, 'spend:items', due);
   s.notice = `Bought ${item.name}.`;
   return true;
 }
@@ -894,8 +905,8 @@ export function buyCell(s, id) {
 export function creditMult(s) {
   const c = s.char, t = s.run ? s.run.threat : s.meta.threat || 0;
   const b = s.run ? s.run.bulletin : null;
-  const cha = 1 + TUNE.chaCredits * (attr(c, 'cha') - 1), wanted = 1 + TUNE.wanted * (s.run ? s.run.wanted || 0 : 0);
-  return cha * wanted * (has(c, 'fence') ? 1.25 : 1) * (hasPerk(c, 'chit') ? 1.2 : 1) * (1 + gearBonus(c, 'credits') / 100) * (1 + 0.15 * t) * (1 + markSum(c).credits + featBuffs(s.meta).credits) * (b === 'payday' ? 1.3 : b === 'lockdown' ? 1.25 : 1) * condCredits(s.run);
+  const cha = 1 + TUNE.chaCredits * (attr(c, 'cha') - 1);
+  return cha * (has(c, 'fence') ? 1.25 : 1) * (1 + pv(c, 'chit') / 100) * (1 + gearBonus(c, 'credits') / 100) * (1 + 0.15 * t) * (1 + markSum(c).credits + featBuffs(s.meta).credits) * (b === 'payday' ? 1.3 : b === 'lockdown' ? 1.25 : 1) * condCredits(s.run);
 }
 const condCredits = (r) => (!r ? 1 : r.cond === 'toxic' ? 1.25 : r.cond === 'patrol' ? 1.3 : r.cond === 'lockdown' ? 1.2 : 1);
 export const condOf = (r) => D.SECTOR_CONDS.find((x) => x.id === (r && r.cond)) || D.SECTOR_CONDS[0];
@@ -927,13 +938,12 @@ export function deploy(s, mapId, startSector, rng) {
   if (!mapUnlocked(s, map)) return false;
   const prog = mapProgress(s.char, map.id);
   if (!prog.insertions.includes(startSector)) startSector = 1;
-  s.char.wanted = (s.char.wanted || 0);
-  s.run = { wanted: s.char.wanted, startCredits: s.char.credits, map: map.id, sector: startSector, startSector, room: 0, choices: null, enemy: null, nextMod: null, sectorCredits: 0, kills: 0, bosses: 0, cleared: 0, elites: 0,
+  s.run = { startCredits: s.char.credits, map: map.id, sector: startSector, startSector, room: 0, choices: null, enemy: null, nextMod: null, sectorCredits: 0, kills: 0, bosses: 0, cleared: 0, elites: 0,
     alert: 0, allies: 0, vent: 3, turns: 0, threat: s.meta.threat || 0, perkOffer: null, ...freshBag(), cb: {}, actor: 0, acted: {}, round: 0, lastAttacker: 0 };
-  if (isCoop(s)) { s.run.cb[1] = freshBag(); s.run.wanted = Math.max(s.char.wanted, s.char2.wanted || 0); }
+  if (isCoop(s)) s.run.cb[1] = freshBag();
   s.meta.stats.raids += 1;
   forEachActor(s, (c) => {
-    c.startCredits = c.credits;
+    c.startCredits = c.credits; c.safeCredits = c.credits; c.xpBank = 0; c.payout = null;
     if (D.BACKGROUNDS.find((b) => b.id === c.background).follower) { s.run.allies = Math.min(2, s.run.allies + 1); s.run.follower = true; }
     if (hasTrait(c, 'surplus') && c.items.stim < stats(s).carry) c.items.stim += 1;
   });
@@ -1108,7 +1118,6 @@ function startFight(s, rng, kind) {
   const e = makeEnemy(r.sector, boss, rng, r.map, r.threat);
   if (!boss) applyQuirk(r, e, rng);
   if (kind === 'elite') makeElite(e, rng);
-  if (r.wanted) { const w = 1 + TUNE.wanted * r.wanted; e.hp = e.maxHp = Math.round(e.maxHp * w); e.atk = Math.round(e.atk * w); }
   if (r.bulletin === 'payday') e.hp = e.maxHp = Math.round(e.maxHp * 1.1);
   if (r.bulletin === 'lockdown') e.atk = Math.round(e.atk * 1.1);
   if (r.bulletin === 'budget') e.def = Math.max(0, e.def - 1);
@@ -1133,12 +1142,12 @@ function startFight(s, rng, kind) {
   if (r.cond === 'lockdown') e.xp = Math.round(e.xp * 1.2);
   if (r.roomType === 'bounty') { e.cr = e.cr.map((v) => Math.round(v * 1.6)); e.bounty = true; }
   r.nextMod = null;
-  if (hasPerk(c, 'spotter')) addStatus(e.st, e.fresh, { exposed: 2 });
-  if (hasPerk(c, 'reputation') && e.tags.includes('human')) addStatus(e.st, e.fresh, { shaken: 2 });
-  if (hasPerk(c, 'tripwire')) addStatus(e.st, e.fresh, { bleed: 2 });
-  if (hasPerk(c, 'warpaint')) addStatus(e.st, e.fresh, { shaken: 1, exposed: 1 });
+  if (hasPerk(c, 'spotter')) addStatus(e.st, e.fresh, { exposed: pv(c, 'spotter') });
+  if (hasPerk(c, 'reputation') && e.tags.includes('human')) addStatus(e.st, e.fresh, { shaken: pv(c, 'reputation') });
+  if (hasPerk(c, 'tripwire')) addStatus(e.st, e.fresh, { bleed: pv(c, 'tripwire') });
+  if (hasPerk(c, 'warpaint')) addStatus(e.st, e.fresh, { shaken: pv(c, 'warpaint'), exposed: pv(c, 'warpaint') });
   e.fresh = [];
-  if (hasPerk(c, 'dressing')) { const st = stats(s); c.hp = Math.min(st.maxHp, c.hp + Math.round(st.maxHp * 0.06)); }
+  if (hasPerk(c, 'dressing')) { const st = stats(s); c.hp = Math.min(st.maxHp, c.hp + Math.round(st.maxHp * pv(c, 'dressing') / 100)); }
   log(s, e.line, boss ? 'boss' : 'sys');
   if (e.quirk) log(s, `${e.bark} (${quirkById(e.quirk).name}: ${quirkById(e.quirk).desc})`, 'info');
   if (e.affix) log(s, `${D.AFFIXES[e.affix].name}: ${D.AFFIXES[e.affix].desc}`, 'bad');
@@ -1172,8 +1181,8 @@ function applyQuirk(r, e, rng) {
 
 function makeElite(e, rng) {
   e.name = `Veteran ${e.name}`; e.elite = true;
-  e.hp = e.maxHp = Math.round(e.maxHp * 1.35);
-  e.atk = Math.round(e.atk * 1.15); e.def += 1;
+  e.hp = e.maxHp = Math.round(e.maxHp * 1.45);
+  e.atk = Math.round(e.atk * 1.22); e.def += 1;
   e.cr = e.cr.map((v) => v * 2); e.xp = Math.round(e.xp * 1.5);
   const affixes = Object.keys(D.AFFIXES).filter((a) => !(a === 'relentless' && !e.intents.special));
   e.affix = pick(rng, affixes);
@@ -1291,7 +1300,7 @@ function hitMult(s, melee, { mult = 1, unarmoredBonus = 1 } = {}) {
   const droid = e.tags.includes('droid'), human = e.tags.includes('human');
   const fb = featBuffs(s.meta);
   mult *= 1 + fb.atk + (melee ? fb.melee : fb.ranged) + (fb.vs[e.id] || 0);
-  if (r.ready) mult *= hasPerk(c, 'steady') ? 2 : 1.5;
+  if (r.ready) mult *= hasPerk(c, 'steady') ? 1 + pv(c, 'steady') / 100 : 1.5;
   if (r.momentum) mult *= 1 + TUNE.momentum;
   if (w.type === 'tech' && droid) mult *= 1.5;
   if (w.droid && droid) mult *= 1 + w.droid;
@@ -1300,10 +1309,10 @@ function hitMult(s, melee, { mult = 1, unarmoredBonus = 1 } = {}) {
   if (hasTrait(c, 'executioner', mode) && e.hp < e.maxHp * 0.3) mult *= 1.4;
   if (hasUnique(c, 'crucible') && e.st.burn) mult *= 1.25;
   if (!e.tags.includes('armored')) mult *= unarmoredBonus;
-  if (hasPerk(c, 'ambush') && !r.struck) mult *= TUNE.ambush;
-  if (hasPerk(c, 'grudge') && (e.elite || e.boss)) mult *= 1.3;
-  if (hasPerk(c, 'adrenal') && c.hp < stats(s).maxHp * 0.35) mult *= 1.25;
-  if (hasPerk(c, 'coupdegrace') && e.hp < e.maxHp * 0.3) mult *= 1.5;
+  if (hasPerk(c, 'ambush') && !r.struck) mult *= 1 + pv(c, 'ambush') / 100;
+  if (hasPerk(c, 'grudge') && (e.elite || e.boss)) mult *= 1 + pv(c, 'grudge') / 100;
+  if (hasPerk(c, 'adrenal') && c.hp < stats(s).maxHp * 0.35) mult *= 1 + pv(c, 'adrenal') / 100;
+  if (hasPerk(c, 'coupdegrace') && e.hp < e.maxHp * 0.3) mult *= 1 + pv(c, 'coupdegrace') / 100;
   return mult * outMult(r.pst, e.st);
 }
 const spreadOf = (melee) => (melee ? TUNE.meleeSpread : TUNE.rangedSpread);
@@ -1320,7 +1329,7 @@ function strike(s, rng, { mult = 1, critBonus = 0, pierce = 0, unarmoredBonus = 
   mult = hitMult(s, melee, { mult, unarmoredBonus });
   r.momentum = false;
   const crit = forceCrit || (first && hasUnique(c, 'ostrane')) || rng() < critChance(st, e, melee) + critBonus;
-  if (crit) mult *= hasPerk(c, 'hollow') ? 2.2 : 1.6;
+  if (crit) mult *= hasPerk(c, 'hollow') ? pv(c, 'hollow') : 1.6;
   if (w.type === 'tech') pierce = Math.max(pierce, 0.5);
   r.struck = true;
   feat(s, melee ? 'strikes' : 'shots'); if (crit) feat(s, 'crits');
@@ -1329,7 +1338,7 @@ function strike(s, rng, { mult = 1, critBonus = 0, pierce = 0, unarmoredBonus = 
   if (!melee && e.intent === 'guard' && e.stun === 0) dmg = Math.max(1, Math.round(dmg * TUNE.cover));
   e.hp -= dmg;
   if (e.hp > 0) {
-    const bleed = 1 - (1 - (hasPerk(c, 'serrated') ? 0.3 : 0)) * (1 - gearBonus(c, 'bleed', mode) / 100);
+    const bleed = 1 - (1 - pv(c, 'serrated') / 100) * (1 - gearBonus(c, 'bleed', mode) / 100);
     if (bleed > 0 && rng() < bleed) addStatus(e.st, e.fresh, { bleed: 2 });
     if (melee && hasUnique(c, 'crucible')) addStatus(e.st, e.fresh, { burn: 2 });
     if (hasTrait(c, 'stunner', mode) && rng() < 0.12) e.stun = Math.max(e.stun, 1);
@@ -1348,7 +1357,7 @@ function addPlayerStatus(s, statuses, rng) {
     if (res && rng() < res) continue;
     out[k] = n;
   }
-  return addStatus(r.pst, r.pfresh, out, hasPerk(c, 'thick') ? 1 : 0);
+  return addStatus(r.pst, r.pfresh, out, pv(c, 'thick'));
 }
 
 // Some enemies punish melee: after a Strike or Power Strike.
@@ -1443,7 +1452,7 @@ function playerActInner(s, act, rng, who) {
     }
     case 'overload': {
       const droid = e.tags.includes('droid');
-      const dmg = Math.round((6 + attr(c, 'int') * TUNE.intOverload + r.sector * 2) * (droid ? 2 : 1) * (hasPerk(c, 'capacitor') ? 1.3 : 1) * (1 + ((baseOf(gearIn(c, 'gadget')) || {}).overload || 0)) * outMult(r.pst, e.st));
+      const dmg = Math.round((6 + attr(c, 'int') * TUNE.intOverload + r.sector * 2) * (droid ? 2 : 1) * (1 + pv(c, 'capacitor') / 100) * (1 + ((baseOf(gearIn(c, 'gadget')) || {}).overload || 0)) * outMult(r.pst, e.st));
       e.hp -= dmg;
       if (droid) e.stun = Math.max(e.stun, 1);
       fx(s, { who: 'player', type: 'overload', dmg, droid });
@@ -1469,7 +1478,7 @@ function playerActInner(s, act, rng, who) {
     }
     case 'defend':
       r.defending = true; r.ready = true;
-      if (hasPerk(c, 'secondwind')) c.hp = Math.min(st.maxHp, c.hp + Math.round(st.maxHp * 0.05));
+      if (hasPerk(c, 'secondwind')) c.hp = Math.min(st.maxHp, c.hp + Math.round(st.maxHp * pv(c, 'secondwind') / 100));
       fx(s, { who: 'player', type: 'defend' });
       log(s, 'You drop behind cover and steady your aim. Next shot +50%.', 'info');
       break;
@@ -1486,7 +1495,7 @@ function playerActInner(s, act, rng, who) {
       c.items.thermal -= 1;
       const dmg = Math.round((20 + r.sector * 4) * st.tech * outMult(r.pst, e.st));
       e.hp -= dmg;
-      if (hasPerk(c, 'incendiary') && e.hp > 0) addStatus(e.st, e.fresh, { burn: 3 });
+      if (hasPerk(c, 'incendiary') && e.hp > 0) addStatus(e.st, e.fresh, { burn: pv(c, 'incendiary') });
       fx(s, { who: 'player', type: 'thermal', dmg });
       log(s, `Thermal charge! ${e.name} takes ${dmg}, armour or not.`, 'crit');
       break;
@@ -1601,9 +1610,9 @@ function checkPhase(s) {
 function lethalSave(s) {
   const r = s.run, c = s.char;
   if (c.hp > 0 || !hasPerk(c, 'deadman') || r.deadmanUsed) return false;
-  r.deadmanUsed = true; c.hp = 1;
+  r.deadmanUsed = true; c.hp = Math.max(1, Math.round(stats(s).maxHp * pv(c, 'deadman') / 100));
   fx(s, { who: 'player', type: 'deadman' });
-  log(s, 'Dead Man\u2019s Switch: you refuse to go down. 1 HP.', 'good');
+  log(s, `Dead Man\u2019s Switch: you refuse to go down. ${c.hp} HP.`, 'good');
   return true;
 }
 
@@ -1701,9 +1710,11 @@ function enemyTurn(s, rng) {
   } else if (e.intent === 'attack' || e.intent === 'heavy') {
     const heavy = e.intent === 'heavy';
     if (r.allies > 0 && rng() < 0.25) {
-      r.allies -= 1;
+      // A freed prisoner soaks the shot. It takes a few to put one down.
+      r.allyHits = (r.allyHits || 0) + 1;
       fx(s, { who: 'enemy', type: e.intent, ally: true, dmg: 0 });
-      log(s, `${e.name} guns down one of the freed prisoners.`, 'bad');
+      if (r.allyHits >= TUNE.allyGrit) { r.allyHits = 0; r.allies -= 1; log(s, `${e.name} guns down one of the freed prisoners.`, 'bad'); }
+      else log(s, `${e.name} hits a freed prisoner. They stay up (${TUNE.allyGrit - r.allyHits} more would do it).`, 'hurt');
     } else if (q && q.miss && rng() < q.miss) {
       fx(s, { who: 'enemy', type: e.intent, dodged: true, missed: true, dmg: 0 });
       log(s, `${e.name} ${pick(rng, q.misses)}.`, 'good');
@@ -1750,18 +1761,39 @@ function enemyTurn(s, rng) {
   e.intent = chooseIntent(e, rng);
 }
 
-function gainXp(s, amount, out) {
+// XP earned on a raid waits in the bank. It turns into levels only when a boss secures it or you get out (settle).
+function gainXp(s, amount) {
   const c = s.char;
   if (c.fed) amount = Math.round(amount * 1.05);
   amount = Math.round(amount * (1 + featBuffs(s.meta).xp));
-  c.xp += amount;
-  while (c.xp >= xpToNext(c.level)) {
-    const before = stats(s).maxHp;
-    c.xp -= xpToNext(c.level); c.level += 1; c.attrPoints += 1;
-    c.hp += stats(s).maxHp - before;
-    out.levelUps.push(c.level);
-  }
+  c.xpBank = (c.xpBank || 0) + amount;
 }
+// Beating a boss or leaving: what's unsecured is paid out, less rate. Credits an operative walked in with are never touched.
+// Leaves c.payout for the screen that shows it. Returns credits lost by the current actor.
+function settle(s, kind, rate) {
+  const r = s.run, me = actorIdx(s);
+  let mine = 0;
+  forEachActor(s, (a, i) => {
+    const safe = a.safeCredits ?? a.startCredits ?? r.startCredits ?? 0, haul = Math.max(0, a.credits - safe), bank = a.xpBank || 0;
+    if (!haul && !bank) return;
+    const lostCredits = Math.round(haul * rate), lostXp = Math.round(bank * rate), gain = bank - lostXp;
+    a.credits -= lostCredits; ledger(s, 'escape loss', -lostCredits);
+    if (i === me) mine = lostCredits;
+    const fromLevel = a.level, fromXp = a.xp, fromNext = xpToNext(a.level);
+    a.xp += gain;
+    let points = 0;
+    while (a.xp >= xpToNext(a.level)) {
+      const before = stats(s).maxHp;
+      a.xp -= xpToNext(a.level); a.level += 1; a.attrPoints += 1; points += 1;
+      a.hp += stats(s).maxHp - before;
+    }
+    a.xpBank = 0; a.safeCredits = a.credits;
+    s.meta.payouts = (s.meta.payouts || 0) + 1;
+    a.payout = { id: s.meta.payouts, kind, rate, credits: haul - lostCredits, lostCredits, xp: gain, lostXp, fromLevel, toLevel: a.level, fromPct: fromXp / fromNext, toPct: a.xp / xpToNext(a.level), points };
+  });
+  return mine;
+}
+export function closePayout(s) { if (s.char) s.char.payout = null; }
 
 function standUp(s, hpShare) {
   for (const i of [0, 1]) {
@@ -1788,26 +1820,25 @@ function winFight(s, rng, fled = false) {
     fx(s, { who: 'env', type: 'explode', pdmg: dmg });
     out.notes.push(dmg ? `It exploded: \u2212${dmg} HP` : 'It exploded, but you were in cover');
   }
-  gainXp(s, xp, out);
-  if (out.levelUps.length) fx(s, { who: 'player', type: 'levelup', level: c.level });
+  gainXp(s, xp);
   if (has(c, 'medic')) {
     const st = stats(s);
     out.healed = Math.min(st.maxHp - c.hp, Math.round(st.maxHp * 0.15));
     c.hp += out.healed;
   }
-  if (hasPerk(c, 'scavenger') && rng() < 0.35) {
+  if (hasPerk(c, 'scavenger') && rng() < pv(c, 'scavenger') / 100) {
     const it = pick(rng, ['stim', 'thermal', 'ion', 'smoke']);
     if (c.items[it] < stats(s).carry) { c.items[it] += 1; out.items.push(D.ITEMS[it].name); }
   }
   if (r.cond === 'toxic' && !fled) { const st = stats(s), d = Math.round(st.maxHp * 0.04); c.hp = Math.max(1, c.hp - d); log(s, `The coolant leak burns your lungs: \u2212${d} HP.`, 'hurt'); }
-  const hk = gearBonus(c, 'healkill') + (hasPerk(c, 'tithe') ? 6 : 0);
+  const hk = gearBonus(c, 'healkill') + pv(c, 'tithe');
   if (hk && !fled) { const st = stats(s), h = Math.min(st.maxHp - c.hp, Math.round(st.maxHp * hk / 100)); c.hp += h; out.healed += h; }
-  if (hasPerk(c, 'quickdraw')) for (const k of Object.keys(r.cooldowns)) if (r.cooldowns[k] < 50) r.cooldowns[k] = Math.max(0, r.cooldowns[k] - 2);
+  if (hasPerk(c, 'quickdraw')) for (const k of Object.keys(r.cooldowns)) if (r.cooldowns[k] < 50) r.cooldowns[k] = Math.max(0, r.cooldowns[k] - pv(c, 'quickdraw'));
   // Co-op: the partner gets the same credits and XP.
   const me = actorIdx(s);
   for (const i of livingActors(s)) if (i !== me) withActor(s, i, () => {
-    const c2 = s.char, o2 = { levelUps: [] };
-    c2.credits += credits; gainXp(s, xp, o2);
+    const c2 = s.char;
+    c2.credits += credits; gainXp(s, xp);
     if (has(c2, 'medic')) { const st2 = stats(s); c2.hp = Math.min(st2.maxHp, c2.hp + Math.round(st2.maxHp * 0.15)); }
     if (e.boss) { const prog = mapProgress(c2, r.map), next = r.sector + 1; if (!prog.insertions.includes(next)) prog.insertions.push(next); }
   });
@@ -1838,15 +1869,29 @@ function winFight(s, rng, fled = false) {
 }
 
 // ---------- contraband ----------
+function rollPerkTier(sector, boss, rng) {
+  const band = Math.min(3, Math.floor((Math.max(1, sector) - 1) / 5) + (boss ? 1 : 0)), odds = D.PERK_TIER_ODDS[band];
+  let x = rng();
+  for (let i = 0; i < odds.length; i++) { x -= odds[i]; if (x <= 0) return i; }
+  return 0;
+}
 function offerPerks(s, rng, boss) {
-  const owned = s.char.perks;
-  let pool = D.PERKS.filter((p) => !owned.includes(p.id));
+  const c = s.char, r = s.run, tiers = {};
+  // Each piece rolls its tier. Something you already carry only turns up as an upgrade.
+  const pool = D.PERKS.filter((p) => {
+    const t = rollPerkTier(r.sector, boss, rng);
+    if (hasPerk(c, p.id) && t <= perkLevel(c, p.id)) return false;
+    tiers[p.id] = t;
+    return true;
+  });
   const rares = pool.filter((p) => p.rare), commons = pool.filter((p) => !p.rare);
   const out = [];
   const take = (arr) => { if (!arr.length) return; const p = pick(rng, arr); out.push(p.id); arr.splice(arr.indexOf(p), 1); };
   if (boss) take(rares);
   while (out.length < 3 && (rares.length || commons.length)) take(rng() < (boss ? 0.4 : 0.2) && rares.length ? rares : commons.length ? commons : rares);
-  return out.length ? out : null;
+  if (!out.length) return null;
+  r.perkTiers = tiers;
+  return out;
 }
 // Take a piece of contraband. With full pockets, dropId names the piece to leave behind.
 export function choosePerk(s, id, rng, dropId = null, who = actorIdx(s)) {
@@ -1856,12 +1901,24 @@ function choosePerkInner(s, id, rng, dropId) {
   const r = s.run, c = s.char;
   if (!r || !r.perkOffer) return false;
   if (id && r.perkOffer.includes(id)) {
+    const tier = (r.perkTiers && r.perkTiers[id]) || 0;
+    c.perkLv = c.perkLv || {};
+    if (hasPerk(c, id)) {
+      // A better copy: no pocket needed.
+      c.perkLv[id] = tier;
+      log(s, `Upgraded: ${perkName(id, tier)}.`, 'reward'); feat(s, 'contraband');
+      r.perkOffer = null; r.perkTiers = null;
+      if (isCoop(s) && rewardsPending(s)) { s.screen = 'loot'; return true; }
+      offerRoute(s, rng);
+      return true;
+    }
+    c.perkLv[id] = tier;
     if (c.perks.length >= CONTRABAND_SLOTS) {
       if (!dropId || !c.perks.includes(dropId)) return false;
       c.perks = c.perks.filter((p) => p !== dropId);
       log(s, `You leave the ${perkById(dropId).name} behind.`, 'info');
     }
-    c.perks.push(id); log(s, `Contraband: ${perkById(id).name}.`, 'reward'); feat(s, 'contraband');
+    c.perks.push(id); log(s, `Contraband: ${perkName(id, tier)}.`, 'reward'); feat(s, 'contraband');
   }
   r.perkOffer = null;
   if (isCoop(s) && rewardsPending(s)) { s.screen = 'loot'; return true; }
@@ -1945,6 +2002,7 @@ function clearSector(s) {
   contractEvent(s, 'sector', {});
   s.outcome = { sector: r.sector, bonus, credits: r.sectorCredits + bonus, resolve: res, fresh };
   log(s, `${sectorName(r.sector, r.map)} cleared. +${bonus} ${D.SETTING.cur}${res ? `, +${res} ${D.SETTING.meta}` : ''}.`, 'reward');
+  if (isBossSector(r.sector)) { settle(s, 'boss', 0); r.allyHits = 0; }
   s.screen = 'sectorClear';
 }
 
@@ -1988,18 +2046,10 @@ export function addToBoard(m, entry) {
 export function endRun(s, how, rngForRestock = Math.random) {
   const r = s.run, c = s.char;
   standUp(s, 0); // running with a downed partner over your shoulder: they make it out, barely
-  let lost = 0;
-  const early = how === 'extracted' && !isBossSector(r.sector);
-  forEachActor(s, (a, i) => {
-    let l = 0;
-    if (how === 'escaped' || early) {
-      l = Math.max(0, Math.round((a.credits - (a.startCredits ?? r.startCredits ?? 0)) * (early ? hardAt(r.sector).extract : hardAt(r.sector).escape)));
-      a.credits -= l; ledger(s, 'escape loss', -l);
-    }
-    if (i === actorIdx(s)) lost = l;
+  const lost = settle(s, how, how === 'extracted' ? extractRate(r.sector) : escapeRate(r.sector));
+  forEachActor(s, (a) => {
     a.raidScore = raidScore(r, a, how).score;
     a.rank = recordScore(s, a, how);
-    a.wanted = (a.wanted || 0) + 1;
     a.fed = false; a.drink = false;
     if (rngForRestock) restockMarket(s, rngForRestock);
   });
@@ -2024,8 +2074,10 @@ export function endRun(s, how, rngForRestock = Math.random) {
   s.tab = 'clinic';
 }
 
-// What extracting right now would cost: 30% of this raid's haul, unless you've just beaten a boss.
-export const extractLoss = (s) => { const r = s.run, c = s.char; return r && !isBossSector(r.sector) ? Math.max(0, Math.round((c.credits - (r.startCredits || 0)) * hardAt(r.sector).extract)) : 0; };
+// What extracting right now would cost.
+export const unsecured = (s) => { const c = s.char; return Math.max(0, c.credits - (c.safeCredits ?? c.startCredits ?? 0)); };
+export const extractLoss = (s) => (s.run ? Math.round(unsecured(s) * extractRate(s.run.sector)) : 0);
+export const extractXpLoss = (s) => (s.run ? Math.round((s.char.xpBank || 0) * extractRate(s.run.sector)) : 0);
 export const allLiberated = (s) => D.MAPS.every((m) => s.meta.liberated[m.id]);
 export const maxThreat = (s) => Math.min(D.THREAT.length - 1, Object.keys(s.meta.liberated).length);
 
@@ -2111,6 +2163,7 @@ function reallyDie(s, foe) {
   record.rank = recordScore(s, c, 'died');
   if (isCoop(s) && !r.orbit) {
     // One of you is dead: the raid is over for both. The survivor drags what they can out (finishCoopDeath).
+    autoHeirloom(s);
     c.dead = true; c.downed = 0; r.over = true;
     s.coopDead = { idx: actorIdx(s), record };
     log(s, `${c.name} goes down. ${charAt(s, 1 - actorIdx(s)).name} grabs what they can and runs.`, 'bad');
@@ -2153,13 +2206,13 @@ export const inTown = (s) => !s.run && !!s.char && s.screen === 'town';
 
 // The Lantern.
 export function buyDrink(s) {
-  const c = s.char, cost = Math.round(D.BAR.drink.cost * hard(s).price);
+  const c = s.char, cost = drinkCost(s);
   if (!inTown(s) || c.drink || c.credits < cost) return false;
   c.credits -= cost; c.drink = true; ledger(s, 'spend:bar', cost); feat(s, 'drinks');
   journal(s, `${c.name} buys a round at the Lantern.`);
   return true;
 }
-export const drinkCost = (s) => Math.round(D.BAR.drink.cost * hard(s).price);
+export const drinkCost = (s) => Math.round(D.BAR.drink.cost * hard(s).price * consumableScale(s.char));
 export function barLine(s, who, rng) {
   const c = s.char;
   c.barSeen = c.barSeen || {};
@@ -2408,7 +2461,7 @@ export function feat(s, key, n = 1) {
       const res = def.resolve ? def.resolve[i] : 0;
       if (res) { m.resolve += res; m.totalResolve += res; }
       (s.featUnlocks = s.featUnlocks || []).push({ key, tier: i + 1, name: def.name, text: featBuffText(def, i), resolve: res });
-      journal(s, `Feat: ${def.name} ${'I II III IV'.split(' ')[i]} (${featBuffText(def, i)}${res ? `, +${res} ${D.SETTING.meta}` : ''}).`, 'good');
+      journal(s, `Achievement: ${def.name} ${ROMAN[i]} (${featBuffText(def, i)}${res ? `, +${res} ${D.SETTING.meta}` : ''}).`, 'good');
     }
   }
   if (s.run) { const l = s.run.featTouched || (s.run.featTouched = []); if (!l.includes(key)) l.push(key); }

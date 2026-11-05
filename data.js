@@ -638,31 +638,34 @@ export const BOSS_INFO = {
 };
 
 // ---------- contraband: run perks drafted after elites and bosses. Kept until the operative dies. ----------
+// vals: the strength at tiers I to IV (see {v} in desc). Higher tiers turn up more the deeper you are; a better copy of something
+// you already carry upgrades it in place, so full pockets still have something to find.
+export const PERK_TIER_ODDS = [[0.8, 0.2, 0, 0], [0.4, 0.45, 0.15, 0], [0.15, 0.4, 0.35, 0.1], [0.05, 0.25, 0.4, 0.3]]; // sectors 1-5, 6-10, 11-15, 16+; bosses roll one band up
 export const PERKS = [
-  { id: 'hollow',    name: 'Hollow-Points',      rare: false, desc: 'Critical hits deal x2.2 instead of x1.6.' },
-  { id: 'dressing',  name: 'Field Dressing',     rare: false, desc: 'Heal 6% of max HP at the start of every fight.' },
-  { id: 'chit',      name: 'Lucky Chit',         rare: false, desc: '+20% credits from everything.' },
-  { id: 'serrated',  name: 'Serrated Rounds',    rare: false, desc: 'Your attacks have a 30% chance to cause Bleeding.' },
-  { id: 'incendiary',name: 'Incendiary Mix',     rare: false, desc: 'Thermal charges also set the target Burning for 3 turns.' },
-  { id: 'steady',    name: 'Steady Hands',       rare: false, desc: 'Defending boosts your next shot by +100% instead of +50%.' },
-  { id: 'secondwind',name: 'Second Wind',        rare: false, desc: 'Defending also heals 5% of max HP.' },
-  { id: 'scavenger', name: 'Scavenger',          rare: false, desc: '35% chance to find an item after each fight.' },
-  { id: 'spotter',   name: 'Spotter',            rare: false, desc: 'Enemies start every fight Exposed for 2 turns.' },
-  { id: 'thick',     name: 'Thick Skin',         rare: false, desc: 'Status effects on you last 1 turn less.' },
-  { id: 'ambush',    name: 'Ambusher',           rare: true,  desc: 'Your first attack in every fight deals +50% damage.' },
-  { id: 'deadman',   name: 'Dead Man\u2019s Switch', rare: true, desc: 'Once per raid, survive a killing blow with 1 HP.' },
-  { id: 'grudge',    name: 'Grudge',             rare: true,  desc: '+30% damage against elites and bosses.' },
-  { id: 'quickdraw', name: 'Quickdraw',          rare: true,  desc: 'Killing an enemy cuts all skill cooldowns by 2.' },
-  { id: 'capacitor', name: 'Ion Capacitor',      rare: true,  desc: 'Ion pulses stun 1 turn longer. Overload deals +30%.' },
-  { id: 'reputation',name: 'Reputation',         rare: true,  desc: 'Human enemies start every fight Shaken for 2 turns.' },
-  { id: 'adrenal',   name: 'Adrenal Spike',      rare: false, desc: '+25% damage while you are below 35% HP.' },
-  { id: 'tithe',     name: 'Blood Tithe',        rare: false, desc: 'Every kill heals 6% of max HP.' },
-  { id: 'ironlung',  name: 'Iron Lung',          rare: false, desc: '+10% max HP.' },
-  { id: 'tripwire',  name: 'Tripwire Kit',       rare: false, desc: 'Enemies start every fight Bleeding for 2 turns.' },
-  { id: 'padding',   name: 'Kevlar Padding',     rare: false, desc: '+2 DEF.' },
-  { id: 'coupdegrace', name: 'Coup de Gr\u00e2ce', rare: true, desc: '+50% damage against enemies below 30% HP.' },
-  { id: 'ghost',     name: 'Ghost Protocol',     rare: true,  desc: '+10% chance to dodge every attack.' },
-  { id: 'warpaint',  name: 'War Paint',          rare: true,  desc: 'Every enemy starts every fight Shaken for 1 turn and Exposed for 1 turn.' },
+  { id: 'hollow',    name: 'Hollow-Points',      rare: false, vals: [1.8, 2, 2.2, 2.5], desc: 'Critical hits deal x{v} instead of x1.6.' },
+  { id: 'dressing',  name: 'Field Dressing',     rare: false, vals: [3, 4, 6, 8], desc: 'Heal {v}% of max HP at the start of every fight.' },
+  { id: 'chit',      name: 'Lucky Chit',         rare: false, vals: [10, 15, 20, 30], desc: '+{v}% credits from everything.' },
+  { id: 'serrated',  name: 'Serrated Rounds',    rare: false, vals: [15, 20, 30, 40], desc: 'Your attacks have a {v}% chance to cause Bleeding.' },
+  { id: 'incendiary',name: 'Incendiary Mix',     rare: false, vals: [2, 3, 4, 5], desc: 'Thermal charges also set the target Burning for {v} turns.' },
+  { id: 'steady',    name: 'Steady Hands',       rare: false, vals: [75, 100, 125, 150], desc: 'Defending boosts your next shot by +{v}% instead of +50%.' },
+  { id: 'secondwind',name: 'Second Wind',        rare: false, vals: [3, 4, 5, 7], desc: 'Defending also heals {v}% of max HP.' },
+  { id: 'scavenger', name: 'Scavenger',          rare: false, vals: [10, 15, 22, 30], desc: '{v}% chance to find an item after each fight.' },
+  { id: 'spotter',   name: 'Spotter',            rare: false, vals: [1, 2, 3, 4], desc: 'Enemies start every fight Exposed for {v} turns.' },
+  { id: 'thick',     name: 'Thick Skin',         rare: false, vals: [1, 1, 2, 3], desc: 'Status effects on you last {v} turn(s) less.' },
+  { id: 'ambush',    name: 'Ambusher',           rare: true,  vals: [30, 40, 50, 70], desc: 'Your first attack in every fight deals +{v}% damage.' },
+  { id: 'deadman',   name: 'Dead Man\u2019s Switch', rare: true, vals: [1, 5, 10, 20], desc: 'Once per raid, survive a killing blow with {v}% of max HP.' },
+  { id: 'grudge',    name: 'Grudge',             rare: true,  vals: [15, 20, 30, 40], desc: '+{v}% damage against elites and bosses.' },
+  { id: 'quickdraw', name: 'Quickdraw',          rare: true,  vals: [1, 2, 3, 4], desc: 'Killing an enemy cuts all skill cooldowns by {v}.' },
+  { id: 'capacitor', name: 'Ion Capacitor',      rare: true,  vals: [15, 20, 30, 45], desc: 'Ion pulses stun 1 turn longer. Overload deals +{v}%.' },
+  { id: 'reputation',name: 'Reputation',         rare: true,  vals: [1, 2, 3, 4], desc: 'Human enemies start every fight Shaken for {v} turns.' },
+  { id: 'adrenal',   name: 'Adrenal Spike',      rare: false, vals: [15, 20, 25, 35], desc: '+{v}% damage while you are below 35% HP.' },
+  { id: 'tithe',     name: 'Blood Tithe',        rare: false, vals: [3, 4, 6, 8], desc: 'Every kill heals {v}% of max HP.' },
+  { id: 'ironlung',  name: 'Iron Lung',          rare: false, vals: [5, 8, 12, 15], desc: '+{v}% max HP.' },
+  { id: 'tripwire',  name: 'Tripwire Kit',       rare: false, vals: [1, 2, 3, 4], desc: 'Enemies start every fight Bleeding for {v} turns.' },
+  { id: 'padding',   name: 'Kevlar Padding',     rare: false, vals: [1, 2, 3, 4], desc: '+{v} DEF.' },
+  { id: 'coupdegrace', name: 'Coup de Gr\u00E2ce', rare: true, vals: [30, 40, 50, 70], desc: '+{v}% damage against enemies below 30% HP.' },
+  { id: 'ghost',     name: 'Ghost Protocol',     rare: true,  vals: [5, 7, 10, 14], desc: '+{v}% chance to dodge every attack.' },
+  { id: 'warpaint',  name: 'War Paint',          rare: true,  vals: [1, 1, 2, 3], desc: 'Every enemy starts every fight Shaken and Exposed for {v} turn(s).' },
 ];
 
 // ---------- contracts: optional jobs from the cell. Rewards are permanent Resolve and credits. ----------
@@ -835,7 +838,7 @@ export const BAR = {
 // Each feat has four tiers. buff: what every tier adds (shrinking: the per array is multiplied by [1, .8, .6, .4]).
 // Kinds: atk (all damage), ranged, melee (that attack's damage), hp, crit, dodge, escape, credits, xp, stim (stim healing),
 // all as fractions of 1. resolve: Resolve paid on reaching tiers 3 and 4. Enemy-type feats are generated from ENEMIES.
-export const FEAT_FALLOFF = [0.5, 0.4, 0.3, 0.2]; // halved after the campaign sim: full size took the finale from operative 22 to 16
+export const FEAT_FALLOFF = [0.6, 0.5, 0.4, 0.35, 0.3, 0.25]; // six tiers, a bit stronger than the old four (0.5, 0.4, 0.3, 0.2). Balance pending.
 export const FEATS = [
   { id: 'kills', group: 'Combat', name: 'Bodies in the yard', desc: 'Enemies put down.', tiers: [10, 100, 500, 1000], buff: 'atk', per: 0.01, resolve: [0, 0, 1, 2] },
   { id: 'bosses', group: 'Combat', name: 'Heads on the wall', desc: 'Bosses beaten.', tiers: [1, 5, 15, 30], buff: 'hp', per: 0.02, resolve: [0, 1, 2, 3] },
@@ -854,9 +857,14 @@ export const FEATS = [
   { id: 'credits', group: 'Raids', name: 'Paid in full', desc: 'Credits earned, all sources.', tiers: [1000, 10000, 50000, 200000], buff: 'credits', per: 0.01 },
   { id: 'fallen', group: 'The cell', name: 'The wall remembers', desc: 'Operatives lost.', tiers: [1, 10, 50, 100], buff: 'hp', per: 0.02, resolve: [0, 1, 2, 3] },
   { id: 'upgrades', group: 'The cell', name: 'Marrow\u2019s best customer', desc: 'Gear upgrades bought.', tiers: [5, 25, 100, 250], buff: 'escape', per: 0.01 },
-  { id: 'lielow', group: 'The cell', name: 'Ghost', desc: 'Times lying low.', tiers: [1, 10, 50, 100], buff: 'dodge', per: 0.005 },
   { id: 'orbit', group: 'After curfew', name: 'Blockade pilot', desc: 'Orbit runs won.', tiers: [1, 5, 15, 30], buff: 'credits', per: 0.01, resolve: [0, 1, 2, 3] },
   { id: 'spins', group: 'After curfew', name: 'Regular at the Wheel', desc: 'Spins.', tiers: [10, 50, 200, 500], buff: 'xp', per: 0.01 },
   { id: 'drinks', group: 'After curfew', name: 'Tab at the Lantern', desc: 'Rounds bought.', tiers: [5, 25, 100, 250], buff: 'hp', per: 0.01 },
 ];
-export const ENEMY_FEAT_TIERS = [1, 10, 50, 100], BOSS_FEAT_TIERS = [1, 3, 10, 25];
+export const ENEMY_FEAT_TIERS = [1, 10, 50, 100, 250, 500], BOSS_FEAT_TIERS = [1, 3, 10, 25, 50, 100];
+// Every achievement runs to six tiers: the last two ask for 2.5 and 5 times the old top, and pay Resolve where the old top did.
+for (const f of FEATS) {
+  const top = f.tiers[f.tiers.length - 1];
+  f.tiers = [...f.tiers, Math.round(top * 2.5), top * 5];
+  if (f.resolve) { const r = f.resolve[f.resolve.length - 1]; f.resolve = [...f.resolve, r + 1, r + 2]; }
+}

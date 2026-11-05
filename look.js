@@ -181,7 +181,7 @@ function closeGaps(g, ox, fw, fh) {
     for (let k = 1; k <= 3; k++) { if (!l && op(x - k, y)) l = k; if (!r && op(x + k, y)) r = k; }
     if (l && r) want.push([x, y]);
   }
-  for (let pass = 0; pass < 3 && want.length; pass++) for (let n = want.length - 1; n >= 0; n--) {
+  for (let pass = 0; pass < 8 && want.length; pass++) for (let n = want.length - 1; n >= 0; n--) {
     const [x, y] = want[n], counts = {};
     let best = null, bestN = 0, any = null;
     for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1], [-2, 0], [2, 0], [0, -2], [0, 2]]) {

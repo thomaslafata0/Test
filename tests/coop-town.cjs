@@ -14,7 +14,7 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   const code = await host.evaluate(() => document.querySelector('.settings b.num').textContent); await host.keyboard.press('Escape');
   await guest.goto(URL + '?join=' + code); await guest.waitForTimeout(1000);
   await guest.click('button[data-a="step"][data-v="2"]'); await guest.click('button[data-a="bg"][data-v="runner"]'); await guest.click('button[data-a="step"][data-v="3"]'); await guest.waitForTimeout(100); await guest.click('button[data-a="create"]'); await guest.waitForTimeout(1200);
-  const hs = () => host.evaluate(() => { const s = JSON.parse(localStorage.getItem('cinder-cell-save-v1')); const g = (c) => Object.fromEntries(Object.entries(c.gear).map(([k, v]) => [k, v && v.base])); return { a: { cr: s.char.credits, gear: g(s.char) }, b: { cr: s.char2.credits, gear: g(s.char2) }, lock: s.meta.lockup.map((x) => x.base), trade: s.trade }; });
+  const hs = () => host.evaluate(() => { const s = JSON.parse(localStorage.getItem('cinder-cell-save-v1')); const g = (c) => Object.fromEntries(Object.entries(c.gear).map(([k, v]) => [k, v && v.base])); return { a: { cr: s.char.credits, gear: g(s.char) }, b: { cr: s.char2.credits, gear: g(s.char2) }, lock: [...(s.char.lockup || []), ...(s.char2.lockup || [])].map((x) => x.base), lockB: (s.char2.lockup || []).map((x) => x.base), trade: s.trade }; });
   const count = (o) => Object.values(o.a.gear).concat(Object.values(o.b.gear), o.lock).filter(Boolean).length;
   let s0 = await hs(); const total = count(s0), money = s0.a.cr + s0.b.cr;
   // Walk up to each other: force positions together, press E.
@@ -67,8 +67,11 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   const before = await hs(), slot = Object.entries(before.a.gear).find(([, v]) => v);
   if (slot) { await host.click(`button[data-a="lockupstore"][data-v="${slot[0]}"]`); await host.waitForTimeout(300); const a = await hs(); check('store', !a.a.gear[slot[0]] && a.lock.includes(slot[1]), JSON.stringify(a.lock)); }
   await guest.bringToFront(); await guest.click('button[data-a="popup"][data-v="lockup"]'); await guest.waitForTimeout(250);
-  const n0 = (await hs()); const take = await guest.$('button[data-a="lockuptake"]:not([disabled])');
-  if (take) { await take.click(); await guest.waitForTimeout(350); const n1 = await hs(); check('friend takes from the shared shelf', count(n1) === total && JSON.stringify(n0.b.gear) !== JSON.stringify(n1.b.gear)); } else check('friend can take something', false);
+  const n0 = await hs(), mineSlot = Object.entries(n0.b.gear).find(([, v]) => v);
+  await guest.click(`button[data-a="lockupstore"][data-v="${mineSlot[0]}"]`); await guest.waitForTimeout(350);
+  const n1 = await hs(); check('friend stores on their own shelf', n1.lockB.length === n0.lockB.length + 1 && count(n1) === total);
+  const take = await guest.$('button[data-a="lockuptake"]:not([disabled])');
+  if (take) { await take.click(); await guest.waitForTimeout(350); const n2 = await hs(); check('friend takes from their own shelf', count(n2) === total && JSON.stringify(n1.b.gear) !== JSON.stringify(n2.b.gear)); } else check('friend can take something', false);
   await guest.screenshot({ path: `${OUT}/s3-lockup-guest.png` });
   console.log(errors.length ? errors : 'no errors');
   await browser.close();

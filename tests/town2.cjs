@@ -25,7 +25,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
     await page.keyboard.press('e'); await page.waitForTimeout(300);
     s = await save(); console.log(width, 'after talking to Cass popup:', s.popup);
     await ov('character'); await page.screenshot({ path: `${OUT}/t2-character-${width}.png`, fullPage: width === 390 });
-    const ll = await page.$('button[data-a="lielow"]:not([disabled])'); if (ll) await ll.click(); await page.waitForTimeout(150);
+    await page.waitForTimeout(150);
     s = await save(); console.log(width, 'wanted after lie low:', s.char.wanted, 'credits', s.char.credits);
     await page.keyboard.press('Escape'); await page.waitForTimeout(200);
     await page.evaluate(() => { const t = globalThis.cinderTown; t.player.x = 96; t.player.y = 170; });

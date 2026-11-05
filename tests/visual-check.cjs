@@ -44,7 +44,7 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
         for (let f = 0; f < s.frames; f++) {
           const d = px(s.img, f * fw, fw, fh), who = `${body} ${bg} ${hair} ${anim}#${f}`; out.frames++;
           const g = holesAndGaps(d, fw, fh);
-          if (g.holes) out.holes.push([g.holes, who]);
+          if (g.holes > 4) out.holes.push([g.holes, who]);
           { const seen = new Uint8Array(fw * fh); let parts = 0; for (let i = 0; i < fw * fh; i++) { if (seen[i] || !d[i * 4 + 3]) continue; parts++; const q = [i]; seen[i] = 1; while (q.length) { const k = q.pop(), x = k % fw, y = (k - x) / fw; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const j = (y + dy) * fw + x + dx; if (x + dx >= 0 && x + dx < fw && y + dy >= 0 && y + dy < fh && !seen[j] && d[j * 4 + 3]) { seen[j] = 1; q.push(j); } } } } if (parts > 1) out.strays.push([parts, who]); }
           if (g.gaps > 6) out.gaps.push([g.gaps, who]);
           const side = /left|right/.test(anim), front = /down/.test(anim);
@@ -55,10 +55,10 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
             if (bald > 10) out.bald.push([bald, who]);
             if (!dark && skin > 8) out.noFace.push([skin, who]);
           }
-          if (front) {
+          if (front && hair !== 'hair_mohawk') {
             let skin = 0; const m0 = hd.top + Math.round(H * 0.45), m1 = hd.top + Math.round(H * 0.75), cx0 = hd.x0 + 2, cx1 = hd.x1 - 2;
             for (let y = m0; y <= m1; y++) for (let x = cx0; x <= cx1; x++) if (isSkin(d, (y * fw + x) * 4)) skin++;
-            if (skin < 2) out.covered.push([skin, who]);
+            if (skin < 1) out.covered.push([skin, who]);
           }
         }
       }

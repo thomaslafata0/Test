@@ -35,7 +35,7 @@ function withItem(s, it, fn) {
 // LOCKUP=1: the bot keeps replaced gear in the Lockup and reuses it, the most a sensible player would get from it.
 const LOCKUP = !!(typeof process !== 'undefined' && process.env.LOCKUP);
 function useLockup(s, style, skip, w) {
-  const list = s.meta.lockup || [];
+  const list = s.char.lockup || [];
   for (let guard = 0; guard < 8; guard++) {
     const base = score(s, style, w);
     let best = -1, bestGain = 0.4;
@@ -49,8 +49,8 @@ function useLockup(s, style, skip, w) {
   }
 }
 function makeRoom(s) {
-  if (E.lockupFree(s.meta) > 0) return;
-  const list = s.meta.lockup;
+  if (E.lockupFree(s) > 0) return;
+  const list = s.char.lockup;
   let low = 0;
   list.forEach((it, i) => { const v = (E.baseOf(it).tier || 0) * 10 + (it.level || 0) * 3, u = (E.baseOf(list[low]).tier || 0) * 10 + (list[low].level || 0) * 3; if (v < u) low = i; });
   E.lockupScrap(s, low);
