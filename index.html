@@ -597,7 +597,7 @@ import * as A from './audio.js';
 import { iconURL, gearIconKey } from './icons.js';
 import { Town, SHOPS } from './town.js';
 import { Wheel, OrbitScene, loadDowntimeArt, artFor } from './downtime.js';
-import { Net, getCoopPrefs, setCoopPrefs, makeCode, getRoom, setRoom } from './net.js';
+import { Net, getCoopPrefs, setCoopPrefs, makeCode, getRoom, setRoom, getLastRoom, setLastRoom } from './net.js';
 import { BODIES, HAIR, HAIR_NAMES, SKINS, HAIRS, defaultLook, loadLayers, hasLayers, lookStill, lookBattleStill, lookPortrait, townSheets, battleSheet, weaponLayer } from './look.js';
 
 const SAVE_KEY = 'cinder-cell-save-v1';
@@ -612,7 +612,22 @@ function load() {
   try { const raw = localStorage.getItem(SAVE_KEY); if (raw) return JSON.parse(raw); } catch (e) {}
   return null;
 }
-function save() { if (isGuest()) return; try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) {} }
+// Writes only when something changed, stamping the save and the operative with when, so copies of them can be compared.
+let lastBody = '', saveFailed = false;
+function writeSave(s) {
+  const a = s.savedAt, c = s.char, b = c && c.savedAt;
+  delete s.savedAt; if (c) delete c.savedAt;
+  const body = JSON.stringify(s), changed = body !== lastBody;
+  const now = Date.now();
+  s.savedAt = changed ? now : a; if (c) c.savedAt = changed ? now : b;
+  if (!changed) return;
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(s)); lastBody = body; saveFailed = false; if (typeof cloudTouched === 'function') cloudTouched(); } catch (e) { saveFailed = true; }
+}
+// The friend's own game (home) is the real save; what's on their screen in co-op is a mirror of the host's.
+function save() {
+  if (!isGuest()) { writeSave(state); return; }
+  if (home && !net.local) writeSave(home);
+}
 
 // ---------- co-op ----------
 // The host runs the game. The friend (guest) mirrors the host's state with the two operatives swapped, so
@@ -623,7 +638,7 @@ const isHost = () => !!net && net.role === 'host';
 const myIdx = () => (isGuest() ? 1 : 0);
 // Actions that only touch this screen, never the game.
 const DOWNTIME = new Set(['drink', 'barchat', 'bet', 'stake', 'spin', 'invest', 'withdraw', 'shippart', 'shipcell', 'orbitgo', 'orbitact', 'orbitclose']);
-const LOCAL = new Set(['continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'emote', 'givearm', 'orbitarm']);
+const LOCAL = new Set(['continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm']);
 function coopChip() {
   if (!net) return '';
   const who = net.peerName || (isHost() ? 'friend' : 'host');
@@ -631,6 +646,43 @@ function coopChip() {
 }
 // One screen's own view of the game. The friend keeps these across host updates, and the host keeps a copy of what
 // the friend's actions set, so neither player's menus or messages land on the other's screen.
+let home = null, lastHostResolve = null, pendingGuest = null;
+const homeInfo = () => (home ? { training: home.meta.training, cell: home.meta.cell } : null);
+const travelCopy = (c) => { if (!c) return null; const o = JSON.parse(JSON.stringify(c)); delete o.home; delete o.coopName; delete o.payout; return o; };
+// The friend's screen shows their own cell's Resolve, training and upgrades, not the host's.
+function mirrorHome() {
+  if (!home || !state || !state.meta) return;
+  for (const k of ['resolve', 'totalResolve', 'training', 'cell', 'operatives']) state.meta[k] = home.meta[k];
+}
+// What the friend earned while on someone else's game comes home with them.
+function syncHome(hostMeta) {
+  if (!home) return;
+  const m = home.meta;
+  if (lastHostResolve !== null && hostMeta.totalResolve > lastHostResolve) { const d = hostMeta.totalResolve - lastHostResolve; m.resolve += d; m.totalResolve += d; }
+  lastHostResolve = hostMeta.totalResolve;
+  m.bestSector = Math.max(m.bestSector || 0, hostMeta.bestSector || 0);
+  if (state.guestFeats) { for (const [k, n] of Object.entries(state.guestFeats)) E.feat(home, k, n); state.guestFeats = null; if (home.featUnlocks) { state.featUnlocks = home.featUnlocks; home.featUnlocks = null; } }
+  const f = state.coopFallen;
+  if (f && f.idx === 1 && home.char && f.record && f.record.uid === home.char.uid) {
+    m.fallen = [f.record, ...(m.fallen || [])].slice(0, 12);
+    if (state.guestHeirloom) m.heirloom = state.guestHeirloom;
+    home.char = null; home.screen = 'create'; home.draft = E.newDraft(m, rng);
+  } else {
+    const me = state.char, sameOp = me && (!home.char || home.char.uid === me.uid);
+    // During a raid only what's secured comes home: a dropped connection can't lose it or duplicate it.
+    const settled = me && (!state.run || (me.payout && me.payout.id !== homePayout));
+    if (sameOp && settled) {
+      if (me.payout) homePayout = me.payout.id;
+      const copy = travelCopy(me);
+      copy.xpBank = 0; copy.downed = 0;
+      if (state.run) copy.credits = copy.safeCredits ?? copy.credits;
+      copy.hp = Math.max(1, copy.hp);
+      home.char = copy; home.screen = 'town'; home.run = null;
+    }
+  }
+  save();
+}
+let homePayout = 0;
 const GUEST_LOCAL = ['popup', 'compare', 'gearSlot', 'confirmSmoke', 'report', 'barSay', 'draft', 'guestSawDeath'];
 const GUEST_VIEW = ['notice', 'perkPick', 'compare', 'popup'];
 const NEEDS_RUN = new Set(['continue', 'room', 'roomDone', 'event', 'eventDone', 'deeper', 'extract', 'loottake', 'lootsell', 'perk', 'perkdrop']);
@@ -639,7 +691,7 @@ function broadcast() {
   if (!isHost() || !net.peer) return;
   const copy = { ...state, meta: { ...state.meta, journal: undefined }, events: undefined, report: null, notice: guestView.notice || null, perkPick: guestView.perkPick || null, popup: null, compare: null };
   net.send({ t: 'state', s: JSON.stringify(copy), toast: guestToast });
-  guestToast = null;
+  guestToast = null; state.guestFeats = null;
 }
 // Run something as the friend's operative, with the friend's view in place of the host's.
 function asGuest(fn) {
@@ -685,9 +737,12 @@ function applyHostState(m) {
   for (const k of GUEST_LOCAL) keep[k] = state[k];
   incoming.meta.journal = state && state.meta ? state.meta.journal : [];
   incoming.meta.tips = (state && state.meta && state.meta.tips) || {};
+  const hostMeta = { totalResolve: incoming.meta.totalResolve, bestSector: incoming.meta.bestSector };
   state = incoming;
   Object.assign(state, keep);
   E.setActor(state, 1);
+  syncHome(hostMeta);
+  mirrorHome();
   // Every update is a fresh copy of the game: it's still the same raid and the same fight, so the stage shouldn't restage them.
   const nextRun = state.run;
   if (prevRun && nextRun && stage.runRef === prevRun) stage.runRef = nextRun;
@@ -703,15 +758,23 @@ let dismissedResult = null;
 function startCoop(role, code, local) {
   const prefs = getCoopPrefs();
   if (net) net.close();
-  guestView = {}; guestQueue = []; inbox = []; hostSynced = false; awaitingHost = false;
-  net = new Net({ role, code, relay: prefs.relay, local, name: prefs.name || (state.char ? state.char.name.split(' ')[0] : 'Friend') });
+  guestView = {}; guestQueue = []; inbox = []; hostSynced = false; awaitingHost = false; pendingGuest = null; lastHostResolve = null;
+  if (role === 'guest') {
+    // Two tabs in one browser share storage, so the test transport gets a throwaway home.
+    home = local ? E.newGame(rng) : state;
+    if (home.run) { toast = 'You\u2019re mid-raid. Finish it or get out first, then join.'; net = null; home = null; setRoom(null); return false; }
+    if (home.char && home.screen === 'death') E.recruit(home, rng);
+    if (home.screen === 'death') home.screen = 'create';
+  } else home = null;
+  net = new Net({ role, code, relay: prefs.relay, local, name: prefs.name || (state.char ? state.char.name.split(' ')[0] : 'Friend'), helloExtra: role === 'guest' ? () => ({ char: home && home.char ? travelCopy(home.char) : null, home: homeInfo() }) : null });
   setRoom({ role, code, local: !!local });
+  if (!local) setLastRoom({ role, code });
   coopStatus = 'connecting';
   net.on('status', () => {
     coopStatus = net.status;
     if (net.peer) { town.resendMove(); townSent = false; } else town.setPartner(null);
     // A dropped connection mid-raid doesn't end co-op: the raid waits for them (see coopBanner).
-    if (isHost() && !state.run) { state.coop = net.peer; if (!net.peer) { state.guestReady = false; state.trade = null; } }
+    if (isHost() && !state.run) { state.coop = net.peer && !!state.char2; if (!net.peer) { state.guestReady = false; state.trade = null; if (!state.char2Held) state.char2 = null; } }
     if (net) render();
   });
   // Moving around the yard: these skip the game state, so walking stays cheap.
@@ -726,16 +789,23 @@ function startCoop(role, code, local) {
   net.on('bye', () => {
     if (isGuest()) { leaveCoop('The host closed the room.'); return; }
     if (state.run) { E.partnerGone(state); state.coop = false; if (['loot', 'perk'].includes(state.screen) && !E.rewardsPending(state)) E.continueAfterVictory(state, rng); }
-    state.guestReady = false; state.trade = null;
+    state.guestReady = false; state.trade = null; state.char2 = null; state.char2Held = false; pendingGuest = null;
     toast = `${net.peerName || 'Your friend'} left the room.`;
     render();
   });
   if (role === 'host') {
     net.on('hello', (m) => {
       const fresh = !state.coop;
-      // A raid started solo stays solo; they join in when it ends.
-      if (!state.run || state.run.cb) state.coop = true;
-      state.guestName = m.name; if (fresh) state.guestReady = false;
+      state.guestName = m.name;
+      const mine = state.char2, theirs = m.char;
+      if (theirs) {
+        // Same operative: whichever copy is newer. The host's is newer if a raid finished while they were away.
+        if (mine && mine.uid === theirs.uid && (state.run || (mine.savedAt || 0) >= (theirs.savedAt || 0))) { mine.home = m.home; state.char2Held = false; }
+        else if (state.run) pendingGuest = { char: theirs, home: m.home };
+        else E.joinPartner(state, rng, theirs, m.home);
+      } else if (mine) { if (m.home) mine.home = m.home; state.char2Held = false; }
+      if (!state.run || state.char2) state.coop = !!state.char2;
+      if (fresh) state.guestReady = false;
       if (state.char2) state.char2.coopName = m.name;
       render();
     });
@@ -745,8 +815,14 @@ function startCoop(role, code, local) {
       render();
     }));
     net.on('fight', (m) => queueGuest(() => fight(m.v, 1)));
-    net.on('create', (m) => { if (!state.char2) E.createChar(state, rng, m.draft, 'char2'); if (m.draft && m.draft.name && net.peerName === 'Friend') { net.peerName = m.draft.name.split(' ')[0]; state.guestName = net.peerName; } state.guestReady = false; render(); });
-    net.on('recruit', () => { E.recruit(state, rng, 'char2'); state.coopFallen = null; render(); });
+    net.on('char', (m) => {
+      if (state.run) pendingGuest = { char: m.char, home: m.home };
+      else { E.joinPartner(state, rng, m.char, m.home); state.coop = true; }
+      if (m.char && net.peerName === 'Friend') { net.peerName = m.char.name.split(' ')[0]; state.guestName = net.peerName; }
+      state.guestReady = false; render();
+    });
+    net.on('home', (m) => { if (state.char2) state.char2.home = m.home; render(); });
+    net.on('recruit', () => { E.recruit(state, rng, 'char2'); state.coopFallen = null; state.guestHeirloom = null; render(); });
     net.on('ready', (m) => { state.guestReady = !!m.on; if (m.on) { toast = `${net.peerName || state.guestName || 'Your friend'} is ready.`; A.play('click'); } render(); });
   } else {
     net.on('state', (m) => { inbox.push(m); pumpInbox(); });
@@ -759,15 +835,18 @@ function leaveCoop(why) {
   if (!net) return;
   const wasGuest = isGuest();
   if (net.online) net.send({ t: 'bye' });
-  net.close(); net = null; coopStatus = ''; setRoom(null); inbox = []; guestQueue = []; setAwaiting(false);
-  if (wasGuest) { state = E.migrate(load(), rng); if (!state.draft && state.screen === 'create') state.draft = E.newDraft(state.meta, rng); }
-  else { if (state.run) { E.partnerGone(state); state.coop = false; if (['loot', 'perk'].includes(state.screen) && !E.rewardsPending(state)) E.continueAfterVictory(state, rng); } state.coop = false; state.guestReady = false; state.trade = null; }
+  const mineHome = home, wasLocal = net.local;
+  net.close(); net = null; coopStatus = ''; setRoom(null); setLastRoom(null); inbox = []; guestQueue = []; setAwaiting(false); home = null; pendingGuest = null;
+  // The friend's operative was theirs all along: they go back to their own game with it, in the yard.
+  if (wasGuest) { state = wasLocal ? E.migrate(load(), rng) : mineHome; if (!state.char && !state.draft) state.draft = E.newDraft(state.meta, rng); if (!state.char && state.meta.operatives) state.screen = 'create'; state.popup = null; }
+  else { if (state.run) { E.partnerGone(state); if (['loot', 'perk'].includes(state.screen) && !E.rewardsPending(state)) { state.coop = false; E.continueAfterVictory(state, rng); } } state.coop = false; state.guestReady = false; state.trade = null; state.char2 = null; state.char2Held = false; }
   if (why) toast = why;
   render();
 }
 const inviteLink = () => (net ? `${location.origin}${location.pathname}?join=${net.code}` : '');
 // A plain statement of the connection whenever it isn't healthy, with what the host can do about it.
 function coopBanner() {
+  if (saveFailed) return '<div class="coop-banner bad" role="status">This browser refused the last save (private window or full storage?). Your progress may not be kept.</div>';
   if (!net) return '';
   if (!net.online && net.status !== 'connecting') return '<div class="coop-banner bad" role="status">Connection lost. Reconnecting\u2026</div>';
   if (net.peer || !net.online) return '';
@@ -780,7 +859,7 @@ function coopBanner() {
 }
 function joiningScreen() {
   return `<section class="panel" style="max-width:520px;margin:48px auto;display:grid;gap:12px"><span class="label">Co-op \u00B7 room ${esc(net.code)}</span><h2>Waiting for the host</h2>
-    <p class="muted">You\u2019re in the room. The game appears as soon as the host is connected.</p><div><button class="btn" data-a="coopleave">Leave</button></div></section>`;
+    <p class="muted">${hostSynced ? `You\u2019re in the room with ${esc((home && home.char && home.char.name) || 'your operative')}. The host is on a raid, so you\u2019ll drop in as soon as they\u2019re back in the yard.` : 'You\u2019re in the room. The game appears as soon as the host is connected.'}</p><div><button class="btn" data-a="coopleave">Leave</button></div></section>`;
 }
 
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -860,6 +939,7 @@ function titleScreen() {
       <div class="title-menu">
         ${hasRun ? `<button class="btn primary big" data-a="continue-title">${state.char && lookStill(state.char.look, state.char.background) ? `<img class="title-me" src="${lookStill(state.char.look, state.char.background)}" alt="" width="48" height="48">` : ''}Continue <span class="muted" style="font-size:.8rem;text-transform:none;letter-spacing:0">${state.char ? `${esc(state.char.name)}, operative ${state.char.number}` : `${m.operatives} operative${m.operatives === 1 ? '' : 's'} so far`}</span></button>` : `<button class="btn primary big" data-a="continue-title">Begin</button>`}
         ${hasRun ? `<button class="btn big" data-a="newcell">${confirmReset ? 'Click again: this erases everything' : 'New cell'}</button>` : ''}
+        ${getLastRoom() && !net ? `<button class="btn big" data-a="coopresume">${getLastRoom().role === 'host' ? 'Host room' : 'Rejoin room'} ${esc(getLastRoom().code)}</button>` : ''}
         <button class="btn big" data-a="modal" data-v="board">Leaderboard</button>
         <button class="btn big" data-a="modal" data-v="feats">Achievements</button>
         <button class="btn big" data-a="modal" data-v="manual">Field manual</button>
@@ -1614,7 +1694,8 @@ function modalView() {
       <h3>Co-op <span class="num muted" style="font-size:.85rem">play with a friend</span></h3>
       ${net ? `<div class="set-row"><span>${isHost() ? 'Hosting' : 'Joined'} room <b class="num">${net.code}</b> \u00B7 ${net.peer ? `connected to ${esc(net.peerName || (isHost() ? 'your friend' : 'the host'))}` : coopStatus === 'error' || coopStatus === 'closed' ? 'connection failed' : 'waiting for the other player\u2026'}</span><button class="btn" data-a="coopleave">Leave</button></div>
         ${isHost() ? `<div class="set-row"><span>Invite link <span class="muted">(your friend just opens it)</span></span><span class="btnrow" style="flex:1;justify-content:flex-end"><input class="text" readonly value="${esc(inviteLink())}" aria-label="Invite link" style="flex:1;min-width:140px"><button class="btn primary" data-a="coopinvite">Copy</button></span></div>` : ''}
-        ${isHost() ? '<p class="muted" style="font-size:.88rem">Give your friend the room code. You pick the missions; they press Ready at their terminal. In fights you take turns, then the enemy acts. If one of you goes down, the other has a few rounds to get them up; if an operative dies, the raid is over for both.</p>' : '<p class="muted" style="font-size:.88rem">The host\u2019s save holds your operative while you play together. Leaving returns you to your own solo save.</p>'}`
+        ${isGuest() ? '<p class="muted" style="font-size:.88rem">Your operative is your own: what you earn here is saved with your cell, and leaving takes them back to your solo game.</p>' : ''}
+        ${isHost() ? '<p class="muted" style="font-size:.88rem">Give your friend the room code. You pick the missions; they press Ready at their terminal. In fights you take turns, then the enemy acts. If one of you goes down, the other has a few rounds to get them up; if an operative dies, the raid is over for both.</p>' : ''}`
       : `<div class="coop-form">
         <label class="set-row" for="coop-name"><span>Your name</span><input id="coop-name" class="text" maxlength="16" value="${esc(getCoopPrefs().name || (state.char ? state.char.name.split(' ')[0] : ''))}"></label>
         ${location.hostname.endsWith('.workers.dev') ? '' : `<label class="set-row" for="coop-relay"><span>Relay URL <span class="muted">(from the Cloudflare Worker; leave empty to test in two tabs of this browser)</span></span><input id="coop-relay" class="text" placeholder="https://cinder-cell-coop.yourname.workers.dev" value="${esc(getCoopPrefs().relay)}"></label>`}
@@ -1868,16 +1949,23 @@ function deathScreen() {
 }
 
 function render() {
-  if (isGuest() && !hostSynced) {
+  if (isGuest() && (!hostSynced || (!state.char && home && home.char))) {
     document.getElementById('app').innerHTML = coopBanner() + joiningScreen() + modalView() + (toast ? `<div class="toast" role="status">${esc(toast)}</div>` : '');
     toast = null;
     return;
   }
   // A raid's end message goes to both players, and a friend who is around joins in once a solo raid is over.
   if (isHost()) {
-    if (hadRun && !state.run) { const n = state.notice || guestView.notice || null; state.notice = n; guestView.notice = n; }
+    if (hadRun && !state.run) {
+      const n = state.notice || guestView.notice || null; state.notice = n; guestView.notice = n;
+      // A raid finished without them: hold on to their result until they're back.
+      if (state.char2 && !net.peer) { state.char2.savedAt = Date.now(); state.char2Held = true; }
+    }
     hadRun = !!state.run;
-    if (!state.run && net.peer) state.coop = true;
+    if (!state.run && net.peer) {
+      if (pendingGuest) { E.joinPartner(state, rng, pendingGuest.char, pendingGuest.home); pendingGuest = null; state.guestReady = false; }
+      state.coop = !!state.char2;
+    }
   }
   const screens = { route: routeScreen, room: roomScreen, intro: introScreen, create: createScreen, town: townScreen, combat: combatScreen, victory: victoryScreen, event: eventScreen, sectorClear: sectorClearScreen, death: deathScreen, perk: rewardScreen, loot: rewardScreen, ending: endingScreen };
   if (isGuest()) {
@@ -2054,7 +2142,19 @@ function act(a, v, k) {
     if (a === 'buygear') state.compare = null;
     if (a === 'tradeask') state.popup = null;
     if (a === 'givecredits' || a === 'givegear') giveArm = null;
-    if (a === 'create') { net.send({ t: 'create', draft: state.draft }); localDraft = null; A.play('click'); return; }
+    if (a === 'create') {
+      // The friend's operative is born in their own cell, then walks into the host's game.
+      E.createChar(home, rng, state.draft); home.screen = 'town'; home.notice = null; localDraft = null; state.draft = null;
+      if (!net.local) writeSave(home);
+      if (home.char && (home.char.gear || {})) net.send({ t: 'char', char: travelCopy(home.char), home: homeInfo() });
+      A.play('click'); return;
+    }
+    if (a === 'train' || a === 'cell') {
+      const done = a === 'train' ? E.train(home, v) : E.buyCell(home, v);
+      A.play(done ? 'buy' : 'denied'); toast = done ? (home.notice || null) : null; home.notice = null;
+      if (done) { save(); net.send({ t: 'home', home: homeInfo() }); mirrorHome(); }
+      render(); return;
+    }
     if (a === 'recruit') { net.send({ t: 'recruit' }); state.coopFallen = null; A.play('click'); return; }
     if (a === 'pickmap') { toast = 'The host picks the target.'; A.play('denied'); render(); return; }
     if (a === 'deploy' || a === 'reset' || a === 'threat') { A.play('denied'); return; }
@@ -2087,10 +2187,11 @@ function applyAct(a, v, k) {
       try { navigator.clipboard.writeText(inviteLink()).then(() => { toast = 'Invite link copied. Send it to your friend.'; render(); }).catch(() => {}); } catch (e) {}
       break;
     }
+    case 'coopresume': { const r = getLastRoom(); if (r && (r.role === 'guest' || state.char)) { titleOpen = false; startCoop(r.role, r.code, false); } break; }
     case 'coopinvite': try { navigator.clipboard.writeText(inviteLink()).then(() => { toast = 'Invite link copied.'; render(); }).catch(() => {}); } catch (e) {} sfx('click'); break;
     case 'coopauto': if (isHost() && state.run && state.screen === 'combat' && state.run.actor === 1 && !net.peer) { fight(E.withActor(state, 1, () => E.autoAction(state)), 1); } return;
     case 'coopskip': if (isHost()) E.skipPartnerReward(state, rng); break;
-    case 'coopdrop': if (isHost()) { E.partnerGone(state); state.coop = false; toast = 'You carry on alone. They can rejoin when they\u2019re back.'; if (['loot', 'perk'].includes(state.screen) && !E.rewardsPending(state)) E.continueAfterVictory(state, rng); } break;
+    case 'coopdrop': if (isHost()) { E.partnerGone(state); state.coop = false; state.char2 = null; pendingGuest = null; toast = 'You carry on alone. They keep their operative as it was, and can join again after this raid.'; if (['loot', 'perk'].includes(state.screen) && !E.rewardsPending(state)) E.continueAfterVictory(state, rng); } break;
     case 'clearnotice': state.notice = null; break;
     case 'payoutclose': E.closePayout(state); sfx('click'); break;
     case 'emote': { const t = EMOTES[+v]; if (t && net && net.peer) { net.send({ t: 'say', text: t }); town.speak('me', t, town.player.x, town.player.y); } sfx('click'); return; }
@@ -2280,6 +2381,7 @@ function start(data) {
   if (/^[A-Z0-9]{4,8}$/.test(join)) { history.replaceState(null, '', location.pathname); titleOpen = false; startCoop('guest', join, !getCoopPrefs().relay); }
   else if (room && (room.role === 'guest' || state.char)) { titleOpen = false; startCoop(room.role, room.code, room.local); }
   else state.coop = false;
+  try { navigator.storage && navigator.storage.persist && navigator.storage.persist().catch(() => {}); } catch (e) {}
   render();
   if (!isGuest()) seedBoard();
   loadLayers().then((ok) => { if (ok) { lookKey = ''; render(); } });

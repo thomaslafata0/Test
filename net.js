@@ -16,6 +16,9 @@ export function setCoopPrefs(p) { try { localStorage.setItem(PREFS_KEY, JSON.str
 export const makeCode = () => Array.from({ length: 4 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
 // The room this tab is in, so a reload rejoins it. Per tab, so two test tabs in one browser don't fight over it.
 export function getRoom() { try { return JSON.parse(sessionStorage.getItem(ROOM_KEY)) || null; } catch (e) { return null; } }
+// The last room this browser was in, kept across closing it, so the title screen can offer to go back.
+export function getLastRoom() { try { return JSON.parse(localStorage.getItem('cinder-cell-lastroom')) || null; } catch (e) { return null; } }
+export function setLastRoom(r) { try { if (r) localStorage.setItem('cinder-cell-lastroom', JSON.stringify(r)); else localStorage.removeItem('cinder-cell-lastroom'); } catch (e) {} }
 export function setRoom(r) { try { if (r) sessionStorage.setItem(ROOM_KEY, JSON.stringify(r)); else sessionStorage.removeItem(ROOM_KEY); } catch (e) {} }
 // Identifies this tab to the relay, so a reconnect replaces its own stale socket instead of being refused as a third player.
 function clientId() {
@@ -97,17 +100,18 @@ class WsTransport {
 export class Net {
   // role: 'host' | 'guest'. local: true for the two-tab transport.
   // status: connecting | waiting (no partner yet) | connected | reconnecting | full | closed.
-  constructor({ role, code, relay, local = false, name = '' }) {
-    this.role = role; this.code = code; this.name = name;
+  constructor({ role, code, relay, local = false, name = '', helloExtra = null }) {
+    this.role = role; this.code = code; this.name = name; this.local = local; this.helloExtra = helloExtra;
+    const hello = () => this.send({ t: 'hello', name: this.name, ...(this.helloExtra ? this.helloExtra() : {}) });
     this.peer = false; this.online = false; this.status = 'connecting';
     this.handlers = {};
     this.t = local ? new LocalTransport(code, role) : new WsTransport(relay, code, role);
-    this.t.onopen = () => { this.online = true; this.status = 'waiting'; this.emit('status'); if (role === 'guest') this.send({ t: 'hello', name: this.name }); };
+    this.t.onopen = () => { this.online = true; this.status = 'waiting'; this.emit('status'); if (role === 'guest') hello(); };
     this.t.onlost = () => { this.online = false; this.peer = false; this.status = 'reconnecting'; this.emit('status'); };
     this.t.onmessage = (m) => {
       if (!m || !m.t) return;
       if (m.t === 'room-full') { this.status = 'full'; this.close(); this.status = 'full'; this.emit('status'); this.emit('room-full'); return; }
-      if (m.t === 'peer-joined') { this.peer = true; this.status = 'connected'; this.emit('status'); if (role === 'guest') this.send({ t: 'hello', name: this.name }); return; }
+      if (m.t === 'peer-joined') { this.peer = true; this.status = 'connected'; this.emit('status'); if (role === 'guest') hello(); return; }
       if (m.t === 'peer-left') { this.peer = false; this.status = 'waiting'; this.emit('status'); this.emit('peer-left'); return; }
       if (m.t === 'hello') this.peerName = m.name;
       // Anything from the other side means they're here (the two-tab transport has no relay to announce them).

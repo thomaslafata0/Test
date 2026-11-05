@@ -109,6 +109,9 @@ export function migrate(s, rng) {
     // The Lockup used to belong to the cell. It belongs to the operative now: anything on the old shelf goes to the current one.
     if (s.meta && s.meta.lockup) { if (s.char) s.char.lockup = [...(s.char.lockup || []), ...s.meta.lockup]; delete s.meta.lockup; }
     s.trade = null;
+    for (const c of [s.char, s.char2]) if (c && !c.uid) c.uid = newUid();
+    // A partner's operative left in the host's save from before characters travelled: it goes back to them when they next join.
+    if (s.char2 && !s.run) s.char2Held = true;
     // Orbit wins from before tiers were tracked count as low-orbit wins, so older cells keep the blockade line open.
     if (s.meta && !s.meta.orbitTierWins) s.meta.orbitTierWins = s.meta.orbitWins ? { low: s.meta.orbitWins } : {};
     for (const k of (s.meta && s.meta.contracts) || []) if (!k.done) k.credits = contractCredits(k.kind, k.n);
@@ -181,10 +184,9 @@ export function withActor(s, i, fn) {
 }
 // Run fn as each living operative in turn (host first).
 export function forEachActor(s, fn) {
-  const n = s.char2 ? 2 : 1;
-  for (let i = 0; i < n; i++) if (aliveAt(s, i)) withActor(s, i, () => fn(s.char, i));
+  for (const i of isCoop(s) ? [0, 1] : [actorIdx(s)]) if (aliveAt(s, i)) withActor(s, i, () => fn(s.char, i));
 }
-export const livingActors = (s) => [0, 1].filter((i) => (i === 0 || !!s.char2) && aliveAt(s, i));
+export const livingActors = (s) => (isCoop(s) ? [0, 1] : [actorIdx(s)]).filter((i) => aliveAt(s, i));
 // Which operative the enemy goes for: usually whoever hurt it most this round, sometimes the other one.
 function pickTarget(s, rng) {
   const r = s.run, alive = livingActors(s);
@@ -212,13 +214,15 @@ export function draftAdjust(draft, k, delta) {
   return true;
 }
 
+// Identifies an operative across saves, so a co-op partner's copy can be matched up with the real one.
+const newUid = () => `${Date.now().toString(36)}${Math.floor(Math.random() * 1e9).toString(36)}`;
 export function createChar(s, rng, draft = null, slot = 'char') {
   const m = s.meta, d = draft || s.draft, bg = D.BACKGROUNDS.find((b) => b.id === d.background);
   m.operatives += 1;
   const attrs = {};
   for (const k of Object.keys(D.ATTRS)) attrs[k] = draftAttr(d, k);
   const c = {
-    name: (d.name || '').trim().slice(0, 24) || pick(rng, D.OPERATIVE_NAMES), number: m.operatives, background: bg.id,
+    uid: newUid(), name: (d.name || '').trim().slice(0, 24) || pick(rng, D.OPERATIVE_NAMES), number: m.operatives, background: bg.id,
     attrs, attrPoints: d.points, level: 1, xp: 0, credits: 25 + (bg.start.credits || 0) + (hasCell(m, 'stash') ? 60 : 0),
     gear: starterGear(m), market: [],
     items: { stim: 2, thermal: 0, ion: 0, smoke: 0 }, upgrades: [], implants: [],
@@ -539,6 +543,12 @@ export function skipPartnerReward(s, rng) {
   r.cb[1].lootOffer = null; r.cb[1].perkOffer = null;
   if (['loot', 'perk'].includes(s.screen) && !rewardsPending(s)) offerRoute(s, rng);
 }
+// A partner's operative arrives in the host's game. Their stock comes with them, or a fresh one if they have none.
+export function joinPartner(s, rng, char, home) {
+  s.char2 = char; if (home) char.home = home;
+  s.char2Held = false;
+  if (!(char.market && char.market.length)) { const on = s.coop; s.coop = true; withActor(s, 1, () => restockMarket(s, rng)); s.coop = on; }
+}
 const canTrade = (s) => isCoop(s) && !s.run;
 export function giveCredits(s, who, n) {
   const c = charAt(s, who);
@@ -631,7 +641,7 @@ const asHeirloom = (it) => { const h = JSON.parse(JSON.stringify(it)); h.level =
 // One piece passes on: anything worn, or anything in that operative's Lockup. Keys: a slot name, or lockup:<index>.
 export function heirloomChoices(s) {
   const c = s.char;
-  if (!c || !hasCell(s.meta, 'heirloom')) return [];
+  if (!c || !((c.home && c.home.cell) || s.meta.cell).includes('heirloom')) return [];
   return [...D.SLOT_ORDER.map((sl) => [sl, gearIn(c, sl)]), ...(c.lockup || []).map((it, i) => [`lockup:${i}`, it])].filter(([, it]) => heirloomWorthy(s.meta, it));
 }
 // On death the most valuable piece goes in the locker by default, so the heirloom isn't lost by forgetting to pick.
@@ -639,7 +649,9 @@ function autoHeirloom(s) {
   const ch = heirloomChoices(s);
   if (!ch.length) return;
   const [, best] = ch.reduce((a, b) => (heirloomValue(b[1]) > heirloomValue(a[1]) ? b : a));
-  s.meta.heirloom = asHeirloom(best);
+  // A visiting partner's heirloom belongs to their own cell, not the host's.
+  if (isCoop(s) && actorIdx(s) === 1) s.guestHeirloom = asHeirloom(best);
+  else s.meta.heirloom = asHeirloom(best);
 }
 export function setHeirloom(s, key) {
   const c = s.char, it = String(key).startsWith('lockup:') ? (c.lockup || [])[+key.slice(7)] : gearIn(c, key);
@@ -664,7 +676,8 @@ export function attr(c, k) {
 }
 
 export function statsOf(meta, c) {
-  const t = meta.training, B = D.BASE_STATS, w = weaponOf(c), mw = meleeOf(c);
+  // A visiting co-op partner keeps their own cell's training.
+  const t = (c.home && c.home.training) || meta.training, B = D.BASE_STATS, w = weaponOf(c), mw = meleeOf(c);
   const str = attr(c, 'str'), agi = attr(c, 'agi');
   let def = 0, spd = 0, carry = 0, critAll = 0;
   for (const slot of D.SLOT_ORDER) {
@@ -2155,7 +2168,7 @@ function reallyDie(s, foe) {
   fx(s, { who: 'player', type: 'down' });
   const c = s.char, r = s.run;
   c.fed = false;
-  const record = { name: c.name, number: c.number, level: c.level, sector: r.sector, map: r.map, killer: foe.name, killerId: foe.id, killerPortrait: foe.portrait, credits: c.credits, background: c.background, look: c.look || null, marks: [...(c.marks || [])] };
+  const record = { uid: c.uid, name: c.name, number: c.number, level: c.level, sector: r.sector, map: r.map, killer: foe.name, killerId: foe.id, killerPortrait: foe.portrait, credits: c.credits, background: c.background, look: c.look || null, marks: [...(c.marks || [])] };
   s.meta.fallen.unshift(record); feat(s, 'fallen');
   s.meta.fallen = s.meta.fallen.slice(0, 12);
   record.perks = (c.perks || []).length;
@@ -2453,6 +2466,8 @@ export function feat(s, key, n = 1) {
   const def = FEAT_DEFS[key]; if (!def || !s.meta) return;
   const m = s.meta, F = m.feats || (m.feats = { counters: {}, tiers: {}, v: 0 });
   F.counters[key] = (F.counters[key] || 0) + n;
+  // A visiting partner's achievements count on their own cell too: the host passes these along.
+  if (isCoop(s) && actorIdx(s) === 1) { const g = s.guestFeats || (s.guestFeats = {}); g[key] = (g[key] || 0) + n; }
   const old = F.tiers[key] || 0; let t = old;
   while (t < def.tiers.length && F.counters[key] >= def.tiers[t]) t++;
   if (t > old) {
