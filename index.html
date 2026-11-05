@@ -361,7 +361,7 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .items .btn:disabled .ico { opacity: .5; filter: grayscale(1); }
 .sk-name { display: inline-flex; align-items: center; gap: 6px; }
 .sk-name .ico { width: 20px; height: 20px; }
-@media (max-width: 520px) { .row.i > .ico { width: 32px; height: 32px; } .door b, .door .desc { padding-right: 0; } .door > .ico { width: 36px; height: 36px; } }
+@media (max-width: 520px) { .row.i { grid-template-columns: auto minmax(0, 1fr); } .row.i > .btn, .row.i > .label:last-child, .row.i > span:last-child { grid-column: 2; justify-self: start; } .coop-form .set-row { flex-wrap: wrap; } .coop-form .set-row > span:first-child { flex: 1 1 100%; } .coop-form .text { max-width: none; } .row.i > .ico { width: 32px; height: 32px; } .door b, .door .desc { padding-right: 0; } .door > .ico { width: 36px; height: 36px; } }
 
 .quirk-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: .85rem; color: var(--muted); }
 .chip.quirk { color: #f0de78; border-color: #e6d36a; }

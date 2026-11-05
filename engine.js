@@ -761,6 +761,8 @@ export function offerRoute(s, rng) {
     const choices = [a, b];
     if (!choices.some((k) => D.ROOMS[k].fight)) choices[1] = 'fight';
     if (choices[0] === choices[1]) choices[1] = choices[0] === 'fight' ? 'elite' : 'fight';
+    // No veteran behind an optional door in the opening sector: a fresh operative shouldn't be walled in room one.
+    if (r.sector === 1) for (let i = 0; i < 2; i++) if (choices[i] === 'elite') choices[i] = choices[1 - i] === 'fight' ? 'event' : 'fight';
     r.choices = choices;
   }
   s.screen = 'route';
