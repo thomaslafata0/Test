@@ -1,10 +1,10 @@
 # Cinder Cell co-op: how it works and how to set it up
 
-Two players, one cell. The **host** runs the game; the **friend** opens an invite link or enters a room code. You each have your own operative, gear, credits and Wanted level; Resolve, training, cell upgrades and the Lockup are shared.
+Two players, one cell. The **host** runs the game; the **friend** opens an invite link or enters a room code. You each have your own operative, gear and credits; Resolve, training and cell upgrades are shared.
 
 **In town** you share the yard: you see each other walk around, with a name tag, an arrow when your partner is out of view, where they are, and quick phrases. Walk up to your partner and press E to give credits or gear or to offer a trade. The host picks the mission and the friend marks Ready.
 
-**The Lockup** is a shelf at the safehouse for spare gear, 4 pieces plus two cell upgrades of 2 each, reachable only in town. It outlives operatives, in solo play too. Choose **Buy and keep the old one** when comparing at the Black Market. Operatives have no bag, so a received piece goes on and whatever it replaces goes to the Lockup; a trade that would overflow the shelf is refused with the reason.
+**The Lockup** is each operative's own shelf at the safehouse for spare gear, 4 pieces plus two cell upgrades of 2 each, reachable only in town, in solo play too. It's lost on death; with the Heirloom upgrade one piece passes on, worn or stored, at base level. Choose **Buy and keep the old one** when comparing at the Black Market. Operatives have no bag, so a received piece goes on and whatever it replaces goes to the Lockup; a trade that would overflow the shelf is refused with the reason.
 
 **On a raid** you vote on doors (a split vote goes to a coin) and must agree on pushing deeper or extracting. Each player rolls and chooses their own loot and contraband; the raid waits for both. In a fight you take turns, then the enemy acts and picks one of you. At 0 HP you go down: your partner has 3 rounds to spend a turn getting you up (2 the second time), and winning the fight gets you up anyway. A third down in a raid is fatal. If you bleed out you die and the survivor escapes with the escape penalty. If your partner falls while you're down, you die and they get out at 1 HP, so one raid never kills both.
 
