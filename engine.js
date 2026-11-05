@@ -33,9 +33,10 @@ export const growth = (lvl, lin, quad) => 1 + lin * lvl + quad * lvl * lvl;
 // Difficulty tiers: the Directorate tightens its grip as the cell goes deeper. Tier 0 through sector 5, tier 1 after sector 5, tier 2 after sector 10.
 // extract: haul lost leaving between bosses; escape: haul lost running mid-fight; hp: enemy HP multiplier; price: multiplier on every credit price.
 export const HARD = [
-  { extract: 0.45, escape: 0.65, hp: 1.1, price: 1.1 },
-  { extract: 0.5, escape: 0.7, hp: 1.12, price: 1.12 },
-  { extract: 0.55, escape: 0.75, hp: 1.15, price: 1.15 },
+  // hp carries an extra +8% per tier to offset the Feats buffs over a long campaign (sim: finale at operative 21 vs 22 without Feats).
+  { extract: 0.45, escape: 0.65, hp: 1.18, price: 1.1 },
+  { extract: 0.5, escape: 0.7, hp: 1.21, price: 1.12 },
+  { extract: 0.55, escape: 0.75, hp: 1.25, price: 1.15 },
 ];
 export const hardTier = (sector) => (sector > 10 ? 2 : sector > 5 ? 1 : 0);
 export const hardAt = (sector) => HARD[hardTier(sector)];
@@ -66,7 +67,7 @@ export const perkById = (id) => D.PERKS.find((p) => p.id === id);
 // ---------- state ----------
 export function newMeta() {
   return { resolve: 0, totalResolve: 0, training: { hp: 0, atk: 0, def: 0, spd: 0 }, cell: [], operatives: 0, bestSector: 0, bestByMap: {},
-    fallen: [], contracts: [], liberated: {}, threat: 0, heirloom: null, tips: {}, endingSeen: false, stats: { kills: 0, bosses: 0, raids: 0 }, board: [], boardSeeded: false, ship: { hull: 0, guns: 0, shields: 0, engines: 0, cell: [] }, ventures: {}, orbitWins: 0 };
+    fallen: [], contracts: [], liberated: {}, threat: 0, heirloom: null, tips: {}, endingSeen: false, stats: { kills: 0, bosses: 0, raids: 0 }, board: [], boardSeeded: false, ship: { hull: 0, guns: 0, shields: 0, engines: 0, cell: [] }, ventures: {}, orbitWins: 0, feats: { counters: {}, tiers: {}, v: 0 } };
 }
 
 export function newGame(rng) {
@@ -93,6 +94,7 @@ export function migrate(s, rng) {
     if (s.meta && !s.meta.board) s.meta.board = [];
     if (s.meta && !s.meta.ship) s.meta.ship = { hull: 0, guns: 0, shields: 0, engines: 0, cell: [] };
     if (s.meta && !s.meta.ventures) s.meta.ventures = {};
+    if (s.meta && !s.meta.feats) s.meta.feats = { counters: {}, tiers: {}, v: 0 };
     for (const k of (s.meta && s.meta.contracts) || []) if (!k.done) k.credits = contractCredits(k.kind, k.n);
     return s;
   }
@@ -368,7 +370,7 @@ export function upgradeItem(s, slot) {
   const cost = price(s, upgradeCost(it));
   if (c.credits < cost) return false;
   const hpBefore = stats(s).maxHp;
-  c.credits -= cost; it.level += 1; it.spent = (it.spent || 0) + cost; ledger(s, 'spend:upgrades', cost);
+  c.credits -= cost; it.level += 1; it.spent = (it.spent || 0) + cost; ledger(s, 'spend:upgrades', cost); feat(s, 'upgrades');
   c.hp = Math.min(c.hp, stats(s).maxHp, Math.max(c.hp, hpBefore));
   s.notice = `${itemName(it)}: ${mainStat(it).key.toUpperCase()} now ${mainStat(it).v}.`;
   return true;
@@ -449,20 +451,20 @@ export function statsOf(meta, c) {
   const rMain = (mainStat(gearIn(c, 'ranged')) || { v: 0 }).v, mMain = (mainStat(gearIn(c, 'melee')) || { v: 0 }).v;
   const optic = hasImp(c, 'optic') ? 0.08 : 0, gadget = baseOf(gearIn(c, 'gadget')) || {};
   const hp = B.hp + t.hp * D.TRAINING.hp.per + (c.level - 1) * 5 + Math.round(str * TUNE.strHp) + (c.background === 'foundry' ? 15 + 2 * (c.level - 1) : 0) + (hasImp(c, 'pain') ? 20 : 0) + gearBonus(c, 'hp');
-  const mk = markSum(c), drink = c.drink ? 1 : 0;
+  const mk = markSum(c), drink = c.drink ? 1 : 0, fb = featBuffs(meta);
   return {
-    maxHp: Math.round(hp * (hasTrait(c, 'stalwart') ? 1.12 : 1) * (1 + mk.hp)),
+    maxHp: Math.round(hp * (hasTrait(c, 'stalwart') ? 1.12 : 1) * (1 + mk.hp + fb.hp)),
     atk: common + rMain + drink + (w.type === 'heavy' ? Math.floor(str * TUNE.strAtk) : Math.floor(agi * TUNE.agiAtk)),
     atkM: common + mMain + drink + Math.floor(str * TUNE.strAtk),
     def: B.def + (c.background === 'foundry' ? 1 : 0) + t.def * D.TRAINING.def.per + Math.floor((c.level - 1) / 2) + def + gearBonus(c, 'def') + (hasImp(c, 'dermal') ? 3 : 0) + mk.def,
     spd: B.spd + (c.background === 'runner' ? 1 : 0) + t.spd * D.TRAINING.spd.per + Math.floor((c.level - 1) / 3) + agi + (hasImp(c, 'reflex') ? 2 : 0) + spd + gearBonus(c, 'spd') + mk.spd,
-    dodge: (agi - 1) * TUNE.agiDodge + (c.background === 'runner' ? 0.05 : 0),
-    crit: 0.05 + (w.crit || 0) + critAll + optic + (agi - 1) * TUNE.agiCrit + gearBonus(c, 'crit', 'ranged') / 100 + mk.crit + drink * 0.04,
-    critM: 0.05 + (mw.crit || 0) + critAll + optic + gearBonus(c, 'crit', 'melee') / 100 + mk.crit + drink * 0.04,
+    dodge: (agi - 1) * TUNE.agiDodge + (c.background === 'runner' ? 0.05 : 0) + fb.dodge,
+    crit: 0.05 + (w.crit || 0) + critAll + optic + (agi - 1) * TUNE.agiCrit + gearBonus(c, 'crit', 'ranged') / 100 + mk.crit + drink * 0.04 + fb.crit,
+    critM: 0.05 + (mw.crit || 0) + critAll + optic + gearBonus(c, 'crit', 'melee') / 100 + mk.crit + drink * 0.04 + fb.crit,
     carry: 4 + (has(c, 'belt') ? 3 : 0) + carry,
     slots: 2 + (attr(c, 'int') >= 4 ? 1 : 0) + (attr(c, 'int') >= 8 ? 1 : 0) + (c.background === 'clerk' ? 1 : 0),
     tech: (1 + 0.1 * attr(c, 'int')) * (hasTrait(c, 'overcharge') ? 1.2 : 1) * (1 + (gadget.techBoost || 0)),
-    stimBoost: gadget.stimBoost || 0,
+    stimBoost: (gadget.stimBoost || 0) + fb.stim,
     scan: !!gadget.scan,
   };
 }
@@ -590,7 +592,7 @@ export function lieLow(s) {
   if (!c.wanted || c.credits < lieLowCost(c, s)) return false;
   const cost = lieLowCost(c, s);
   c.credits -= cost; ledger(s, 'spend:lielow', cost);
-  c.wanted = Math.max(0, c.wanted - 2);
+  c.wanted = Math.max(0, c.wanted - 2); feat(s, 'lielow');
   s.notice = `Cass burns your old papers. Wanted level ${c.wanted}.`;
   return true;
 }
@@ -680,7 +682,7 @@ export function creditMult(s) {
   const c = s.char, t = s.run ? s.run.threat : s.meta.threat || 0;
   const b = s.run ? s.run.bulletin : null;
   const cha = 1 + TUNE.chaCredits * (attr(c, 'cha') - 1), wanted = 1 + TUNE.wanted * (s.run ? s.run.wanted || 0 : 0);
-  return cha * wanted * (has(c, 'fence') ? 1.25 : 1) * (hasPerk(c, 'chit') ? 1.2 : 1) * (1 + gearBonus(c, 'credits') / 100) * (1 + 0.15 * t) * (1 + markSum(c).credits) * (b === 'payday' ? 1.3 : b === 'lockdown' ? 1.25 : 1);
+  return cha * wanted * (has(c, 'fence') ? 1.25 : 1) * (hasPerk(c, 'chit') ? 1.2 : 1) * (1 + gearBonus(c, 'credits') / 100) * (1 + 0.15 * t) * (1 + markSum(c).credits + featBuffs(s.meta).credits) * (b === 'payday' ? 1.3 : b === 'lockdown' ? 1.25 : 1);
 }
 
 // ---------- status effects ----------
@@ -970,7 +972,7 @@ export function autoAction(s) {
 }
 export function runChance(s) {
   const st = stats(s), e = s.run.enemy;
-  const ch = clamp(0.45 + (st.spd - e.spd) * 0.06 + (s.char.background === 'runner' ? 0.25 : 0) + markSum(s.char).escape, 0.1, 0.95);
+  const ch = clamp(0.45 + (st.spd - e.spd) * 0.06 + (s.char.background === 'runner' ? 0.25 : 0) + markSum(s.char).escape + featBuffs(s.meta).escape, 0.1, 0.95);
   return e.boss ? ch * 0.5 : ch;
 }
 export function dodgeChance(st, e) { return clamp(0.05 + (st.spd - e.spd) * 0.03 + (st.dodge || 0), 0, 0.45); }
@@ -994,6 +996,8 @@ export function canUse(s, act) {
 function hitMult(s, melee, { mult = 1, unarmoredBonus = 1 } = {}) {
   const r = s.run, e = r.enemy, c = s.char, mode = melee ? 'melee' : 'ranged', w = melee ? meleeOf(c) : weaponOf(c);
   const droid = e.tags.includes('droid'), human = e.tags.includes('human');
+  const fb = featBuffs(s.meta);
+  mult *= 1 + fb.atk + (melee ? fb.melee : fb.ranged) + (fb.vs[e.id] || 0);
   if (r.ready) mult *= hasPerk(c, 'steady') ? 2 : 1.5;
   if (r.momentum) mult *= 1 + TUNE.momentum;
   if (w.type === 'tech' && droid) mult *= 1.5;
@@ -1024,6 +1028,7 @@ function strike(s, rng, { mult = 1, critBonus = 0, pierce = 0, unarmoredBonus = 
   if (crit) mult *= hasPerk(c, 'hollow') ? 2.2 : 1.6;
   if (w.type === 'tech') pierce = Math.max(pierce, 0.5);
   r.struck = true;
+  feat(s, melee ? 'strikes' : 'shots'); if (crit) feat(s, 'crits');
   const sp = spreadOf(melee);
   let dmg = mitigate((melee ? st.atkM : st.atk) * (1 - sp + rng() * 2 * sp) * mult + flat, e.def * (1 - pierce));
   if (!melee && e.intent === 'guard' && e.stun === 0) dmg = Math.max(1, Math.round(dmg * TUNE.cover));
@@ -1082,6 +1087,7 @@ function playerActInner(s, act, rng, who) {
     r.cooldowns[act] = skillCd(c, act) + 1;
     if (act !== 'intimidate' && rng() < Math.min(60, gearBonus(c, 'cooldown')) / 100) r.cooldowns[act] -= 1;
     (r.usedThisFight = r.usedThisFight || []).includes(act) || r.usedThisFight.push(act);
+    feat(s, 'skills');
   }
   if (act === 'attack') act = 'shoot';
 
@@ -1168,7 +1174,7 @@ function playerActInner(s, act, rng, who) {
       c.items.stim -= 1;
       const amt = Math.min(st.maxHp - c.hp, Math.round(st.maxHp * 0.4 * st.tech * (1 + st.stimBoost)));
       c.hp += amt;
-      delete r.pst.bleed; delete r.pst.burn;
+      delete r.pst.bleed; delete r.pst.burn; feat(s, 'stims');
       fx(s, { who: 'player', type: 'stim', amt });
       log(s, `You jam a stim into your thigh. +${amt} HP.`, 'good');
       break;
@@ -1378,6 +1384,7 @@ function enemyTurn(s, rng) {
       fx(s, { who: 'enemy', type: e.intent, dodged: true, missed: true, dmg: 0 });
       log(s, `${e.name} ${pick(rng, q.misses)}.`, 'good');
     } else if (rng() < dodgeChance(st, e)) {
+      feat(s, 'dodges');
       fx(s, { who: 'enemy', type: e.intent, dodged: true, dmg: 0 });
       log(s, `${e.name} ${heavy ? 'unleashes a heavy strike' : 'fires'}, and you dodge.`, 'good');
     } else {
@@ -1422,6 +1429,7 @@ function enemyTurn(s, rng) {
 function gainXp(s, amount, out) {
   const c = s.char;
   if (c.fed) amount = Math.round(amount * 1.05);
+  amount = Math.round(amount * (1 + featBuffs(s.meta).xp));
   c.xp += amount;
   while (c.xp >= xpToNext(c.level)) {
     const before = stats(s).maxHp;
@@ -1440,6 +1448,8 @@ function winFight(s, rng, fled = false) {
   log(s, `${e.name} ${fled ? 'flees, dropping a credit pouch' : 'goes down'}. +${credits} ${D.SETTING.cur}, +${xp} XP.`, 'reward');
   fx(s, { who: 'enemy', type: fled ? 'flee' : 'down', boss: e.boss });
   m.stats.kills += 1; r.kills = (r.kills || 0) + 1; if (e.boss) r.bosses = (r.bosses || 0) + 1; if (e.elite) r.elites = (r.elites || 0) + 1;
+  feat(s, 'kills'); feat(s, `kill:${e.id}`); if (e.boss) feat(s, 'bosses'); if (e.elite) feat(s, 'elites'); feat(s, 'credits', credits);
+  out.feats = featProgress(s, r.featTouched || []); r.featTouched = [];
   if (e.affix === 'volatile' && !fled) {
     const st = stats(s), dmg = r.defending ? 0 : Math.round(st.maxHp * 0.15);
     c.hp = Math.max(1, c.hp - dmg);
@@ -1514,7 +1524,7 @@ function choosePerkInner(s, id, rng, dropId) {
       c.perks = c.perks.filter((p) => p !== dropId);
       log(s, `You leave the ${perkById(dropId).name} behind.`, 'info');
     }
-    c.perks.push(id); log(s, `Contraband: ${perkById(id).name}.`, 'reward');
+    c.perks.push(id); log(s, `Contraband: ${perkById(id).name}.`, 'reward'); feat(s, 'contraband');
   }
   r.perkOffer = null;
   offerRoute(s, rng);
@@ -1542,6 +1552,7 @@ export function optionAvailable(s, opt) {
 }
 
 export function resolveEvent(s, index, rng, who = 0) {
+  feat(s, 'events');
   return withActor(s, who, () => resolveEventInner(s, index, rng));
 }
 function resolveEventInner(s, index, rng) {
@@ -1574,7 +1585,7 @@ function resolveEventInner(s, index, rng) {
 
 function clearSector(s) {
   const r = s.run, c = s.char, map = mapById(r.map), m = s.meta;
-  r.cleared = (r.cleared || 0) + 1;
+  r.cleared = (r.cleared || 0) + 1; feat(s, 'sectors');
   const bonus = Math.round(8 * r.sector * map.credits * creditMult(s));
   const prog = mapProgress(c, r.map);
   // Resolve only for new ground: sectors this operative hasn't cleared on this map before.
@@ -1583,7 +1594,7 @@ function clearSector(s) {
   if (!fresh) c.repeatClears = (c.repeatClears || 0) + 1;
   const pays = fresh || c.repeatClears % 2 === 0;
   const res = pays ? 1 + (r.threat >= 3 && isBossSector(r.sector) ? 1 : 0) : 0;
-  c.credits += bonus; ledger(s, 'sector bonus', bonus);
+  c.credits += bonus; ledger(s, 'sector bonus', bonus); feat(s, 'credits', bonus);
   m.resolve += res; m.totalResolve += res;
   prog.deepest = Math.max(prog.deepest, r.sector);
   c.deepest = Math.max(c.deepest, r.sector);
@@ -1652,7 +1663,8 @@ export function endRun(s, how, rngForRestock = Math.random) {
   });
   let home = '';
   const freed = Math.max(0, r.allies - (r.follower ? 1 : 0)); // the Preacher's follower isn't a rescued prisoner
-  if (how === 'extracted' && freed > 0) {
+  if (how === 'extracted') feat(s, 'extractions');
+  if (how === 'extracted' && freed > 0) { feat(s, 'freed', freed);
     s.meta.resolve += freed; s.meta.totalResolve += freed;
     home = ` You brought ${freed} prisoner${freed > 1 ? 's' : ''} home: +${freed} ${D.SETTING.meta}.`;
   }
@@ -1724,7 +1736,7 @@ function die(s, foe) {
   const c = s.char, r = s.run;
   c.fed = false;
   const record = { name: c.name, number: c.number, level: c.level, sector: r.sector, map: r.map, killer: foe.name, killerId: foe.id, killerPortrait: foe.portrait, credits: c.credits, background: c.background };
-  s.meta.fallen.unshift(record);
+  s.meta.fallen.unshift(record); feat(s, 'fallen');
   s.meta.fallen = s.meta.fallen.slice(0, 12);
   record.perks = (c.perks || []).length;
   record.score = raidScore(r, c, 'died').score;
@@ -1774,7 +1786,7 @@ export const inTown = (s) => !s.run && !!s.char && s.screen === 'town';
 export function buyDrink(s) {
   const c = s.char, cost = Math.round(D.BAR.drink.cost * hard(s).price);
   if (!inTown(s) || c.drink || c.credits < cost) return false;
-  c.credits -= cost; c.drink = true; ledger(s, 'spend:bar', cost);
+  c.credits -= cost; c.drink = true; ledger(s, 'spend:bar', cost); feat(s, 'drinks');
   journal(s, `${c.name} buys a round at the Lantern.`);
   return true;
 }
@@ -1808,7 +1820,7 @@ export function spinWheel(s, bet, stake, pick, rng) {
   const delta = win ? stake * b.pays : -stake;
   c.credits += delta; ledger(s, win ? 'wheel' : 'spend:wheel', Math.abs(delta));
   s.meta.wheel = s.meta.wheel || { spins: 0, net: 0, best: 0 };
-  s.meta.wheel.spins += 1; s.meta.wheel.net += delta; s.meta.wheel.best = Math.max(s.meta.wheel.best, delta);
+  feat(s, 'spins'); s.meta.wheel.spins += 1; s.meta.wheel.net += delta; s.meta.wheel.best = Math.max(s.meta.wheel.best, delta);
   journal(s, `${c.name} ${win ? 'wins' : 'loses'} ${Math.abs(delta)} ${D.SETTING.cur} on the Wheel (${n}).`);
   return { n, red: ROULETTE_RED.has(n), win, delta, bet, stake, pick };
 }
@@ -1928,7 +1940,7 @@ function finishOrbit(s, rng) {
   o.result = { credits: 0, mark: null, survived: true };
   if (o.over === 'won') {
     const cr = Math.round(randInt(rng, t.credits[0], t.credits[1]) * (m.ship.cell.includes('salvager') ? 1.25 : 1) * (1 + markSum(c).credits));
-    c.credits += cr; ledger(s, 'orbit', cr); o.result.credits = cr; m.orbitWins = (m.orbitWins || 0) + 1;
+    c.credits += cr; ledger(s, 'orbit', cr); o.result.credits = cr; m.orbitWins = (m.orbitWins || 0) + 1; feat(s, 'orbit'); feat(s, 'credits', cr);
     const left = marksLeft(c);
     if (left.length && rng() < t.mark) { const id = pick(rng, left); c.marks = [...(c.marks || []), id]; o.result.mark = id; journal(s, `${c.name} earns the Mark: ${D.MARKS[id].name}.`, 'good'); }
     else if (!left.length && t.mark >= 1) { c.credits += 150; o.result.credits += 150; }
@@ -1957,4 +1969,60 @@ export function orbitClose(s) {
     s.outcome.orbit = true; s.outcome.map = 'garrison';
   }
   return true;
+}
+
+
+// ---------- Feats: cell-wide achievements ----------
+// FEAT_DEFS: the general feats from data plus one per enemy type (kill:<id>), each with four tiers.
+export const FEAT_DEFS = {};
+for (const f of D.FEATS) FEAT_DEFS[f.id] = f;
+for (const [id, e] of Object.entries(D.ENEMIES)) {
+  FEAT_DEFS[`kill:${id}`] = { id: `kill:${id}`, group: e.tags.includes('boss') ? 'Bosses' : 'Enemies', name: e.name, desc: `${e.name}s put down.`, tiers: e.tags.includes('boss') ? D.BOSS_FEAT_TIERS : D.ENEMY_FEAT_TIERS, buff: 'vs', vs: id, per: e.tags.includes('boss') ? 0.03 : 0.02 };
+}
+export const BUFF_NAMES = { atk: 'damage', ranged: 'ranged damage', melee: 'melee damage', hp: 'max HP', crit: 'crit chance', dodge: 'dodge', escape: 'escape chance', credits: 'credits', xp: 'XP', stim: 'stim healing', vs: 'damage vs' };
+export const featTierBuff = (def, i) => def.per * D.FEAT_FALLOFF[i];
+export const featTotal = (def, tier) => { let t = 0; for (let i = 0; i < tier; i++) t += featTierBuff(def, i); return t; };
+const fbCache = new WeakMap();
+// All active feat buffs for a cell, cached until a tier changes.
+export function featBuffs(m) {
+  const F = m.feats || { counters: {}, tiers: {}, v: 0 };
+  const hit = fbCache.get(m);
+  if (hit && hit.v === (F.v || 0)) return hit.b;
+  const b = { atk: 0, ranged: 0, melee: 0, hp: 0, crit: 0, dodge: 0, escape: 0, credits: 0, xp: 0, stim: 0, vs: {} };
+  for (const [key, tier] of Object.entries(F.tiers || {})) {
+    const def = FEAT_DEFS[key]; if (!def || !tier) continue;
+    const v = featTotal(def, tier);
+    if (def.buff === 'vs') b.vs[def.vs] = (b.vs[def.vs] || 0) + v; else b[def.buff] += v;
+  }
+  fbCache.set(m, { v: F.v || 0, b });
+  return b;
+}
+// Counts progress; unlocks tiers; pays Resolve on the top tiers; queues a notice for the UI (s.featUnlocks).
+export function feat(s, key, n = 1) {
+  const def = FEAT_DEFS[key]; if (!def || !s.meta) return;
+  const m = s.meta, F = m.feats || (m.feats = { counters: {}, tiers: {}, v: 0 });
+  F.counters[key] = (F.counters[key] || 0) + n;
+  const old = F.tiers[key] || 0; let t = old;
+  while (t < def.tiers.length && F.counters[key] >= def.tiers[t]) t++;
+  if (t > old) {
+    F.tiers[key] = t; F.v = (F.v || 0) + 1;
+    for (let i = old; i < t; i++) {
+      const res = def.resolve ? def.resolve[i] : 0;
+      if (res) { m.resolve += res; m.totalResolve += res; }
+      (s.featUnlocks = s.featUnlocks || []).push({ key, tier: i + 1, name: def.name, text: featBuffText(def, i), resolve: res });
+      journal(s, `Feat: ${def.name} ${'I II III IV'.split(' ')[i]} (${featBuffText(def, i)}${res ? `, +${res} ${D.SETTING.meta}` : ''}).`, 'good');
+    }
+  }
+  if (s.run) { const l = s.run.featTouched || (s.run.featTouched = []); if (!l.includes(key)) l.push(key); }
+}
+export function featBuffText(def, i) {
+  const v = featTierBuff(def, i), pct = `+${(v * 100).toFixed(v * 100 < 1 ? 1 : v * 100 % 1 ? 1 : 0)}%`;
+  return def.buff === 'vs' ? `${pct} damage vs ${D.ENEMIES[def.vs].name}` : `${pct} ${BUFF_NAMES[def.buff]}`;
+}
+// Progress rows for the after-action strip: the feats touched this fight, enemy types first.
+export function featProgress(s, keys) {
+  const F = s.meta.feats || { counters: {}, tiers: {} };
+  return keys.map((key) => { const def = FEAT_DEFS[key]; const c = F.counters[key] || 0, t = F.tiers[key] || 0, next = def.tiers[Math.min(t, def.tiers.length - 1)], prev = t ? def.tiers[t - 1] : 0;
+    return { key, name: def.name, count: c, tier: t, max: def.tiers.length, next, pct: t >= def.tiers.length ? 1 : Math.min(1, (c - prev) / (next - prev)), done: t >= def.tiers.length }; })
+    .sort((a, b) => (a.key.startsWith('kill:') ? 0 : 1) - (b.key.startsWith('kill:') ? 0 : 1));
 }

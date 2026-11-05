@@ -692,3 +692,33 @@ export const BAR = {
     ] },
   ],
 };
+
+// ---------- Feats: cell-wide achievements with small permanent buffs ----------
+// Each feat has four tiers. buff: what every tier adds (shrinking: the per array is multiplied by [1, .8, .6, .4]).
+// Kinds: atk (all damage), ranged, melee (that attack's damage), hp, crit, dodge, escape, credits, xp, stim (stim healing),
+// all as fractions of 1. resolve: Resolve paid on reaching tiers 3 and 4. Enemy-type feats are generated from ENEMIES.
+export const FEAT_FALLOFF = [0.5, 0.4, 0.3, 0.2]; // halved after the campaign sim: full size took the finale from operative 22 to 16
+export const FEATS = [
+  { id: 'kills', group: 'Combat', name: 'Bodies in the yard', desc: 'Enemies put down.', tiers: [10, 100, 500, 1000], buff: 'atk', per: 0.01, resolve: [0, 0, 1, 2] },
+  { id: 'bosses', group: 'Combat', name: 'Heads on the wall', desc: 'Bosses beaten.', tiers: [1, 5, 15, 30], buff: 'hp', per: 0.02, resolve: [0, 1, 2, 3] },
+  { id: 'elites', group: 'Combat', name: 'Veteran hunter', desc: 'Veterans beaten.', tiers: [1, 10, 50, 100], buff: 'crit', per: 0.005, resolve: [0, 0, 1, 2] },
+  { id: 'crits', group: 'Combat', name: 'Clean hits', desc: 'Critical hits landed.', tiers: [10, 100, 500, 1000], buff: 'crit', per: 0.005 },
+  { id: 'shots', group: 'Combat', name: 'Rounds down range', desc: 'Shots that hit.', tiers: [25, 250, 1000, 2500], buff: 'ranged', per: 0.01 },
+  { id: 'strikes', group: 'Combat', name: 'Close work', desc: 'Strikes that hit.', tiers: [25, 250, 1000, 2500], buff: 'melee', per: 0.01 },
+  { id: 'skills', group: 'Combat', name: 'Tricks of the trade', desc: 'Skills used.', tiers: [10, 100, 500, 1000], buff: 'xp', per: 0.02 },
+  { id: 'dodges', group: 'Combat', name: 'Not today', desc: 'Attacks dodged.', tiers: [10, 50, 200, 500], buff: 'dodge', per: 0.005 },
+  { id: 'stims', group: 'Combat', name: 'Field medicine', desc: 'Stims used.', tiers: [5, 25, 100, 250], buff: 'stim', per: 0.03 },
+  { id: 'sectors', group: 'Raids', name: 'Deeper', desc: 'Sectors cleared.', tiers: [5, 25, 100, 250], buff: 'xp', per: 0.02, resolve: [0, 0, 1, 2] },
+  { id: 'extractions', group: 'Raids', name: 'Came back', desc: 'Raids extracted from.', tiers: [1, 10, 50, 100], buff: 'credits', per: 0.01, resolve: [0, 0, 1, 2] },
+  { id: 'events', group: 'Raids', name: 'Something in the corridor', desc: 'Events resolved.', tiers: [5, 25, 100, 250], buff: 'xp', per: 0.02 },
+  { id: 'contraband', group: 'Raids', name: 'Pockets full', desc: 'Contraband taken.', tiers: [5, 25, 100, 250], buff: 'hp', per: 0.01 },
+  { id: 'freed', group: 'Raids', name: 'Open doors', desc: 'Prisoners brought home.', tiers: [1, 10, 50, 100], buff: 'escape', per: 0.01, resolve: [0, 1, 2, 3] },
+  { id: 'credits', group: 'Raids', name: 'Paid in full', desc: 'Credits earned, all sources.', tiers: [1000, 10000, 50000, 200000], buff: 'credits', per: 0.01 },
+  { id: 'fallen', group: 'The cell', name: 'The wall remembers', desc: 'Operatives lost.', tiers: [1, 10, 50, 100], buff: 'hp', per: 0.02, resolve: [0, 1, 2, 3] },
+  { id: 'upgrades', group: 'The cell', name: 'Marrow\u2019s best customer', desc: 'Gear upgrades bought.', tiers: [5, 25, 100, 250], buff: 'escape', per: 0.01 },
+  { id: 'lielow', group: 'The cell', name: 'Ghost', desc: 'Times lying low.', tiers: [1, 10, 50, 100], buff: 'dodge', per: 0.005 },
+  { id: 'orbit', group: 'After curfew', name: 'Blockade pilot', desc: 'Orbit runs won.', tiers: [1, 5, 15, 30], buff: 'credits', per: 0.01, resolve: [0, 1, 2, 3] },
+  { id: 'spins', group: 'After curfew', name: 'Regular at the Wheel', desc: 'Spins.', tiers: [10, 50, 200, 500], buff: 'xp', per: 0.01 },
+  { id: 'drinks', group: 'After curfew', name: 'Tab at the Lantern', desc: 'Rounds bought.', tiers: [5, 25, 100, 250], buff: 'hp', per: 0.01 },
+];
+export const ENEMY_FEAT_TIERS = [1, 10, 50, 100], BOSS_FEAT_TIERS = [1, 3, 10, 25];

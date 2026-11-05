@@ -528,6 +528,19 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .door.tier .odds { font-family: var(--mono); font-size: .72rem; }
 .row.i.venture > div { min-width: 0; }
 @media (max-width: 700px) { .dt-wheel { grid-template-columns: minmax(0, 1fr); } .doors.tiers { grid-template-columns: minmax(0, 1fr); } .orbit-huds { grid-template-columns: minmax(0, 1fr); } }
+.feat-bar { height: 6px; background: var(--panel); border: 1px solid var(--line); position: relative; overflow: hidden; }
+.feat-bar i { position: absolute; inset: 0; width: 0; background: var(--sodium); transition: width .4s ease; }
+.feat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+.feat { display: grid; gap: 4px; padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--line); }
+.feat.has { border-left: 3px solid var(--sodium); }
+.feat.done { border-left-color: var(--ok); }
+.feat-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.feat .small { font-size: .8rem; }
+.aa-feats { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px 12px; margin-top: 4px; }
+.aa-feat { display: grid; gap: 3px; font-size: .72rem; color: var(--muted); }
+.aa-feat b { color: var(--fg); }
+.aa-feat.done .feat-bar i { background: var(--ok); }
+.modal.feats { width: min(960px, 100%); }
 .board-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .board-table th { text-align: left; font-family: var(--mono); font-size: .66rem; letter-spacing: .1em; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); }
 .board-table td { padding: 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
@@ -638,6 +651,7 @@ function headerTools() {
   return `<div class="tools"><button class="tool" data-a="modal" data-v="manual" aria-label="Field manual">Manual</button>
     <button class="tool" data-a="sound" aria-pressed="${p.sfx}" aria-label="Toggle sound">${p.sfx ? 'Sound on' : 'Sound off'}</button>
     <button class="tool" data-a="modal" data-v="board" aria-label="Leaderboard">Board</button>
+    <button class="tool" data-a="modal" data-v="feats" aria-label="Feats">Feats</button>
     <button class="tool" data-a="modal" data-v="settings" aria-label="Settings">Settings</button></div>`;
 }
 function statusStrip() {
@@ -1200,11 +1214,12 @@ function afterAction() {
     main = `<b>${esc(o.name)}</b> <span class="muted">${esc(o.text)}</span>`;
     chips = o.notes || [];
   }
+  const feats = o.kind === 'fight' && o.feats && o.feats.length ? `<div class="aa-feats">${o.feats.slice(0, 4).map((p) => `<div class="aa-feat ${p.done ? 'done' : ''}" title="${esc(E.FEAT_DEFS[p.key].desc)}"><span class="num">${esc(p.name)} <b>${p.done ? 'IV' : `${p.count}/${p.next}`}</b></span>${featBar(p)}</div>`).join('')}</div>` : '';
   const lvl = o.kind === 'fight' && o.levelUps && o.levelUps.length ? `<span class="chip good">Level ${o.levelUps[o.levelUps.length - 1]}!</span>` : '';
   const spend = c.attrPoints ? `<div class="aa-spend"><span class="label">${c.attrPoints} point${c.attrPoints > 1 ? 's' : ''} to spend</span>${Object.entries(D.ATTRS).map(([k, a]) => `<button class="btn" data-a="spend" data-v="${k}" title="${esc(a.desc)}" ${c.attrs[k] >= D.ATTR_MAX ? 'disabled' : ''}>${a.short} ${c.attrs[k]}\u2192${c.attrs[k] + 1}</button>`).join('')}</div>` : '';
   return `${o.liberated ? `<div class="liberated"><span class="label">District liberated</span><b>${esc(o.liberated)}</b><span>Threat levels are now available under Missions.</span></div>` : ''}
     <div class="aa"><div class="aa-main">${main} ${lvl}<span class="chips">${chips.map((t) => `<span class="chip ${/\u2212|alerted|exploded/.test(t) ? 'bad' : 'good'}">${esc(t)}</span>`).join('')}</span></div>
-    <button class="tool" data-a="dismissresult" aria-label="Hide">\u00D7</button>${spend}</div>`;
+    <button class="tool" data-a="dismissresult" aria-label="Hide">\u00D7</button>${feats}${spend}</div>`;
 }
 // The view behind loot, contraband and sector-clear popups.
 function popupView(inner) {
@@ -1266,6 +1281,7 @@ function modalView() {
   if (['bar', 'wheel', 'orbit', 'ventures'].includes(modal)) return downtimeView();
   const p = A.getPrefs();
   if (modal === 'board') return boardView();
+  if (modal === 'feats') return featsView();
   const body = modal === 'manual' ? `
     <h2>Field manual</h2>
     <div class="manual">
@@ -1282,9 +1298,10 @@ function modalView() {
       <section><h3>Your turn</h3><p><b>Defend</b> also steadies your aim: your next shot deals +50%. <b>Skills</b> come from your weapon and high attributes; their cooldowns last for the whole sector, so choose your moment. <b>Stims</b> heal and stop bleeding and burning.</p></section>
       <section><h3>Status effects</h3><ul>${Object.values(D.STATUSES).map((x) => `<li><b>${esc(x.name)}</b>: ${esc(x.desc)}</li>`).join('')}</ul></section>
       <section><h3>Elites and bosses</h3><p>Elites (veterans) carry a modifier, such as Regenerating or Volatile. Bosses enrage at half health. Bosses always carry <b>contraband</b> and elites sometimes do: pick one of three perks that last until your operative dies. You have four pockets, so a fifth piece means dropping one.</p></section>
+      <section><h3>Feats</h3><p>Everything the cell does is counted across every operative: enemies of each type put down, bosses, crits, shots, strikes, skills, dodges, stims, sectors, extractions, events, contraband, prisoners, credits, operatives lost, upgrades, lying low, orbit wins, spins and rounds. Each feat has four tiers (for enemy types: 1, 10, 50, 100). Every tier adds a small permanent edge, each a little smaller than the last, and the top tiers of the big ones pay Resolve. Progress shows after every fight; the full record is under <b>Feats</b>.</p></section>
       <section><h3>After curfew</h3><p>A second row of buttons in the yard. <b>The Lantern</b>: KEG-7 pours a round (+1 ATK, +4% crit next raid) and tells jokes; the regulars talk. <b>The Wheel</b>: roulette, one bet per spin, zero belongs to the house. <b>Orbit</b>: fly the cell\u2019s shuttle against the blockade. Wins pay credits and, on the harder runs, a permanent <b>Mark</b> (five exist). Lose the shuttle and the pilot dies. Refit the shuttle with credits; cell fittings cost Resolve and survive death. The odds shown are simulated for your current shuttle. <b>Ventures</b>: invest the cell\u2019s money; each venture ticks up or down once per raid and survives the operative.</p></section>
       <section><h3>Quirks and bulletins</h3><p>Regular enemies often have a <b>quirk</b>, like a Drunk trooper whose shots go wild or an Overclocked droid that cooks itself. Every raid also rolls a <b>Directorate bulletin</b>, such as Payday or Staff Party, that bends the rules until you leave.</p></section>
-      <section><h3>Wanted and escaping</h3><p>Every raid an operative survives raises their <b>Wanted</b> level: enemies get 2.5% tougher per level, and pay 2.5% more. Lower it by lying low at the safehouse. Extracting right after a boss keeps the whole haul; slipping out between bosses costs 45% of it in bribes, and escaping mid-fight with <b>Run</b> or <b>Smoke</b> costs 65%. Past sector 5 the Directorate tightens its grip: bribes rise to 50% and 70%, enemies get 12% tougher and every price goes up 12%; past sector 10 it is 55%, 75%, 15% and 15%.</p></section>
+      <section><h3>Wanted and escaping</h3><p>Every raid an operative survives raises their <b>Wanted</b> level: enemies get 2.5% tougher per level, and pay 2.5% more. Lower it by lying low at the safehouse. Extracting right after a boss keeps the whole haul; slipping out between bosses costs 45% of it in bribes, and escaping mid-fight with <b>Run</b> or <b>Smoke</b> costs 65%. Past sector 5 the Directorate tightens its grip: bribes rise to 50% and 70%, enemies get tougher and every price goes up 12%; past sector 10 it is 55%, 75% and 15%.</p></section>
       <section><h3>Getting stronger</h3><p><b>This operative</b>: levels (attribute points), gear, implants and contraband. All lost on death. <b>The cell</b>: Resolve buys permanent training and upgrades. Earn it from sectors (repeat clears pay only every other time), bosses, brave choices and contracts.</p></section>
       <section><h3>The yard</h3><p>Walk with the arrows or WASD, or tap where to go. Walk into a door to go inside; talk to the person there (<b>E</b>, Space or a tap) to open their menu. The freight terminal opens straight away. Most things in the yard can be poked at, and the noodle vendor sells a hot meal worth +5% XP for the next raid.</p></section>
       <section><h3>Controls</h3><p class="keys"><span><b>A</b> shoot</span><span><b>F</b> strike</span><span><b>D</b> defend</span><span><b>S</b> stim</span><span><b>R</b> run</span><span><b>Q W E T</b> skills</span><span><b>2 3 4</b> items</span><span><b>1 2</b> doors</span><span><b>Enter</b> continue</span><span><b>Esc</b> close any menu</span></p></section>
@@ -1318,6 +1335,34 @@ function modalView() {
     <button class="tool close" data-a="closemodal" aria-label="Close">Close</button>${body}</div></div>`;
 }
 
+// Feats: progress bars for every achievement and the buffs they add up to.
+function featBar(p) {
+  return `<div class="feat-bar" role="progressbar" aria-valuenow="${Math.round(p.pct * 100)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${Math.round(p.pct * 100)}%"></i></div>`;
+}
+function featsView() {
+  const F = state.meta.feats || { counters: {}, tiers: {} }, fb = E.featBuffs(state.meta);
+  const totals = Object.entries(fb).filter(([k, v]) => k !== 'vs' && v > 0).map(([k, v]) => `<span class="chip good">+${(v * 100).toFixed(1).replace(/\.0$/, '')}% ${esc(E.BUFF_NAMES[k])}</span>`);
+  const vs = Object.entries(fb.vs).filter(([, v]) => v > 0).length;
+  if (vs) totals.push(`<span class="chip good">bonus damage vs ${vs} enemy type${vs > 1 ? 's' : ''}</span>`);
+  const groups = {};
+  for (const def of Object.values(E.FEAT_DEFS)) (groups[def.group] = groups[def.group] || []).push(def);
+  const row = (def) => {
+    const c = F.counters[def.id] || 0, t = F.tiers[def.id] || 0, done = t >= def.tiers.length, next = def.tiers[Math.min(t, def.tiers.length - 1)], prev = t ? def.tiers[t - 1] : 0;
+    const pct = done ? 1 : Math.min(1, (c - prev) / (next - prev));
+    const nextText = done ? 'complete' : `${c.toLocaleString()} / ${next.toLocaleString()} \u00b7 next: ${esc(E.featBuffText(def, t))}${def.resolve && def.resolve[t] ? `, +${def.resolve[t]} ${esc(S.meta)}` : ''}`;
+    return `<div class="feat ${t ? 'has' : ''} ${done ? 'done' : ''}"><div class="feat-head"><b>${esc(def.name)}</b><span class="pips">${def.tiers.map((_, i) => `<i class="${i < t ? 'on' : ''}"></i>`).join('')}</span></div>
+      <div class="muted small">${esc(def.desc)} ${t ? `<span class="good">Now: +${(E.featTotal(def, t) * 100).toFixed(1).replace(/\.0$/, '')}% ${esc(def.buff === 'vs' ? 'damage' : E.BUFF_NAMES[def.buff])}.</span>` : ''}</div>
+      ${featBar({ pct })}<div class="muted small num">${nextText}</div></div>`;
+  };
+  const order = ['Combat', 'Raids', 'The cell', 'After curfew', 'Enemies', 'Bosses'];
+  return `<div class="modal-wrap" data-a="closemodal"><div class="modal board feats" role="dialog" aria-modal="true" aria-label="Feats">
+    <button class="tool close" data-a="closemodal" aria-label="Close">Close</button>
+    <h2>Feats <span class="num muted" style="font-size:.9rem">the cell\u2019s record</span></h2>
+    <p class="muted" style="font-size:.9rem">Everything the cell does counts, across every operative. Each feat has four tiers; every tier adds a small permanent edge, and each tier adds a little less than the last. The top tiers of the big ones also pay ${esc(S.meta)}.</p>
+    ${totals.length ? `<div class="chips">${totals.join('')}</div>` : '<p class="muted small">No tiers yet. Go and do something.</p>'}
+    ${order.filter((g) => groups[g]).map((g) => `<h3>${esc(g)}</h3><div class="feat-grid">${groups[g].map(row).join('')}</div>`).join('')}
+  </div></div>`;
+}
 // Top raids on this device. Bot raids from the simulator seed the board until real ones push them off.
 function boardView() {
   const board = state.meta.board || [], me = state.char;
@@ -1518,6 +1563,7 @@ function render() {
   }
   const showStatus = state.screen !== 'intro' && !titleOpen;
   if (state.contractDone) { toast = `Contract complete: ${state.contractDone}`; state.contractDone = null; A.play('perk'); }
+  if (state.featUnlocks && state.featUnlocks.length) { const u = state.featUnlocks; toast = `Feat: ${u.slice(0, 2).map((x) => `${x.name} ${'I II III IV'.split(' ')[x.tier - 1]} (${x.text}${x.resolve ? `, +${x.resolve} ${S.meta}` : ''})`).join(' \u00B7 ')}${u.length > 2 ? ` and ${u.length - 2} more` : ''}`; state.featUnlocks = null; A.play('perk'); }
   // Keep the page where it was: scroll positions of menus and the page, and the focused button, survive the rebuild.
   const app = document.getElementById('app');
   const kept = [...app.querySelectorAll('.modal, .log')].map((el) => ({ cls: el.className, top: el.scrollTop })).filter((k) => k.top > 0);
