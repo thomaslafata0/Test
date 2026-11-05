@@ -159,7 +159,7 @@ export function createChar(s, rng) {
   restockMarket(s, rng);
   refreshContracts(s, rng);
   s.screen = 'town'; s.tab = 'gate';
-  s.notice = `${c.name} takes the empty bunk. Gear up, then pick a target.`;
+  s.notice = `${c.name} takes the empty bunk. Gear up, then take a mission at the freight terminal.`;
   return c;
 }
 

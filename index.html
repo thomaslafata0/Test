@@ -416,6 +416,24 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .skills { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
 .next-intent { font-family: var(--mono); font-size: .66rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ion); }
 .btn.warn .bs { color: #ff8a78; opacity: 1; }
+/* walkable town */
+.town { position: relative; border: 1px solid var(--line); background: #0b0d10; overflow: hidden; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+.town canvas { display: block; width: 100%; height: auto; aspect-ratio: 416 / 256; image-rendering: pixelated; cursor: pointer; outline: none; }
+.town:not(.ready) canvas { opacity: .25; }
+.town.failed::after { content: 'Town art could not load. Use the buttons below.'; position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: .9rem; }
+.town-bubble { position: absolute; transform: translate(-50%, -100%); max-width: min(260px, 70%); padding: 6px 10px; background: #f3ead6; color: #1a1208; font-size: .85rem; line-height: 1.3; border: 2px solid #1a1208; pointer-events: none; text-align: center; }
+.town-bubble::after { content: ''; position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); border: 6px solid transparent; border-top-color: #1a1208; }
+.town-prompt { position: absolute; left: 50%; bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transform: translateX(-50%); max-width: calc(100% - 16px); padding: 4px 10px; background: #121518e0; border: 1px solid var(--line); font-family: var(--mono); font-size: .68rem; letter-spacing: .06em; color: var(--fg); pointer-events: none; text-align: center; }
+.town-fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
+.town-fade.on { animation: tfade .45s ease-out; }
+@media (max-width: 520px) { .town-prompt { font-size: .58rem; padding: 3px 7px; } .town-bubble { font-size: .78rem; } }
+@keyframes tfade { 0% { opacity: .9; } 100% { opacity: 0; } }
+.town-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 6px 16px; }
+.town-help { font-size: .85rem; max-width: 46ch; }
+.shortcuts { display: flex; flex-wrap: wrap; gap: 6px; }
+.modal.popup.wide { width: min(1040px, 100%); max-height: 88vh; }
+.pop-head { display: flex; justify-content: space-between; align-items: start; gap: 12px; position: sticky; top: -24px; background: var(--panel); padding: 4px 0 8px; z-index: 2; border-bottom: 1px solid var(--line); }
+.pop-tabs { margin-top: -6px; }
 /* between fights */
 .aa { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; align-items: start; padding: 10px 12px; border: 1px solid var(--line); border-left: 3px solid var(--sodium); background: var(--panel-2); animation: aa-in .25s ease-out; }
 .aa-main { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: .95rem; }
@@ -451,6 +469,7 @@ import { portraitURL } from './portraits.js';
 import { Stage, loadSheets, sheetStill } from './stage.js';
 import * as A from './audio.js';
 import { iconURL, gearIconKey } from './icons.js';
+import { Town } from './town.js';
 
 const SAVE_KEY = 'cinder-cell-save-v1';
 const rng = Math.random;
@@ -498,7 +517,7 @@ function statusStrip() {
 
 // ---------- one-time tips ----------
 const TIPS = {
-  town: 'Start on the Targets tab. When you come back with credits, gear up at the Black Market and Clinic. Resolve is spent on the Character tab and is never lost.',
+  town: 'Walk into the freight terminal (top) to pick a mission. Back in town, Marrow\u2019s container sells gear, Doc Ilse patches you up, and the safehouse is where you spend Resolve. The buttons under the town open them directly.',
   route: 'Pick a door. Each sector has three rooms, and at least two of them will be fights. A boss waits at the end of every fifth sector.',
   combat: 'Read the enemy\u2019s intent below the battle scene. Defend against heavy strikes and signature moves; it also steadies your next shot.',
   perk: 'Contraband stays with this operative until they die. Bosses always carry some, elites sometimes. You can hold four pieces.',
@@ -570,18 +589,36 @@ function createScreen() {
   </section>`;
 }
 
-function townScreen() {
+// Town menus: each opens as a popup, from walking into its building or from the shortcut bar.
+const POPUPS = {
+  missions: { label: 'Missions', where: 'Freight terminal \u00B7 the dispatcher', body: () => gate() },
+  market: { label: 'Black Market', where: 'Marrow\u2019s container', body: () => market() },
+  clinic: { label: 'Clinic', where: 'Doc Ilse', body: () => clinic() },
+  character: { label: 'Character & Resolve', where: 'The safehouse \u00B7 Cass', body: () => character() },
+  gear: { label: 'Gear', where: 'The safehouse \u00B7 your locker', body: () => `${tip('gear')}${gearTab()}` },
+};
+const popupBadge = (id) => {
   const c = state.char;
-  if (state.tab === 'safehouse') state.tab = 'character';
-  const tabs = [['gate', 'Targets'], ['character', 'Character'], ['gear', 'Gear'], ['market', 'Black Market'], ['clinic', 'Clinic']];
-  const body = { market, clinic, character, gate, gear: gearTab }[state.tab] || gate;
-  const badge = (id) => id !== 'character' ? '' : c.attrPoints ? ` <span class="badge" title="Attribute points to spend">${c.attrPoints}</span>` : canSpendResolve() ? ' <span class="badge" title="You can spend Resolve here">R</span>' : '';
-  return `<section class="panel">
-    <div style="display:grid;gap:4px"><span class="label">Town \u00B7 curfew in effect</span><h2>${esc(S.town)}</h2></div>
-    ${tip('town')}${state.tab === 'gear' ? tip('gear') : ''}${notice()}
-    <nav class="tabs" role="tablist">${tabs.map(([id, l]) => `<button class="tab" role="tab" aria-selected="${state.tab === id}" data-a="tab" data-v="${id}">${l}${badge(id)}</button>`).join('')}</nav>
-    ${body()}
-  </section>`;
+  if (id !== 'character') return '';
+  return c.attrPoints ? ` <span class="badge" title="Attribute points to spend">${c.attrPoints}</span>` : canSpendResolve() ? ' <span class="badge" title="You can spend Resolve here">R</span>' : '';
+};
+function townScreen() {
+  return `<section class="panel town-panel">
+    <div class="town-head"><div style="display:grid;gap:4px"><span class="label">Town \u00B7 curfew in effect</span><h2>${esc(S.town)}</h2></div>
+      <p class="muted town-help">Arrows or WASD to walk, or tap where to go. Walk into a door to go inside. <b>E</b> or tap to talk.</p></div>
+    ${tip('town')}${state.popup ? '' : notice()}
+    <div id="town-slot"></div>
+    <nav class="shortcuts" aria-label="Town menus">${Object.entries(POPUPS).map(([id, p]) => `<button class="btn" data-a="popup" data-v="${id}">${esc(p.label)}${popupBadge(id)}</button>`).join('')}</nav>
+  </section>${townPopup()}`;
+}
+function townPopup() {
+  const id = state.popup, p = POPUPS[id];
+  if (!p) return '';
+  const pair = id === 'character' || id === 'gear' ? `<nav class="tabs pop-tabs">${['character', 'gear'].map((k) => `<button class="tab" aria-selected="${id === k}" data-a="popup" data-v="${k}">${esc(POPUPS[k].label)}${popupBadge(k)}</button>`).join('')}</nav>` : '';
+  return `<div class="popup-wrap town-pop"><div class="modal popup wide" role="dialog" aria-modal="true" aria-label="${esc(p.label)}">
+    <div class="pop-head"><div style="display:grid;gap:2px"><span class="label">${esc(p.where)}</span><h2>${esc(p.label)}</h2></div><button class="tool" data-a="closepopup" aria-label="Close">Close</button></div>
+    ${notice()}${pair}${p.body()}
+  </div></div>`;
 }
 
 function buyBtn(a, v, k, cost, extraDisabled = false) {
@@ -913,7 +950,7 @@ function roomScreen() {
 function victoryScreen() {
   const o = state.outcome, c = state.char, r = state.run;
   return `<div class="columns"><section class="panel">
-    ${o.liberated ? `<div class="liberated"><span class="label">District liberated</span><b>${esc(o.liberated)}</b><span>The Directorate has lost its grip here. Threat levels are now available on the Targets tab.</span></div>` : ''}
+    ${o.liberated ? `<div class="liberated"><span class="label">District liberated</span><b>${esc(o.liberated)}</b><span>The Directorate has lost its grip here. Threat levels are now available under Missions.</span></div>` : ''}
     <div class="killer">${o.id ? portraitImg({ id: o.id, name: o.enemy, portrait: o.portrait }, 'down') : ''}<div style="display:grid;gap:4px"><span class="label">${o.fled ? 'Target fled' : 'Target down'}</span><h2>${esc(o.enemy)}</h2></div></div>
     <dl class="kv"><dt>Credits</dt><dd style="color:var(--sodium)">+${o.credits}</dd><dt>XP</dt><dd>+${o.xp}</dd>
     ${o.levelUps.length ? `<dt>Level up</dt><dd class="ok-text">Now level ${o.levelUps[o.levelUps.length - 1]} \u00B7 +${o.levelUps.length} attribute point${o.levelUps.length > 1 ? 's' : ''}</dd>` : ''}
@@ -946,7 +983,7 @@ function afterAction() {
   }
   const lvl = o.kind === 'fight' && o.levelUps && o.levelUps.length ? `<span class="chip good">Level ${o.levelUps[o.levelUps.length - 1]}!</span>` : '';
   const spend = c.attrPoints ? `<div class="aa-spend"><span class="label">${c.attrPoints} point${c.attrPoints > 1 ? 's' : ''} to spend</span>${Object.entries(D.ATTRS).map(([k, a]) => `<button class="btn" data-a="spend" data-v="${k}" title="${esc(a.desc)}" ${c.attrs[k] >= D.ATTR_MAX ? 'disabled' : ''}>${a.short} ${c.attrs[k]}\u2192${c.attrs[k] + 1}</button>`).join('')}</div>` : '';
-  return `${o.liberated ? `<div class="liberated"><span class="label">District liberated</span><b>${esc(o.liberated)}</b><span>Threat levels are now available on the Targets tab.</span></div>` : ''}
+  return `${o.liberated ? `<div class="liberated"><span class="label">District liberated</span><b>${esc(o.liberated)}</b><span>Threat levels are now available under Missions.</span></div>` : ''}
     <div class="aa"><div class="aa-main">${main} ${lvl}<span class="chips">${chips.map((t) => `<span class="chip ${/\u2212|alerted|exploded/.test(t) ? 'bad' : 'good'}">${esc(t)}</span>`).join('')}</span></div>
     <button class="tool" data-a="dismissresult" aria-label="Hide">\u00D7</button>${spend}</div>`;
 }
@@ -1000,7 +1037,7 @@ function endingScreen() {
     <div class="story"><p>The garrison gate stands open. The furnaces are cold, the cells are empty, and the lift to orbit has stopped running. For the first time in three years, nobody in ${esc(S.town)} is working a Directorate shift.</p>
     <p>${m.operatives === 1 ? 'One operative' : `${m.operatives} operatives`} walked through the gate to get here. ${m.operatives === 1 ? 'Their name is' : 'Their names are'} on the wall in the safehouse.</p></div>
     <dl class="kv"><dt>Operatives</dt><dd>${m.operatives}</dd><dt>Raids</dt><dd>${m.stats.raids}</dd><dt>Enemies down</dt><dd>${m.stats.kills}</dd><dt>Bosses</dt><dd>${m.stats.bosses}</dd><dt>Resolve earned</dt><dd>${m.totalResolve}</dd></dl>
-    <p class="muted">The Directorate will send more. Threat levels are open on the Targets tab for anyone who wants to keep going.</p>
+    <p class="muted">The Directorate will send more. Threat levels are open under Missions for anyone who wants to keep going.</p>
     <div><button class="btn primary big" data-a="ending">Back to the yard</button></div>
   </section>`;
 }
@@ -1092,7 +1129,7 @@ function deathScreen() {
     <p class="story">Operative ${o.number} went down in the ${esc(E.sectorName(o.sector, o.map))}${o.killerId ? `, killed by a ${esc(o.killer)}` : `, taken by ${esc(o.killer)}`}. The ${o.credits.toLocaleString()} ${S.currency}, the gear, ${o.perks ? `${o.perks} piece${o.perks > 1 ? 's' : ''} of contraband, ` : ''}the implants and level ${o.level} went with them.</p>
     <dl class="kv"><dt>${esc(S.meta)} to spend</dt><dd style="color:var(--sodium)">${state.meta.resolve}</dd><dt>Deepest ever</dt><dd>Sector ${state.meta.bestSector}</dd></dl>
     ${heirloomPick()}
-    <p class="muted">Spend the Resolve on the Character tab once your next operative is in town. Training and cell upgrades carry over.</p>
+    <p class="muted">Spend the Resolve at the safehouse (Character & Resolve) once your next operative is in town. Training and cell upgrades carry over.</p>
     <div><button class="btn primary big" data-a="recruit">Build the next operative</button></div>
   </section>`;
 }
@@ -1116,6 +1153,14 @@ function render() {
     (toast ? `<div class="toast" role="status">${esc(toast)}</div>` : '');
   toast = null;
   A.setAmbience(state.run ? E.mapById(state.run.map).theme : 'town');
+  const tslot = document.getElementById('town-slot');
+  if (tslot) {
+    tslot.replaceWith(town.el);
+    if (lastScreen !== 'town') town.spawnAt(['create', 'intro', 'death'].includes(lastScreen) || !lastScreen ? 'safehouse' : lastScreen === 'ending' ? 'safehouse' : 'terminal');
+    town.setBlocked(!!state.popup || !!modal);
+  }
+  if (state.screen !== 'town') state.popup = null;
+  lastScreen = state.screen;
   const slot = document.getElementById('stage-slot');
   if (slot) {
     slot.replaceWith(stage.el);
@@ -1148,6 +1193,11 @@ document.addEventListener('automode', () => { A.play('click'); if (state.screen 
 
 // ---------- input ----------
 const stage = new Stage();
+const town = new Town();
+globalThis.cinderTown = town; // handy for debugging in the console
+let lastScreen = null;
+// Walking into a building (or talking to its NPC) opens that building's menu.
+town.onOpen = (id) => { if (state.screen !== 'town' || modal) return; state.popup = id; state.notice = null; A.play('click'); render(); };
 let busy = false;
 
 async function fight(v) {
@@ -1196,8 +1246,9 @@ function act(a, v, k) {
     case 'bg': state.draft.background = v; { for (const key of Object.keys(D.ATTRS)) while (E.draftAttr(state.draft, key) > D.ATTR_CREATE_MAX) E.draftAdjust(state.draft, key, -1); } break;
     case 'attr': E.draftAdjust(state.draft, v, +k); break;
     case 'randname': state.draft.name = D.OPERATIVE_NAMES[Math.floor(rng() * D.OPERATIVE_NAMES.length)]; break;
-    case 'create': E.createChar(state, rng); state.gateMap = 'garrison'; break;
-    case 'tab': state.tab = v; state.notice = null; break;
+    case 'create': E.createChar(state, rng); state.gateMap = 'garrison'; state.popup = null; break;
+    case 'tab': case 'popup': state.popup = v === 'gate' ? 'missions' : v === 'safehouse' ? 'character' : v; state.notice = null; break;
+    case 'closepopup': state.popup = null; state.notice = null; break;
     case 'buygear': ok = E.buyGear(state, +v); break;
     case 'gearslot': state.gearSlot = v; A.play('click'); break;
     case 'upgradegear': ok = E.upgradeItem(state, v); break;
@@ -1216,7 +1267,7 @@ function act(a, v, k) {
     case 'spend': ok = E.spendAttr(state, v); break;
     case 'respec': ok = E.respec(state); break;
     case 'pickmap': state.gateMap = v; break;
-    case 'deploy': state.lastResult = null; E.deploy(state, state.gateMap || 'garrison', +v, rng); break;
+    case 'deploy': state.popup = null; state.lastResult = null; E.deploy(state, state.gateMap || 'garrison', +v, rng); break;
     case 'continue': E.continueAfterVictory(state, rng); break;
     case 'room': state.lastResult = null; E.enterRoom(state, +v, rng); if (state.screen === 'room') { state.lastResult = { kind: 'room', ...state.roomResult }; E.offerRoute(state, rng); } break;
     case 'dismissresult': state.lastResult = null; break;
@@ -1232,12 +1283,13 @@ function act(a, v, k) {
   }
   if (BUY.has(a)) A.play(ok ? 'buy' : 'denied');
   else if (['deploy', 'room', 'deeper'].includes(a)) A.play('door');
-  else if (['tab', 'pickmap', 'continue', 'roomDone', 'eventDone', 'event', 'bg', 'attr', 'create', 'begin', 'recruit', 'extract'].includes(a)) A.play('click');
+  else if (['tab', 'popup', 'closepopup', 'pickmap', 'continue', 'roomDone', 'eventDone', 'event', 'bg', 'attr', 'create', 'begin', 'recruit', 'extract'].includes(a)) A.play('click');
   render();
 }
 
 document.addEventListener('click', (ev) => {
   if (ev.target.classList && ev.target.classList.contains('modal-wrap')) { act('closemodal'); return; }
+  if (ev.target.classList && ev.target.classList.contains('town-pop')) { act('closepopup'); return; }
   const b = ev.target.closest('button[data-a]');
   if (!b || b.disabled) return;
   act(b.dataset.a, b.dataset.v, b.dataset.k);
@@ -1250,6 +1302,7 @@ document.addEventListener('change', (ev) => { if (ev.target.id === 'vol') A.play
 
 document.addEventListener('keydown', (ev) => {
   if (ev.key === 'Escape' && modal) { act('closemodal'); return; }
+  if (ev.key === 'Escape' && state.popup && state.screen === 'town') { act('closepopup'); return; }
   if (ev.metaKey || ev.ctrlKey || ev.altKey || busy || modal || ev.target.tagName === 'INPUT') return;
   A.unlock();
   const key = ev.key.toLowerCase();

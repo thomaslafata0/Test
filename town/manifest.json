@@ -1,0 +1,927 @@
+{
+ "tileSize": 32,
+ "frame": 64,
+ "feetFromBottom": 4,
+ "notes": "Characters use 64x64 frames; lowest opaque row of every frame is y=59. Tile ids count left-to-right, top-to-bottom across tiles/town.png (12 columns). Doors are rectangles in image pixels; enterable buildings switch to the matching interiors/<id>.png scene. Inside, walking onto exit returns to the town in front of that building; talking to npc opens the screen named in opens.",
+ "chars": {
+  "dispatcher": {
+   "anims": {
+    "idle": {
+     "frames": 4,
+     "fps": 5,
+     "loop": true,
+     "dirs": [
+      "down"
+     ]
+    }
+   }
+  },
+  "handler": {
+   "anims": {
+    "idle": {
+     "frames": 4,
+     "fps": 5,
+     "loop": true,
+     "dirs": [
+      "down"
+     ]
+    }
+   }
+  },
+  "ilse": {
+   "anims": {
+    "idle": {
+     "frames": 4,
+     "fps": 5,
+     "loop": true,
+     "dirs": [
+      "down"
+     ]
+    }
+   }
+  },
+  "kid": {
+   "anims": {
+    "idle": {
+     "frames": 4,
+     "fps": 5,
+     "loop": true,
+     "dirs": [
+      "down"
+     ]
+    }
+   }
+  },
+  "marrow": {
+   "anims": {
+    "idle": {
+     "frames": 4,
+     "fps": 5,
+     "loop": true,
+     "dirs": [
+      "down"
+     ]
+    }
+   }
+  },
+  "patrol": {
+   "anims": {
+    "idle": {
+     "frames": 4,
+     "fps": 5,
+     "loop": true,
+     "dirs": [
+      "down"
+     ]
+    },
+    "walk": {
+     "frames": 6,
+     "fps": 10,
+     "loop": true,
+     "dirs": [
+      "down",
+      "up",
+      "left",
+      "right"
+     ]
+    }
+   }
+  },
+  "player": {
+   "anims": {
+    "idle": {
+     "frames": 4,
+     "fps": 5,
+     "loop": true,
+     "dirs": [
+      "down",
+      "up",
+      "left",
+      "right"
+     ]
+    },
+    "walk": {
+     "frames": 6,
+     "fps": 10,
+     "loop": true,
+     "dirs": [
+      "down",
+      "up",
+      "left",
+      "right"
+     ]
+    }
+   }
+  },
+  "vendor": {
+   "anims": {
+    "idle": {
+     "frames": 4,
+     "fps": 5,
+     "loop": true,
+     "dirs": [
+      "down"
+     ]
+    }
+   }
+  },
+  "worker": {
+   "anims": {
+    "idle": {
+     "frames": 4,
+     "fps": 5,
+     "loop": true,
+     "dirs": [
+      "down"
+     ]
+    }
+   }
+  }
+ },
+ "tilesets": {
+  "deck_sand": {
+   "first_id": 0,
+   "region": {
+    "x": 0,
+    "y": 0,
+    "w": 128,
+    "h": 128
+   },
+   "terrain_A": "metal_deck",
+   "terrain_B": "sand",
+   "tiles": [
+    {
+     "id": 0,
+     "corners": {
+      "nw": "metal_deck",
+      "ne": "metal_deck",
+      "sw": "sand",
+      "se": "metal_deck"
+     }
+    },
+    {
+     "id": 1,
+     "corners": {
+      "nw": "metal_deck",
+      "ne": "sand",
+      "sw": "metal_deck",
+      "se": "sand"
+     }
+    },
+    {
+     "id": 2,
+     "corners": {
+      "nw": "sand",
+      "ne": "metal_deck",
+      "sw": "sand",
+      "se": "sand"
+     }
+    },
+    {
+     "id": 3,
+     "corners": {
+      "nw": "metal_deck",
+      "ne": "metal_deck",
+      "sw": "sand",
+      "se": "sand"
+     }
+    },
+    {
+     "id": 12,
+     "corners": {
+      "nw": "sand",
+      "ne": "metal_deck",
+      "sw": "metal_deck",
+      "se": "sand"
+     }
+    },
+    {
+     "id": 13,
+     "corners": {
+      "nw": "metal_deck",
+      "ne": "sand",
+      "sw": "sand",
+      "se": "sand"
+     }
+    },
+    {
+     "id": 14,
+     "corners": {
+      "nw": "sand",
+      "ne": "sand",
+      "sw": "sand",
+      "se": "sand"
+     }
+    },
+    {
+     "id": 15,
+     "corners": {
+      "nw": "sand",
+      "ne": "sand",
+      "sw": "sand",
+      "se": "metal_deck"
+     }
+    },
+    {
+     "id": 24,
+     "corners": {
+      "nw": "metal_deck",
+      "ne": "sand",
+      "sw": "metal_deck",
+      "se": "metal_deck"
+     }
+    },
+    {
+     "id": 25,
+     "corners": {
+      "nw": "sand",
+      "ne": "sand",
+      "sw": "metal_deck",
+      "se": "metal_deck"
+     }
+    },
+    {
+     "id": 26,
+     "corners": {
+      "nw": "sand",
+      "ne": "sand",
+      "sw": "metal_deck",
+      "se": "sand"
+     }
+    },
+    {
+     "id": 27,
+     "corners": {
+      "nw": "sand",
+      "ne": "metal_deck",
+      "sw": "sand",
+      "se": "metal_deck"
+     }
+    },
+    {
+     "id": 36,
+     "corners": {
+      "nw": "metal_deck",
+      "ne": "metal_deck",
+      "sw": "metal_deck",
+      "se": "metal_deck"
+     }
+    },
+    {
+     "id": 37,
+     "corners": {
+      "nw": "metal_deck",
+      "ne": "metal_deck",
+      "sw": "metal_deck",
+      "se": "sand"
+     }
+    },
+    {
+     "id": 38,
+     "corners": {
+      "nw": "metal_deck",
+      "ne": "sand",
+      "sw": "sand",
+      "se": "metal_deck"
+     }
+    },
+    {
+     "id": 39,
+     "corners": {
+      "nw": "sand",
+      "ne": "metal_deck",
+      "sw": "metal_deck",
+      "se": "metal_deck"
+     }
+    }
+   ],
+   "note": "4x4 block; ids are global ids in the 12-column grid of tiles/town.png"
+  },
+  "sand_plaza": {
+   "first_id": 4,
+   "region": {
+    "x": 128,
+    "y": 0,
+    "w": 128,
+    "h": 128
+   },
+   "terrain_A": "sand",
+   "terrain_B": "plaza",
+   "tiles": [
+    {
+     "id": 4,
+     "corners": {
+      "nw": "sand",
+      "ne": "sand",
+      "sw": "plaza",
+      "se": "sand"
+     }
+    },
+    {
+     "id": 5,
+     "corners": {
+      "nw": "sand",
+      "ne": "plaza",
+      "sw": "sand",
+      "se": "plaza"
+     }
+    },
+    {
+     "id": 6,
+     "corners": {
+      "nw": "plaza",
+      "ne": "sand",
+      "sw": "plaza",
+      "se": "plaza"
+     }
+    },
+    {
+     "id": 7,
+     "corners": {
+      "nw": "sand",
+      "ne": "sand",
+      "sw": "plaza",
+      "se": "plaza"
+     }
+    },
+    {
+     "id": 16,
+     "corners": {
+      "nw": "plaza",
+      "ne": "sand",
+      "sw": "sand",
+      "se": "plaza"
+     }
+    },
+    {
+     "id": 17,
+     "corners": {
+      "nw": "sand",
+      "ne": "plaza",
+      "sw": "plaza",
+      "se": "plaza"
+     }
+    },
+    {
+     "id": 18,
+     "corners": {
+      "nw": "plaza",
+      "ne": "plaza",
+      "sw": "plaza",
+      "se": "plaza"
+     }
+    },
+    {
+     "id": 19,
+     "corners": {
+      "nw": "plaza",
+      "ne": "plaza",
+      "sw": "plaza",
+      "se": "sand"
+     }
+    },
+    {
+     "id": 28,
+     "corners": {
+      "nw": "sand",
+      "ne": "plaza",
+      "sw": "sand",
+      "se": "sand"
+     }
+    },
+    {
+     "id": 29,
+     "corners": {
+      "nw": "plaza",
+      "ne": "plaza",
+      "sw": "sand",
+      "se": "sand"
+     }
+    },
+    {
+     "id": 30,
+     "corners": {
+      "nw": "plaza",
+      "ne": "plaza",
+      "sw": "sand",
+      "se": "plaza"
+     }
+    },
+    {
+     "id": 31,
+     "corners": {
+      "nw": "plaza",
+      "ne": "sand",
+      "sw": "plaza",
+      "se": "sand"
+     }
+    },
+    {
+     "id": 40,
+     "corners": {
+      "nw": "sand",
+      "ne": "sand",
+      "sw": "sand",
+      "se": "sand"
+     }
+    },
+    {
+     "id": 41,
+     "corners": {
+      "nw": "sand",
+      "ne": "sand",
+      "sw": "sand",
+      "se": "plaza"
+     }
+    },
+    {
+     "id": 42,
+     "corners": {
+      "nw": "sand",
+      "ne": "plaza",
+      "sw": "plaza",
+      "se": "sand"
+     }
+    },
+    {
+     "id": 43,
+     "corners": {
+      "nw": "plaza",
+      "ne": "sand",
+      "sw": "sand",
+      "se": "sand"
+     }
+    }
+   ],
+   "note": "4x4 block; ids are global ids in the 12-column grid of tiles/town.png"
+  },
+  "deck_pad": {
+   "first_id": 8,
+   "region": {
+    "x": 256,
+    "y": 0,
+    "w": 128,
+    "h": 128
+   },
+   "terrain_A": "landing_pad",
+   "terrain_B": "metal_deck",
+   "tiles": [
+    {
+     "id": 8,
+     "corners": {
+      "nw": "landing_pad",
+      "ne": "landing_pad",
+      "sw": "metal_deck",
+      "se": "landing_pad"
+     }
+    },
+    {
+     "id": 9,
+     "corners": {
+      "nw": "landing_pad",
+      "ne": "metal_deck",
+      "sw": "landing_pad",
+      "se": "metal_deck"
+     }
+    },
+    {
+     "id": 10,
+     "corners": {
+      "nw": "metal_deck",
+      "ne": "landing_pad",
+      "sw": "metal_deck",
+      "se": "metal_deck"
+     }
+    },
+    {
+     "id": 11,
+     "corners": {
+      "nw": "landing_pad",
+      "ne": "landing_pad",
+      "sw": "metal_deck",
+      "se": "metal_deck"
+     }
+    },
+    {
+     "id": 20,
+     "corners": {
+      "nw": "metal_deck",
+      "ne": "landing_pad",
+      "sw": "landing_pad",
+      "se": "metal_deck"
+     }
+    },
+    {
+     "id": 21,
+     "corners": {
+      "nw": "landing_pad",
+      "ne": "metal_deck",
+      "sw": "metal_deck",
+      "se": "metal_deck"
+     }
+    },
+    {
+     "id": 22,
+     "corners": {
+      "nw": "metal_deck",
+      "ne": "metal_deck",
+      "sw": "metal_deck",
+      "se": "metal_deck"
+     }
+    },
+    {
+     "id": 23,
+     "corners": {
+      "nw": "metal_deck",
+      "ne": "metal_deck",
+      "sw": "metal_deck",
+      "se": "landing_pad"
+     }
+    },
+    {
+     "id": 32,
+     "corners": {
+      "nw": "landing_pad",
+      "ne": "metal_deck",
+      "sw": "landing_pad",
+      "se": "landing_pad"
+     }
+    },
+    {
+     "id": 33,
+     "corners": {
+      "nw": "metal_deck",
+      "ne": "metal_deck",
+      "sw": "landing_pad",
+      "se": "landing_pad"
+     }
+    },
+    {
+     "id": 34,
+     "corners": {
+      "nw": "metal_deck",
+      "ne": "metal_deck",
+      "sw": "landing_pad",
+      "se": "metal_deck"
+     }
+    },
+    {
+     "id": 35,
+     "corners": {
+      "nw": "metal_deck",
+      "ne": "landing_pad",
+      "sw": "metal_deck",
+      "se": "landing_pad"
+     }
+    },
+    {
+     "id": 44,
+     "corners": {
+      "nw": "landing_pad",
+      "ne": "landing_pad",
+      "sw": "landing_pad",
+      "se": "landing_pad"
+     }
+    },
+    {
+     "id": 45,
+     "corners": {
+      "nw": "landing_pad",
+      "ne": "landing_pad",
+      "sw": "landing_pad",
+      "se": "metal_deck"
+     }
+    },
+    {
+     "id": 46,
+     "corners": {
+      "nw": "landing_pad",
+      "ne": "metal_deck",
+      "sw": "metal_deck",
+      "se": "landing_pad"
+     }
+    },
+    {
+     "id": 47,
+     "corners": {
+      "nw": "metal_deck",
+      "ne": "landing_pad",
+      "sw": "landing_pad",
+      "se": "landing_pad"
+     }
+    }
+   ],
+   "note": "4x4 block; ids are global ids in the 12-column grid of tiles/town.png"
+  }
+ },
+ "buildings": {
+  "market": {
+   "w": 192,
+   "h": 160,
+   "door": {
+    "x": 84,
+    "y": 92,
+    "w": 18,
+    "h": 48
+   },
+   "enterable": true,
+   "target": "interior:market"
+  },
+  "clinic": {
+   "w": 160,
+   "h": 160,
+   "door": {
+    "x": 46,
+    "y": 106,
+    "w": 18,
+    "h": 40
+   },
+   "enterable": true,
+   "target": "interior:clinic"
+  },
+  "safehouse": {
+   "w": 160,
+   "h": 160,
+   "door": {
+    "x": 50,
+    "y": 102,
+    "w": 16,
+    "h": 41
+   },
+   "enterable": true,
+   "target": "interior:safehouse"
+  },
+  "terminal": {
+   "w": 256,
+   "h": 256,
+   "door": {
+    "x": 90,
+    "y": 146,
+    "w": 44,
+    "h": 48
+   },
+   "enterable": true,
+   "target": "interior:terminal"
+  },
+  "barracks": {
+   "w": 192,
+   "h": 160,
+   "door": {
+    "x": 75,
+    "y": 115,
+    "w": 16,
+    "h": 29
+   },
+   "enterable": false
+  },
+  "tenement_a": {
+   "w": 160,
+   "h": 160,
+   "door": {
+    "x": 63,
+    "y": 110,
+    "w": 17,
+    "h": 35
+   },
+   "enterable": false
+  },
+  "tenement_b": {
+   "w": 160,
+   "h": 160,
+   "door": {
+    "x": 34,
+    "y": 108,
+    "w": 30,
+    "h": 28
+   },
+   "enterable": false
+  }
+ },
+ "interiors": {
+  "market": {
+   "w": 192,
+   "h": 224,
+   "exit": {
+    "x": 80,
+    "y": 192,
+    "w": 32,
+    "h": 32,
+    "target": "town"
+   },
+   "floor": {
+    "x": 16,
+    "y": 72,
+    "w": 160,
+    "h": 120
+   },
+   "npc": {
+    "id": "marrow",
+    "x": 48,
+    "y": 112,
+    "opens": "market"
+   },
+   "spawn": {
+    "x": 96,
+    "y": 184
+   }
+  },
+  "clinic": {
+   "w": 192,
+   "h": 224,
+   "exit": {
+    "x": 80,
+    "y": 192,
+    "w": 32,
+    "h": 32,
+    "target": "town"
+   },
+   "floor": {
+    "x": 16,
+    "y": 72,
+    "w": 160,
+    "h": 120
+   },
+   "npc": {
+    "id": "ilse",
+    "x": 40,
+    "y": 112,
+    "opens": "clinic"
+   },
+   "spawn": {
+    "x": 96,
+    "y": 184
+   }
+  },
+  "safehouse": {
+   "w": 192,
+   "h": 224,
+   "exit": {
+    "x": 80,
+    "y": 192,
+    "w": 32,
+    "h": 32,
+    "target": "town"
+   },
+   "floor": {
+    "x": 16,
+    "y": 72,
+    "w": 160,
+    "h": 120
+   },
+   "npc": {
+    "id": "handler",
+    "x": 128,
+    "y": 108,
+    "opens": "safehouse"
+   },
+   "spawn": {
+    "x": 96,
+    "y": 184
+   }
+  },
+  "terminal": {
+   "w": 192,
+   "h": 224,
+   "exit": {
+    "x": 80,
+    "y": 192,
+    "w": 32,
+    "h": 32,
+    "target": "town"
+   },
+   "floor": {
+    "x": 16,
+    "y": 72,
+    "w": 160,
+    "h": 120
+   },
+   "npc": {
+    "id": "dispatcher",
+    "x": 76,
+    "y": 120,
+    "opens": "contracts"
+   },
+   "spawn": {
+    "x": 96,
+    "y": 184
+   }
+  }
+ },
+ "props": {
+  "crate": {
+   "w": 32,
+   "h": 32
+  },
+  "fuel_tank": {
+   "w": 32,
+   "h": 32
+  },
+  "console": {
+   "w": 32,
+   "h": 32
+  },
+  "generator": {
+   "w": 32,
+   "h": 32
+  },
+  "air_unit": {
+   "w": 32,
+   "h": 32
+  },
+  "trash_pile": {
+   "w": 32,
+   "h": 32
+  },
+  "sat_dish": {
+   "w": 32,
+   "h": 32
+  },
+  "workbench": {
+   "w": 32,
+   "h": 32
+  },
+  "queue_barrier": {
+   "w": 32,
+   "h": 32
+  },
+  "cargo_crate": {
+   "w": 32,
+   "h": 32
+  },
+  "barrels": {
+   "w": 32,
+   "h": 32
+  },
+  "vending_terminal": {
+   "w": 32,
+   "h": 32
+  },
+  "junction_box": {
+   "w": 32,
+   "h": 32
+  },
+  "lockers": {
+   "w": 32,
+   "h": 32
+  },
+  "antenna": {
+   "w": 32,
+   "h": 32
+  },
+  "streetlamp": {
+   "w": 32,
+   "h": 64
+  },
+  "noodle_stall": {
+   "w": 64,
+   "h": 64
+  },
+  "power_unit": {
+   "w": 64,
+   "h": 64
+  },
+  "water_tower": {
+   "w": 64,
+   "h": 64
+  },
+  "cargo_pile": {
+   "w": 64,
+   "h": 64
+  },
+  "noticeboard": {
+   "w": 64,
+   "h": 64
+  },
+  "poster_wall": {
+   "w": 64,
+   "h": 64
+  },
+  "cargo_crawler": {
+   "w": 64,
+   "h": 64
+  },
+  "barrel_fire": {
+   "w": 32,
+   "h": 32,
+   "frames": 4,
+   "fps": 8
+  },
+  "steam_vent": {
+   "w": 32,
+   "h": 32,
+   "frames": 4,
+   "fps": 6
+  },
+  "holosign": {
+   "w": 32,
+   "h": 32,
+   "frames": 2,
+   "fps": 4
+  },
+  "lamp_light_pool": {
+   "w": 96,
+   "h": 64,
+   "semi_transparent": true
+  }
+ }
+}

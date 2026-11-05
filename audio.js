@@ -63,6 +63,7 @@ function noise({ a = 0.002, d = 0.2, vol = 0.3, filter = 'lowpass', f0 = 2000, f
 
 // ---------- effects ----------
 const SFX = {
+  step:    () => noise({ d: 0.035, vol: 0.04, filter: 'lowpass', f0: 600 + Math.random() * 300 }),
   click:   () => tone({ type: 'square', f0: 1400, f1: 900, d: 0.03, vol: 0.05 }),
   hover:   () => tone({ type: 'sine', f0: 900, d: 0.02, vol: 0.02 }),
   shot:    () => { noise({ d: 0.08, vol: 0.25, filter: 'highpass', f0: 1800 }); tone({ type: 'square', f0: 1400, f1: 180, d: 0.14, vol: 0.12 }); },
