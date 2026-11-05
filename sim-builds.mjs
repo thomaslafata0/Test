@@ -135,7 +135,7 @@ function campaign(build, style) {
       let t = true; while (t) t = Object.keys(D.TRAINING).sort((a, b) => s.meta.training[a] - s.meta.training[b]).some((x) => E.train(s, x));
       create(s, rng, BUILDS[build]);
       playOperative(s, rng, BUILDS[build], STYLES[style]);
-      for (const b of [5, 10, 15]) if (!seen[b] && s.meta.bestSector >= b) { seen[b] = 1; first[b].push(life + 1); if (b === 15) raidsTo15.push(s.meta.stats.raids); }
+      for (const b of [5, 10, 15]) if (!seen[b] && Math.max(0, ...Object.values(s.meta.bestByMap)) >= b) { seen[b] = 1; first[b].push(life + 1); if (b === 15) raidsTo15.push(s.meta.stats.raids); }
       if (seen[15]) break;
     }
   }

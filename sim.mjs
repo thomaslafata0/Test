@@ -124,7 +124,7 @@ for (let k = 0; k < CAMPAIGNS; k++) {
     if (life > 0) E.recruit(s, rng);
     createBot(s, rng);
     playLife(s, rng, byLife[life]);
-    for (const b of [5, 10, 15]) if (!seen[b] && s.meta.bestSector >= b) { seen[b] = 1; firstBoss[b].push(life + 1); }
+    for (const b of [5, 10, 15]) if (!seen[b] && Math.max(0, ...Object.values(s.meta.bestByMap)) >= b) { seen[b] = 1; firstBoss[b].push(life + 1); }
   }
   raidsTotal += s.meta.stats.raids;
 }
