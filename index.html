@@ -493,6 +493,41 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .resolve-link:hover { border-color: var(--sodium); }
 .auto-note { font-family: var(--mono); font-size: .66rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ion); }
 #app.still .popup-wrap, #app.still .aa { animation: none; }
+.tools.downtime { margin-top: 6px; }
+.tools.downtime .tool { border-color: #d9a53a55; color: var(--fg); }
+.tools.downtime .tool.on { background: var(--sodium); color: #111; border-color: var(--sodium); }
+.modal.dt { width: min(900px, 100%); }
+.dt .small { font-size: .8rem; }
+.dt-bar { display: grid; gap: 10px; }
+.dt-person { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 14px; align-items: center; padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--line); }
+.dt-person .dt-say { grid-column: 1 / -1; font-size: .95rem; }
+.dt-person .dt-say p { margin: 0; }
+.dt-who { display: flex; gap: 12px; align-items: center; }
+.dt-face { width: 56px; height: 56px; image-rendering: pixelated; border: 1px solid var(--line); background: var(--panel); flex: none; }
+.dt-face.ph { display: grid; place-items: center; font-family: var(--display); font-size: 1.6rem; color: var(--sodium); background: linear-gradient(160deg, #2a2d33, #15171b); }
+.dt-face.ph.keg7 { color: #9fd3ff; } .dt-face.ph.vess { color: #ff7a9a; } .dt-face.ph.juno { color: #ffd166; } .dt-face.ph.sable { color: #c8a2ff; }
+.dt-drink { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--sodium); background: #d9a53a12; }
+.dt-wheel { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 18px; align-items: start; }
+.dt-wheel-left { display: grid; gap: 8px; justify-items: center; text-align: center; }
+.wheel { width: 260px; height: 260px; }
+.dt-wheel-right { display: grid; gap: 10px; align-content: start; }
+.dt-bets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.dt-bets .btn.red:not(.primary) { border-color: #b53a2f; } .dt-bets .btn.black:not(.primary) { border-color: #777; }
+.dt-result { font-family: var(--display); font-size: 1.3rem; margin: 0; }
+.dt-result.good { color: var(--ok); } .dt-result.bad { color: var(--danger); }
+.dt-orbit { display: grid; gap: 10px; }
+.orbit-canvas { width: 100%; max-width: 768px; aspect-ratio: 384 / 180; image-rendering: pixelated; border: 1px solid var(--line); background: #05070c; justify-self: center; }
+.orbit-huds { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.hud-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; align-items: baseline; padding: 8px 10px; background: var(--panel-2); border: 1px solid var(--line); }
+.hud-line .bar { grid-column: 1 / -1; }
+.kv-strip { display: flex; flex-wrap: wrap; gap: 10px 24px; padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--line); }
+.doors.tiers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.door.tier { display: grid; gap: 6px; align-content: start; padding: 12px; }
+.door.tier.danger { border-color: var(--danger-dim); }
+.door.tier .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.door.tier .odds { font-family: var(--mono); font-size: .72rem; }
+.row.i.venture > div { min-width: 0; }
+@media (max-width: 700px) { .dt-wheel { grid-template-columns: minmax(0, 1fr); } .doors.tiers { grid-template-columns: minmax(0, 1fr); } .orbit-huds { grid-template-columns: minmax(0, 1fr); } }
 .board-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .board-table th { text-align: left; font-family: var(--mono); font-size: .66rem; letter-spacing: .1em; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); }
 .board-table td { padding: 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
@@ -517,6 +552,7 @@ import { Stage, loadSheets, sheetStill } from './stage.js';
 import * as A from './audio.js';
 import { iconURL, gearIconKey } from './icons.js';
 import { Town } from './town.js';
+import { Wheel, OrbitScene, loadDowntimeArt, artFor } from './downtime.js';
 import { Net, getCoopPrefs, setCoopPrefs, makeCode } from './net.js';
 import { BODIES, HAIR, HAIR_NAMES, SKINS, HAIRS, defaultLook, loadLayers, hasLayers, lookStill } from './look.js';
 
@@ -542,6 +578,7 @@ const isGuest = () => !!net && net.role === 'guest';
 const isHost = () => !!net && net.role === 'host';
 const myIdx = () => (isGuest() ? 1 : 0);
 // Actions that only touch this screen, never the game.
+const DOWNTIME = new Set(['drink', 'barchat', 'bet', 'stake', 'spin', 'invest', 'withdraw', 'shippart', 'shipcell', 'orbitgo', 'orbitact', 'orbitclose']);
 const LOCAL = new Set(['continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'pickmap', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready']);
 function coopChip() {
   if (!net) return '';
@@ -616,10 +653,20 @@ function statusStrip() {
     <div class="stat"><span class="label">${esc(S.currency)}</span><span class="v">${c.credits.toLocaleString()}</span></div>
     ${state.screen === 'town' ? `<button class="stat resolve-link" data-a="tab" data-v="character" title="Spend Resolve on the Character tab"><span class="label">${esc(S.meta)} \u00B7 spend</span><span class="v" style="color:var(--sodium)">${state.meta.resolve}</span></button>` : `<div class="stat"><span class="label">${esc(S.meta)}</span><span class="v" style="color:var(--sodium)">${state.meta.resolve}</span></div>`}
     </div>
+    ${downtimeBar()}
   </header>`;
 }
-
-// ---------- one-time tips ----------
+// The after-curfew row: only in the yard, only for the host.
+function downtimeBar() {
+  if (state.screen !== 'town' || state.run || isGuest()) return '';
+  const v = E.venturesTotal(state), left = E.marksLeft(state.char).length;
+  return `<nav class="tools downtime" aria-label="After curfew">
+    <button class="tool ${modal === 'bar' ? 'on' : ''}" data-a="modal" data-v="bar">The Lantern${state.char.drink ? ' \u00B7 round bought' : ''}</button>
+    <button class="tool ${modal === 'wheel' ? 'on' : ''}" data-a="modal" data-v="wheel">The Wheel</button>
+    <button class="tool ${modal === 'orbit' ? 'on' : ''}" data-a="modal" data-v="orbit">Orbit${state.orbit ? ' \u00B7 in flight' : left < 5 ? ` \u00B7 ${5 - left}/5 marks` : ''}</button>
+    <button class="tool ${modal === 'ventures' ? 'on' : ''}" data-a="modal" data-v="ventures">Ventures${v ? ` \u00B7 ${v.toLocaleString()} ${esc(S.cur)}` : ''}</button>
+  </nav>`;
+}
 const TIPS = {
   town: 'Walk into the freight terminal (top) to pick a mission. Back in town, Marrow\u2019s container sells gear, Doc Ilse patches you up, and the safehouse is where you spend Resolve. The buttons under the town open them directly.',
   route: 'Pick a door. Each sector has three rooms, and at least two of them will be fights. A boss waits at the end of every fifth sector.',
@@ -1216,6 +1263,7 @@ function endingScreen() {
 
 function modalView() {
   if (!modal) return '';
+  if (['bar', 'wheel', 'orbit', 'ventures'].includes(modal)) return downtimeView();
   const p = A.getPrefs();
   if (modal === 'board') return boardView();
   const body = modal === 'manual' ? `
@@ -1234,6 +1282,7 @@ function modalView() {
       <section><h3>Your turn</h3><p><b>Defend</b> also steadies your aim: your next shot deals +50%. <b>Skills</b> come from your weapon and high attributes; their cooldowns last for the whole sector, so choose your moment. <b>Stims</b> heal and stop bleeding and burning.</p></section>
       <section><h3>Status effects</h3><ul>${Object.values(D.STATUSES).map((x) => `<li><b>${esc(x.name)}</b>: ${esc(x.desc)}</li>`).join('')}</ul></section>
       <section><h3>Elites and bosses</h3><p>Elites (veterans) carry a modifier, such as Regenerating or Volatile. Bosses enrage at half health. Bosses always carry <b>contraband</b> and elites sometimes do: pick one of three perks that last until your operative dies. You have four pockets, so a fifth piece means dropping one.</p></section>
+      <section><h3>After curfew</h3><p>A second row of buttons in the yard. <b>The Lantern</b>: KEG-7 pours a round (+1 ATK, +4% crit next raid) and tells jokes; the regulars talk. <b>The Wheel</b>: roulette, one bet per spin, zero belongs to the house. <b>Orbit</b>: fly the cell\u2019s shuttle against the blockade. Wins pay credits and, on the harder runs, a permanent <b>Mark</b> (five exist). Lose the shuttle and the pilot dies. Refit the shuttle with credits; cell fittings cost Resolve and survive death. The odds shown are simulated for your current shuttle. <b>Ventures</b>: invest the cell\u2019s money; each venture ticks up or down once per raid and survives the operative.</p></section>
       <section><h3>Quirks and bulletins</h3><p>Regular enemies often have a <b>quirk</b>, like a Drunk trooper whose shots go wild or an Overclocked droid that cooks itself. Every raid also rolls a <b>Directorate bulletin</b>, such as Payday or Staff Party, that bends the rules until you leave.</p></section>
       <section><h3>Wanted and escaping</h3><p>Every raid an operative survives raises their <b>Wanted</b> level: enemies get 2.5% tougher per level, and pay 2.5% more. Lower it by lying low at the safehouse. Extracting right after a boss keeps the whole haul; slipping out between bosses costs 45% of it in bribes, and escaping mid-fight with <b>Run</b> or <b>Smoke</b> costs 65%. Past sector 5 the Directorate tightens its grip: bribes rise to 50% and 70%, enemies get 12% tougher and every price goes up 12%; past sector 10 it is 55%, 75%, 15% and 15%.</p></section>
       <section><h3>Getting stronger</h3><p><b>This operative</b>: levels (attribute points), gear, implants and contraband. All lost on death. <b>The cell</b>: Resolve buys permanent training and upgrades. Earn it from sectors (repeat clears pay only every other time), bosses, brave choices and contracts.</p></section>
@@ -1285,6 +1334,109 @@ function boardView() {
   </div></div>`;
 }
 
+// ---------- Downtime screens ----------
+const DT_TITLES = { bar: ['The Lantern', 'Tenement basement \u00b7 after curfew'], wheel: ['The Wheel', 'Back room of the Lantern'], orbit: ['Orbit', 'The cell\u2019s shuttle \u00b7 lift corridor'], ventures: ['Ventures', 'Sable\u2019s ledger'] };
+function downtimeView() {
+  const [title, where] = DT_TITLES[modal];
+  const body = { bar: barView, wheel: wheelView, orbit: orbitView, ventures: venturesView }[modal]();
+  return `<div class="modal-wrap" data-a="closemodal"><div class="modal popup wide dt dt-${modal}" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+    <div class="pop-head"><div style="display:grid;gap:2px"><span class="label">${esc(where)}</span><h2>${esc(title)}</h2></div><button class="tool" data-a="closemodal" aria-label="Close">Close</button></div>
+    <nav class="tabs pop-tabs">${['bar', 'wheel', 'orbit', 'ventures'].map((k) => `<button class="tab" aria-selected="${modal === k}" data-a="modal" data-v="${k}">${esc(DT_TITLES[k][0])}</button>`).join('')}</nav>
+    ${!E.inTown(state) ? '<p class="muted">Only between raids, and only in the yard.</p>' : body}
+  </div></div>`;
+}
+function dtPortrait(id, name) {
+  const im = artFor(`bar:${id}`);
+  return im ? `<img class="portrait dt-face" src="${im.src}" alt="${esc(name)}" width="96" height="96">` : `<div class="dt-face ph ${id}" aria-hidden="true"><span>${esc(name[0])}</span></div>`;
+}
+function barView() {
+  const c = state.char, B = D.BAR, cost = E.drinkCost(state), say = state.barSay || {};
+  const person = (p, who) => `<div class="dt-person"><div class="dt-who">${dtPortrait(p.id, p.name)}<div><div class="name">${esc(p.name)}</div><div class="muted small">${esc(p.role || p.desc)}</div></div></div>
+    <div class="dt-say">${say[who] ? `<p>\u201c${esc(say[who])}\u201d</p>` : `<p class="muted">${esc(p.role ? p.desc : 'Rag over one shoulder. Optics on you.')}</p>`}</div>
+    <div><button class="btn" data-a="barchat" data-v="${who}">${who === 'keg7' ? 'Ask for a joke' : 'Talk'}</button></div></div>`;
+  return `<p class="muted">Low ceiling, lower lights, a bar made from a cargo door. Nobody here is wanted. Nobody here is innocent either.</p>
+    <div class="dt-bar">
+      ${person(B.bartender, 'keg7')}
+      <div class="dt-drink"><div><div class="name">${esc(B.drink.name)} \u00b7 ${cr(cost)}</div><div class="muted small">${esc(B.drink.desc)}</div></div>
+        <button class="btn primary" data-a="drink" ${c.drink || c.credits < cost ? 'disabled' : ''}>${c.drink ? 'Round bought' : 'Buy a round'}</button></div>
+      ${B.regulars.map((r) => person(r, r.id)).join('')}
+    </div>`;
+}
+let wheel = null, wheelBusy = false;
+function wheelView() {
+  const c = state.char, w = state.wheel || (state.wheel = { bet: 'red', stake: 10, pick: 7 }), res = state.wheelResult, st = state.meta.wheel || { spins: 0, net: 0 };
+  const betBtn = (k) => `<button class="btn ${w.bet === k ? 'primary' : ''} ${k === 'red' ? 'red' : k === 'black' ? 'black' : ''}" data-a="bet" data-v="${k}" ${wheelBusy ? 'disabled' : ''}>${esc(E.BETS[k].name)} <span class="muted small">${E.BETS[k].pays}:1</span></button>`;
+  return `<div class="dt-wheel">
+    <div class="dt-wheel-left"><div id="wheel-slot"></div>
+      ${res ? `<p class="dt-result ${res.win ? 'good' : 'bad'}">${res.n} ${res.n === 0 ? 'green' : res.red ? 'red' : 'black'} \u00b7 ${res.win ? `you win ${res.delta}` : `you lose ${-res.delta}`} ${esc(S.cur)}</p>` : '<p class="muted small">A fixer called Ratchet runs the Wheel. Zero is the house. The house is always the house.</p>'}
+      <p class="muted small">${st.spins} spin${st.spins === 1 ? '' : 's'} \u00b7 net ${st.net >= 0 ? '+' : ''}${st.net} ${esc(S.cur)}</p></div>
+    <div class="dt-wheel-right">
+      <span class="label">Bet</span>
+      <div class="dt-bets">${['red', 'black', 'odd', 'even', 'low', 'high', 'd1', 'd2', 'd3', 'straight'].map(betBtn).join('')}</div>
+      ${w.bet === 'straight' ? `<label class="set-row" for="wheel-pick"><span>Number</span><input id="wheel-pick" class="text" type="number" min="0" max="36" value="${w.pick}" style="width:6ch" ${wheelBusy ? 'disabled' : ''}></label>` : ''}
+      <span class="label">Stake</span>
+      <div class="btnrow">${E.STAKES.map((v) => `<button class="btn ${w.stake === v ? 'primary' : ''}" data-a="stake" data-v="${v}" ${c.credits < v || wheelBusy ? 'disabled' : ''}>${v}</button>`).join('')}</div>
+      <button class="btn primary big" data-a="spin" ${wheelBusy || c.credits < w.stake ? 'disabled' : ''}>${wheelBusy ? 'Spinning\u2026' : `Spin \u00b7 ${w.stake} ${esc(S.cur)} on ${esc(E.BETS[w.bet].name)}`}</button>
+      <p class="muted small">You have ${c.credits.toLocaleString()} ${esc(S.cur)}. Sable says the dozens pay two to one and the house still wins.</p>
+    </div></div>`;
+}
+let orbitScene = null, orbitBusy = false;
+function orbitOdds(tier) {
+  // A quick simulation of this tier with the current shuttle and a sensible pilot, for the odds line.
+  const N = 120; let w = 0, j = 0;
+  for (let i = 0; i < N; i++) {
+    const r = E.seededRng(777 + i), c = { ...state.char, marks: [...(state.char.marks || [])], credits: 0, ejected: true };
+    const t = { meta: { ...state.meta, journal: [], ship: { ...state.meta.ship, cell: [...state.meta.ship.cell] } }, char: c, run: null, screen: 'town', orbit: null };
+    E.orbitStart(t, tier, r); let n = 0;
+    while (!t.orbit.over && n++ < 80) { const o = t.orbit; E.orbitAct(t, o.hull <= o.maxHull * 0.2 && o.eHull > o.eMaxHull * 0.5 ? 'jump' : (o.intent === 'volley' || o.intent === 'lock') ? 'evade' : o.intent === 'repair' ? 'overcharge' : 'fire', r); }
+    if (t.orbit.over === 'won') w++; else if (t.orbit.over === 'jumped') j++;
+  }
+  return { win: Math.round(w / N * 100), jump: Math.round(j / N * 100), dead: Math.round((N - w - j) / N * 100) };
+}
+function orbitView() {
+  const c = state.char, m = state.meta, o = state.orbit, me = E.shipStats(m);
+  const marks = Object.entries(D.MARKS).map(([k, mk]) => `<div class="row i ${(c.marks || []).includes(k) ? 'owned' : ''}">${ico('mark:' + k)}<div><div class="name">${esc(mk.name)}</div><div class="desc">${esc(mk.desc)}</div></div><span class="label">${(c.marks || []).includes(k) ? 'earned' : ''}</span></div>`).join('');
+  if (o) {
+    const t = D.ORBIT_TIERS.find((x) => x.id === o.tier), I = D.ORBIT_INTENTS[o.intent];
+    const log = o.log.slice(-6).map((l) => { const m2 = /^(\w+):(.*)$/.exec(l); return `<div class="${m2 ? m2[1] : ''}">${esc(m2 ? m2[2] : l)}</div>`; }).join('');
+    const done = o.over;
+    return `<div class="dt-orbit">
+      <div id="orbit-slot"></div>
+      <div class="orbit-huds"><div class="hud-line"><b>Shuttle</b><span class="num">${o.hull} / ${o.maxHull}</span>${bar(o.hull, o.maxHull)}</div><div class="hud-line"><b>${esc(t.shipName)}</b><span class="num">${o.eHull} / ${o.eMaxHull}</span>${bar(o.eHull, o.eMaxHull, 'enemy')}</div></div>
+      ${done ? `<div class="aa ${o.over === 'won' ? 'good' : o.over === 'jumped' || o.over === 'ejected' ? '' : 'bad'}"><div class="aa-main"><b>${o.over === 'won' ? 'Target destroyed.' : o.over === 'jumped' ? 'You jumped clear.' : o.over === 'ejected' ? 'Shuttle lost. The pod brought you home.' : 'Shuttle lost with all hands.'}</b> ${o.result && o.result.credits ? `+${o.result.credits} ${esc(S.cur)}.` : ''} ${o.result && o.result.mark ? `<span class="good">Mark earned: ${esc(D.MARKS[o.result.mark].name)}.</span>` : ''}</div><span></span><button class="btn primary" data-a="orbitclose">${o.result && !o.result.survived ? 'Signal lost' : 'Back to the yard'}</button></div>`
+        : `<div class="intent ${o.intent === 'volley' || o.intent === 'lock' ? 'danger' : ''}"><span class="dot"></span><div><b>${esc(I.label)}</b><div class="muted small">${esc(I.desc)}</div></div></div>
+      <div class="actions ${orbitBusy ? 'locked' : ''}">
+        <button class="btn primary twoline" data-a="orbitact" data-v="fire"><span class="bt">Fire<span class="k">1</span></span><span class="bs">${me.atk} dmg \u00b7 ${Math.round(t.evade * 100)}% it rolls clear</span></button>
+        <button class="btn twoline" data-a="orbitact" data-v="evade"><span class="bt">Evade<span class="k">2</span></span><span class="bs">70% to dodge, next shot +50%</span></button>
+        <button class="btn twoline" data-a="orbitact" data-v="overcharge"><span class="bt">Overcharge<span class="k">3</span></span><span class="bs">x2 dmg, \u22125 hull</span></button>
+        <button class="btn twoline" data-a="orbitact" data-v="jump"><span class="bt">Jump<span class="k">4</span></span><span class="bs">${Math.round(Math.min(0.9, 0.4 + me.evade + (c.background === 'runner' ? 0.1 : 0)) * 100)}% to escape, no reward</span></button>
+      </div>`}
+      <div class="log small">${log}</div>
+    </div>`;
+  }
+  const parts = Object.entries(D.SHIP_PARTS).map(([k, p]) => { const lvl = m.ship[k], cost = E.shipPartCost(state, k); return `<div class="row i">${ico('ship:' + k)}<div><div class="name">${esc(p.name)} <span class="num muted small">${lvl} / 3</span></div><div class="desc">${esc(p.desc)}</div><div class="pips">${[0, 1, 2].map((i) => `<i class="${i < lvl ? 'on' : ''}"></i>`).join('')}</div></div>${cost ? `<button class="btn" data-a="shippart" data-v="${k}" ${c.credits < cost ? 'disabled' : ''}>${cr(cost)}</button>` : '<span class="label">maxed</span>'}</div>`; }).join('');
+  const cell = D.SHIP_CELL.map((u) => { const own = m.ship.cell.includes(u.id); return `<div class="row i ${own ? 'owned' : ''}">${ico('ship:' + u.id)}<div><div class="name">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div></div>${own ? '<span class="label">fitted</span>' : `<button class="btn ${m.resolve >= u.cost ? 'primary' : ''}" data-a="shipcell" data-v="${u.id}" ${m.resolve < u.cost ? 'disabled' : ''}>${u.cost} ${esc(S.meta)}</button>`}</div>`; }).join('');
+  const tiers = D.ORBIT_TIERS.map((t) => { const od = orbitOdds(t.id); return `<div class="door tier ${od.dead >= 50 ? 'danger' : ''}"><span class="label">${esc(t.name)}</span><b>${esc(t.shipName)}</b><div class="desc">${esc(t.desc)}</div>
+    <div class="chips"><span class="chip">hull ${t.hull} \u00b7 guns ${t.atk}</span><span class="chip">${t.credits[0]}\u2013${t.credits[1]} ${esc(S.cur)}</span><span class="chip ${t.mark ? 'good' : ''}">${t.mark ? `${Math.round(t.mark * 100)}% Mark` : 'no Mark'}</span></div>
+    <div class="odds"><span class="good">${od.win}% win</span> \u00b7 <span>${od.jump}% jump clear</span> \u00b7 <span class="bad">${od.dead}% lost with the pilot</span></div>
+    <button class="btn ${od.dead >= 50 ? '' : 'primary'}" data-a="orbitgo" data-v="${t.id}">Launch</button></div>`; }).join('');
+  return `<p class="muted">The cell keeps a shuttle in a collapsed lift shaft. It flies badly, which is why the Directorate has not found it. Runs past the blockade pay in credits and, if you live, in <b>Marks</b>: permanent edges only orbit gives. Lose the shuttle and you lose the pilot.</p>
+    <div class="kv-strip"><div class="stat"><span class="label">Shuttle</span><span class="v">hull ${me.hull} \u00b7 guns ${me.atk} \u00b7 deflector ${me.shield} \u00b7 evade ${Math.round(me.evade * 100)}%</span></div><div class="stat"><span class="label">Marks</span><span class="v">${(c.marks || []).length} / 5</span></div></div>
+    <h3>Runs <span class="muted small">odds are simulated for your current shuttle</span></h3>
+    <div class="doors tiers">${tiers}</div>
+    <h3>Refit <span class="muted small">${esc(S.currency)}, this operative</span></h3>${parts}
+    <h3>Cell fittings <span class="muted small">${esc(S.meta)}, survive death</span></h3>${cell}
+    <h3>Marks</h3>${marks}`;
+}
+function venturesView() {
+  const c = state.char, V = D.VENTURES, total = E.venturesTotal(state);
+  const rows = V.map((v) => { const amt = Math.round(state.meta.ventures[v.id] || 0); return `<div class="row i venture">${ico('venture:' + v.id)}<div><div class="name">${esc(v.name)} ${amt ? `<span class="num good">${amt.toLocaleString()} ${esc(S.cur)}</span>` : ''}</div><div class="desc">${esc(v.desc)}</div>
+    <div class="btnrow" style="margin-top:6px"><input class="text" type="number" id="inv-${v.id}" min="${v.min}" step="10" value="${v.min}" style="width:9ch" aria-label="Amount"><button class="btn" data-a="invest" data-v="${v.id}" ${c.credits < v.min ? 'disabled' : ''}>Invest</button>${amt ? `<button class="btn" data-a="withdraw" data-v="${v.id}">Withdraw all</button>` : ''}</div></div></div>`; }).join('');
+  return `<p class="muted">Sable keeps the cell\u2019s money moving while operatives come and go. Ventures belong to the cell: they survive the operative who funded them. They tick once per raid, up or down. Safer than the Wheel. Less fun than the Wheel.</p>
+    <div class="kv-strip"><div class="stat"><span class="label">Invested</span><span class="v">${total.toLocaleString()} ${esc(S.cur)}</span></div><div class="stat"><span class="label">On you</span><span class="v">${c.credits.toLocaleString()} ${esc(S.cur)}</span></div></div>
+    ${rows}`;
+}
+
 function eventScreen() {
   const ev = E.eventById(state.event), res = state.eventResult;
   const opts = ev.options.map((o, i) => {
@@ -1330,10 +1482,10 @@ function heirloomPick() {
 function deathScreen() {
   const o = state.outcome;
   return `<section class="panel" style="padding:32px">
-    <span class="label">Signal lost \u00B7 ${esc(E.mapById(o.map).name)} \u00B7 Sector ${o.sector}</span>
+    <span class="label">Signal lost \u00B7 ${o.orbit ? 'the lift corridor' : `${esc(E.mapById(o.map).name)} \u00B7 Sector ${o.sector}`}</span>
     <h1 class="big-title" style="color:var(--danger)">${esc(o.name)}</h1>
     ${o.killerId ? `<div class="killer">${portraitImg({ id: o.killerId, name: o.killer, portrait: o.killerPortrait })}<span class="label">Last seen<br>engaging a ${esc(o.killer)}</span></div>` : ''}
-    <p class="story">Operative ${o.number} went down in the ${esc(E.sectorName(o.sector, o.map))}${o.killerId ? `, killed by a ${esc(o.killer)}` : `, taken by ${esc(o.killer)}`}. The ${o.credits.toLocaleString()} ${S.currency}, the gear, ${o.perks ? `${o.perks} piece${o.perks > 1 ? 's' : ''} of contraband, ` : ''}the implants and level ${o.level} went with them.</p>
+    <p class="story">Operative ${o.number} ${o.orbit ? `was lost in orbit when a ${esc(o.killer)} broke the shuttle apart` : `went down in the ${esc(E.sectorName(o.sector, o.map))}${o.killerId ? `, killed by a ${esc(o.killer)}` : `, taken by ${esc(o.killer)}`}`}. The ${o.credits.toLocaleString()} ${S.currency}, the gear, ${o.perks ? `${o.perks} piece${o.perks > 1 ? 's' : ''} of contraband, ` : ''}the implants and level ${o.level} went with them.</p>
     <dl class="kv"><dt>${esc(S.meta)} to spend</dt><dd style="color:var(--sodium)">${state.meta.resolve}</dd><dt>Deepest ever</dt><dd>Sector ${state.meta.bestSector}</dd>${o.rank ? `<dt>Leaderboard</dt><dd style="color:var(--sodium)">#${o.rank} of ${E.BOARD_SIZE} \u00B7 ${o.score} points <button class="btn" data-a="modal" data-v="board" style="margin-left:8px">View</button></dd>` : o.score ? `<dt>Last raid</dt><dd>${o.score} points <span class="muted">(#${E.BOARD_SIZE} holds ${E.boardFloor(state.meta)})</span></dd>` : ''}</dl>
     ${heirloomPick()}
     <p class="muted">Spend the Resolve at the safehouse (Character & Resolve) once your next operative is in town. Training and cell upgrades carry over.</p>
@@ -1383,6 +1535,10 @@ function render() {
   } else app.classList.remove('still');
   A.setAmbience(state.run ? E.mapById(state.run.map).theme : 'town');
   A.setMusic(state.run ? 'raid' : 'town');
+  const wslot = document.getElementById('wheel-slot');
+  if (wslot) { if (!wheel) { wheel = new Wheel(); globalThis.cinderWheel = wheel; } wslot.replaceWith(wheel.el); if (state.wheelResult && !wheelBusy) wheel.draw(state.wheelResult.n); }
+  const oslot = document.getElementById('orbit-slot');
+  if (oslot) { if (!orbitScene) orbitScene = new OrbitScene(); const o = state.orbit; orbitScene.set(D.ORBIT_TIERS.find((x) => x.id === o.tier).ship, { me: o.over === 'lost' || o.over === 'ejected', enemy: o.over === 'won' }); oslot.replaceWith(orbitScene.el); }
   const tslot = document.getElementById('town-slot');
   if (tslot) {
     tslot.replaceWith(town.el);
@@ -1486,6 +1642,7 @@ function act(a, v, k) {
   if (a === 'closemodal') { modal = null; confirmReset = false; state.report = null; render(); return; }
   if (busy && !modal) return;
   if (a === 'act') return fight(v);
+  if (DOWNTIME.has(a) && (isGuest() || wheelBusy || orbitBusy)) { A.play('denied'); return; }
   // The friend's game actions run on the host; a few need a different message.
   if (isGuest() && !LOCAL.has(a)) {
     if (a === 'create') { net.send({ t: 'create', draft: state.draft }); localDraft = null; A.play('click'); return; }
@@ -1512,6 +1669,29 @@ function applyAct(a, v, k) {
     case 'coopleave': leaveCoop(); return;
     case 'coopready': state.guestReady = !state.guestReady; if (net) net.send({ t: 'ready', on: state.guestReady }); A.play('click'); break;
     case 'modal': modal = v; A.play('click'); break;
+    case 'drink': ok = E.buyDrink(state); if (ok) { toast = 'KEG-7 pours. It does not spill. It is proud of that.'; A.play('perk'); } break;
+    case 'barchat': state.barSay = { ...(state.barSay || {}), [v]: E.barLine(state, v, rng) }; A.play('click'); break;
+    case 'bet': state.wheel.bet = v; A.play('click'); break;
+    case 'stake': state.wheel.stake = +v; A.play('click'); break;
+    case 'spin': {
+      const w = state.wheel, pick = +((document.getElementById('wheel-pick') || {}).value ?? w.pick); w.pick = pick;
+      const res = E.spinWheel(state, w.bet, w.stake, pick, rng);
+      if (!res) { ok = false; break; }
+      state.wheelResult = null; wheelBusy = true; save(); A.play('click');
+      setTimeout(async () => { if (wheel) await wheel.spinTo(res.n); state.wheelResult = res; wheelBusy = false; A.play(res.win ? 'perk' : 'denied'); render(); }, 50);
+      break;
+    }
+    case 'invest': { const n = Math.floor(+((document.getElementById(`inv-${v}`) || {}).value || 0)); ok = E.invest(state, v, n); break; }
+    case 'withdraw': ok = E.withdraw(state, v); break;
+    case 'shippart': ok = E.buyShipPart(state, v); break;
+    case 'shipcell': ok = E.buyShipCell(state, v); if (ok) A.play('perk'); break;
+    case 'orbitgo': ok = E.orbitStart(state, v, rng); if (ok) A.play('door'); break;
+    case 'orbitact': {
+      ok = E.orbitAct(state, v, rng);
+      if (ok && orbitScene) { const o = state.orbit; const ms = orbitScene.play(o.events); orbitBusy = true; save(); setTimeout(() => { orbitBusy = false; if (o.over === 'lost') { orbitScene.set(D.ORBIT_TIERS.find((x) => x.id === o.tier).ship, { me: true, enemy: false }); } render(); }, ms + 150); return; }
+      break;
+    }
+    case 'orbitclose': ok = E.orbitClose(state); if (ok) { if (state.screen === 'death') { modal = null; A.play('death'); } else A.play('door'); } break;
     case 'sound': A.setPref('sfx', !A.getPrefs().sfx); A.play('click'); break;
     case 'setpref': A.setPref(v, !A.getPrefs()[v]); A.play('click'); break;
     case 'tip': state.meta.tips[v] = true; A.play('click'); break;
@@ -1593,6 +1773,7 @@ document.addEventListener('change', (ev) => { if (ev.target.id === 'vol') A.play
 document.addEventListener('keydown', (ev) => {
   if (ev.key === 'Escape' && modal) { act('closemodal'); return; }
   if (ev.key === 'Escape' && state.compare !== null && state.compare !== undefined && state.screen === 'town') { act('closecompare'); return; }
+  if (modal === 'orbit' && state.orbit && !state.orbit.over && ['1', '2', '3', '4'].includes(ev.key)) { act('orbitact', ['fire', 'evade', 'overcharge', 'jump'][+ev.key - 1]); return; }
   if (ev.key === 'Escape' && state.popup && state.screen === 'town') { act('closepopup'); return; }
   if (ev.key === 'Escape' && state.screen === 'town' && globalThis.cinderTown && globalThis.cinderTown.interior && !globalThis.cinderTown.offer) { globalThis.cinderTown.exit(); return; }
   if (ev.key === 'Escape' && state.screen === 'loot') { act('lootsell'); return; }
@@ -1639,6 +1820,7 @@ function start(data) {
   render();
   seedBoard();
   loadLayers().then((ok) => { if (ok && state.screen === 'create') render(); });
+  loadDowntimeArt().then((ok) => { if (ok && modal) render(); });
   // PixelLab sheets, if any have been delivered. Re-render so the stage picks them up.
   loadSheets().then((n) => { if (n && ['combat', 'victory', 'death'].includes(state.screen)) { stage.enemyRef = null; stage.player = null; render(); } });
 }

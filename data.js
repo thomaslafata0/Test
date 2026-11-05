@@ -612,3 +612,83 @@ export const BULLETINS = [
   { id: 'lockdown',   name: 'Lockdown',        weight: 1.5, desc: 'Enemies +10% ATK, but +25% credits for the trouble.' },
   { id: 'shift',      name: 'Shift Change',    weight: 1.5, desc: 'The first enemy in every sector is caught off guard.' },
 ];
+
+// ---------- Downtime: the after-curfew side of the yard ----------
+// Permanent marks an operative can earn in orbit. Five exist; an operative can hold all five.
+export const MARKS = {
+  hardened: { name: 'Pressure-hardened', desc: '+10% max HP. You stopped flinching at hull alarms.', hp: 0.1 },
+  reckoning: { name: 'Dead Reckoning', desc: '+8% crit chance. Lead the target, every time.', crit: 0.08 },
+  blockade: { name: 'Blockade Runner', desc: '+15% chance to escape a fight. Nobody catches you twice.', escape: 0.15 },
+  salvage: { name: 'Salvage Rights', desc: '+12% credits from everything. You know what sells.', credits: 0.12 },
+  coldblood: { name: 'Cold-blooded', desc: '+1 SPD and +1 DEF. Vacuum calm.', spd: 1, def: 1 },
+};
+// The cell's shuttle. Levels are bought with the operative's credits; cell upgrades with Resolve and survive death.
+export const SHIP_PARTS = {
+  hull: { name: 'Hull plating', per: 15, base: 40, desc: 'Hull points per level.', cost: [120, 260, 480] },
+  guns: { name: 'Rail cannons', per: 3, base: 8, desc: 'Damage per level.', cost: [140, 300, 540] },
+  shields: { name: 'Deflector', per: 2, base: 1, desc: 'Damage absorbed from every hit, per level.', cost: [110, 240, 450] },
+  engines: { name: 'Drive tuning', per: 0.08, base: 0.1, desc: 'Evade chance and jump odds, per level.', cost: [130, 280, 500] },
+};
+export const SHIP_CELL = [
+  { id: 'ejector', name: 'Ejection pod', cost: 10, desc: 'When the shuttle is destroyed, the pilot has a 50% chance to drift home alive. Once per operative.' },
+  { id: 'targeting', name: 'Targeting array', cost: 8, desc: 'Rail cannons crit (x1.6) 20% of the time.' },
+  { id: 'salvager', name: 'Salvage claw', cost: 6, desc: 'Orbit wins pay 25% more credits.' },
+];
+// Enemy ships by run tier. mark: chance a win grants a Mark.
+export const ORBIT_TIERS = [
+  { id: 'low', name: 'Low orbit', ship: 'cutter', shipName: 'Patrol Cutter', hull: 40, atk: 8, shield: 1, evade: 0.1, credits: [70, 130], mark: 0, desc: 'A customs cutter on a lazy loop. Credits, no glory.', fx: ['fire', 'fire', 'volley', 'repair'] },
+  { id: 'mid', name: 'The blockade line', ship: 'corvette', shipName: 'Customs Corvette', hull: 70, atk: 11, shield: 2, evade: 0.15, credits: [160, 280], mark: 0.4, desc: 'A corvette that shoots first. A real chance of a Mark.', fx: ['fire', 'volley', 'fire', 'lock', 'repair'] },
+  { id: 'high', name: 'The Warden\u2019s watch', ship: 'frigate', shipName: 'Blockade Frigate', hull: 100, atk: 15, shield: 2, evade: 0.12, credits: [320, 520], mark: 1, desc: 'The frigate that owns the lift corridor. A Mark if you live; the pilot if you don\u2019t.', fx: ['fire', 'lock', 'volley', 'fire', 'volley', 'repair'] },
+];
+export const ORBIT_INTENTS = { fire: { label: 'Firing', desc: 'A normal volley.' }, volley: { label: 'Full broadside', desc: 'x1.8 damage. Evade it.' }, lock: { label: 'Target lock', desc: 'Its next shot cannot miss and ignores half your deflector.' }, repair: { label: 'Damage control', desc: 'It repairs 15% of its hull. Hit it hard now.' } };
+// Ventures: the cell's money working while operatives die. Ticked after every raid.
+export const VENTURES = [
+  { id: 'stall', name: 'Noodle stall share', rate: 0.06, bust: 0.04, loss: 0.25, min: 50, desc: 'A quiet cut of the vendor\u2019s broth money. +6% per raid; a 4% chance per raid that a Directorate inspection costs a quarter of it.' },
+  { id: 'consignment', name: 'Marrow\u2019s consignment', rate: 0.14, bust: 0.12, loss: 0.5, min: 100, desc: 'Marrow moves your goods through the market. +14% per raid; a 12% chance per raid that a raid on the stall loses half.' },
+  { id: 'bond', name: 'Smuggler\u2019s bond', rate: 0.3, bust: 0.22, loss: 1, min: 150, desc: 'A share in a lift-corridor run. +30% per raid; a 22% chance per raid that the ship never comes back and the money with it.' },
+];
+// The Lantern: a tenement-basement bar that opens after curfew.
+export const BAR = {
+  drink: { name: 'A round', cost: 6, desc: 'Foundry gin. +1 ATK and +4% crit on your next raid.' },
+  bartender: { id: 'keg7', name: 'KEG-7', desc: 'A loader droid somebody bolted a bar towel onto. It has opinions.', jokes: [
+    'Why did the Directorate auditor cross the road? To count the chickens on the other side. Twice.',
+    'I used to lift crates for a living. Now I lift spirits. The pay is the same: nothing.',
+    'A patrol trooper walks into a bar. Everyone else walks out the back. Classic.',
+    'What do you call a Supervisor with a sense of humour? Reassigned.',
+    'My cousin was a cargo crawler. Three wheels, no brakes. He runs the freight office now.',
+    'They say the curfew is for our safety. Mine too, apparently. I was built in daylight.',
+    'I told the Supervisor a joke about the quota. He didn\u2019t laugh. Then he raised it.',
+    'Two droids walk into a bar. The second one should have seen it coming; the first one had no optics.',
+    'Doc Ilse says I drink too much coolant. Doc Ilse also charges by the stitch.',
+    'The casino next door is fair. Fair to the house. That is a kind of fair.',
+    'Heard the garrison got hit last night. Not by me. I was here, polishing glasses. Loudly.',
+    'A Mark from orbit? Impressive. I got mine from a forklift. It is on my chassis.',
+    'You look like you need a drink. Everyone does. It is the lighting.',
+    'What is the difference between the Directorate and a leaky valve? You can fix a valve.',
+    'I once served the Warden. Terrible tipper. Wonderful hull.',
+    'Last call is at dawn. First call was three years ago, and nobody answered.',
+  ] },
+  regulars: [
+    { id: 'vess', name: 'Vess', role: 'Dancer, The Lantern', desc: 'Runs the floor and half the rumours in the yard. Smiles like she already knows how your night ends.', lines: [
+      'You walk like someone who just came back from the garrison. Buy me a drink and I won\u2019t say that any louder.',
+      'The Wheel? I only play the numbers KEG-7 can\u2019t count to. So all of them.',
+      'If you make it to orbit, bring me back a star. A real one. I\u2019ll know.',
+      'Careful with Juno. She\u2019ll talk you into a cockpit and out of your credits.',
+      'You\u2019ve got a look. Not a good look. A look that comes back, though. Keep it.',
+    ] },
+    { id: 'juno', name: 'Juno', role: 'Lift pilot, grounded', desc: 'Flew the orbital lift until the Directorate took her licence. Still smells of ozone.', lines: [
+      'The frigate on the Warden\u2019s watch rolls left before every broadside. Evade left. You\u2019re welcome.',
+      'They grounded me for \u201cunauthorised joy\u201d. It\u2019s on the form.',
+      'Your shuttle? I\u2019ve seen it. I\u2019ve seen toasters with better shielding. Fix the deflector first.',
+      'Buy me a round and I\u2019ll tell you where the cutter patrols are thin. Buy two and I\u2019ll fly it myself. Kidding. Mostly.',
+      'You came back. Pilots who come back get a nickname. Yours is \u201cagain\u201d.',
+    ] },
+    { id: 'sable', name: 'Sable', role: 'Marrow\u2019s cousin', desc: 'Keeps the books nobody is supposed to see, and dresses like the curfew is optional.', lines: [
+      'Marrow\u2019s consignment pays. Until it doesn\u2019t. I\u2019d keep half in the stall. Boring money is still money.',
+      'The dozens on the Wheel pay two to one. The house still wins. That\u2019s why it has a roof.',
+      'You spend like someone who doesn\u2019t expect a next week. Sweet. Dumb, but sweet.',
+      'I don\u2019t date operatives. I did once. I have his coat. It\u2019s a good coat.',
+      'If you ever hit the top of that leaderboard, I\u2019ll frame it. Right next to the warrants.',
+    ] },
+  ],
+};

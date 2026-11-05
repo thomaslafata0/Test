@@ -199,6 +199,22 @@ const DRAW = {
   'room:rest': (g) => { g.rect(2, 12, 20, 5, 'brown'); g.rect(2, 9, 6, 4, 'white'); g.rect(8, 10, 14, 3, 'olive'); g.rect(2, 17, 2, 4, 'brown', 0); g.rect(20, 17, 2, 4, 'brown', 0); },
   'room:cells': (g) => { ring(g, 7, 8, 5, 'gold', 1, 2); g.rect(11, 7, 11, 3, 'gold'); g.rect(17, 10, 2, 4, 'gold', 0); g.rect(20, 10, 2, 3, 'gold', 0); },
   'room:cargo': (g) => { crate(g, 'grey'); for (let x = 3; x < 21; x += 4) g.line(x, 20, x + 3, 17, 'yellow', 1); },
+  // Downtime: Marks, shuttle parts and fittings, ventures.
+  'mark:hardened': (g) => { g.rect(5, 4, 14, 16, 'grey'); g.rect(7, 6, 10, 12, 'navy'); g.rect(10, 9, 4, 6, 'ion', 2); },
+  'mark:reckoning': (g) => { ring(g, 12, 12, 8, 'gold', 1, 2); ring(g, 12, 12, 3, 'red', 2, 1); g.rect(11, 2, 2, 5, 'gold', 2); g.rect(11, 17, 2, 5, 'gold', 2); },
+  'mark:blockade': (g) => { g.tri(3, 16, 13, 6, 21, 12, 'ion', 1); g.rect(3, 15, 10, 4, 'ion', 0); g.rect(14, 10, 7, 3, 'yellow', 2); },
+  'mark:salvage': (g) => { coin(g, 9, 13, 6); coin(g, 16, 9, 5); },
+  'mark:coldblood': (g) => { g.rect(11, 3, 2, 18, 'white', 2); g.rect(3, 11, 18, 2, 'white', 2); g.line(5, 5, 19, 19, 'ion', 1); g.line(19, 5, 5, 19, 'ion', 1); },
+  'ship:hull': (g) => { g.rect(4, 6, 16, 12, 'grey'); g.rect(6, 8, 12, 8, 'grey', 2); g.rect(9, 10, 6, 4, 'black', 0); },
+  'ship:guns': (g) => { g.rect(3, 10, 18, 4, 'black'); g.rect(14, 9, 8, 6, 'grey'); g.rect(2, 11, 4, 2, 'yellow', 2); },
+  'ship:shields': (g) => { ring(g, 12, 12, 9, 'ion', 1, 2); g.rect(9, 8, 6, 8, 'ion', 2); },
+  'ship:engines': (g) => { g.rect(6, 4, 12, 10, 'grey'); g.rect(8, 14, 8, 3, 'black'); g.tri(7, 17, 17, 17, 12, 22, 'yellow', 2); },
+  'ship:ejector': (g) => { g.ellipse(12, 10, 7, 9, 'white'); g.rect(9, 8, 6, 5, 'ion', 2); g.rect(8, 18, 8, 3, 'red', 1); },
+  'ship:targeting': (g) => { ring(g, 12, 12, 8, 'red', 1, 1); g.rect(11, 4, 2, 16, 'red', 2); g.rect(4, 11, 16, 2, 'red', 2); },
+  'ship:salvager': (g) => { g.rect(10, 2, 4, 10, 'grey'); g.rect(5, 12, 14, 3, 'grey', 2); g.rect(5, 15, 3, 6, 'grey', 0); g.rect(16, 15, 3, 6, 'grey', 0); coin(g, 12, 18, 3); },
+  'venture:stall': (g) => { g.rect(4, 10, 16, 9, 'olive'); g.rect(3, 7, 18, 3, 'red', 2); g.rect(6, 4, 4, 3, 'white', 1); },
+  'venture:consignment': (g) => { crate(g, 'navy'); coin(g, 17, 7, 4); },
+  'venture:bond': (g) => { g.rect(4, 3, 16, 18, 'paper'); for (let y = 6; y < 18; y += 3) g.rect(7, y, 10, 1, 'grey', 1); g.rect(13, 14, 6, 6, 'red', 1); },
   'room:boss': (g) => { skull(g, 'red'); g.tri(4, 3, 8, 3, 6, 0, 'gold', 2); g.tri(10, 3, 14, 3, 12, 0, 'gold', 2); g.tri(16, 3, 20, 3, 18, 0, 'gold', 2); g.rect(4, 3, 16, 2, 'gold'); },
 };
 

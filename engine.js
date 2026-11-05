@@ -66,7 +66,7 @@ export const perkById = (id) => D.PERKS.find((p) => p.id === id);
 // ---------- state ----------
 export function newMeta() {
   return { resolve: 0, totalResolve: 0, training: { hp: 0, atk: 0, def: 0, spd: 0 }, cell: [], operatives: 0, bestSector: 0, bestByMap: {},
-    fallen: [], contracts: [], liberated: {}, threat: 0, heirloom: null, tips: {}, endingSeen: false, stats: { kills: 0, bosses: 0, raids: 0 }, board: [], boardSeeded: false };
+    fallen: [], contracts: [], liberated: {}, threat: 0, heirloom: null, tips: {}, endingSeen: false, stats: { kills: 0, bosses: 0, raids: 0 }, board: [], boardSeeded: false, ship: { hull: 0, guns: 0, shields: 0, engines: 0, cell: [] }, ventures: {}, orbitWins: 0 };
 }
 
 export function newGame(rng) {
@@ -91,6 +91,8 @@ export function migrate(s, rng) {
   }
   if (s && s.v === VERSION) {
     if (s.meta && !s.meta.board) s.meta.board = [];
+    if (s.meta && !s.meta.ship) s.meta.ship = { hull: 0, guns: 0, shields: 0, engines: 0, cell: [] };
+    if (s.meta && !s.meta.ventures) s.meta.ventures = {};
     for (const k of (s.meta && s.meta.contracts) || []) if (!k.done) k.credits = contractCredits(k.kind, k.n);
     return s;
   }
@@ -447,15 +449,16 @@ export function statsOf(meta, c) {
   const rMain = (mainStat(gearIn(c, 'ranged')) || { v: 0 }).v, mMain = (mainStat(gearIn(c, 'melee')) || { v: 0 }).v;
   const optic = hasImp(c, 'optic') ? 0.08 : 0, gadget = baseOf(gearIn(c, 'gadget')) || {};
   const hp = B.hp + t.hp * D.TRAINING.hp.per + (c.level - 1) * 5 + Math.round(str * TUNE.strHp) + (c.background === 'foundry' ? 15 + 2 * (c.level - 1) : 0) + (hasImp(c, 'pain') ? 20 : 0) + gearBonus(c, 'hp');
+  const mk = markSum(c), drink = c.drink ? 1 : 0;
   return {
-    maxHp: Math.round(hp * (hasTrait(c, 'stalwart') ? 1.12 : 1)),
-    atk: common + rMain + (w.type === 'heavy' ? Math.floor(str * TUNE.strAtk) : Math.floor(agi * TUNE.agiAtk)),
-    atkM: common + mMain + Math.floor(str * TUNE.strAtk),
-    def: B.def + (c.background === 'foundry' ? 1 : 0) + t.def * D.TRAINING.def.per + Math.floor((c.level - 1) / 2) + def + gearBonus(c, 'def') + (hasImp(c, 'dermal') ? 3 : 0),
-    spd: B.spd + (c.background === 'runner' ? 1 : 0) + t.spd * D.TRAINING.spd.per + Math.floor((c.level - 1) / 3) + agi + (hasImp(c, 'reflex') ? 2 : 0) + spd + gearBonus(c, 'spd'),
+    maxHp: Math.round(hp * (hasTrait(c, 'stalwart') ? 1.12 : 1) * (1 + mk.hp)),
+    atk: common + rMain + drink + (w.type === 'heavy' ? Math.floor(str * TUNE.strAtk) : Math.floor(agi * TUNE.agiAtk)),
+    atkM: common + mMain + drink + Math.floor(str * TUNE.strAtk),
+    def: B.def + (c.background === 'foundry' ? 1 : 0) + t.def * D.TRAINING.def.per + Math.floor((c.level - 1) / 2) + def + gearBonus(c, 'def') + (hasImp(c, 'dermal') ? 3 : 0) + mk.def,
+    spd: B.spd + (c.background === 'runner' ? 1 : 0) + t.spd * D.TRAINING.spd.per + Math.floor((c.level - 1) / 3) + agi + (hasImp(c, 'reflex') ? 2 : 0) + spd + gearBonus(c, 'spd') + mk.spd,
     dodge: (agi - 1) * TUNE.agiDodge + (c.background === 'runner' ? 0.05 : 0),
-    crit: 0.05 + (w.crit || 0) + critAll + optic + (agi - 1) * TUNE.agiCrit + gearBonus(c, 'crit', 'ranged') / 100,
-    critM: 0.05 + (mw.crit || 0) + critAll + optic + gearBonus(c, 'crit', 'melee') / 100,
+    crit: 0.05 + (w.crit || 0) + critAll + optic + (agi - 1) * TUNE.agiCrit + gearBonus(c, 'crit', 'ranged') / 100 + mk.crit + drink * 0.04,
+    critM: 0.05 + (mw.crit || 0) + critAll + optic + gearBonus(c, 'crit', 'melee') / 100 + mk.crit + drink * 0.04,
     carry: 4 + (has(c, 'belt') ? 3 : 0) + carry,
     slots: 2 + (attr(c, 'int') >= 4 ? 1 : 0) + (attr(c, 'int') >= 8 ? 1 : 0) + (c.background === 'clerk' ? 1 : 0),
     tech: (1 + 0.1 * attr(c, 'int')) * (hasTrait(c, 'overcharge') ? 1.2 : 1) * (1 + (gadget.techBoost || 0)),
@@ -464,6 +467,12 @@ export function statsOf(meta, c) {
   };
 }
 export const stats = (s) => statsOf(s.meta, s.char);
+// Sum of an operative's permanent Marks (won in orbit).
+export function markSum(c) {
+  const t = { hp: 0, crit: 0, escape: 0, credits: 0, spd: 0, def: 0 };
+  for (const id of c.marks || []) { const m = D.MARKS[id]; if (m) for (const k of Object.keys(t)) t[k] += m[k] || 0; }
+  return t;
+}
 export const price = (s, cost) => Math.round(cost * hard(s).price * Math.max(0.6, 1 - 0.04 * (attr(s.char, 'cha') - 1)) * (s.char.background === 'preacher' ? 0.9 : 1));
 export const meetsReq = (c, req) => !req || Object.entries(req).every(([k, v]) => attr(c, k) >= v);
 export const reqText = (req) => req ? Object.entries(req).map(([k, v]) => `${D.ATTRS[k].short} ${v}`).join(', ') : '';
@@ -671,7 +680,7 @@ export function creditMult(s) {
   const c = s.char, t = s.run ? s.run.threat : s.meta.threat || 0;
   const b = s.run ? s.run.bulletin : null;
   const cha = 1 + TUNE.chaCredits * (attr(c, 'cha') - 1), wanted = 1 + TUNE.wanted * (s.run ? s.run.wanted || 0 : 0);
-  return cha * wanted * (has(c, 'fence') ? 1.25 : 1) * (hasPerk(c, 'chit') ? 1.2 : 1) * (1 + gearBonus(c, 'credits') / 100) * (1 + 0.15 * t) * (b === 'payday' ? 1.3 : b === 'lockdown' ? 1.25 : 1);
+  return cha * wanted * (has(c, 'fence') ? 1.25 : 1) * (hasPerk(c, 'chit') ? 1.2 : 1) * (1 + gearBonus(c, 'credits') / 100) * (1 + 0.15 * t) * (1 + markSum(c).credits) * (b === 'payday' ? 1.3 : b === 'lockdown' ? 1.25 : 1);
 }
 
 // ---------- status effects ----------
@@ -961,7 +970,7 @@ export function autoAction(s) {
 }
 export function runChance(s) {
   const st = stats(s), e = s.run.enemy;
-  const ch = clamp(0.45 + (st.spd - e.spd) * 0.06 + (s.char.background === 'runner' ? 0.25 : 0), 0.1, 0.95);
+  const ch = clamp(0.45 + (st.spd - e.spd) * 0.06 + (s.char.background === 'runner' ? 0.25 : 0) + markSum(s.char).escape, 0.1, 0.95);
   return e.boss ? ch * 0.5 : ch;
 }
 export function dodgeChance(st, e) { return clamp(0.05 + (st.spd - e.spd) * 0.03 + (st.dodge || 0), 0, 0.45); }
@@ -1638,7 +1647,7 @@ export function endRun(s, how, rngForRestock = Math.random) {
     a.raidScore = raidScore(r, a, how).score;
     a.rank = recordScore(s, a, how);
     a.wanted = (a.wanted || 0) + 1;
-    a.fed = false;
+    a.fed = false; a.drink = false;
     if (rngForRestock) restockMarket(s, rngForRestock);
   });
   let home = '';
@@ -1652,6 +1661,8 @@ export function endRun(s, how, rngForRestock = Math.random) {
   s.notice = (how === 'extracted'
     ? `You made it out of ${sectorName(r.sector, r.map)}.${lost ? ` Slipping out early cost ${lost} ${D.SETTING.cur} in bribes at the gate.` : ''}${home} Spend it before your luck runs out.`
     : `You escaped from ${sectorName(r.sector, r.map)}${lost ? `, but dropped ${lost} ${D.SETTING.cur} on the way out` : ''}.`) + rank;
+  const vn = tickVentures(s, rngForRestock || Math.random);
+  if (vn) s.notice += ' ' + vn;
   s.run = null;
   s.screen = allLiberated(s) && !s.meta.endingSeen ? 'ending' : 'town';
   s.tab = 'clinic';
@@ -1753,4 +1764,197 @@ export function recruit(s, rng, slot = 'char') {
   s.draft = newDraft(s.meta, rng);
   s.screen = 'create';
   s.notice = null;
+}
+
+
+// ---------- Downtime: the Lantern, the Wheel, orbit runs and ventures ----------
+export const inTown = (s) => !s.run && !!s.char && s.screen === 'town';
+
+// The Lantern.
+export function buyDrink(s) {
+  const c = s.char, cost = Math.round(D.BAR.drink.cost * hard(s).price);
+  if (!inTown(s) || c.drink || c.credits < cost) return false;
+  c.credits -= cost; c.drink = true; ledger(s, 'spend:bar', cost);
+  journal(s, `${c.name} buys a round at the Lantern.`);
+  return true;
+}
+export const drinkCost = (s) => Math.round(D.BAR.drink.cost * hard(s).price);
+export function barLine(s, who, rng) {
+  const c = s.char;
+  c.barSeen = c.barSeen || {};
+  if (who === 'keg7') { const j = D.BAR.bartender.jokes; const i = (c.barSeen.keg7 = ((c.barSeen.keg7 ?? Math.floor(rng() * j.length)) + 1) % j.length); return j[i]; }
+  const r = D.BAR.regulars.find((x) => x.id === who);
+  if (!r) return '';
+  const i = (c.barSeen[who] = ((c.barSeen[who] ?? Math.floor(rng() * r.lines.length)) + 1) % r.lines.length);
+  return r.lines[i];
+}
+
+// The Wheel: European roulette, one bet per spin.
+export const ROULETTE_RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
+export const WHEEL_ORDER = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
+export const BETS = {
+  red: { name: 'Red', pays: 1, test: (n) => n > 0 && ROULETTE_RED.has(n) }, black: { name: 'Black', pays: 1, test: (n) => n > 0 && !ROULETTE_RED.has(n) },
+  odd: { name: 'Odd', pays: 1, test: (n) => n > 0 && n % 2 === 1 }, even: { name: 'Even', pays: 1, test: (n) => n > 0 && n % 2 === 0 },
+  low: { name: '1\u201318', pays: 1, test: (n) => n >= 1 && n <= 18 }, high: { name: '19\u201336', pays: 1, test: (n) => n >= 19 },
+  d1: { name: '1st dozen', pays: 2, test: (n) => n >= 1 && n <= 12 }, d2: { name: '2nd dozen', pays: 2, test: (n) => n >= 13 && n <= 24 }, d3: { name: '3rd dozen', pays: 2, test: (n) => n >= 25 },
+  straight: { name: 'Single number', pays: 35, test: (n, pick) => n === pick },
+};
+export const STAKES = [10, 25, 50, 100, 250];
+export function spinWheel(s, bet, stake, pick, rng) {
+  const c = s.char, b = BETS[bet];
+  if (!inTown(s) || !b || !STAKES.includes(stake) || c.credits < stake) return null;
+  if (bet === 'straight' && !(pick >= 0 && pick <= 36)) return null;
+  const n = Math.floor(rng() * 37), win = b.test(n, pick);
+  const delta = win ? stake * b.pays : -stake;
+  c.credits += delta; ledger(s, win ? 'wheel' : 'spend:wheel', Math.abs(delta));
+  s.meta.wheel = s.meta.wheel || { spins: 0, net: 0, best: 0 };
+  s.meta.wheel.spins += 1; s.meta.wheel.net += delta; s.meta.wheel.best = Math.max(s.meta.wheel.best, delta);
+  journal(s, `${c.name} ${win ? 'wins' : 'loses'} ${Math.abs(delta)} ${D.SETTING.cur} on the Wheel (${n}).`);
+  return { n, red: ROULETTE_RED.has(n), win, delta, bet, stake, pick };
+}
+
+// Ventures: cell money, ticked once per raid.
+export function invest(s, id, amount) {
+  const v = D.VENTURES.find((x) => x.id === id), c = s.char;
+  if (!v || !inTown(s) || amount < v.min || c.credits < amount) return false;
+  c.credits -= amount; ledger(s, 'spend:ventures', amount);
+  s.meta.ventures[id] = Math.round((s.meta.ventures[id] || 0) + amount);
+  journal(s, `${c.name} puts ${amount} ${D.SETTING.cur} into ${v.name}.`);
+  return true;
+}
+export function withdraw(s, id) {
+  const amt = Math.round(s.meta.ventures[id] || 0);
+  if (!inTown(s) || amt <= 0) return false;
+  s.meta.ventures[id] = 0; s.char.credits += amt; ledger(s, 'ventures', amt);
+  journal(s, `${s.char.name} pulls ${amt} ${D.SETTING.cur} out of ${D.VENTURES.find((x) => x.id === id).name}.`);
+  return true;
+}
+// Returns a sentence about anything notable, or ''.
+export function tickVentures(s, rng) {
+  const notes = [];
+  for (const v of D.VENTURES) {
+    const amt = s.meta.ventures[v.id] || 0;
+    if (amt <= 0) continue;
+    if (rng() < v.bust) {
+      const lost = Math.round(amt * v.loss);
+      s.meta.ventures[v.id] = amt - lost;
+      notes.push(v.loss >= 1 ? `${v.name}: the run never came back. ${lost} ${D.SETTING.cur} gone.` : `${v.name} took a hit: \u2212${lost} ${D.SETTING.cur}.`);
+      journal(s, `${v.name} loses ${lost} ${D.SETTING.cur}.`, 'bad');
+    } else {
+      const gain = Math.round(amt * v.rate);
+      s.meta.ventures[v.id] = amt + gain;
+      journal(s, `${v.name} grows by ${gain} ${D.SETTING.cur}.`, 'good');
+    }
+  }
+  return notes.join(' ');
+}
+export const venturesTotal = (s) => Object.values(s.meta.ventures || {}).reduce((t, v) => t + (v || 0), 0);
+
+// The shuttle.
+export function shipStats(m) {
+  const sh = m.ship, P = D.SHIP_PARTS;
+  return { hull: P.hull.base + P.hull.per * sh.hull, atk: P.guns.base + P.guns.per * sh.guns, shield: P.shields.base + P.shields.per * sh.shields, evade: P.engines.base + P.engines.per * sh.engines, crit: sh.cell.includes('targeting') ? 0.2 : 0 };
+}
+export const shipPartCost = (s, part) => { const lvl = s.meta.ship[part]; return lvl >= 3 ? 0 : Math.round(D.SHIP_PARTS[part].cost[lvl] * hard(s).price); };
+export function buyShipPart(s, part) {
+  const cost = shipPartCost(s, part);
+  if (!inTown(s) || !cost || s.char.credits < cost) return false;
+  s.char.credits -= cost; s.meta.ship[part] += 1; ledger(s, 'spend:ship', cost);
+  return true;
+}
+export function buyShipCell(s, id) {
+  const u = D.SHIP_CELL.find((x) => x.id === id), m = s.meta;
+  if (!u || m.ship.cell.includes(id) || m.resolve < u.cost) return false;
+  m.resolve -= u.cost; m.ship.cell.push(id);
+  return true;
+}
+export const marksLeft = (c) => Object.keys(D.MARKS).filter((k) => !(c.marks || []).includes(k));
+
+// An orbit run: a turn-based ship fight kept in s.orbit. Losing the shuttle kills the operative.
+export function orbitStart(s, tierId, rng) {
+  const t = D.ORBIT_TIERS.find((x) => x.id === tierId);
+  if (!t || !inTown(s) || s.orbit) return false;
+  const me = shipStats(s.meta);
+  s.orbit = { tier: t.id, hull: me.hull, maxHull: me.hull, eHull: t.hull, eMaxHull: t.hull, step: 0, intent: t.fx[0], evading: false, aimed: false, locked: false, round: 1, log: [], over: null, events: [] };
+  s.orbit.log.push(`${t.shipName} on an intercept course. ${D.ORBIT_INTENTS[s.orbit.intent].label}.`);
+  journal(s, `${s.char.name} takes the shuttle up: ${t.name}.`);
+  return true;
+}
+const olog = (o, text, kind = 'info') => o.log.push(kind === 'info' ? text : `${kind}:${text}`);
+export function orbitAct(s, act, rng) {
+  const o = s.orbit, c = s.char;
+  if (!o || o.over) return false;
+  const t = D.ORBIT_TIERS.find((x) => x.id === o.tier), me = shipStats(s.meta);
+  o.events = [];
+  const hitEnemy = (mult, label) => {
+    if (rng() < t.evade) { olog(o, `${label}: the ${t.shipName} rolls clear.`); o.events.push({ t: 'miss', who: 'enemy' }); return; }
+    const crit = rng() < me.crit;
+    const dmg = Math.max(1, Math.round(me.atk * mult * (o.aimed ? 1.5 : 1) * (crit ? 1.6 : 1) * (0.85 + rng() * 0.3)) - t.shield);
+    o.eHull = Math.max(0, o.eHull - dmg); o.aimed = false;
+    olog(o, `${label}: ${crit ? 'critical, ' : ''}${dmg} to its hull.`, crit ? 'crit' : 'hit'); o.events.push({ t: 'hit', who: 'enemy', dmg, crit });
+  };
+  if (act === 'fire') hitEnemy(1, 'Rail cannons');
+  else if (act === 'overcharge') { hitEnemy(2, 'Overcharged cannons'); const self = 5; o.hull = Math.max(0, o.hull - self); olog(o, `The capacitors scorch the hull: \u2212${self}.`, 'bad'); o.events.push({ t: 'hit', who: 'me', dmg: self }); }
+  else if (act === 'evade') { o.evading = true; o.aimed = true; olog(o, 'You bank hard and line up the next shot.'); o.events.push({ t: 'evade' }); }
+  else if (act === 'jump') {
+    const ch = clamp(0.4 + me.evade + (c.background === 'runner' ? 0.1 : 0), 0.2, 0.9);
+    if (rng() < ch) { o.over = 'jumped'; olog(o, 'The drive catches. Stars smear. You are gone.', 'good'); o.events.push({ t: 'jump' }); finishOrbit(s, rng); return true; }
+    olog(o, 'The drive stutters. Not yet.', 'bad'); o.events.push({ t: 'miss', who: 'me' });
+  } else return false;
+  if (o.eHull <= 0) { o.over = 'won'; olog(o, `The ${t.shipName} breaks apart.`, 'good'); o.events.push({ t: 'kill' }); finishOrbit(s, rng); return true; }
+  // Enemy turn.
+  const it = o.intent;
+  if (it === 'repair') { const h = Math.round(t.hull * 0.15); o.eHull = Math.min(t.hull, o.eHull + h); olog(o, `Damage control: it patches ${h} hull.`); o.events.push({ t: 'repair' }); }
+  else if (it === 'lock') { o.locked = true; olog(o, 'Target lock. Its next shot will not miss.', 'bad'); o.events.push({ t: 'lock' }); }
+  else {
+    const mult = it === 'volley' ? 1.8 : 1;
+    const dodge = o.locked ? 0 : (o.evading ? 0.7 : 0) + me.evade;
+    if (rng() < dodge) { olog(o, `${D.ORBIT_INTENTS[it].label}: it misses.`, 'good'); o.events.push({ t: 'miss', who: 'me' }); }
+    else {
+      const shield = o.locked ? Math.floor(me.shield / 2) : me.shield;
+      const dmg = Math.max(1, Math.round(t.atk * mult * (0.85 + rng() * 0.3)) - shield);
+      o.hull = Math.max(0, o.hull - dmg); olog(o, `${D.ORBIT_INTENTS[it].label}: ${dmg} to your hull.`, 'bad'); o.events.push({ t: 'hit', who: 'me', dmg });
+    }
+    o.locked = false;
+  }
+  o.evading = false;
+  o.step += 1; o.round += 1; o.intent = t.fx[o.step % t.fx.length];
+  if (o.hull <= 0) { o.over = 'lost'; finishOrbit(s, rng); return true; }
+  olog(o, `${D.ORBIT_INTENTS[o.intent].label}.`);
+  return true;
+}
+function finishOrbit(s, rng) {
+  const o = s.orbit, c = s.char, m = s.meta, t = D.ORBIT_TIERS.find((x) => x.id === o.tier);
+  o.result = { credits: 0, mark: null, survived: true };
+  if (o.over === 'won') {
+    const cr = Math.round(randInt(rng, t.credits[0], t.credits[1]) * (m.ship.cell.includes('salvager') ? 1.25 : 1) * (1 + markSum(c).credits));
+    c.credits += cr; ledger(s, 'orbit', cr); o.result.credits = cr; m.orbitWins = (m.orbitWins || 0) + 1;
+    const left = marksLeft(c);
+    if (left.length && rng() < t.mark) { const id = pick(rng, left); c.marks = [...(c.marks || []), id]; o.result.mark = id; journal(s, `${c.name} earns the Mark: ${D.MARKS[id].name}.`, 'good'); }
+    else if (!left.length && t.mark >= 1) { c.credits += 150; o.result.credits += 150; }
+    olog(o, `Salvage: +${o.result.credits} ${D.SETTING.cur}.${o.result.mark ? ` The Mark of ${D.MARKS[o.result.mark].name}.` : ''}`, 'good');
+    journal(s, `${c.name} wins in orbit (${t.name}): +${o.result.credits} ${D.SETTING.cur}.`, 'reward');
+  } else if (o.over === 'lost') {
+    if (m.ship.cell.includes('ejector') && !c.ejected && rng() < 0.5) {
+      c.ejected = true; o.result.survived = true; o.over = 'ejected';
+      olog(o, 'The shuttle comes apart. The pod fires. You drift home with nothing.', 'bad');
+      journal(s, `${c.name}'s shuttle is destroyed; the pod brings them home.`, 'bad');
+    } else {
+      o.result.survived = false;
+      journal(s, `${c.name} is lost in orbit to the ${t.shipName}.`, 'bad');
+    }
+  }
+}
+// Closes the orbit screen; the pilot's death is applied here so the result is read first.
+export function orbitClose(s) {
+  const o = s.orbit;
+  if (!o || !o.over) return false;
+  s.orbit = null;
+  if (!o.result.survived) {
+    const t = D.ORBIT_TIERS.find((x) => x.id === o.tier);
+    s.run = { map: 'garrison', sector: Math.max(1, s.meta.bestSector || 1), orbit: true, startSector: 1 };
+    die(s, { name: t.shipName, id: 'ship:' + t.ship, portrait: null });
+    s.outcome.orbit = true; s.outcome.map = 'garrison';
+  }
+  return true;
 }
