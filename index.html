@@ -491,6 +491,7 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .resolve-link { background: none; border: 1px solid transparent; padding: 2px 6px; margin: -3px -7px; text-align: left; }
 .resolve-link:hover { border-color: var(--sodium); }
 .auto-note { font-family: var(--mono); font-size: .66rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ion); }
+#app.still .popup-wrap, #app.still .aa { animation: none; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 
@@ -1334,9 +1335,21 @@ function render() {
   }
   const showStatus = state.screen !== 'intro' && !titleOpen;
   if (state.contractDone) { toast = `Contract complete: ${state.contractDone}`; state.contractDone = null; A.play('perk'); }
-  document.getElementById('app').innerHTML = (titleOpen && !isGuest() ? titleScreen() : (showStatus ? statusStrip() : '') + screens[state.screen]()) + modalView() +
+  // Keep the page where it was: scroll positions of menus and the page, and the focused button, survive the rebuild.
+  const app = document.getElementById('app');
+  const kept = [...app.querySelectorAll('.modal, .log')].map((el) => ({ cls: el.className, top: el.scrollTop })).filter((k) => k.top > 0);
+  const pageY = window.scrollY, fo = document.activeElement, foKey = fo && fo.dataset && fo.dataset.a ? [fo.dataset.a, fo.dataset.v || '', fo.dataset.k || ''].join('|') : null;
+  const sameView = lastView === [state.screen, state.popup || '', modal || '', state.compare == null ? '' : state.compare].join('|');
+  app.innerHTML = (titleOpen && !isGuest() ? titleScreen() : (showStatus ? statusStrip() : '') + screens[state.screen]()) + modalView() +
     (toast ? `<div class="toast" role="status">${esc(toast)}</div>` : '');
   toast = null;
+  lastView = [state.screen, state.popup || '', modal || '', state.compare == null ? '' : state.compare].join('|');
+  if (sameView) {
+    app.classList.add('still');
+    const seen = {};
+    for (const el of app.querySelectorAll('.modal, .log')) { const k = kept.find((x) => x.cls === el.className && !seen[x.cls]); if (k) { seen[k.cls] = true; el.scrollTop = k.top; } }
+    if (foKey) { const b = [...app.querySelectorAll('button[data-a]')].find((x) => [x.dataset.a, x.dataset.v || '', x.dataset.k || ''].join('|') === foKey); if (b && !b.disabled) b.focus({ preventScroll: true }); }
+  } else app.classList.remove('still');
   A.setAmbience(state.run ? E.mapById(state.run.map).theme : 'town');
   A.setMusic(state.run ? 'raid' : 'town');
   const tslot = document.getElementById('town-slot');
@@ -1361,6 +1374,7 @@ function render() {
       stage.bossIntro({ name: r.enemy.name, epithet: info.epithet, label: `${map.name} \u00B7 Sector ${r.sector}` }).then(() => { busy = false; document.getElementById('app').classList.remove('busy'); scheduleAuto(); });
     }
   }
+  if (sameView && pageY) window.scrollTo(0, pageY);
   const log = document.getElementById('log');
   if (log) log.scrollTop = log.scrollHeight;
   save();
@@ -1383,7 +1397,7 @@ document.addEventListener('automode', () => { A.play('click'); if (state.screen 
 const stage = new Stage();
 const town = new Town();
 globalThis.cinderTown = town; // handy for debugging in the console
-let lastScreen = null;
+let lastScreen = null, lastView = '';
 // Walking into a building (or talking to its NPC) opens that building's menu.
 town.onOpen = (id) => { if (state.screen !== 'town' || modal) return; state.popup = id; state.notice = null; A.play('click'); render(); };
 // Things in the yard that touch the game: noodles, the vending terminal, doors with no inside.
