@@ -737,6 +737,7 @@ function raiseAlarm(s, n, why) {
 // New sector: cooldowns reset, then pick the first room.
 function beginSector(s, rng) {
   const r = s.run;
+  s.meta.bestSector = Math.max(s.meta.bestSector || 0, r.sector); // reached counts for the record; cleared still drives contracts and insertions
   r.room = 0; r.fightsDone = 0; r.cooldowns = {}; r.usedThisFight = []; r.sectorCredits = 0;
   for (const b of Object.values(r.cb || {})) { b.cooldowns = {}; b.usedThisFight = []; }
   offerRoute(s, rng);
@@ -1610,6 +1611,8 @@ export function recordScore(s, c, how) {
   return addToBoard(m, entry);
 }
 // Inserts an entry if it makes the cut; returns its 1-based rank or 0.
+// The score the last place on the board holds (0 while it has room).
+export const boardFloor = (m) => ((m.board || []).length >= BOARD_SIZE ? m.board[BOARD_SIZE - 1].score : 0);
 export function addToBoard(m, entry) {
   const board = m.board || (m.board = []);
   board.push(entry);
@@ -1630,6 +1633,7 @@ export function endRun(s, how, rngForRestock = Math.random) {
       a.credits -= l; ledger(s, 'escape loss', -l);
     }
     if (i === actorIdx(s)) lost = l;
+    a.raidScore = raidScore(r, a, how).score;
     a.rank = recordScore(s, a, how);
     a.wanted = (a.wanted || 0) + 1;
     a.fed = false;
@@ -1642,7 +1646,7 @@ export function endRun(s, how, rngForRestock = Math.random) {
     home = ` You brought ${freed} prisoner${freed > 1 ? 's' : ''} home: +${freed} ${D.SETTING.meta}.`;
   }
   if (how === 'extracted') contractEvent(s, 'extract', { credits: s.char.credits, allies: freed });
-  const rank = c.rank ? ` Top ${BOARD_SIZE} raid: #${c.rank} on the leaderboard.` : '';
+  const rank = c.rank ? ` Top ${BOARD_SIZE} raid: #${c.rank} on the leaderboard (${c.raidScore} points).` : c.raidScore ? ` Raid score ${c.raidScore}; last place on the leaderboard holds ${boardFloor(s.meta)}.` : '';
   s.notice = (how === 'extracted'
     ? `You made it out of ${sectorName(r.sector, r.map)}.${lost ? ` Slipping out early cost ${lost} ${D.SETTING.cur} in bribes at the gate.` : ''}${home} Spend it before your luck runs out.`
     : `You escaped from ${sectorName(r.sector, r.map)}${lost ? `, but dropped ${lost} ${D.SETTING.cur} on the way out` : ''}.`) + rank;
@@ -1710,6 +1714,7 @@ function die(s, foe) {
   s.meta.fallen.unshift(record);
   s.meta.fallen = s.meta.fallen.slice(0, 12);
   record.perks = (c.perks || []).length;
+  record.score = raidScore(r, c, 'died').score;
   record.rank = recordScore(s, c, 'died');
   if (isCoop(s)) {
     // One of you is down: the raid is over for both. The survivor drags what they can out (finishCoopDeath).

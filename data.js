@@ -198,7 +198,7 @@ export const ITEMS = {
   stim:    { name: 'Med Stim',       short: 'Heal 40%, stop bleeding', cost: 20, desc: 'Restore 40% max HP (+10% per INT).' },
   thermal: { name: 'Thermal Charge', short: 'Big blast, ignores armour', cost: 35, desc: 'Heavy damage that ignores armour.' },
   ion:     { name: 'Ion Pulse',      short: 'Stun 1 turn (droids 3)', cost: 30, desc: 'Stun 1 turn. Droids: stun 3 turns and damage.' },
-  smoke:   { name: 'Smoke Canister', short: 'Escape; drop half this raid\u2019s loot', cost: 25, desc: 'Guaranteed escape back to town, but you drop half the credits picked up this raid.' },
+  smoke:   { name: 'Smoke Canister', short: 'Escape; drop most of this raid\u2019s loot', cost: 25, desc: 'Guaranteed escape back to town, but you drop most of the credits picked up this raid (65% to 75%, by sector).' },
 };
 
 // Implants: installed at the clinic, lost on death. Slots: 2, +1 at INT 4 and INT 8.
@@ -234,7 +234,7 @@ export const CELL = [
   { id: 'stash',  name: 'Hidden Stash',   cost: 6,  desc: 'New operatives start with +60 credits.' },
   { id: 'kit',    name: 'Field Kit',      cost: 6,  desc: 'New operatives start with +1 Med Stim and +1 Thermal Charge.' },
   { id: 'cache',  name: 'Weapons Cache',  cost: 8,  desc: 'New operatives start with a Salvaged Carbine and a Shock Baton.' },
-  { id: 'ledger', name: 'Doc\u2019s Ledger', cost: 8, desc: 'Med Bay treatment costs half.' },
+  { id: 'ledger', name: 'Doc\u2019s Ledger', cost: 8, desc: 'Clinic treatment costs half.' },
   { id: 'mentor', name: 'Old Hand',       cost: 12, desc: 'New operatives get +1 attribute point at creation.' },
   { id: 'heirloom', name: 'Heirloom',     cost: 10, desc: 'When an operative dies, choose one piece of their gear to pass on to the next.' },
 ];

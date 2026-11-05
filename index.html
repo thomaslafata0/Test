@@ -600,6 +600,7 @@ function headerTools() {
   const p = A.getPrefs();
   return `<div class="tools"><button class="tool" data-a="modal" data-v="manual" aria-label="Field manual">Manual</button>
     <button class="tool" data-a="sound" aria-pressed="${p.sfx}" aria-label="Toggle sound">${p.sfx ? 'Sound on' : 'Sound off'}</button>
+    <button class="tool" data-a="modal" data-v="board" aria-label="Leaderboard">Board</button>
     <button class="tool" data-a="modal" data-v="settings" aria-label="Settings">Settings</button></div>`;
 }
 function statusStrip() {
@@ -656,7 +657,7 @@ function titleScreen() {
         <button class="btn big" data-a="modal" data-v="manual">Field manual</button>
         <button class="btn big" data-a="modal" data-v="settings">Settings &amp; co-op</button>
       </div>
-      ${m.operatives ? `<dl class="kv title-stats"><dt>Deepest</dt><dd>Sector ${m.bestSector}</dd><dt>Raids</dt><dd>${m.stats.raids}</dd><dt>${esc(S.meta)}</dt><dd>${m.resolve}</dd></dl>` : ''}
+      ${m.operatives ? (() => { const best = (m.board || []).findIndex((e) => !e.bot); return `<dl class="kv title-stats"><dt>Deepest</dt><dd>Sector ${m.bestSector}</dd><dt>Raids</dt><dd>${m.stats.raids}</dd><dt>${esc(S.meta)}</dt><dd>${m.resolve}</dd>${best >= 0 ? `<dt>Best raid</dt><dd>#${best + 1} \u00B7 ${m.board[best].score.toLocaleString()}</dd>` : ''}</dl>`; })() : ''}
     </div>
   </section>`;
 }
@@ -1059,7 +1060,7 @@ function combatScreen() {
       <button class="btn twoline atk ${D.MELEE_COUNTER[e.id] ? 'warn' : ''}" data-a="act" data-v="strike" title="${esc(E.meleeOf(c).name)}: ${st.atkM} ATK, ${pct(E.critChance(st, e, true))} crit. Swingy damage, ignores cover, and your next attack hits ${Math.round(E.TUNE.momentum * 100)}% harder."><span class="bt">Strike<span class="k">F</span></span><span class="wpn">${esc(E.meleeOf(c).name)}</span><span class="bs"><b class="rng">${mr[0]}\u2013${mr[1]}</b> dmg \u00B7 ${D.MELEE_COUNTER[e.id] ? 'it hits back!' : `next hit +${Math.round(E.TUNE.momentum * 100)}%${e.intent === 'guard' && !e.stun ? ', ignores cover' : ''}`}</span></button>
       <button class="btn twoline" data-a="act" data-v="defend"><span class="bt">Defend<span class="k">D</span></span><span class="bs">Halve damage, aim next shot</span></button>
       <button class="btn twoline" data-a="act" data-v="stim" ${c.items.stim ? '' : 'disabled'}><span class="bt">${ico('item:stim', 'sm')}Stim <span class="num">\u00D7${c.items.stim}</span><span class="k">S</span></span><span class="bs">${esc(D.ITEMS.stim.short)}</span></button>
-      <button class="btn twoline" data-a="act" data-v="run"><span class="bt">Run<span class="k">R</span></span><span class="bs">${pct(E.runChance(state))} to escape, drop half loot</span></button>
+      <button class="btn twoline" data-a="act" data-v="run"><span class="bt">Run<span class="k">R</span></span><span class="bs">${pct(E.runChance(state))} to escape, drop ${Math.round(E.hard(state).escape * 100)}% of loot</span></button>
     </div>
     ${skills ? `<div class="skills ${mine ? '' : 'locked'}">${skills}</div>` : ''}
     <div class="items">${items}</div>
@@ -1333,7 +1334,7 @@ function deathScreen() {
     <h1 class="big-title" style="color:var(--danger)">${esc(o.name)}</h1>
     ${o.killerId ? `<div class="killer">${portraitImg({ id: o.killerId, name: o.killer, portrait: o.killerPortrait })}<span class="label">Last seen<br>engaging a ${esc(o.killer)}</span></div>` : ''}
     <p class="story">Operative ${o.number} went down in the ${esc(E.sectorName(o.sector, o.map))}${o.killerId ? `, killed by a ${esc(o.killer)}` : `, taken by ${esc(o.killer)}`}. The ${o.credits.toLocaleString()} ${S.currency}, the gear, ${o.perks ? `${o.perks} piece${o.perks > 1 ? 's' : ''} of contraband, ` : ''}the implants and level ${o.level} went with them.</p>
-    <dl class="kv"><dt>${esc(S.meta)} to spend</dt><dd style="color:var(--sodium)">${state.meta.resolve}</dd><dt>Deepest ever</dt><dd>Sector ${state.meta.bestSector}</dd>${o.rank ? `<dt>Leaderboard</dt><dd style="color:var(--sodium)">#${o.rank} of ${E.BOARD_SIZE} <button class="btn" data-a="modal" data-v="board" style="margin-left:8px">View</button></dd>` : ''}</dl>
+    <dl class="kv"><dt>${esc(S.meta)} to spend</dt><dd style="color:var(--sodium)">${state.meta.resolve}</dd><dt>Deepest ever</dt><dd>Sector ${state.meta.bestSector}</dd>${o.rank ? `<dt>Leaderboard</dt><dd style="color:var(--sodium)">#${o.rank} of ${E.BOARD_SIZE} \u00B7 ${o.score} points <button class="btn" data-a="modal" data-v="board" style="margin-left:8px">View</button></dd>` : o.score ? `<dt>Last raid</dt><dd>${o.score} points <span class="muted">(#${E.BOARD_SIZE} holds ${E.boardFloor(state.meta)})</span></dd>` : ''}</dl>
     ${heirloomPick()}
     <p class="muted">Spend the Resolve at the safehouse (Character & Resolve) once your next operative is in town. Training and cell upgrades carry over.</p>
     <div><button class="btn primary big" data-a="recruit">Build the next operative</button></div>
