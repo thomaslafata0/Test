@@ -272,6 +272,8 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .set-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .set-row input[type=range] { width: min(240px, 50%); accent-color: var(--sodium); }
 .btn.danger { border-color: var(--danger); color: var(--danger); }
+.coop-banner { position: sticky; top: 0; z-index: 30; display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center; padding: 8px 12px; margin-bottom: 8px; background: var(--panel-2); border: 1px solid var(--sodium); color: var(--sodium); font-size: .92rem; }
+.coop-banner.bad { border-color: var(--danger); color: var(--danger); }
 .party { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .pm { display: grid; gap: 3px; padding: 8px 10px; border: 1px solid var(--line); background: var(--panel-2); font-family: var(--mono); font-size: .8rem; }
 .pm.turn { border-color: var(--sodium); }
@@ -581,7 +583,7 @@ import * as A from './audio.js';
 import { iconURL, gearIconKey } from './icons.js';
 import { Town } from './town.js';
 import { Wheel, OrbitScene, loadDowntimeArt, artFor } from './downtime.js';
-import { Net, getCoopPrefs, setCoopPrefs, makeCode } from './net.js';
+import { Net, getCoopPrefs, setCoopPrefs, makeCode, getRoom, setRoom } from './net.js';
 import { BODIES, HAIR, HAIR_NAMES, SKINS, HAIRS, defaultLook, loadLayers, hasLayers, lookStill, lookBattleStill, lookPortrait, townSheets, battleSheet, weaponLayer } from './look.js';
 
 const SAVE_KEY = 'cinder-cell-save-v1';
@@ -601,56 +603,155 @@ function save() { if (isGuest()) return; try { localStorage.setItem(SAVE_KEY, JS
 // ---------- co-op ----------
 // The host runs the game. The friend (guest) mirrors the host's state with the two operatives swapped, so
 // everything on their screen is "theirs", and every game action they take is sent to the host to run.
-let net = null, coopStatus = '', lastEvents = null, actingAs = 0;
+let net = null, coopStatus = '', actingAs = 0;
 const isGuest = () => !!net && net.role === 'guest';
 const isHost = () => !!net && net.role === 'host';
 const myIdx = () => (isGuest() ? 1 : 0);
 // Actions that only touch this screen, never the game.
 const DOWNTIME = new Set(['drink', 'barchat', 'bet', 'stake', 'spin', 'invest', 'withdraw', 'shippart', 'shipcell', 'orbitgo', 'orbitact', 'orbitclose']);
-const LOCAL = new Set(['continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'pickmap', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'orbitarm']);
+const LOCAL = new Set(['continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'orbitarm']);
 function coopChip() {
   if (!net) return '';
   const who = net.peerName || (isHost() ? 'friend' : 'host');
   return `<span class="chip ${net.peer ? 'good' : ''}" title="Co-op room ${net.code}">${isHost() ? 'Hosting' : 'Joined'} ${net.code} \u00B7 ${net.peer ? `with ${esc(who)}` : 'waiting'}</span>`;
 }
-function broadcast(ev = null) {
+// One screen's own view of the game. The friend keeps these across host updates, and the host keeps a copy of what
+// the friend's actions set, so neither player's menus or messages land on the other's screen.
+const GUEST_LOCAL = ['popup', 'compare', 'gearSlot', 'confirmSmoke', 'report', 'barSay', 'draft', 'guestSawDeath'];
+const GUEST_VIEW = ['notice', 'perkPick', 'compare', 'popup'];
+const NEEDS_RUN = new Set(['continue', 'room', 'roomDone', 'event', 'eventDone', 'deeper', 'extract', 'loottake', 'lootsell', 'perk', 'perkdrop']);
+let guestView = {}, guestQueue = [], guestToast = null, hostSynced = false, awaitingHost = false, awaitTimer = null, inbox = [], pumping = false, hadRun = false;
+function broadcast() {
   if (!isHost() || !net.peer) return;
-  const copy = { ...state, meta: { ...state.meta, journal: undefined }, events: undefined, report: null };
-  net.send({ t: 'state', s: JSON.stringify(copy), ev });
+  const copy = { ...state, meta: { ...state.meta, journal: undefined }, events: undefined, report: null, notice: guestView.notice || null, perkPick: guestView.perkPick || null, popup: null, compare: null };
+  net.send({ t: 'state', s: JSON.stringify(copy), toast: guestToast });
+  guestToast = null;
 }
+// Run something as the friend's operative, with the friend's view in place of the host's.
+function asGuest(fn) {
+  const mine = {};
+  for (const k of GUEST_VIEW) { mine[k] = state[k]; state[k] = guestView[k] ?? null; }
+  E.setActor(state, 1); actingAs = 1;
+  try { fn(); } catch (e) { console.warn('friend action failed', e); } finally {
+    actingAs = 0; E.setActor(state, 0);
+    for (const k of GUEST_VIEW) { guestView[k] = state[k]; state[k] = mine[k]; }
+  }
+}
+// The friend's actions wait out the host's animations instead of being dropped.
+function queueGuest(fn) { guestQueue.push(fn); drainGuest(); }
+function drainGuest() { while (guestQueue.length && !busy) guestQueue.shift()(); }
+function setAwaiting(on) {
+  awaitingHost = on; clearTimeout(awaitTimer);
+  document.getElementById('app').classList.toggle('busy', on || busy);
+  if (on) awaitTimer = setTimeout(() => setAwaiting(false), 6000);
+}
+// The friend handles host messages strictly in order, so a move's animation finishes before the state after it appears.
+function pumpInbox() {
+  if (pumping) return;
+  pumping = true;
+  (async () => {
+    while (inbox.length) {
+      const m = inbox.shift();
+      try { if (m.t === 'fx') await playHostFx(m.ev); else applyHostState(m); } catch (e) { console.warn('host message failed', e); }
+    }
+    pumping = false;
+  })();
+}
+async function playHostFx(ev) {
+  setAwaiting(false);
+  while (busy) await new Promise((r) => setTimeout(r, 60));
+  if (!isGuest() || !ev || !ev.length || !state.run || state.screen !== 'combat' || !stage.el.isConnected) return;
+  busy = true; document.getElementById('app').classList.add('busy');
+  try { await stage.play(ev); } finally { busy = false; document.getElementById('app').classList.remove('busy'); }
+}
+function applyHostState(m) {
+  if (!isGuest()) return;
+  const incoming = JSON.parse(m.s), keep = {};
+  for (const k of GUEST_LOCAL) keep[k] = state[k];
+  incoming.meta.journal = state && state.meta ? state.meta.journal : [];
+  incoming.meta.tips = (state && state.meta && state.meta.tips) || {};
+  state = incoming;
+  Object.assign(state, keep);
+  E.setActor(state, 1);
+  if (!state.draft) state.draft = localDraft || (localDraft = E.newDraft(state.meta, rng));
+  if (dismissedResult && JSON.stringify(state.lastResult) === dismissedResult) state.lastResult = null;
+  hostSynced = true; titleOpen = false;
+  setAwaiting(false);
+  if (m.toast) toast = m.toast;
+  render();
+}
+let dismissedResult = null;
 function startCoop(role, code, local) {
   const prefs = getCoopPrefs();
   if (net) net.close();
-  net = new Net({ role, code, relay: prefs.relay, local, name: prefs.name || (state.char ? state.char.name : 'friend') });
+  guestView = {}; guestQueue = []; inbox = []; hostSynced = false; awaitingHost = false;
+  net = new Net({ role, code, relay: prefs.relay, local, name: prefs.name || (state.char ? state.char.name.split(' ')[0] : 'Friend') });
+  setRoom({ role, code, local: !!local });
   coopStatus = 'connecting';
-  net.on('status', () => { coopStatus = net.status; if (isHost()) { state.coop = net.peer; if (!net.peer) state.guestReady = false; broadcast(); } render(); });
+  net.on('status', () => {
+    coopStatus = net.status;
+    // A dropped connection mid-raid doesn't end co-op: the raid waits for them (see coopBanner).
+    if (isHost() && !state.run) { state.coop = net.peer; if (!net.peer) state.guestReady = false; }
+    if (net) render();
+  });
+  net.on('room-full', () => { leaveCoop('That room already has two players.'); });
+  net.on('bye', () => {
+    if (isGuest()) { leaveCoop('The host closed the room.'); return; }
+    if (state.run) { state.coop = false; }
+    state.guestReady = false;
+    toast = `${net.peerName || 'Your friend'} left the room.`;
+    render();
+  });
   if (role === 'host') {
-    net.on('hello', (m) => { state.coop = true; state.guestName = m.name; state.guestReady = false; if (state.char2) state.char2.coopName = m.name; render(); });
-    net.on('act', (m) => { if (busy) return; E.setActor(state, 1); actingAs = 1; try { applyAct(m.a, m.v, m.k); } finally { actingAs = 0; E.setActor(state, 0); } render(); });
-    net.on('fight', (m) => { fight(m.v, 1); });
-    net.on('create', (m) => { if (!state.char2) E.createChar(state, rng, m.draft, 'char2'); state.guestReady = false; render(); });
-    net.on('recruit', () => { E.recruit(state, rng, 'char2'); state.coopFallen = null; render(); });
-    net.on('ready', (m) => { state.guestReady = !!m.on; render(); });
-  } else {
-    net.on('state', (m) => {
-      const incoming = JSON.parse(m.s);
-      incoming.meta.journal = state && state.meta ? state.meta.journal : [];
-      state = incoming; E.setActor(state, 1);
-      if (!state.draft) state.draft = localDraft || (localDraft = E.newDraft(state.meta, rng));
+    net.on('hello', (m) => {
+      const fresh = !state.coop;
+      // A raid started solo stays solo; they join in when it ends.
+      if (!state.run || state.run.cb) state.coop = true;
+      state.guestName = m.name; if (fresh) state.guestReady = false;
+      if (state.char2) state.char2.coopName = m.name;
       render();
-      if (m.ev && m.ev.length && state.screen === 'combat' && stage.el.isConnected) { busy = true; document.getElementById('app').classList.add('busy'); stage.play(m.ev).finally(() => { busy = false; document.getElementById('app').classList.remove('busy'); render(); }); }
     });
-    net.on('peer-left', () => { toast = 'The host left.'; render(); });
+    net.on('act', (m) => queueGuest(() => {
+      if (NEEDS_RUN.has(m.a) && !state.run) { render(); return; }
+      asGuest(() => applyAct(m.a, m.v, m.k));
+      render();
+    }));
+    net.on('fight', (m) => queueGuest(() => fight(m.v, 1)));
+    net.on('create', (m) => { if (!state.char2) E.createChar(state, rng, m.draft, 'char2'); if (m.draft && m.draft.name && net.peerName === 'Friend') { net.peerName = m.draft.name.split(' ')[0]; state.guestName = net.peerName; } state.guestReady = false; render(); });
+    net.on('recruit', () => { E.recruit(state, rng, 'char2'); state.coopFallen = null; render(); });
+    net.on('ready', (m) => { state.guestReady = !!m.on; if (m.on) { toast = `${net.peerName || state.guestName || 'Your friend'} is ready.`; A.play('click'); } render(); });
+  } else {
+    net.on('state', (m) => { inbox.push(m); pumpInbox(); });
+    net.on('fx', (m) => { inbox.push(m); pumpInbox(); });
   }
 }
 let localDraft = null;
-function leaveCoop() {
+function leaveCoop(why) {
   if (!net) return;
   const wasGuest = isGuest();
-  net.close(); net = null; coopStatus = '';
+  if (net.online) net.send({ t: 'bye' });
+  net.close(); net = null; coopStatus = ''; setRoom(null); inbox = []; guestQueue = []; setAwaiting(false);
   if (wasGuest) { state = E.migrate(load(), rng); if (!state.draft && state.screen === 'create') state.draft = E.newDraft(state.meta, rng); }
   else { state.coop = false; state.guestReady = false; }
+  if (why) toast = why;
   render();
+}
+const inviteLink = () => (net ? `${location.origin}${location.pathname}?join=${net.code}` : '');
+// A plain statement of the connection whenever it isn't healthy, with what the host can do about it.
+function coopBanner() {
+  if (!net) return '';
+  if (!net.online && net.status !== 'connecting') return '<div class="coop-banner bad" role="status">Connection lost. Reconnecting\u2026</div>';
+  if (net.peer || !net.online) return '';
+  if (isGuest()) return hostSynced ? '<div class="coop-banner" role="status"><span>The host dropped out. Waiting for them to come back\u2026</span><button class="btn" data-a="coopleave">Leave</button></div>' : '';
+  if (state.run && state.coop && state.char2) {
+    const who = esc(net.peerName || state.guestName || 'Your friend'), turn = state.screen === 'combat' && state.run.actor === 1;
+    return `<div class="coop-banner" role="status"><span>${who} dropped out. The raid waits for them.</span><span class="btnrow">${turn ? '<button class="btn" data-a="coopauto">Play their turn on auto</button>' : ''}<button class="btn" data-a="coopdrop">Carry on without them</button></span></div>`;
+  }
+  return '';
+}
+function joiningScreen() {
+  return `<section class="panel" style="max-width:520px;margin:48px auto;display:grid;gap:12px"><span class="label">Co-op \u00B7 room ${esc(net.code)}</span><h2>Waiting for the host</h2>
+    <p class="muted">You\u2019re in the room. The game appears as soon as the host is connected.</p><div><button class="btn" data-a="coopleave">Leave</button></div></section>`;
 }
 
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -1344,10 +1445,11 @@ function modalView() {
       <p class="muted" style="font-size:.88rem">Battle mode (Manual, Auto 1\u00D7 or Auto 2\u00D7) is in the corner of the battle scene. Auto fights for you with a fixed routine until the fight ends.</p>
       <h3>Co-op <span class="num muted" style="font-size:.85rem">play with a friend</span></h3>
       ${net ? `<div class="set-row"><span>${isHost() ? 'Hosting' : 'Joined'} room <b class="num">${net.code}</b> \u00B7 ${net.peer ? `connected to ${esc(net.peerName || (isHost() ? 'your friend' : 'the host'))}` : coopStatus === 'error' || coopStatus === 'closed' ? 'connection failed' : 'waiting for the other player\u2026'}</span><button class="btn" data-a="coopleave">Leave</button></div>
+        ${isHost() ? `<div class="set-row"><span>Invite link <span class="muted">(your friend just opens it)</span></span><span class="btnrow" style="flex:1;justify-content:flex-end"><input class="text" readonly value="${esc(inviteLink())}" aria-label="Invite link" style="flex:1;min-width:140px"><button class="btn primary" data-a="coopinvite">Copy</button></span></div>` : ''}
         ${isHost() ? '<p class="muted" style="font-size:.88rem">Give your friend the room code. You pick the missions; they press Ready at their terminal. In fights you take turns, then the enemy acts. If either of you goes down, the raid is over for both.</p>' : '<p class="muted" style="font-size:.88rem">The host\u2019s save holds your operative while you play together. Leaving returns you to your own solo save.</p>'}`
       : `<div class="coop-form">
         <label class="set-row" for="coop-name"><span>Your name</span><input id="coop-name" class="text" maxlength="16" value="${esc(getCoopPrefs().name || (state.char ? state.char.name.split(' ')[0] : ''))}"></label>
-        <label class="set-row" for="coop-relay"><span>Relay URL <span class="muted">(from the Cloudflare Worker; leave empty to test in two tabs of this browser)</span></span><input id="coop-relay" class="text" placeholder="https://cinder-cell-coop.yourname.workers.dev" value="${esc(getCoopPrefs().relay)}"></label>
+        ${location.hostname.endsWith('.workers.dev') ? '' : `<label class="set-row" for="coop-relay"><span>Relay URL <span class="muted">(from the Cloudflare Worker; leave empty to test in two tabs of this browser)</span></span><input id="coop-relay" class="text" placeholder="https://cinder-cell-coop.yourname.workers.dev" value="${esc(getCoopPrefs().relay)}"></label>`}
         <div class="set-row"><span>Host a game${state.char ? '' : ' (build an operative first)'}</span><button class="btn primary" data-a="coophost" ${state.char ? '' : 'disabled'}>Host</button></div>
         <label class="set-row" for="coop-code"><span>Join with a code</span><span class="btnrow"><input id="coop-code" class="text" maxlength="8" placeholder="CODE" style="width:7ch;text-transform:uppercase"><button class="btn" data-a="coopjoin">Join</button></span></label>
       </div>`}
@@ -1590,6 +1692,17 @@ function deathScreen() {
 }
 
 function render() {
+  if (isGuest() && !hostSynced) {
+    document.getElementById('app').innerHTML = coopBanner() + joiningScreen() + modalView() + (toast ? `<div class="toast" role="status">${esc(toast)}</div>` : '');
+    toast = null;
+    return;
+  }
+  // A raid's end message goes to both players, and a friend who is around joins in once a solo raid is over.
+  if (isHost()) {
+    if (hadRun && !state.run) { const n = state.notice || guestView.notice || null; state.notice = n; guestView.notice = n; }
+    hadRun = !!state.run;
+    if (!state.run && net.peer) state.coop = true;
+  }
   const screens = { route: routeScreen, room: roomScreen, intro: introScreen, create: createScreen, town: townScreen, combat: combatScreen, victory: victoryScreen, event: eventScreen, sectorClear: sectorClearScreen, death: deathScreen, perk: perkScreen, loot: lootScreen, ending: endingScreen };
   if (isGuest()) {
     // The friend's view: their own death and creation screens, the shared raid otherwise.
@@ -1613,14 +1726,14 @@ function render() {
   if (state.coopFallen && state.coopFallen.idx === 0 && state.screen !== 'death') state.coopFallen = null;
   }
   const showStatus = state.screen !== 'intro' && !titleOpen;
-  if (state.contractDone) { toast = `Contract complete: ${state.contractDone}`; state.contractDone = null; A.play('perk'); }
-  if (state.featUnlocks && state.featUnlocks.length) { const u = state.featUnlocks; toast = `Feat: ${u.slice(0, 2).map((x) => `${x.name} ${'I II III IV'.split(' ')[x.tier - 1]} (${x.text}${x.resolve ? `, +${x.resolve} ${S.meta}` : ''})`).join(' \u00B7 ')}${u.length > 2 ? ` and ${u.length - 2} more` : ''}`; state.featUnlocks = null; A.play('perk'); }
+  if (state.contractDone) { toast = `Contract complete: ${state.contractDone}`; state.contractDone = null; A.play('perk'); if (isHost()) guestToast = toast; }
+  if (state.featUnlocks && state.featUnlocks.length) { const u = state.featUnlocks; toast = `Feat: ${u.slice(0, 2).map((x) => `${x.name} ${'I II III IV'.split(' ')[x.tier - 1]} (${x.text}${x.resolve ? `, +${x.resolve} ${S.meta}` : ''})`).join(' \u00B7 ')}${u.length > 2 ? ` and ${u.length - 2} more` : ''}`; state.featUnlocks = null; A.play('perk'); if (isHost()) guestToast = toast; }
   // Keep the page where it was: scroll positions of menus and the page, and the focused button, survive the rebuild.
   const app = document.getElementById('app');
   const kept = [...app.querySelectorAll('.modal, .log')].map((el) => ({ cls: el.className, top: el.scrollTop })).filter((k) => k.top > 0);
   const pageY = window.scrollY, fo = document.activeElement, foKey = fo && fo.dataset && fo.dataset.a ? [fo.dataset.a, fo.dataset.v || '', fo.dataset.k || ''].join('|') : null;
   const sameView = lastView === [state.screen, state.popup || '', modal || '', state.compare == null ? '' : state.compare].join('|');
-  app.innerHTML = (titleOpen && !isGuest() ? titleScreen() : (showStatus ? statusStrip() : '') + screens[state.screen]()) + modalView() +
+  app.innerHTML = coopBanner() + (titleOpen && !isGuest() ? titleScreen() : (showStatus ? statusStrip() : '') + screens[state.screen]()) + modalView() +
     (toast ? `<div class="toast" role="status">${esc(toast)}</div>` : '');
   toast = null;
   lastView = [state.screen, state.popup || '', modal || '', state.compare == null ? '' : state.compare].join('|');
@@ -1656,14 +1769,14 @@ function render() {
     if (res && res.isNewBoss) {
       busy = true; document.getElementById('app').classList.add('busy');
       const info = D.BOSS_INFO[r.enemy.id] || {};
-      stage.bossIntro({ name: r.enemy.name, epithet: info.epithet, label: `${map.name} \u00B7 Sector ${r.sector}` }).then(() => { busy = false; document.getElementById('app').classList.remove('busy'); scheduleAuto(); });
+      stage.bossIntro({ name: r.enemy.name, epithet: info.epithet, label: `${map.name} \u00B7 Sector ${r.sector}` }).then(() => { busy = false; document.getElementById('app').classList.remove('busy'); scheduleAuto(); drainGuest(); });
     }
   }
   if (sameView && pageY) window.scrollTo(0, pageY);
   const log = document.getElementById('log');
   if (log) log.scrollTop = log.scrollHeight;
   save();
-  if (isHost()) { broadcast(lastEvents); lastEvents = null; }
+  broadcast();
   scheduleAuto();
 }
 
@@ -1703,12 +1816,13 @@ town.onAction = (id) => {
 let busy = false;
 
 async function fight(v, who = 0) {
-  if (busy || !state.run || !state.run.enemy) return;
+  if (busy || awaitingHost || !state.run || !state.run.enemy) return;
   if (isGuest()) {
+    if (!net.online || !net.peer) return;
     if (E.isCoop(state) && state.run.actor !== 1) return;
     if (!E.canUse(state, v)) return;
     if (v === 'smoke' && !state.confirmSmoke) { state.confirmSmoke = true; A.play('click'); render(); return; }
-    state.confirmSmoke = false; net.send({ t: 'fight', v }); return;
+    state.confirmSmoke = false; setAwaiting(true); net.send({ t: 'fight', v }); return;
   }
   if (E.isCoop(state) && state.run.actor !== who) return;
   const can = E.withActor(state, who, () => E.canUse(state, v));
@@ -1723,7 +1837,8 @@ async function fight(v, who = 0) {
   E.playerAct(state, v, rng, who);
   const events = state.events;
   delete state.events;
-  lastEvents = events;
+  // The friend sees the move as it happens, not after the host's animation.
+  if (isHost() && net.peer) net.send({ t: 'fx', ev: events });
   save();
   try { await stage.play(events); } finally {
     busy = false;
@@ -1731,6 +1846,7 @@ async function fight(v, who = 0) {
     if (state.run && state.run.alert > alertBefore) A.play('alarm');
     if (state.screen === 'victory') { A.play(state.outcome.liberated ? 'liberate' : 'coin'); state.lastResult = { kind: 'fight', ...state.outcome }; E.continueAfterVictory(state, rng); }
     render();
+    drainGuest();
   }
 }
 
@@ -1743,62 +1859,81 @@ function act(a, v, k) {
   if (DOWNTIME.has(a) && (isGuest() || wheelBusy || orbitBusy)) { A.play('denied'); return; }
   // The friend's game actions run on the host; a few need a different message.
   if (isGuest() && !LOCAL.has(a)) {
+    if (!net.online || !net.peer) { toast = 'Not connected to the host right now.'; A.play('denied'); render(); return; }
+    if (a === 'buygear') state.compare = null;
     if (a === 'create') { net.send({ t: 'create', draft: state.draft }); localDraft = null; A.play('click'); return; }
     if (a === 'recruit') { net.send({ t: 'recruit' }); state.coopFallen = null; A.play('click'); return; }
+    if (a === 'pickmap') { toast = 'The host picks the target.'; A.play('denied'); render(); return; }
     if (a === 'deploy' || a === 'reset' || a === 'threat') { A.play('denied'); return; }
     net.send({ t: 'act', a, v, k }); A.play('click'); return;
+  }
+  if (isGuest()) {
+    if (a === 'dismissresult') dismissedResult = JSON.stringify(state.lastResult);
+    // The host holds the friend's messages, so closing a menu clears them there too.
+    if ((a === 'popup' || a === 'tab' || a === 'closepopup') && state.notice && net.online) net.send({ t: 'act', a: 'clearnotice' });
   }
   applyAct(a, v, k);
   render();
 }
+const sfx = (k) => { if (!actingAs) A.play(k); };
 function applyAct(a, v, k) {
   state.confirmSmoke = false;
   if (a !== 'reset') confirmReset = false;
   let ok = true;
   switch (a) {
-    case 'continue-title': titleOpen = false; if (state.screen === 'intro') state.screen = 'intro'; A.play('door'); break;
+    case 'continue-title': titleOpen = false; if (state.screen === 'intro') state.screen = 'intro'; sfx('door'); break;
     case 'newcell': if (!confirmReset) { confirmReset = true; break; } confirmReset = false; state = keepBoard(E.newGame(rng)); titleOpen = false; break;
-    case 'step': state.draft.step = +v; A.play('click'); break;
-    case 'look': state.draft.look = state.draft.look || defaultLook(); state.draft.look[v] = v === 'skin' || v === 'hairColor' ? +k : k; A.play('click'); break;
-    case 'savecode': { const code = E.exportSave(state); state.report = code; try { navigator.clipboard.writeText(code).then(() => { toast = 'Save code copied.'; render(); }).catch(() => {}); } catch (e) {} A.play('click'); break; }
-    case 'loadcode': { const t = (document.getElementById('load-code') || {}).value || ''; const loaded = E.importSave(t, rng); if (loaded) { state = loaded; modal = null; titleOpen = false; toast = 'Save loaded.'; A.play('perk'); } else { toast = 'That is not a Cinder Cell save code.'; A.play('denied'); } break; }
-    case 'coophost': { setCoopPrefs({ name: (document.getElementById('coop-name') || {}).value || '', relay: ((document.getElementById('coop-relay') || {}).value || '').trim() }); const code = makeCode(); startCoop('host', code, !getCoopPrefs().relay); break; }
+    case 'step': state.draft.step = +v; sfx('click'); break;
+    case 'look': state.draft.look = state.draft.look || defaultLook(); state.draft.look[v] = v === 'skin' || v === 'hairColor' ? +k : k; sfx('click'); break;
+    case 'savecode': { const code = E.exportSave(state); state.report = code; try { navigator.clipboard.writeText(code).then(() => { toast = 'Save code copied.'; render(); }).catch(() => {}); } catch (e) {} sfx('click'); break; }
+    case 'loadcode': { const t = (document.getElementById('load-code') || {}).value || ''; const loaded = E.importSave(t, rng); if (loaded) { state = loaded; modal = null; titleOpen = false; toast = 'Save loaded.'; sfx('perk'); } else { toast = 'That is not a Cinder Cell save code.'; sfx('denied'); } break; }
+    case 'coophost': {
+      const pre = getCoopPrefs(), code = pre.hostCode || makeCode(); // the same room each time, so an old invite link keeps working
+      setCoopPrefs({ name: (document.getElementById('coop-name') || {}).value || '', relay: ((document.getElementById('coop-relay') || {}).value || '').trim(), hostCode: code });
+      startCoop('host', code, !getCoopPrefs().relay);
+      try { navigator.clipboard.writeText(inviteLink()).then(() => { toast = 'Invite link copied. Send it to your friend.'; render(); }).catch(() => {}); } catch (e) {}
+      break;
+    }
+    case 'coopinvite': try { navigator.clipboard.writeText(inviteLink()).then(() => { toast = 'Invite link copied.'; render(); }).catch(() => {}); } catch (e) {} sfx('click'); break;
+    case 'coopauto': if (isHost() && state.run && state.screen === 'combat' && state.run.actor === 1 && !net.peer) { fight(E.withActor(state, 1, () => E.autoAction(state)), 1); } return;
+    case 'coopdrop': if (isHost()) { state.coop = false; toast = 'You carry on alone. They rejoin when the raid is over.'; } break;
+    case 'clearnotice': state.notice = null; break;
     case 'coopjoin': { setCoopPrefs({ name: (document.getElementById('coop-name') || {}).value || '', relay: ((document.getElementById('coop-relay') || {}).value || '').trim() }); const code = ((document.getElementById('coop-code') || {}).value || '').trim().toUpperCase(); if (code.length >= 4) startCoop('guest', code, !getCoopPrefs().relay); else toast = 'Enter the room code.'; break; }
     case 'coopleave': leaveCoop(); return;
-    case 'coopready': state.guestReady = !state.guestReady; if (net) net.send({ t: 'ready', on: state.guestReady }); A.play('click'); break;
-    case 'modal': modal = v; A.play('click'); break;
-    case 'drink': ok = E.buyDrink(state); if (ok) { toast = 'KEG-7 pours. It does not spill. It is proud of that.'; A.play('perk'); } break;
-    case 'barchat': state.barSay = { ...(state.barSay || {}), [v]: E.barLine(state, v, rng) }; A.play('click'); break;
-    case 'bet': state.wheel.bet = v; A.play('click'); break;
-    case 'stake': state.wheel.stake = +v; A.play('click'); break;
+    case 'coopready': state.guestReady = !state.guestReady; if (net) net.send({ t: 'ready', on: state.guestReady }); sfx('click'); break;
+    case 'modal': modal = v; sfx('click'); break;
+    case 'drink': ok = E.buyDrink(state); if (ok) { toast = 'KEG-7 pours. It does not spill. It is proud of that.'; sfx('perk'); } break;
+    case 'barchat': state.barSay = { ...(state.barSay || {}), [v]: E.barLine(state, v, rng) }; sfx('click'); break;
+    case 'bet': state.wheel.bet = v; sfx('click'); break;
+    case 'stake': state.wheel.stake = +v; sfx('click'); break;
     case 'spin': {
       const w = state.wheel, pick = +((document.getElementById('wheel-pick') || {}).value ?? w.pick); w.pick = pick;
       const res = E.spinWheel(state, w.bet, w.stake, pick, rng);
       if (!res) { ok = false; break; }
-      state.wheelResult = null; wheelBusy = true; save(); A.play('click');
-      setTimeout(async () => { if (wheel) await wheel.spinTo(res.n); state.wheelResult = res; wheelBusy = false; A.play(res.win ? 'perk' : 'denied'); render(); }, 50);
+      state.wheelResult = null; wheelBusy = true; save(); sfx('click');
+      setTimeout(async () => { if (wheel) await wheel.spinTo(res.n); state.wheelResult = res; wheelBusy = false; sfx(res.win ? 'perk' : 'denied'); render(); }, 50);
       break;
     }
     case 'invest': { const n = Math.floor(+((document.getElementById(`inv-${v}`) || {}).value || 0)); ok = E.invest(state, v, n); break; }
     case 'withdraw': ok = E.withdraw(state, v); break;
     case 'shippart': ok = E.buyShipPart(state, v); break;
-    case 'shipcell': ok = E.buyShipCell(state, v); if (ok) A.play('perk'); break;
-    case 'orbitarm': orbitArm = v || null; A.play('click'); render(); return;
-    case 'orbitgo': orbitArm = null; ok = E.orbitStart(state, v, rng); if (ok) A.play('door'); break;
+    case 'shipcell': ok = E.buyShipCell(state, v); if (ok) sfx('perk'); break;
+    case 'orbitarm': orbitArm = v || null; sfx('click'); render(); return;
+    case 'orbitgo': orbitArm = null; ok = E.orbitStart(state, v, rng); if (ok) sfx('door'); break;
     case 'orbitact': {
       ok = E.orbitAct(state, v, rng);
       if (ok && orbitScene) { const o = state.orbit; const ms = orbitScene.play(o.events); orbitBusy = true; save(); setTimeout(() => { orbitBusy = false; if (o.over === 'lost') { orbitScene.set(D.ORBIT_TIERS.find((x) => x.id === o.tier).ship, { me: true, enemy: false }); } render(); }, ms + 150); return; }
       break;
     }
-    case 'orbitclose': ok = E.orbitClose(state); if (ok) { if (state.screen === 'death') { modal = null; A.play('death'); } else A.play('door'); } break;
-    case 'sound': A.setPref('sfx', !A.getPrefs().sfx); A.play('click'); break;
-    case 'setpref': A.setPref(v, !A.getPrefs()[v]); A.play('click'); break;
-    case 'tip': state.meta.tips[v] = true; A.play('click'); break;
-    case 'threat': state.meta.threat = +v; A.play('click'); break;
+    case 'orbitclose': ok = E.orbitClose(state); if (ok) { if (state.screen === 'death') { modal = null; sfx('death'); } else sfx('door'); } break;
+    case 'sound': A.setPref('sfx', !A.getPrefs().sfx); sfx('click'); break;
+    case 'setpref': A.setPref(v, !A.getPrefs()[v]); sfx('click'); break;
+    case 'tip': state.meta.tips[v] = true; sfx('click'); break;
+    case 'threat': state.meta.threat = +v; sfx('click'); break;
     case 'perk':
-      if (v && state.char.perks.length >= E.CONTRABAND_SLOTS) { state.perkPick = state.perkPick === v ? null : v; A.play('click'); break; }
-      E.choosePerk(state, v, rng, null, actingAs); state.perkPick = null; if (v) A.play('perk'); break;
-    case 'perkdrop': if (E.choosePerk(state, state.perkPick, rng, v, actingAs)) { state.perkPick = null; A.play('perk'); } break;
+      if (v && state.char.perks.length >= E.CONTRABAND_SLOTS) { state.perkPick = state.perkPick === v ? null : v; sfx('click'); break; }
+      E.choosePerk(state, v, rng, null, actingAs); state.perkPick = null; if (v) sfx('perk'); break;
+    case 'perkdrop': if (E.choosePerk(state, state.perkPick, rng, v, actingAs)) { state.perkPick = null; sfx('perk'); } break;
     case 'ending': state.meta.endingSeen = true; state.screen = 'town'; break;
     case 'begin': state.screen = 'create'; if (!state.draft) state.draft = E.newDraft(state.meta, rng); break;
     case 'bg': state.draft.background = v; { for (const key of Object.keys(D.ATTRS)) while (E.draftAttr(state.draft, key) > D.ATTR_CREATE_MAX) E.draftAdjust(state.draft, key, -1); } break;
@@ -1807,16 +1942,16 @@ function applyAct(a, v, k) {
     case 'create': E.createChar(state, rng); state.gateMap = 'garrison'; state.popup = null; break;
     case 'tab': case 'popup': state.popup = v === 'gate' ? 'missions' : v === 'safehouse' ? 'character' : v; state.notice = null; break;
     case 'closepopup': state.popup = null; state.notice = null; state.compare = null; break;
-    case 'compare': state.compare = +v; A.play('click'); break;
-    case 'closecompare': state.compare = null; A.play('click'); break;
+    case 'compare': state.compare = +v; sfx('click'); break;
+    case 'closecompare': state.compare = null; sfx('click'); break;
     case 'buygear': ok = E.buyGear(state, +v); state.compare = null; break;
-    case 'gearslot': state.gearSlot = v; A.play('click'); break;
+    case 'gearslot': state.gearSlot = v; sfx('click'); break;
     case 'upgradegear': ok = E.upgradeItem(state, v); break;
     case 'reroll': ok = E.rerollBonus(state, v, +k, rng); break;
     case 'equipheirloom': ok = E.equipHeirloom(state); break;
-    case 'heirloom': E.setHeirloom(state, v); A.play('click'); break;
-    case 'loottake': if (E.takeLoot(state, rng, actingAs)) A.play('buy'); break;
-    case 'lootsell': if (E.leaveLoot(state, rng)) A.play('click'); break;
+    case 'heirloom': E.setHeirloom(state, v); sfx('click'); break;
+    case 'loottake': if (E.takeLoot(state, rng, actingAs)) sfx('buy'); break;
+    case 'lootsell': if (E.leaveLoot(state, rng)) sfx('click'); break;
     case 'lielow': ok = E.lieLow(state); break;
     case 'item': ok = E.buyItem(state, v); break;
     case 'upgrade': ok = E.buyUpgrade(state, v); break;
@@ -1842,16 +1977,16 @@ function applyAct(a, v, k) {
       const text = E.runReport(state);
       state.report = text;
       try { navigator.clipboard.writeText(text).then(() => { toast = 'Run report copied. Paste it into the chat.'; render(); }).catch(() => {}); } catch (e) {}
-      A.play('click'); break;
+      sfx('click'); break;
     }
     case 'reset':
       if (!confirmReset) { confirmReset = true; break; }
       confirmReset = false; modal = null; state = keepBoard(E.newGame(rng)); break;
   }
   if (BUY.has(a) && ok && state.notice) E.journal(state, state.notice, 'town');
-  if (BUY.has(a)) A.play(ok ? 'buy' : 'denied');
-  else if (['deploy', 'room', 'deeper'].includes(a)) A.play('door');
-  else if (['step', 'look', 'tab', 'popup', 'closepopup', 'pickmap', 'continue', 'roomDone', 'eventDone', 'event', 'bg', 'attr', 'create', 'begin', 'recruit', 'extract'].includes(a)) A.play('click');
+  if (BUY.has(a)) sfx(ok ? 'buy' : 'denied');
+  else if (['deploy', 'room', 'deeper'].includes(a)) sfx('door');
+  else if (['step', 'look', 'tab', 'popup', 'closepopup', 'pickmap', 'continue', 'roomDone', 'eventDone', 'event', 'bg', 'attr', 'create', 'begin', 'recruit', 'extract'].includes(a)) sfx('click');
 }
 
 document.addEventListener('click', (ev) => {
@@ -1930,8 +2065,13 @@ function start(data) {
   delete state.events;
   if (state.screen === 'create' && !state.draft) state.draft = E.newDraft(state.meta, rng);
   titleOpen = !(data && data.state);
+  // An invite link joins straight away; a reload goes back to the room this tab was in.
+  const join = (new URLSearchParams(location.search).get('join') || '').trim().toUpperCase(), room = getRoom();
+  if (/^[A-Z0-9]{4,8}$/.test(join)) { history.replaceState(null, '', location.pathname); titleOpen = false; startCoop('guest', join, !getCoopPrefs().relay); }
+  else if (room && (room.role === 'guest' || state.char)) { titleOpen = false; startCoop(room.role, room.code, room.local); }
+  else state.coop = false;
   render();
-  seedBoard();
+  if (!isGuest()) seedBoard();
   loadLayers().then((ok) => { if (ok) { lookKey = ''; render(); } });
   loadDowntimeArt().then((ok) => { if (ok && modal) render(); });
   // PixelLab sheets, if any have been delivered. Re-render so the stage picks them up.

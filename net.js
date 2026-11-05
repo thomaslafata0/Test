@@ -3,6 +3,7 @@
 // two tabs in the same browser (handy for testing without a server).
 
 const PREFS_KEY = 'cinder-cell-coop';
+const ROOM_KEY = 'cinder-cell-room';
 // On the deployed site the same Worker serves the game and the relay, so no Relay URL needs entering.
 const DEFAULT_RELAY = typeof location !== 'undefined' && location.hostname.endsWith('.workers.dev') ? location.origin : '';
 export function getCoopPrefs() {
@@ -13,6 +14,17 @@ export function getCoopPrefs() {
 }
 export function setCoopPrefs(p) { try { localStorage.setItem(PREFS_KEY, JSON.stringify(Object.assign(getCoopPrefs(), p))); } catch (e) {} }
 export const makeCode = () => Array.from({ length: 4 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
+// The room this tab is in, so a reload rejoins it. Per tab, so two test tabs in one browser don't fight over it.
+export function getRoom() { try { return JSON.parse(sessionStorage.getItem(ROOM_KEY)) || null; } catch (e) { return null; } }
+export function setRoom(r) { try { if (r) sessionStorage.setItem(ROOM_KEY, JSON.stringify(r)); else sessionStorage.removeItem(ROOM_KEY); } catch (e) {} }
+// Identifies this tab to the relay, so a reconnect replaces its own stale socket instead of being refused as a third player.
+function clientId() {
+  try {
+    let id = sessionStorage.getItem('cinder-cell-client');
+    if (!id) { id = makeCode() + makeCode(); sessionStorage.setItem('cinder-cell-client', id); }
+    return id;
+  } catch (e) { return makeCode() + makeCode(); }
+}
 
 class LocalTransport {
   constructor(code, role) {
@@ -25,43 +37,86 @@ class LocalTransport {
   close() { this.send({ t: 'peer-left', role: this.role }); this.ch.close(); }
 }
 
+const BEAT_MS = 15000, DEAD_MS = 40000, RETRY_MAX_MS = 8000;
 class WsTransport {
   constructor(url, code, role) {
-    const base = url.replace(/\/+$/, '').replace(/^http/, 'ws');
-    this.ws = new WebSocket(`${base}/room/${code}?role=${role}`);
-    this.ws.onopen = () => {
-      // Heartbeat so a long think between turns doesn't let the connection idle out. The relay drops these.
-      this.beat = setInterval(() => { if (this.ws.readyState === 1) this.ws.send('ping'); }, 30000);
+    this.url = `${url.replace(/\/+$/, '').replace(/^http/, 'ws')}/room/${code}?role=${role}&id=${clientId()}`;
+    this.closed = false; this.tries = 0;
+    // A phone that wakes up or a laptop back on wifi shouldn't wait out the retry timer.
+    this.wake = () => { if (!this.closed && document.visibilityState === 'visible' && !this.isOpen()) this.reconnectNow(); };
+    document.addEventListener('visibilitychange', this.wake);
+    window.addEventListener('online', this.wake);
+    this.connect();
+  }
+  isOpen() { return !!this.ws && this.ws.readyState === 1; }
+  connect() {
+    clearTimeout(this.retry);
+    const ws = this.ws = new WebSocket(this.url);
+    ws.onopen = () => {
+      if (ws !== this.ws) return;
+      this.tries = 0; this.seen = Date.now();
+      // The relay answers each ping; silence means the connection is dead even if the browser hasn't noticed.
+      this.beat = setInterval(() => {
+        if (Date.now() - this.seen > DEAD_MS) return this.drop(ws);
+        if (ws.readyState === 1) ws.send('ping');
+      }, BEAT_MS);
       if (this.onopen) this.onopen();
     };
-    this.ws.onmessage = (ev) => { try { const m = JSON.parse(ev.data); if (this.onmessage) this.onmessage(m); } catch (e) {} };
-    this.ws.onclose = () => { clearInterval(this.beat); if (this.onclose) this.onclose(); };
-    this.ws.onerror = () => { if (this.onerror) this.onerror(); };
+    ws.onmessage = (ev) => {
+      if (ws !== this.ws) return;
+      this.seen = Date.now();
+      if (ev.data === 'pong') return;
+      try { const m = JSON.parse(ev.data); if (this.onmessage) this.onmessage(m); } catch (e) {}
+    };
+    ws.onclose = () => this.drop(ws);
+    ws.onerror = () => {};
   }
-  send(data) { if (this.ws.readyState === 1) this.ws.send(JSON.stringify(data)); }
-  close() { clearInterval(this.beat); try { this.ws.close(); } catch (e) {} }
+  // Forget this socket and try again, with a growing delay.
+  drop(ws) {
+    if (ws !== this.ws) return;
+    clearInterval(this.beat);
+    ws.onopen = ws.onmessage = ws.onclose = null;
+    try { ws.close(); } catch (e) {}
+    this.ws = null;
+    if (this.closed) return;
+    if (this.onlost) this.onlost();
+    clearTimeout(this.retry);
+    this.retry = setTimeout(() => this.connect(), Math.min(RETRY_MAX_MS, 500 * 2 ** this.tries++));
+  }
+  reconnectNow() { clearTimeout(this.retry); this.tries = 0; if (this.ws) this.drop(this.ws); this.connect(); }
+  send(data) { if (this.isOpen()) this.ws.send(JSON.stringify(data)); }
+  close() {
+    this.closed = true;
+    clearInterval(this.beat); clearTimeout(this.retry);
+    document.removeEventListener('visibilitychange', this.wake);
+    window.removeEventListener('online', this.wake);
+    if (this.ws) { this.ws.onclose = null; try { this.ws.close(); } catch (e) {} }
+  }
 }
 
 export class Net {
   // role: 'host' | 'guest'. local: true for the two-tab transport.
+  // status: connecting | waiting (no partner yet) | connected | reconnecting | full | closed.
   constructor({ role, code, relay, local = false, name = '' }) {
     this.role = role; this.code = code; this.name = name;
-    this.peer = false; this.status = 'connecting';
+    this.peer = false; this.online = false; this.status = 'connecting';
     this.handlers = {};
     this.t = local ? new LocalTransport(code, role) : new WsTransport(relay, code, role);
-    this.t.onopen = () => { this.status = 'waiting'; this.emit('status'); if (role === 'guest') this.send({ t: 'hello', name }); };
+    this.t.onopen = () => { this.online = true; this.status = 'waiting'; this.emit('status'); if (role === 'guest') this.send({ t: 'hello', name: this.name }); };
+    this.t.onlost = () => { this.online = false; this.peer = false; this.status = 'reconnecting'; this.emit('status'); };
     this.t.onmessage = (m) => {
       if (!m || !m.t) return;
-      if (m.t === 'peer-joined') { this.peer = true; this.status = 'connected'; this.emit('status'); if (role === 'guest') this.send({ t: 'hello', name }); return; }
+      if (m.t === 'room-full') { this.status = 'full'; this.close(); this.status = 'full'; this.emit('status'); this.emit('room-full'); return; }
+      if (m.t === 'peer-joined') { this.peer = true; this.status = 'connected'; this.emit('status'); if (role === 'guest') this.send({ t: 'hello', name: this.name }); return; }
       if (m.t === 'peer-left') { this.peer = false; this.status = 'waiting'; this.emit('status'); this.emit('peer-left'); return; }
-      if (m.t === 'hello') { this.peer = true; this.status = 'connected'; this.peerName = m.name; this.emit('status'); }
+      if (m.t === 'hello') this.peerName = m.name;
+      // Anything from the other side means they're here (the two-tab transport has no relay to announce them).
+      if (!this.peer || m.t === 'hello') { this.peer = true; this.status = 'connected'; this.emit('status'); }
       this.emit(m.t, m);
     };
-    this.t.onclose = () => { this.status = 'closed'; this.emit('status'); };
-    this.t.onerror = () => { this.status = 'error'; this.emit('status'); };
   }
   on(t, fn) { (this.handlers[t] = this.handlers[t] || []).push(fn); return this; }
   emit(t, m) { for (const fn of this.handlers[t] || []) fn(m); }
   send(data) { this.t.send(data); }
-  close() { this.t.close(); this.status = 'closed'; }
+  close() { this.t.close(); this.online = false; this.peer = false; this.status = 'closed'; }
 }
