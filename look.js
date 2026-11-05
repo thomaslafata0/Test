@@ -35,10 +35,14 @@ export function loadLayers() {
     if (!m || m.pending || !m.layers) return false;
     manifest = m;
     const jobs = [];
-    const load = (src) => new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = `chars2/${src}`; });
+    // Atlas entries (battle hair) name a strip by y, w and h inside a shared image; cut it out once.
+    const cut = (img, a) => { const c = document.createElement('canvas'); c.width = a.w; c.height = a.h; c.getContext('2d').drawImage(img, 0, a.y, a.w, a.h, 0, 0, a.w, a.h); return c; };
+    const loaded = {};
+    const load = (src) => loaded[src] || (loaded[src] = loadOne(src));
+    const loadOne = (src) => new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = `chars2/${src}`; });
     for (const [id, def] of Object.entries(m.layers)) {
       layers[id] = { kind: def.kind, town: {}, battle: {} };
-      for (const scene of ['town', 'battle']) for (const [anim, a] of Object.entries(def[scene] || {})) jobs.push(load(a.file).then((img) => { if (img) layers[id][scene][anim] = { img, frames: a.frames, fps: a.fps, tip: a.tip || null }; }));
+      for (const scene of ['town', 'battle']) for (const [anim, a] of Object.entries(def[scene] || {})) jobs.push(load(a.file).then((img) => { if (img) layers[id][scene][anim] = { img: a.y != null ? cut(img, a) : img, frames: a.frames, fps: a.fps, tip: a.tip || null }; }));
     }
     for (const [id, p] of Object.entries(m.portraits || {})) jobs.push(load(p.file).then((img) => { if (img) portraits[id] = img; }));
     await Promise.all(jobs);

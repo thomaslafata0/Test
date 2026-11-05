@@ -1,6 +1,6 @@
 """Battle hair layers for chars2: cut each hairstyle from a PixelLab state of battle body_m1 (north-east rotation),
 recolour it to the pack's three hair shades, and pin it to the head in every battle frame by matching the head shape.
-usage: bhair_build.py <rotations dir> <chars2 dir>"""
+usage: bhair_build.py <rotations dir> <chars2 dir>   (then pack hair/<id>/battle/<body>/<anim>.png into hair/<id>/battle.png atlases; see chars2/manifest.json note_battle_hair)"""
 import sys, colorsys, json
 from PIL import Image
 R, C = sys.argv[1], sys.argv[2]; F = 96
@@ -102,7 +102,7 @@ for st in STYLES:
     pts = [(x - hmx, y - hmy, hair.getpixel((x, y))) for y in range(F) for x in range(F) if hair.getpixel((x, y))[3]]
     report[st] = {'px': len(pts), 'bbox': hair.getbbox()}
     for bd in BODIES:
-        os.makedirs(f'{C}/hair/{st}/battle/{bd}', exist_ok=True)
+        os.makedirs(f"{C}/hair/{st}/battle/{bd}", exist_ok=True)
         for a in ANIMS:
             strip = Image.open(f'{C}/body/{bd}/battle/{a}.png').convert('RGBA'); n = strip.width // F
             out = Image.new('RGBA', strip.size)
