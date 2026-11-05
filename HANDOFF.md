@@ -1,69 +1,105 @@
 # Cinder Cell: project handoff
 
-Read this first in a new session. It describes the whole project as it stands, how the pieces fit, how to test and publish, and what is next.
+Read this first in a new session. It covers what the game is, how the code fits together, every system, the balance numbers, how to test and publish, and what is left. Last updated at commit `35fb7ac` plus the commit that added this file and `tests/`.
+
+## Start here
+1. Clone `https://github.com/thomaslafata0/Test`, branch **`loot-and-gear`** (everything is here; `master` is the old single-weapon game, merge only when the owner says so).
+2. `python3 -m http.server 8765` in the repo, open `http://localhost:8765/index.html`.
+3. Run the checks in **Testing** before and after any change.
+4. Publish to the live artifact (see **Publishing**) and push. The owner plays the live link on desktop and phone.
+
+- **Live build:** https://claude.ai/artifact/6yZfDr97V6KXSHJs3fx9Pw (private to the owner; republishing keeps the URL).
+- **Owner:** wants it challenging, funny and varied; makes art with ChatGPT + PixelLab from briefs in `docs/`; pastes run reports (Settings > Copy run report) as feedback; will play co-op with a friend. Prefers you act autonomously and report plainly.
 
 ## What it is
-A browser roguelite (HTML + JS modules, no build step) about a resistance cell raiding an occupied industrial town's four Directorate districts. Original IP **inspired by the tone of Andor; it must not use Star Wars names, characters, logos or designs**. All names live in `data.js`.
+A browser roguelite in plain HTML + JS modules, no build step. A resistance cell raids four districts of an occupied industrial town, Kessa Yard, held by the Directorate. Operatives die permanently; the cell keeps Resolve, training, feats and records. Original IP **inspired by the tone of Andor: no Star Wars names, characters, logos, ship silhouettes or designs**. All names live in `data.js`.
 
-- **Live build:** https://claude.ai/artifact/6yZfDr97V6KXSHJs3fx9Pw (private; publishing republishes to this URL).
-- **GitHub:** https://github.com/thomaslafata0/Test. Branch `loot-and-gear` holds everything below; `master` is the old single-weapon game. Merge when the owner says so.
-- **Owner:** plays on desktop and phone; wants it challenging, funny, varied; uses ChatGPT + PixelLab for art, Claude for code; sends "run reports" (Settings) and a friend will play co-op with them.
+## Conventions
+- ASCII-only JS and HTML: write non-ASCII as `\uXXXX`. Check with `python3 -I -c "import sys; [print(f, sum(1 for l in open(f,encoding='utf-8') if any(ord(c)>127 for c in l))) for f in sys.argv[1:]]" index.html engine.js data.js`.
+- 2-space indent, data-driven content in `data.js`, rules in `engine.js` (pure, no DOM), UI in `index.html`.
+- Every mechanic that changes difficulty gets a simulator check before it ships.
+- Save is `VERSION = 4` in `localStorage['cinder-cell-save-v1']`. New fields must default with `||` or in `migrate()` (the `s.v === VERSION` branch already backfills `board`, `ship`, `ventures`, `feats`).
+- Commits end with the session's attribution lines.
 
 ## Files
 | File | Purpose |
 |---|---|
-| `index.html` | All screens, CSS, input, rendering glue, co-op client logic. One `<script type="module">`. |
-| `engine.js` | All rules, pure (no DOM). `VERSION = 4` saves; `migrate()` upgrades old ones. `TUNE` holds the balance knobs. |
-| `data.js` | Content: maps, enemies, bosses, quirks, bulletins, gear (`GEAR`, `RARITY`, `BONUSES`, `TRAITS`, `BOSS_UNIQUE`), implants, perks, events, contracts, backgrounds. |
-| `stage.js` | Animated battle canvas (384x216): sprites, effects, boss intro, partner sprite in co-op, Manual/Auto 1x/Auto 2x buttons. |
-| `town.js` | The walkable yard: layout, outline collision, doors to interiors, NPCs, hotspots, tap-to-walk. Art in `town/`. |
-| `downtime.js` | Code-drawn roulette wheel (`Wheel`) and orbit fight scene (`OrbitScene`); loads `downtime/manifest.json` art when delivered. |
-| `look.js` | Character looks. `townSheets(look, bg)` and `battleSheet(look, bg, rangedWpn, meleeWpn)` composite body + outfit + hair/weapon with skin (exact ramp swap) and hair (luminance ramp) recolouring; `lookStill`, `lookBattleStill`, `lookPortrait`; `weaponLayer(base)` maps gear to `wpn_*`. `index.html` `applyLook()` feeds `town.setPlayerSheets` and `stage.setLookSheets` whenever look, class or weapons change (`attackM` is the melee attack strip). |
-| `net.js` | Co-op transports (WebSocket relay, BroadcastChannel for two tabs) and the `Net` session. |
-| `coop/worker.js`, `coop/wrangler.toml` | The Cloudflare relay (Durable Object per room code). Not yet deployed. |
-| `audio.js` | Synthesised SFX, optional drone/rain, and music (`music/town.mp3`, `music/raid.mp3`, crossfaded). |
-| `icons.js`, `portraits.js` | Code-drawn pixel icons and fallback portraits. `gearIconKey()` maps gear ids to icons. |
-| `sprites/` | PixelLab battle sheets for all characters + `manifest.json`. |
-| `town/` | Town art pack (tiles, buildings, interiors, props, chars) + `manifest.json`, `CHECKLIST.md`. |
-| `chars2/` | The delivered character pack: 4 bodies (town 8 strips + battle 6), 4 class outfits, 6 hairstyles (town only), 8 weapons (battle idle/attack/charge, with per-frame tips), 4 portraits, `manifest.json`, `CHECKLIST.md`. Overlays were drawn on body_m1; `look.js` shifts them per frame onto the other bodies. **No battle hair in the pack**, so operatives are bald in combat and on the gear portrait: ask the artist for `hair/<id>/battle/{idle,attack,charge,hit,defend,death}.png` and `look.js` will pick them up once `compose` paints hair in the battle scene too. |
-| `sim.mjs`, `sim-builds.mjs`, `sim-gear.mjs`, `sim-coop.mjs` | Simulators (see Balance). |
-| `sim-board.mjs`, `board.json` | Builds the seed leaderboard: 50 simulator raids labelled Bot #n, spread from a sector-20 run down to a sector-4 one. Rebuild with `node sim-board.mjs 40 25 > board.json` after balance changes. |
-| `docs/COOP.md` | Co-op design, protocol, Cloudflare deploy steps. |
-| `docs/CHARACTER_ART_PROMPT_CHATGPT.md` | The art brief for the character customisation pack. |
-| `docs/TOWN_ART_*.md` | The earlier town art briefs. |
-| `manifest.webmanifest`, `icon-*.png` | Add-to-home-screen support. |
-
-Conventions: ASCII-only JS/HTML (non-ASCII as `\uXXXX`); 2-space indent; data-driven content; every mechanic gets a simulator check; commits end with the session's attribution lines.
+| `index.html` | Every screen, all CSS, input, render loop (`render()` rebuilds `#app`; same-view renders keep scroll and focus), co-op client. One `<script type="module">`. |
+| `engine.js` | All rules. `TUNE` and `HARD` are the balance knobs. Sections: gear, stats, combat, raids, leaderboard, co-op actors, downtime, feats. |
+| `data.js` | Content: maps, enemies, bosses, quirks, bulletins, gear, rarities, bonuses, traits, uniques, implants, perks, events, contracts, backgrounds, Marks, shuttle parts, orbit tiers, ventures, the bar, feats. |
+| `stage.js` | Battle canvas (384x216): sprite sheets, effects, boss intro, co-op partner, Manual / Auto 1x / Auto 2x. `setLookSheets` takes composited player sheets. |
+| `town.js` | The walkable yard: layout, outline collision from building alpha, doors and interiors, NPCs, hotspots, tap-to-walk. `setPlayerSheets` takes composited strips. |
+| `look.js` | Character compositor over `chars2/`: `townSheets`, `battleSheet` (ranged weapon in idle/charge/attack, melee weapon in `attackM`), `lookStill`, `lookBattleStill`, `lookPortrait`, `weaponLayer(base)`. Skin swaps the exact grey ramp; hair maps by brightness. Overlays drawn on body_m1 are shifted per frame onto other bodies. |
+| `downtime.js` | Code-drawn roulette `Wheel` and `OrbitScene`; loads `downtime/manifest.json` art when delivered. |
+| `net.js`, `coop/` | Co-op transports (WebSocket relay, BroadcastChannel) and the Cloudflare Worker + Durable Object relay (not deployed). |
+| `audio.js` | Synth SFX, optional drone/rain, music (`music/town.mp3`, `music/raid.mp3`), default music volume 0.2. |
+| `icons.js`, `portraits.js` | Code-drawn icons (gear, skills, rooms, marks, shuttle, ventures) and fallback portraits. |
+| `sprites/` | PixelLab battle sheets for enemies, bosses, prisoner and the stock player. |
+| `town/` | Town art pack + `manifest.json`. |
+| `chars2/` | Character art pack (see **Art**). |
+| `downtime/manifest.json` | Placeholder (`pending: true`) until the downtime art arrives. |
+| `sim.mjs`, `sim-builds.mjs`, `sim-gear.mjs`, `sim-coop.mjs`, `sim-board.mjs` | Simulators (see **Balance**). `board.json` is the seeded leaderboard. |
+| `tests/*.cjs` | Playwright browser tests (see **Testing**). Screenshots go to `tests/shots/` (ignored). |
+| `docs/` | `COOP.md` (design, protocol, deploy), art briefs for town, characters and downtime. |
+| `manifest.webmanifest`, `icon-*.png` | Add to home screen. |
 
 ## Game systems
-- **Meta loop:** operatives die permanently; Resolve (permanent) buys training and cell upgrades (incl. Heirloom: keep one piece of gear on death). Journal of every event in `meta.journal`; Settings > "Copy run report" exports it with the full state. Settings > save codes move a cell between devices.
-- **Title screen** on load (Continue / New cell / Manual / Settings & co-op). **Creation** in three steps: body (4 placeholders until the art lands), class (the four backgrounds, each with +2 to an attribute, a lasting perk, starting gear and a starting skill), details (name, hair, skin and hair colour, attributes). Looks are stored in `c.look`.
-- **Town (Kessa Yard):** walk with arrows/WASD or tap; buildings use outline collision; freight terminal opens Missions on entry, the other shops open when you talk to their NPC (Marrow = Black Market, Ilse = Clinic, Cass = Character & Resolve with a Gear tab). Noodle vendor (+5% XP until next in town), tenement stim (once per operative), vending terminal, poster, barracks lines. Attribute points can be spent from the town screen. Escape closes any menu or leaves a room. Shortcut bar under the yard opens any menu.
-- **Gear:** six slots (ranged, melee, head, chest, legs, gadget). Items are `{ base, rarity, level, bonuses, trait }`; Common/Rare/Elite/Legendary plus boss Uniques. Black Market: six random pieces, restocks after each raid, Compare popup; nothing is ever sold (buying replaces, drops are take-or-leave). Upgrades +1..+5 and rerolls on the Gear tab.
-- **Combat:** Shoot (ranged, steady, take 15% less damage that turn) vs Strike (melee, swingy, ignores cover, next hit +15%, some enemies hit back). Skills from weapons/attributes (every class starts with one). Intents shown ahead; scanner gadgets show the next one too. Auto battle uses `E.autoAction`.
-- **Raids:** 3 rooms per sector via two doors (no optional veteran door in sector 1), boss every 5th sector, four maps with mechanics; results show as a strip on the door screen; loot, contraband and sector-clear are popups. Extracting between bosses costs 45% to 55% of the raid's haul by tier; after a boss it's free; Run/Smoke cost 65% to 75%. Wanted +1 per raid survived; lower it at the safehouse (Lie low).
-- **Where permanent progress shows:** Character tab lists the operative's Marks and the cell's Feat buff totals (with a link to the full Feats screen); the title screen's Continue button shows the operative's composited still and the best real leaderboard raid; the death screen shows the fallen operative beside their killer; Settings > run report now includes feats, shuttle, ventures, wheel and marks.
-- **Leaderboard:** every raid is scored when it ends (`raidScore`: haul brought home + 150/sector cleared + 25/kill + 75/veteran + 500/boss + 100/prisoner; dying zeroes the haul). `recordScore` keeps the top `BOARD_SIZE` (50) in `meta.board`; the rank shows in the after-raid notice and on the death screen. The board is per device: `keepBoard` in `index.html` carries it across New cell and Reset, and `seedBoard` fills it once from `board.json` (bot rows, `bot: true`). Title screen > Leaderboard.
-- **Feats (achievements):** `D.FEATS` plus one per enemy type (`FEAT_DEFS` in `engine.js`, built at import). `feat(s, key, n)` counts and unlocks tiers (Resolve on top tiers, `s.featUnlocks` for the toast, `r.featTouched` for the after-action bars via `featProgress`). `featBuffs(meta)` (cached per `meta.feats.v`) feeds `statsOf` (hp, crit, dodge, stim), `hitMult` (atk / ranged / melee / per-enemy), `creditMult`, `runChance`, `gainXp`. `FEAT_FALLOFF` halves the listed `per` values; enemy HP in `HARD` carries +8% per tier to offset them (sim: finale 21 with Feats vs 22 without). Feats screen: header > Feats.
-- **After curfew (downtime):** second tool row in the yard, host only, `modal` = bar / wheel / orbit / ventures (`downtimeView` in `index.html`; engine section "Downtime"). The Lantern: `buyDrink` (c.drink, +1 ATK +4% crit, cleared in `endRun`), `barLine` cycles jokes/lines per operative. The Wheel: `spinWheel` (European roulette, `BETS`, `STAKES`, stats in `meta.wheel`). Orbit: `s.orbit` fight state, `orbitStart/orbitAct/orbitClose`; losing the shuttle calls `die` (death screen says lost in orbit); `MARKS` (5, `c.marks`, applied in `statsOf`, `creditMult`, `runChance`); shuttle levels in `meta.ship` (`SHIP_PARTS`, credits) and cell fittings (`SHIP_CELL`, Resolve). Enemy stats in `ORBIT_TIERS` were tuned so low orbit is ~85% with a stock shuttle, mid needs level 1, high needs level 3 (~86% win, ~9% death); the UI simulates odds for the current shuttle (`orbitOdds`). Ventures: `meta.ventures` by id, `invest/withdraw`, `tickVentures` once per raid in `endRun`. Art brief: `docs/DOWNTIME_ART_PROMPT_CHATGPT.md`; placeholder `downtime/manifest.json`.
-- **Co-op:** see `docs/COOP.md`. Host runs the game and broadcasts state; the friend's screen mirrors it with the operatives swapped (`E.setActor`). Turn-taking fights, enemy targets whoever hurt it most, second enemy action every 4th round; a death ends the raid for both. Tested in two tabs; the WebSocket path needs the owner to deploy the Worker (`cd coop && wrangler deploy`) and host the page on Cloudflare Pages so the friend can open it.
+- **Meta loop.** Operatives die permanently. Resolve buys training and cell upgrades (Heirloom keeps one piece of gear). Feats, the leaderboard, the journal, shuttle fittings and ventures persist; Marks and gear die with the operative. Settings has save codes (move a cell between devices) and the run report.
+- **Title and creation.** Title: Continue (with the operative's composited still), New cell, Leaderboard, Feats, Manual, Settings. Creation in three steps: body (four bodies with the pack's portraits), class (four backgrounds, each +2 to an attribute, a lasting perk, starting gear and skill), details (name, six hairstyles, six skin tones, six hair colours, attributes). Live preview is the composited figure.
+- **The yard.** Walk with arrows/WASD or tap. Freight terminal opens Missions on entry; other shops open by talking to their NPC (Marrow: Black Market, Ilse: Clinic, Cass: Character & Resolve with a Gear tab). Noodles (+5% XP until next in town), tenement stim, vending terminal, poster and barracks lines. Attribute points spend from the yard. Escape closes any menu or leaves a room. Rails and door aprons are walkable.
+- **Gear.** Six slots. Items `{ base, rarity, level, bonuses, trait }`, Common to Legendary plus boss Uniques. Black Market: six random pieces, restocks after each raid, Compare popup, nothing is ever sold. Upgrades +1..+5 and rerolls on the Gear tab.
+- **Combat.** Shoot (ranged, steady, 15% less damage taken that turn) vs Strike (melee, swingy, ignores cover, next hit +15%, some enemies hit back). Skills from weapons and attributes. Intents shown. Auto battle via `E.autoAction`. Battle sprites show the class outfit and the equipped weapons.
+- **Raids.** Three rooms per sector via two doors, a boss every fifth sector, four maps with mechanics. No optional veteran door in sector 1. Results strip on the door screen with feat progress bars; loot, contraband and sector clear are popups. Wanted +1 per raid; lie low at the safehouse.
+- **Difficulty tiers** (`HARD`, `hard(s)`, by current sector in a raid and deepest sector in the yard): through sector 5, extracting between bosses loses 45% of the haul, Run/Smoke 65%, enemy HP x1.18, prices x1.10; after 5: 50% / 70% / x1.21 / x1.12; after 10: 55% / 75% / x1.25 / x1.15. Enemy HP includes +8% per tier offsetting Feats. Extracting right after a boss is free.
+- **Leaderboard.** `raidScore`: haul brought home + 150 per sector cleared + 25 per kill + 75 per veteran + 500 per boss + 100 per prisoner; dying zeroes the haul. Top 50 in `meta.board`, per device (survives New cell and Reset). Seeded once from `board.json` as Bot #1 to #50, a ladder from about 15,000 down to 1,600. Rank or gap shows after every raid and on the death screen.
+- **Feats.** 21 general feats plus one per enemy type (`FEAT_DEFS`), four tiers each (enemy types 1/10/50/100, bosses 1/3/10/25). Each tier adds a small permanent buff, shrinking by `FEAT_FALLOFF` (0.5, 0.4, 0.3, 0.2 of `per`); the big ones pay Resolve on top tiers. `featBuffs(meta)` feeds stats, damage (including per-enemy), credits, escape and XP. Unlock toasts, after-fight bars, a Feats screen, and totals on the Character tab.
+- **After curfew** (second row of buttons in the yard, host only):
+  - *The Lantern:* KEG-7 the droid bartender tells jokes; a round (+1 ATK, +4% crit next raid); regulars Vess, Juno and Sable with flirty lines and tips.
+  - *The Wheel:* European roulette, ten bet types at real payouts, stakes 10 to 250, animated wheel that lands on the result.
+  - *Orbit:* turn-based shuttle fights (Fire, Evade, Overcharge, Jump) at three tiers. Losing the shuttle kills the operative (an Ejection pod fitting gives a 50% save once). Wins pay credits and, on the two harder tiers, one of five permanent **Marks** per operative. Refits cost credits; three fittings cost Resolve and survive death. Each run card shows simulated odds for the current shuttle.
+  - *Ventures:* three cell-owned investments that tick once per raid, from +6% with rare losses to +30% with a 22% chance of total loss.
+- **Co-op.** Host runs the game and broadcasts state; the friend's screen mirrors it with operatives swapped. Turn-taking fights, the enemy targets whoever hurt it most, a death ends the raid for both. Works in two tabs; over the internet it needs the Worker deployed (see `docs/COOP.md`). Downtime is host only.
 
-## Balance (final solo pass, owner asked to stop here)
-Knobs in `engine.js` `TUNE`. Commands: `node sim.mjs 100 30`, `MAP=port node sim.mjs 100 40`, `node sim-builds.mjs 200 100` (or `ONLY=a,b`), `ECON=1 node sim.mjs ...` for the economy, `ABLATE=perk:x|unique:x|trait:x|bonus:x|loot` for outliers, `TUNE='{...}'` overrides, `node sim-coop.mjs` / `SOLO=1 node sim-coop.mjs`.
-- **Difficulty tiers** (`HARD` in `engine.js`, owner's request): through sector 5 extracting between bosses loses 45% of the haul, Run/Smoke 65%, enemy HP x1.18 (x1.10 plus the Feats offset), every credit price x1.10; after sector 5: 50% / 70% / x1.21 / x1.12; after sector 10: 55% / 75% / x1.25 / x1.15. In a raid the current sector sets the tier; in the yard the cell's deepest sector does (`hard(s)`).
-- Main bot after the tiers: first boss at operative 3, sector 10 at 11, Garrison finale 22 (94% within 30 lives), Port finale 32 (78% within 40). Before the tiers it was 3 / 9 / 20 / 27.
-- Builds at 100 campaigns (operatives to the sector-15 boss): strength 17, balanced 16, tank 17, intellect 19, strAgi/hybrid/dotBuild 19, meleeOnly 22, charisma 24, critStack 25, rangedOnly 25, agility 27, glass 30 (88%). Spread 1.6x; all finish.
-- No single perk, Unique, trait or bonus moves the finale by more than one operative.
-- Co-op knobs (`coopHp` 1.5, `coopAtk` 1, `coopExtra` 4) are a first guess.
+## Art
+- **Town pack** (`town/`): complete, in use.
+- **Character pack** (`chars2/`): four bodies (town 8 strips, battle 6), four class outfits, six hairstyles (town only), eight weapons (battle idle/attack/charge with per-frame tips), four portraits. In use in creation, the yard, battle, gear, title and death screens. **Missing: battle hair strips.** Operatives are bald in battle. Ask the artist for `hair/<id>/battle/{idle,attack,charge,hit,defend,death}.png` drawn on body_m1 at 96px, add them to the manifest, and in `look.js` `compose()` paint hair in the battle scene too. The owner's second upload (`cinder_cell_chars3.zip`) was byte-identical to the first.
+- **Downtime pack:** not delivered. Brief in `docs/DOWNTIME_ART_PROMPT_CHATGPT.md` (four ships, five bar portraits, three backgrounds, manifest format). Ships and portraits are picked up automatically; backgrounds need a few lines in `downtime.js` and `barView`.
 
-## Testing and publishing
-- Local: `python3 -m http.server 8765` in the project; Playwright is pre-installed. Test scripts lived in the session scratchpad (title/creation, town flows, screens at 1200 and 390 px, compare popup, run report, random-play "monkey", two-tab co-op). Recreate as needed: they drive buttons by `data-a` attributes and read the save from `localStorage['cinder-cell-save-v1']`. The title screen must be dismissed first (`button[data-a="continue-title"]`).
-- Publish with the Artifact tool: `file_path: index.html` plus `files` for changed modules; unlisted files already published are kept. All art (`sprites/`, `town/`, `music/`) is already published.
-- Save version 4; any new per-operative field must default via `||` or be set in `migrate()`.
+## Balance
+Commands: `node sim.mjs 100 30`, `MAP=port node sim.mjs 100 40`, `node sim-builds.mjs 60 60` (or `ONLY=a,b`), `ECON=1` for the economy, `ABLATE=perk:x|unique:x|trait:x|bonus:x|loot` for outliers, `TUNE='{...}'` overrides, `node sim-coop.mjs` / `SOLO=1 node sim-coop.mjs`, `node sim-board.mjs 40 25 > board.json` to rebuild the seed board. Sims count boss progress by cleared sectors (`bestByMap`), not `bestSector`, which counts entry.
+
+Current numbers (median operative to reach each boss, main bot):
+| Boss | Operative |
+|---|---|
+| Garrison sector 5 | 3 |
+| Garrison sector 10 | 10 |
+| Garrison sector 15 | 21 (93% within 30) |
+
+Builds at 60 campaigns, operatives to the sector-15 boss: strength 20, balanced 20, tank 20, intellect 22, strAgi 22, hybrid 22, dotBuild 22, charisma 23, meleeOnly 24, critStack 25, rangedOnly 26, agility 28, glass 31 (92%). Cautious play 11, greedy 37 (15% finish). Orbit tiers: a stock shuttle wins low orbit about 85%; mid needs one refit level; high needs a maxed shuttle and still loses the pilot about one run in ten. Co-op knobs (`coopHp` 1.5, `coopAtk` 1, `coopExtra` 4) are a first guess.
+
+## Testing
+Start the server, then from the repo root:
+```bash
+node tests/ui-test.cjs        # every main screen at 1200 and 390 px, overflow and console errors
+node tests/flow.cjs 390       # fresh save through creation, yard menus, a raid, to death; screenshots each screen
+node tests/title-test.cjs     # title, creation, save-code round trip
+node tests/town2.cjs          # yard: shops on talk, lie low, noodles, tenement, terminal, walls
+node tests/coop-test.cjs      # two tabs over BroadcastChannel, alternating turns
+node tests/dt.cjs             # Lantern, Wheel, Ventures, an orbit fight
+node tests/feats.cjs          # feat unlock toast, after-fight bars, Feats screen
+node tests/board.cjs          # leaderboard seeding, ranks on extract and death, survives New cell
+node tests/look-test.cjs      # composited looks grid and in-game screens
+node tests/grid.cjs           # yard collision overlay to tests/shots/grid.png
+node tests/monkey.cjs 600 71  # random play; args are steps and seed
+```
+Each prints `no errors` per width when clean. Look at the screenshots in `tests/shots/` after UI changes, at both widths. The monkey can loiter in the Gear popup clicking hidden header buttons; that is the test, not a bug.
+
+## Publishing
+Artifact tool, publish `index.html` with `url` set to the live link, `root` set to the repo, and `files` listing changed modules (for example `{"engine.js": "engine.js"}`). Unlisted files already published are kept, so art only goes up once. If the publish is refused because a file changed since you last saw it, compare its sha256 with `git show HEAD~1:<file>`; if it matches your previous commit, pass that path in `overwrite_unread`. Push with `git push -u origin loot-and-gear`.
 
 ## Next
-1. **Downtime art pack** (`docs/DOWNTIME_ART_PROMPT_CHATGPT.md`): drop into `downtime/`, write the manifest; ships and bar portraits are picked up automatically. Backgrounds need a few lines in `downtime.js` and `barView`.
-2. **Character art, second pass:** battle hair strips (see `chars2/` note), hair on the portraits, and the co-op partner's look on the friend's own screen (today the partner sprite uses the partner's look on the host only).
-2. **Co-op:** deploy the Worker, bake its URL into `net.js` as the default, test over the internet, then balance with `sim-coop.mjs`. Door votes, each player's own contraband pick, a "spectate" state when the host is building a new operative.
-3. **Furniture collision** indoors (only the floor rectangle is used), and a Tiled map for the yard if the artist makes one.
-4. Owner feedback from run reports.
+1. **Owner feedback.** Ask for a run report after a few sessions; tune from it.
+2. **Battle hair** once the artist delivers it (see **Art**), then hair on portraits.
+3. **Downtime art** once delivered.
+4. **Co-op online:** owner deploys the Worker (`cd coop && wrangler deploy`) and hosts the page on Cloudflare Pages; bake the Worker URL into `net.js`; test across devices; balance with `sim-coop.mjs`. Then door votes, each player's own contraband pick, a spectate state while the host builds a new operative, downtime for the guest, and the partner's look on the guest's own screen.
+5. **Smaller polish:** furniture collision inside interiors (only the floor rectangle is used), a Tiled map for the yard if the artist makes one, and merging `loot-and-gear` into `master` when the owner agrees.
