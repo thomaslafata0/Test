@@ -83,11 +83,18 @@ export class Town {
     this.el = document.createElement('div');
     this.el.className = 'town';
     this.el.innerHTML = `<canvas width="${VIEW_W}" height="${VIEW_H}" aria-label="Kessa Yard. Walk with arrow keys or WASD, or tap where to go. E or Space to talk." tabindex="0"></canvas>
-      <div class="town-bubble" hidden></div><div class="town-prompt" hidden></div><div class="town-fade"></div>`;
+      <div class="town-bubble" hidden></div><div class="town-bubble mate" hidden></div><div class="town-tag" hidden></div><div class="town-arrow" hidden><i>\u25B2</i><span></span></div><div class="town-prompt" hidden></div><div class="town-fade"></div>`;
     this.cv = this.el.querySelector('canvas');
     this.g = this.cv.getContext('2d');
     this.g.imageSmoothingEnabled = false;
     this.bubble = this.el.querySelector('.town-bubble');
+    this.mateBubble = this.el.querySelector('.town-bubble.mate');
+    this.tag = this.el.querySelector('.town-tag');
+    this.arrow = this.el.querySelector('.town-arrow');
+    this.partner = null;    // the co-op partner: { x, y, tx, ty, dir, moving, scene, t, name, say }
+    this.onMove = null;     // ({ x, y, dir, moving, scene }) => void, at most ten times a second and only on change
+    this.onPartner = null;  // () => void, walking up to the partner and pressing E
+    this.moveT = 0; this.moveKey = '';
     this.prompt = this.el.querySelector('.town-prompt');
     this.fade = this.el.querySelector('.town-fade');
     this.keys = new Set();
@@ -244,6 +251,7 @@ export class Town {
     const d = this.doors.find((x) => x.id === where);
     const p = this.player;
     if (d) { p.x = d.front.x; p.y = d.front.y + 6; p.dir = 'down'; }
+    if (this.spawnShift && this.walkable(p.x + this.spawnShift, p.y)) p.x += this.spawnShift; // co-op: side by side, not stacked
     p.path = null; p.goal = null; this.say = null; this.offer = null;
     this.snapCamera();
   }
@@ -306,7 +314,8 @@ export class Town {
   // Who or what is next to the player that they could talk to or use.
   nearby() {
     const p = this.player, near = (x, y, r = 26) => Math.hypot(p.x - x, p.y - y) < r;
-    const it = this.interior;
+    const it = this.interior, m = this.partner;
+    if (m && this.onPartner && m.scene === this.scene && near(m.x, m.y, 30)) return { kind: 'partner', who: m };
     if (it) {
       if (near(it.npc.x, it.npc.y, 34)) return { kind: 'npc', id: it.npc.id, x: it.npc.x, y: it.npc.y, opens: SHOPS[this.interiorId].opens };
       return null;
@@ -323,6 +332,7 @@ export class Town {
     if (this.offer) { const o = this.offer; this.offer = null; o.accept(); return true; }
     const n = this.nearby();
     if (!n) return false;
+    if (n.kind === 'partner') { if (this.onPartner) this.onPartner(); play('click'); return true; }
     if (n.kind === 'npc') {
       this.speak(n.id, pick(INSIDE[n.id] || ['...']), n.x, n.y);
       if (this.onOpen) this.onOpen(n.opens, this.interiorId);
@@ -348,6 +358,8 @@ export class Town {
     const p = this.player;
     const it = this.interior;
     // Tap a person: walk next to them and talk.
+    const m = this.partner;
+    if (m && this.onPartner && m.scene === this.scene && Math.abs(x - m.x) < 14 && y > m.y - 44 && y < m.y + 4) { this.walkTo(m.x, m.y + 12, () => { if (this.nearby() && this.nearby().kind === 'partner') this.interact(); }); return; }
     const targets = it ? [{ x: it.npc.x, y: it.npc.y, talk: true }] : [...this.folk, this.patrol].map((f) => ({ x: f.x, y: f.y, talk: true }));
     for (const t of targets) if (Math.abs(x - t.x) < 14 && y > t.y - 44 && y < t.y + 4) { this.walkTo(t.x, t.y + 14, () => this.interact()); return; }
     if (this.offer) { this.offer = null; this.say = null; }
@@ -433,6 +445,7 @@ export class Town {
       }
     }
     p.t += dt;
+    this.updatePartner(dt);
     // patrol walks its loop, pausing at corners
     const g = this.patrol;
     if (g && !this.interior) {
@@ -461,9 +474,38 @@ export class Town {
   // ---------- drawing ----------
   // Composited look strips from look.js ({ idle_down: { img, frames, fps }, ... }) replace the stock player sheets.
   setPlayerSheets(sheets) { this.playerSheets = sheets || null; }
+  setPartnerSheets(sheets) { this.partnerSheets = sheets || null; }
+  // Co-op: where the partner says they are. null when they aren't in town.
+  setPartner(m) {
+    if (!m) { this.partner = null; return; }
+    const o = this.partner;
+    if (!o || o.scene !== m.scene) this.partner = { x: m.x, y: m.y, tx: m.x, ty: m.y, dir: m.dir, moving: m.moving, scene: m.scene, t: 0, name: (o && o.name) || this.mateName || '', say: o && o.say };
+    else Object.assign(o, { tx: m.x, ty: m.y, dir: m.dir, moving: m.moving });
+  }
+  partnerSay(text, ms = 3200) { if (this.partner) this.partner.say = { text, until: performance.now() + ms }; }
+  resendMove() { this.moveKey = ''; }
+  // Glide toward the last reported spot, and report our own when it changes.
+  updatePartner(dt) {
+    const m = this.partner;
+    if (m) {
+      m.t += dt;
+      const dx = m.tx - m.x, dy = m.ty - m.y, d = Math.hypot(dx, dy);
+      if (d > 90) { m.x = m.tx; m.y = m.ty; }
+      else if (d > 0.5) { const step = Math.min(d, Math.max(SPEED * 1.15, d * 6) * dt); m.x += (dx / d) * step; m.y += (dy / d) * step; }
+    }
+    const p = this.player;
+    this.moveT -= dt;
+    if (!this.onMove || this.moveT > 0) return;
+    const key = [Math.round(p.x), Math.round(p.y), p.dir, p.moving ? 1 : 0, this.scene].join();
+    if (key === this.moveKey) return;
+    this.moveKey = key; this.moveT = 0.1;
+    this.onMove({ x: Math.round(p.x), y: Math.round(p.y), dir: p.dir, moving: p.moving, scene: this.scene });
+  }
   sprite(id, anim, dir, x, y, t) {
     const a = this.m.chars[id] && this.m.chars[id].anims[anim];
-    const custom = id === 'player' && this.playerSheets && (this.playerSheets[`${anim}_${dir}`] || this.playerSheets.idle_down);
+    const sheets = id === 'player' ? this.playerSheets : id === 'partner' ? this.partnerSheets : null;
+    const custom = sheets && (sheets[`${anim}_${dir}`] || sheets.idle_down);
+    if (id === 'partner') id = 'player'; // the stock figure, until their look has composited
     if (custom) { const f = Math.floor(t * custom.fps) % custom.frames; this.g.drawImage(custom.img, f * 64, 0, 64, 64, Math.round(x - FEET.x - this.cam.x), Math.round(y - FEET.y - this.cam.y), 64, 64); return; }
     let im = this.img[`c:${id}:${anim}_${dir}`];
     let frames = a ? a.frames : 4, fps = a ? a.fps : 5;
@@ -499,6 +541,8 @@ export class Town {
       list.push({ y: gd.y, draw: () => { this.shadow(gd.x, gd.y); this.sprite('patrol', gd.pause > 0 ? 'idle' : 'walk', gd.pause > 0 ? 'down' : gd.dir, gd.x, gd.y, gd.t); } });
     }
     list.push({ y: p.y, draw: () => { this.shadow(p.x, p.y); this.sprite('player', p.moving ? 'walk' : 'idle', p.dir, p.x, p.y, p.t); } });
+    const m = this.partner;
+    if (m && m.scene === this.scene) list.push({ y: m.y, draw: () => { this.shadow(m.x, m.y); this.sprite('partner', m.moving ? 'walk' : 'idle', m.dir, m.x, m.y, m.t); } });
     list.sort((a, b) => a.y - b.y).forEach((o) => o.draw());
     if (!it) {
       // dusk tint, lamp light, rain
@@ -512,6 +556,37 @@ export class Town {
     this.drawOverlay(now);
   }
   // Speech bubble and the context prompt are HTML so the text stays crisp.
+  // Name over the partner's head, their speech, and an arrow at the edge when they're out of view.
+  drawPartnerOverlay(now) {
+    const m = this.partner, here = m && m.scene === this.scene;
+    const hide = (el) => { if (!el.hidden) el.hidden = true; };
+    if (!m) { hide(this.tag); hide(this.mateBubble); hide(this.arrow); return; }
+    const pctX = (x) => (x - this.cam.x) / VIEW_W * 100, pctY = (y) => (y - this.cam.y) / VIEW_H * 100;
+    let target = here ? m : null;
+    // In the yard, a partner who's indoors is pointed to by the door they went through.
+    if (!here && !this.interior && m.scene.startsWith('interior:')) { const d = this.doors.find((dd) => dd.id === m.scene.slice(9)); if (d) target = d.front; }
+    const inView = target && pctX(target.x) > 2 && pctX(target.x) < 98 && pctY(target.y) > 4 && pctY(target.y) < 100;
+    if (here && inView) {
+      const label = m.name || 'Partner';
+      if (this.tag.textContent !== label) this.tag.textContent = label;
+      this.tag.hidden = false;
+      this.tag.style.left = `${clamp(pctX(m.x), 6, 94)}%`; this.tag.style.top = `${clamp(pctY(m.y - 50), 3, 96)}%`;
+    } else hide(this.tag);
+    if (m.say && now < m.say.until && here) {
+      if (this.mateBubble.textContent !== m.say.text) this.mateBubble.textContent = m.say.text;
+      this.mateBubble.hidden = false;
+      this.mateBubble.style.left = `${clamp(pctX(m.x), 12, 88)}%`; this.mateBubble.style.top = `${clamp(pctY(m.y - 54), 12, 90)}%`;
+    } else hide(this.mateBubble);
+    if (target && !(here && inView) && !(!here && inView)) {
+      const cx = this.cam.x + VIEW_W / 2, cy = this.cam.y + VIEW_H / 2, ang = Math.atan2(target.y - 20 - cy, target.x - cx);
+      const span = Math.max(Math.abs(Math.cos(ang)) / 46, Math.abs(Math.sin(ang)) / 42);
+      this.arrow.hidden = false;
+      this.arrow.style.left = `${50 + Math.cos(ang) / span}%`; this.arrow.style.top = `${50 + Math.sin(ang) / span}%`;
+      this.arrow.firstChild.style.transform = `rotate(${ang + Math.PI / 2}rad)`;
+      const label = m.name || 'Partner';
+      if (this.arrow.lastChild.textContent !== label) this.arrow.lastChild.textContent = label;
+    } else hide(this.arrow);
+  }
   drawOverlay(now) {
     const s = this.say, b = this.bubble;
     if (s && now < s.until) {
@@ -519,9 +594,11 @@ export class Town {
       if (b.hidden || b.textContent !== s.text) { b.textContent = s.text; b.hidden = false; }
       b.style.left = `${clamp(sx, 12, 88)}%`; b.style.top = `${clamp(sy, 4, 90)}%`;
     } else if (!b.hidden) { b.hidden = true; this.say = null; }
+    this.drawPartnerOverlay(now);
     const n = this.nearby();
     let text = '';
     if (this.offer) text = 'Enter \u00B7 yes \u00B7 Esc \u00B7 no';
+    else if (n && n.kind === 'partner') text = `E \u00B7 trade or give to ${n.who.name || 'your partner'}`;
     else if (n && n.kind === 'npc') text = `E \u00B7 talk to ${npcName(n.id)} (${SHOPS[this.interiorId].label})`;
     else if (n && n.kind === 'folk') text = n.who.talk ? 'E \u00B7 talk to the vendor' : 'E \u00B7 talk';
     else if (n && n.kind === 'spot') text = `E \u00B7 ${n.spot.prompt}`;

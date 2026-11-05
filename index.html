@@ -443,6 +443,13 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .town.failed::after { content: 'Town art could not load. Use the buttons below.'; position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: .9rem; }
 .town-bubble { position: absolute; transform: translate(-50%, -100%); max-width: min(260px, 70%); padding: 6px 10px; background: #f3ead6; color: #1a1208; font-size: .85rem; line-height: 1.3; border: 2px solid #1a1208; pointer-events: none; text-align: center; }
 .town-bubble::after { content: ''; position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); border: 6px solid transparent; border-top-color: #1a1208; }
+.town-bubble.mate { background: #d9e6f3; }
+.town-tag { position: absolute; transform: translate(-50%, -100%); padding: 0 5px; background: #121518c0; color: var(--sodium); font-family: var(--mono); font-size: .62rem; white-space: nowrap; pointer-events: none; }
+.town-arrow { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; color: var(--sodium); font-family: var(--mono); font-size: .58rem; pointer-events: none; text-shadow: 0 0 3px #000, 0 0 3px #000; }
+.town-arrow i { font-style: normal; font-size: .9rem; line-height: 1; display: block; }
+.coop-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 6px 10px; border: 1px solid var(--line); background: var(--panel-2); font-size: .88rem; }
+.coop-bar .emotes { display: flex; flex-wrap: wrap; gap: 4px; margin-left: auto; }
+.coop-bar .emotes .btn { padding: 3px 8px; font-size: .78rem; min-height: 0; }
 .town-prompt { position: absolute; left: 50%; bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transform: translateX(-50%); max-width: calc(100% - 16px); padding: 4px 10px; background: #121518e0; border: 1px solid var(--line); font-family: var(--mono); font-size: .68rem; letter-spacing: .06em; color: var(--fg); pointer-events: none; text-align: center; }
 .town-fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
 .town-fade.on { animation: tfade .45s ease-out; }
@@ -581,7 +588,7 @@ import { portraitURL } from './portraits.js';
 import { Stage, loadSheets, sheetStill, setLookSheets } from './stage.js';
 import * as A from './audio.js';
 import { iconURL, gearIconKey } from './icons.js';
-import { Town } from './town.js';
+import { Town, SHOPS } from './town.js';
 import { Wheel, OrbitScene, loadDowntimeArt, artFor } from './downtime.js';
 import { Net, getCoopPrefs, setCoopPrefs, makeCode, getRoom, setRoom } from './net.js';
 import { BODIES, HAIR, HAIR_NAMES, SKINS, HAIRS, defaultLook, loadLayers, hasLayers, lookStill, lookBattleStill, lookPortrait, townSheets, battleSheet, weaponLayer } from './look.js';
@@ -609,7 +616,7 @@ const isHost = () => !!net && net.role === 'host';
 const myIdx = () => (isGuest() ? 1 : 0);
 // Actions that only touch this screen, never the game.
 const DOWNTIME = new Set(['drink', 'barchat', 'bet', 'stake', 'spin', 'invest', 'withdraw', 'shippart', 'shipcell', 'orbitgo', 'orbitact', 'orbitclose']);
-const LOCAL = new Set(['continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'orbitarm']);
+const LOCAL = new Set(['continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'emote', 'orbitarm']);
 function coopChip() {
   if (!net) return '';
   const who = net.peerName || (isHost() ? 'friend' : 'host');
@@ -690,10 +697,19 @@ function startCoop(role, code, local) {
   coopStatus = 'connecting';
   net.on('status', () => {
     coopStatus = net.status;
+    if (net.peer) { town.resendMove(); townSent = false; } else town.setPartner(null);
     // A dropped connection mid-raid doesn't end co-op: the raid waits for them (see coopBanner).
     if (isHost() && !state.run) { state.coop = net.peer; if (!net.peer) state.guestReady = false; }
     if (net) render();
   });
+  // Moving around the yard: these skip the game state, so walking stays cheap.
+  net.on('pos', (m) => {
+    if (m.gone) town.setPartner(null);
+    else { town.setPartner(m); town.partner.menu = m.menu || null; }
+    const w = document.getElementById('coop-where'); if (w) w.textContent = partnerWhere();
+  });
+  net.on('say', (m) => { town.partnerSay(String(m.text || '').slice(0, 40)); A.play('click'); });
+  net.on('peer-left', () => { town.setPartner(null); });
   net.on('room-full', () => { leaveCoop('That room already has two players.'); });
   net.on('bye', () => {
     if (isGuest()) { leaveCoop('The host closed the room.'); return; }
@@ -725,8 +741,9 @@ function startCoop(role, code, local) {
     net.on('fx', (m) => { inbox.push(m); pumpInbox(); });
   }
 }
-let localDraft = null;
+let localDraft = null, townSent = false, lastMenu = '';
 function leaveCoop(why) {
+  town.setPartner(null); town.spawnShift = 0;
   if (!net) return;
   const wasGuest = isGuest();
   if (net.online) net.send({ t: 'bye' });
@@ -928,9 +945,29 @@ function townScreen() {
       <p class="muted town-help">Arrows or WASD to walk, or tap where to go. Walk into a door to go inside and talk to whoever\u2019s there. <b>E</b> or tap to talk.${state.char.fed ? ' <span class="chip good">Fed: +5% XP</span>' : ''}</p></div>
     ${tip('town')}${state.popup ? '' : notice()}
     ${townSpend()}
+    ${coopBar()}
     <div id="town-slot"></div>
     <nav class="shortcuts" aria-label="Town menus">${Object.entries(POPUPS).map(([id, p]) => `<button class="btn" data-a="popup" data-v="${id}">${esc(p.label)}${popupBadge(id)}</button>`).join('')}</nav>
   </section>${townPopup()}`;
+}
+// Co-op, under the yard: where your partner is, whether they're ready, and something to say to them.
+const EMOTES = ['Over here!', 'Ready?', 'Ready.', 'Let\u2019s go', 'Hold on', 'Nice.', 'Trade?', 'Ha!'];
+function partnerWhere() {
+  const m = town.partner;
+  if (!m) return 'not in town yet';
+  if (m.menu && POPUPS[m.menu]) return `in ${POPUPS[m.menu].label}`;
+  if (m.scene && m.scene.startsWith('interior:')) { const sh = SHOPS[m.scene.slice(9)]; return sh ? `inside ${sh.name}` : 'indoors'; }
+  return 'in the yard';
+}
+function coopBar() {
+  if (!net || !net.peer) return '';
+  const pc = E.charAt(state, 1 - myIdx()), name = pc ? pc.name.split(' ')[0] : (net.peerName || 'Your partner');
+  const iReady = !!state.guestReady;
+  const ready = isGuest()
+    ? `<button class="btn ${iReady ? 'primary' : ''}" data-a="coopready" aria-pressed="${iReady}" style="padding:3px 8px;min-height:0;font-size:.78rem">${iReady ? 'Ready' : 'Mark ready'}</button>`
+    : `<span class="chip ${iReady ? 'good' : ''}">${iReady ? 'Ready' : 'Not ready'}</span>`;
+  return `<div class="coop-bar"><b>${esc(name)}</b> <span class="muted" id="coop-where">${esc(partnerWhere())}</span> ${ready}
+    <span class="emotes" aria-label="Say something">${EMOTES.map((t, i) => `<button class="btn" data-a="emote" data-v="${i}">${esc(t)}</button>`).join('')}</span></div>`;
 }
 // Attribute points can be spent right here, no shop needed.
 function townSpend() {
@@ -1753,10 +1790,17 @@ function render() {
   const tslot = document.getElementById('town-slot');
   if (tslot) {
     tslot.replaceWith(town.el);
+    town.spawnShift = net ? (isGuest() ? 14 : -14) : 0;
+    { const pc = net ? E.charAt(state, 1 - myIdx()) : null; if (town.partner) town.partner.name = pc ? pc.name.split(' ')[0] : (net && net.peerName) || ''; town.mateName = pc ? pc.name.split(' ')[0] : ''; }
     if (lastScreen !== 'town') town.spawnAt(['create', 'intro', 'death'].includes(lastScreen) || !lastScreen ? 'safehouse' : lastScreen === 'ending' ? 'safehouse' : 'terminal');
     town.setBlocked(!!state.popup || !!modal);
   }
   if (state.screen !== 'town') state.popup = null;
+  if (net && net.peer) {
+    // Tell the partner when this player leaves the yard, or opens or closes a menu.
+    if (state.screen !== 'town' && townSent) { net.send({ t: 'pos', gone: true }); townSent = false; town.resendMove(); }
+    if ((state.popup || '') !== lastMenu) { lastMenu = state.popup || ''; town.resendMove(); }
+  }
   lastScreen = state.screen;
   const slot = document.getElementById('stage-slot');
   if (slot) {
@@ -1794,6 +1838,11 @@ document.addEventListener('automode', () => { A.play('click'); if (state.screen 
 // ---------- input ----------
 const stage = new Stage();
 const town = new Town();
+town.onMove = (p) => {
+  if (!net || !net.peer || state.screen !== 'town' || !state.char) return;
+  townSent = true;
+  net.send({ t: 'pos', ...p, menu: state.popup || null });
+};
 globalThis.cinderTown = town; // handy for debugging in the console
 let lastScreen = null, lastView = '';
 // Walking into a building (or talking to its NPC) opens that building's menu.
@@ -1898,6 +1947,7 @@ function applyAct(a, v, k) {
     case 'coopauto': if (isHost() && state.run && state.screen === 'combat' && state.run.actor === 1 && !net.peer) { fight(E.withActor(state, 1, () => E.autoAction(state)), 1); } return;
     case 'coopdrop': if (isHost()) { state.coop = false; toast = 'You carry on alone. They rejoin when the raid is over.'; } break;
     case 'clearnotice': state.notice = null; break;
+    case 'emote': { const t = EMOTES[+v]; if (t && net && net.peer) { net.send({ t: 'say', text: t }); town.speak('me', t, town.player.x, town.player.y); } sfx('click'); return; }
     case 'coopjoin': { setCoopPrefs({ name: (document.getElementById('coop-name') || {}).value || '', relay: ((document.getElementById('coop-relay') || {}).value || '').trim() }); const code = ((document.getElementById('coop-code') || {}).value || '').trim().toUpperCase(); if (code.length >= 4) startCoop('guest', code, !getCoopPrefs().relay); else toast = 'Enter the room code.'; break; }
     case 'coopleave': leaveCoop(); return;
     case 'coopready': state.guestReady = !state.guestReady; if (net) net.send({ t: 'ready', on: state.guestReady }); sfx('click'); break;
@@ -2045,6 +2095,7 @@ function applyLook() {
   lookKey = key;
   const mine = c && c.look ? [c.look, c.background, ...wp(c)] : null, theirs = p && p.look ? [p.look, p.background, ...wp(p)] : null;
   town.setPlayerSheets(mine ? townSheets(mine[0], mine[1]) : null);
+  town.setPartnerSheets(theirs ? townSheets(theirs[0], theirs[1]) : null);
   setLookSheets(mine ? battleSheet(...mine) : null, theirs ? battleSheet(...theirs) : null);
   stage.player = null; stage.partner = null;
 }
