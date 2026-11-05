@@ -32,7 +32,7 @@ export const MIN_FIGHTS = 2; // fights required per sector; the rest of the room
 export const growth = (lvl, lin, quad) => 1 + lin * lvl + quad * lvl * lvl;
 export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.01, bossHp: 2.1, bossAtk: 1.4, enemyAtk: 1.74, enemyHp: 1.78, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 1.5, strAtk: 0.6, agiCrit: 0.04, agiDodge: 0.025, intOverload: 5, chaHesitate: 0.055, chaCredits: 0.05, wanted: 0.025, escapeLoss: 0.5, extractLoss: 0.3, ambush: 1.5,
   upgradeCost: 60, eliteGear: 0.3, shopLegendary: 0.06, cover: 0.5, agiAtk: 1, early: 0.35,
-  rangedSpread: 0.15, meleeSpread: 0.3, shootGuard: 0.15, momentum: 0.15 };
+  rangedSpread: 0.15, meleeSpread: 0.3, shootGuard: 0.15, momentum: 0.15, coopHp: 1.5, coopAtk: 1, coopExtra: 4 };
 export const isBossSector = (n) => n % 5 === 0;
 // Optional credit accounting for the simulators: set s.ledger = {} and every credit gain or spend is tallied by source.
 const ledger = (s, k, n) => { if (s.ledger && n) s.ledger[k] = (s.ledger[k] || 0) + n; };
@@ -121,6 +121,47 @@ function migrateOld(s, rng) {
   return fresh;
 }
 
+// ---------- co-op: two operatives in one cell ----------
+// s.char is the host's operative, s.char2 the friend's. The engine always acts on s.char, so to act as the
+// friend we swap the two references (and the per-operative combat fields in s.run) for the duration of a call.
+// Saves are always written with s.actorIdx === 0, so the swap never leaks into a save.
+const BAG = ['pst', 'pfresh', 'defending', 'ready', 'momentum', 'keepDistance', 'struck', 'cooldowns', 'usedThisFight', 'adrenalUsed', 'deadmanUsed'];
+const freshBag = () => ({ pst: {}, pfresh: [], defending: false, ready: false, momentum: false, keepDistance: false, struck: false, cooldowns: {}, usedThisFight: [], adrenalUsed: false, deadmanUsed: false });
+const saveBag = (r) => { const b = {}; for (const k of BAG) b[k] = r[k]; return b; };
+const loadBag = (r, b) => { for (const k of BAG) r[k] = b[k]; };
+export const isCoop = (s) => !!(s.coop && s.char && s.char2);
+export const charAt = (s, i) => ((s.actorIdx || 0) === i ? s.char : s.char2) || null;
+const aliveAt = (s, i) => { const c = charAt(s, i); return !!c && !c.dead; };
+export const actorIdx = (s) => s.actorIdx || 0;
+export function setActor(s, i) {
+  const cur = s.actorIdx || 0;
+  if (cur === i) return;
+  const r = s.run;
+  if (r && r.cb) { r.cb[cur] = saveBag(r); loadBag(r, r.cb[i] || freshBag()); }
+  const t = s.char; s.char = s.char2; s.char2 = t;
+  s.actorIdx = i;
+}
+export function withActor(s, i, fn) {
+  const prev = s.actorIdx || 0;
+  if (!s.char2 || i === prev) return fn();
+  setActor(s, i);
+  try { return fn(); } finally { if (s.char2 !== undefined) setActor(s, prev); }
+}
+// Run fn as each living operative in turn (host first).
+export function forEachActor(s, fn) {
+  const n = s.char2 ? 2 : 1;
+  for (let i = 0; i < n; i++) if (aliveAt(s, i)) withActor(s, i, () => fn(s.char, i));
+}
+export const livingActors = (s) => [0, 1].filter((i) => (i === 0 || !!s.char2) && aliveAt(s, i));
+// Which operative the enemy goes for: usually whoever hurt it most this round, sometimes the other one.
+function pickTarget(s, rng) {
+  const r = s.run, alive = livingActors(s);
+  if (alive.length === 1) return alive[0];
+  const d = r.dealt || {}, a = alive[0], b = alive[1];
+  const hot = (d[a] || 0) === (d[b] || 0) ? pick(rng, alive) : (d[a] || 0) > (d[b] || 0) ? a : b;
+  return rng() < 0.65 ? hot : alive.find((i) => i !== hot);
+}
+
 // ---------- character creation ----------
 export function newDraft(meta, rng) {
   return {
@@ -138,8 +179,8 @@ export function draftAdjust(draft, k, delta) {
   return true;
 }
 
-export function createChar(s, rng) {
-  const m = s.meta, d = s.draft, bg = D.BACKGROUNDS.find((b) => b.id === d.background);
+export function createChar(s, rng, draft = null, slot = 'char') {
+  const m = s.meta, d = draft || s.draft, bg = D.BACKGROUNDS.find((b) => b.id === d.background);
   m.operatives += 1;
   const attrs = {};
   for (const k of Object.keys(D.ATTRS)) attrs[k] = draftAttr(d, k);
@@ -154,8 +195,16 @@ export function createChar(s, rng) {
   c.gear = startingGear(m, bg.id);
   if (hasCell(m, 'kit')) { c.items.stim += 1; c.items.thermal += 1; }
   c.hp = statsOf(m, c).maxHp;
-  s.char = c; s.draft = null;
   if (m.heirloom && canEquip(c, m.heirloom)) { const it = m.heirloom; m.heirloom = null; c.gear[baseOf(it).slot] = it; c.hp = statsOf(m, c).maxHp; }
+  if (slot === 'char2') {
+    // The friend's operative: created from a draft they sent, without touching the host's screen.
+    s.char2 = c;
+    withActor(s, 1, () => restockMarket(s, rng));
+    refreshContracts(s, rng);
+    journal(s, `${c.name} joins the cell.`, 'sys');
+    return c;
+  }
+  s.char = c; if (!draft) s.draft = null;
   restockMarket(s, rng);
   refreshContracts(s, rng);
   s.screen = 'town'; s.tab = 'gate';
@@ -323,7 +372,10 @@ export function rerollBonus(s, slot, idx, rng) {
   return true;
 }
 // Loot drop after a fight: take it (the old piece is left behind) or leave it.
-export function takeLoot(s, rng) {
+export function takeLoot(s, rng, who = 0) {
+  return withActor(s, who, () => takeLootInner(s, rng));
+}
+function takeLootInner(s, rng) {
   const r = s.run, c = s.char, it = r && r.lootOffer;
   if (!it || !canEquip(c, it)) return false;
   const old = equip(s, it);
@@ -420,7 +472,7 @@ export const skillCd = (c, id) => Math.max(1, D.SKILLS[id].cd - (hasImp(c, 'syna
 function fx(s, ev) {
   if (!Array.isArray(s.events)) return;
   const r = s.run;
-  s.events.push({ ...ev, php: s.char.hp, ehp: r && r.enemy ? r.enemy.hp : 0 });
+  s.events.push({ ...ev, actor: s.actorIdx || 0, php: s.char.hp, ehp: r && r.enemy ? r.enemy.hp : 0 });
 }
 
 function log(s, text, kind = 'info') {
@@ -630,11 +682,15 @@ export function deploy(s, mapId, startSector, rng) {
   const prog = mapProgress(s.char, map.id);
   if (!prog.insertions.includes(startSector)) startSector = 1;
   s.char.wanted = (s.char.wanted || 0);
-  s.run = { wanted: s.char.wanted, startCredits: s.char.credits, map: map.id, sector: startSector, room: 0, choices: null, enemy: null, defending: false, ready: false, nextMod: null, sectorCredits: 0, cooldowns: {}, adrenalUsed: false,
-    alert: 0, allies: 0, vent: 3, turns: 0, threat: s.meta.threat || 0, pst: {}, pfresh: [], deadmanUsed: false, perkOffer: null };
+  s.run = { wanted: s.char.wanted, startCredits: s.char.credits, map: map.id, sector: startSector, room: 0, choices: null, enemy: null, nextMod: null, sectorCredits: 0,
+    alert: 0, allies: 0, vent: 3, turns: 0, threat: s.meta.threat || 0, perkOffer: null, ...freshBag(), cb: {}, actor: 0, acted: {}, round: 0, lastAttacker: 0 };
+  if (isCoop(s)) { s.run.cb[1] = freshBag(); s.run.wanted = Math.max(s.char.wanted, s.char2.wanted || 0); }
   s.meta.stats.raids += 1;
-  if (D.BACKGROUNDS.find((b) => b.id === s.char.background).follower) { s.run.allies = 1; s.run.follower = true; }
-  if (hasTrait(s.char, 'surplus') && s.char.items.stim < stats(s).carry) s.char.items.stim += 1;
+  forEachActor(s, (c) => {
+    c.startCredits = c.credits;
+    if (D.BACKGROUNDS.find((b) => b.id === c.background).follower) { s.run.allies = Math.min(2, s.run.allies + 1); s.run.follower = true; }
+    if (hasTrait(c, 'surplus') && c.items.stim < stats(s).carry) c.items.stim += 1;
+  });
   s.run.bulletin = pickWeighted(rng, D.BULLETINS.map((b) => [b.id, b.weight]));
   refreshContracts(s, rng);
   s.log = [];
@@ -662,6 +718,7 @@ function raiseAlarm(s, n, why) {
 function beginSector(s, rng) {
   const r = s.run;
   r.room = 0; r.fightsDone = 0; r.cooldowns = {}; r.usedThisFight = []; r.sectorCredits = 0;
+  for (const b of Object.values(r.cb || {})) { b.cooldowns = {}; b.usedThisFight = []; }
   offerRoute(s, rng);
 }
 
@@ -705,16 +762,19 @@ export function enterRoom(s, idx, rng) {
   if (kind === 'supply' || kind === 'cargo') {
     const range = kind === 'cargo' ? [20, 30] : [8, 15];
     const cr = Math.round(randInt(rng, range[0], range[1]) * r.sector * map.credits * creditMult(s));
-    c.credits += cr; r.sectorCredits += cr; ledger(s, 'rooms', cr); notes.push(`+${cr} ${D.SETTING.cur}`);
+    forEachActor(s, (a) => { a.credits += cr; });
+    r.sectorCredits += cr; ledger(s, 'rooms', cr); notes.push(`+${cr} ${D.SETTING.cur}${isCoop(s) ? ' each' : ''}`);
     if (kind === 'supply' && rng() < 0.5) {
       const it = pick(rng, ['stim', 'thermal', 'ion']);
-      if (c.items[it] < st.carry) { c.items[it] += 1; notes.push(`+1 ${D.ITEMS[it].name}`); }
+      forEachActor(s, (a) => { if (a.items[it] < stats(s).carry) { a.items[it] += 1; } });
+      notes.push(`+1 ${D.ITEMS[it].name}`);
     }
     if (kind === 'cargo') { r.nextMod = 'alerted'; notes.push('next enemy alerted'); text = 'You crack two crates of confiscated goods. Someone heard the crowbar.'; }
     else text = 'Shelves of requisitioned supplies. You take what fits in your pockets.';
   } else if (kind === 'rest') {
-    const h = Math.min(st.maxHp - c.hp, Math.round(st.maxHp * 0.3));
-    c.hp += h; notes.push(`+${h} HP`);
+    let h = 0;
+    forEachActor(s, (a, i) => { const m2 = stats(s).maxHp, hh = Math.min(m2 - a.hp, Math.round(m2 * 0.3)); a.hp += hh; if (i === actorIdx(s)) h = hh; });
+    notes.push(`+${h} HP`);
     text = 'Five quiet minutes. You rewrap the bandages and breathe.';
     if (r.alert > 0) { r.alert = Math.max(0, r.alert - 2); notes.push(`alarm down to ${r.alert}`); text += ' Up on the wall, the alarm lights blink back to amber.'; }
   } else if (kind === 'cells') {
@@ -740,6 +800,9 @@ function startFight(s, rng, kind) {
   if (r.bulletin === 'inspection') e.xp = Math.round(e.xp * 1.2);
   if (r.bulletin === 'shift' && r.room === 1 && !boss) e.stun = Math.max(e.stun, 1);
   if (mech === 'alarm' && r.alert) { e.atk = Math.round(e.atk * (1 + 0.06 * r.alert)); e.cr = e.cr.map((v) => Math.round(v * (1 + 0.05 * r.alert))); }
+  if (isCoop(s)) { e.hp = e.maxHp = Math.round(e.maxHp * TUNE.coopHp); e.atk = Math.round(e.atk * TUNE.coopAtk); e.cr = e.cr.map((v) => Math.round(v * 1.25)); }
+  r.actor = livingActors(s)[0] || 0; r.acted = {}; r.round = 0; r.lastAttacker = r.actor;
+  for (const b of Object.values(r.cb || {})) { const cd = b.cooldowns || {}; for (const k of b.usedThisFight || []) if (cd[k] < 50) cd[k] = Math.max(cd[k] || 0, CARRY_CD); Object.assign(b, freshBag(), { cooldowns: cd }); }
   r.enemy = e; r.defending = false; r.ready = false; r.momentum = false; r.keepDistance = false; r.adrenalUsed = false; r.vent = 3; r.turns = 0; r.alarmRaised = false; r.struck = false;
   // Skills used last fight are still recharging when the next one starts (at least 2 turns), so you can't open every fight with them.
   for (const k of r.usedThisFight || []) if (r.cooldowns[k] < 50) r.cooldowns[k] = Math.max(r.cooldowns[k] || 0, CARRY_CD);
@@ -967,9 +1030,18 @@ function meleeCounter(s, rng) {
   log(s, `${mc.name}: ${dmg ? `you take ${dmg}` : 'it bites back'}${added.length ? ` and you are ${added.map((k) => D.STATUSES[k].name).join(' and ')}` : ''}.`, 'bad');
 }
 
-export function playerAct(s, act, rng) {
-  if (s.screen !== 'combat' || !canUse(s, act)) return;
+export function playerAct(s, act, rng, who = 0) {
+  if (s.screen !== 'combat' || !s.run) return;
+  if (isCoop(s) && (s.run.actor !== who || !aliveAt(s, who))) return;
+  withActor(s, who, () => playerActInner(s, act, rng, who));
+  if (s.coopDead && s.run) finishCoopDeath(s, rng);
+}
+function playerActInner(s, act, rng, who) {
+  if (!canUse(s, act)) return;
   const r = s.run, e = r.enemy, c = s.char, st = stats(s);
+  r.lastAttacker = who;
+  const hpBefore = e.hp;
+  r.dealt = r.dealt || {};
   const wasReady = r.ready;
   r.defending = false; r.keepDistance = false;
   const guarded = e.intent === 'guard' && e.stun === 0;
@@ -1103,6 +1175,7 @@ export function playerAct(s, act, rng) {
     }
   }
   tick(r);
+  r.dealt[who] = (r.dealt[who] || 0) + Math.max(0, hpBefore - e.hp);
   if (c.hp <= 0 && !lethalSave(s)) return die(s, e);
   if (e.hp <= 0) return winFight(s, rng);
   if (e.quirk && quirkById(e.quirk).flee && e.hp < e.maxHp * 0.4) {
@@ -1111,6 +1184,13 @@ export function playerAct(s, act, rng) {
     return winFight(s, rng, true);
   }
   checkPhase(s);
+  // In co-op the other operative acts before the enemy does.
+  if (isCoop(s)) {
+    r.acted[who] = true;
+    const other = livingActors(s).find((i) => i !== who && !r.acted[i]);
+    if (other !== undefined) { r.actor = other; fx(s, { who: 'player', type: 'handoff', actor: other }); return; }
+    r.acted = {};
+  }
   if (r.allies > 0) {
     for (let i = 0; i < r.allies && e.hp > 0; i++) {
       const dmg = mitigate(st.atk * 0.3 * (0.85 + rng() * 0.3), e.def);
@@ -1120,9 +1200,27 @@ export function playerAct(s, act, rng) {
     }
     if (e.hp <= 0) return winFight(s, rng);
   }
-  enemyTurn(s, rng);
-  if (s.screen === 'combat') envTurn(s, rng);
-  if (s.screen === 'combat') statusTurn(s, rng);
+  enemyRound(s, rng);
+}
+// The enemy's turn, then the room and status effects for every operative. In co-op the enemy picks a target,
+// and every other round it gets a second action: there are two of you to shoot at.
+const fighting = (s) => s.screen === 'combat' && s.run && s.run.enemy && !s.run.over;
+function enemyRound(s, rng) {
+  const r = s.run;
+  r.round += 1;
+  const coop = isCoop(s), actions = coop && r.round % TUNE.coopExtra === 0 ? 2 : 1;
+  for (let n = 0; n < actions && fighting(s); n++) {
+    const t = coop ? pickTarget(s, rng) : 0;
+    if (coop) fx(s, { who: 'enemy', type: 'target', actor: t });
+    withActor(s, t, () => enemyTurn(s, rng));
+  }
+  let first = true;
+  for (const i of livingActors(s)) { if (!fighting(s)) break; withActor(s, i, () => envTurn(s, rng, first)); first = false; }
+  first = true;
+  for (const i of livingActors(s)) { if (!fighting(s)) break; withActor(s, i, () => statusTurn(s, rng, first)); first = false; }
+  r.dealt = {};
+  // Take turns going first.
+  if (fighting(s) && coop) { const alive = livingActors(s); r.actor = alive[r.round % alive.length]; }
 }
 
 // Bosses get angrier at half health.
@@ -1148,7 +1246,7 @@ function lethalSave(s) {
 }
 
 // End of round: damage over time, regeneration, durations tick down.
-function statusTurn(s, rng) {
+function statusTurn(s, rng, enemyToo = true) {
   const r = s.run, e = r.enemy, c = s.char, st = stats(s);
   const tickSide = (obj, fresh, maxHp) => {
     let dmg = 0;
@@ -1163,10 +1261,10 @@ function statusTurn(s, rng) {
     return dmg;
   };
   const pd = tickSide(r.pst, r.pfresh, st.maxHp);
-  const ed = tickSide(e.st, e.fresh, e.maxHp);
+  const ed = enemyToo ? tickSide(e.st, e.fresh, e.maxHp) : 0;
   let regen = 0;
-  if (e.affix === 'regenerating') { regen = Math.min(e.maxHp - e.hp, Math.round(e.maxHp * 0.06)); e.hp += regen; }
-  const sd = e.quirk && quirkById(e.quirk).selfDamage;
+  if (enemyToo && e.affix === 'regenerating') { regen = Math.min(e.maxHp - e.hp, Math.round(e.maxHp * 0.06)); e.hp += regen; }
+  const sd = enemyToo && e.quirk && quirkById(e.quirk).selfDamage;
   let selfDmg = 0;
   if (sd) { selfDmg = Math.max(1, Math.round(e.maxHp * sd)); e.hp -= selfDmg; }
   if (pd || ed || regen || selfDmg) {
@@ -1188,15 +1286,14 @@ function tick(r) {
 }
 
 // Map mechanics that act at the end of each round.
-function envTurn(s, rng) {
+function envTurn(s, rng, enemyToo = true) {
   const r = s.run, e = r.enemy, c = s.char, st = stats(s), mech = mechanicOf(r);
-  r.turns += 1;
+  if (enemyToo) r.turns += 1;
   if (mech === 'vents') {
-    r.vent -= 1;
-    if (r.vent <= 0) {
-      r.vent = 3;
+    if (enemyToo) { r.vent -= 1; r.ventNow = r.vent <= 0; if (r.ventNow) r.vent = 3; }
+    if (r.ventNow) {
       const pdmg = r.defending ? 0 : Math.round(st.maxHp * 0.1 * (hasUnique(c, 'crawler') ? 0.5 : 1));
-      const edmg = Math.round(e.maxHp * (e.tags.includes('droid') ? 0.06 : 0.12));
+      const edmg = enemyToo ? Math.round(e.maxHp * (e.tags.includes('droid') ? 0.06 : 0.12)) : 0;
       c.hp -= pdmg; e.hp -= edmg;
       fx(s, { who: 'env', type: 'vent', pdmg, edmg, blocked: r.defending });
       log(s, `The furnace vents blast the floor.${pdmg ? ` You take ${pdmg}.` : ' You were behind cover.'}${edmg ? ` ${e.name} takes ${edmg}.` : ''}`, 'bad');
@@ -1210,7 +1307,7 @@ function envTurn(s, rng) {
     fx(s, { who: 'env', type: 'sniper', dmg, blocked: r.defending });
     log(s, dmg ? `A tower sniper clips you for ${dmg}.` : 'A sniper round sparks off your cover.', dmg ? 'bad' : 'info');
     if (c.hp <= 0 && !lethalSave(s)) return die(s, { name: 'tower sniper', id: null });
-  } else if (mech === 'alarm' && r.turns === 5 && !r.alarmRaised) {
+  } else if (enemyToo && mech === 'alarm' && r.turns === 5 && !r.alarmRaised) {
     r.alarmRaised = true;
     raiseAlarm(s, 1, 'The fight is dragging on. Someone hit the alarm.');
   }
@@ -1331,6 +1428,14 @@ function winFight(s, rng, fled = false) {
   const hk = gearBonus(c, 'healkill');
   if (hk && !fled) { const st = stats(s), h = Math.min(st.maxHp - c.hp, Math.round(st.maxHp * hk / 100)); c.hp += h; out.healed += h; }
   if (hasPerk(c, 'quickdraw')) for (const k of Object.keys(r.cooldowns)) if (r.cooldowns[k] < 50) r.cooldowns[k] = Math.max(0, r.cooldowns[k] - 2);
+  // Co-op: the partner gets the same credits and XP.
+  const me = actorIdx(s);
+  for (const i of livingActors(s)) if (i !== me) withActor(s, i, () => {
+    const c2 = s.char, o2 = { levelUps: [] };
+    c2.credits += credits; gainXp(s, xp, o2);
+    if (has(c2, 'medic')) { const st2 = stats(s); c2.hp = Math.min(st2.maxHp, c2.hp + Math.round(st2.maxHp * 0.15)); }
+    if (e.boss) { const prog = mapProgress(c2, r.map), next = r.sector + 1; if (!prog.insertions.includes(next)) prog.insertions.push(next); }
+  });
   contractEvent(s, 'kill', { enemy: e });
   if (e.boss) {
     const t = r.threat;
@@ -1365,7 +1470,10 @@ function offerPerks(s, rng, boss) {
   return out.length ? out : null;
 }
 // Take a piece of contraband. With full pockets, dropId names the piece to leave behind.
-export function choosePerk(s, id, rng, dropId = null) {
+export function choosePerk(s, id, rng, dropId = null, who = 0) {
+  return withActor(s, who, () => choosePerkInner(s, id, rng, dropId));
+}
+function choosePerkInner(s, id, rng, dropId) {
   const r = s.run, c = s.char;
   if (!r || !r.perkOffer) return false;
   if (id && r.perkOffer.includes(id)) {
@@ -1401,7 +1509,10 @@ export function optionAvailable(s, opt) {
   return true;
 }
 
-export function resolveEvent(s, index, rng) {
+export function resolveEvent(s, index, rng, who = 0) {
+  return withActor(s, who, () => resolveEventInner(s, index, rng));
+}
+function resolveEventInner(s, index, rng) {
   const ev = eventById(s.event), opt = ev && ev.options[index];
   if (!opt || s.eventResult || !optionAvailable(s, opt)) return;
   const c = s.char, r = s.run, st = stats(s);
@@ -1443,6 +1554,7 @@ function clearSector(s) {
   m.resolve += res; m.totalResolve += res;
   prog.deepest = Math.max(prog.deepest, r.sector);
   c.deepest = Math.max(c.deepest, r.sector);
+  for (const i of livingActors(s)) if (i !== actorIdx(s)) withActor(s, i, () => { const c2 = s.char, p2 = mapProgress(c2, r.map); c2.credits += bonus; p2.deepest = Math.max(p2.deepest, r.sector); c2.deepest = Math.max(c2.deepest, r.sector); });
   m.bestSector = Math.max(m.bestSector, r.sector);
   m.bestByMap[r.map] = Math.max(m.bestByMap[r.map] || 0, r.sector);
   contractEvent(s, 'sector', {});
@@ -1462,13 +1574,17 @@ export function endRun(s, how, rngForRestock = Math.random) {
   const r = s.run, c = s.char;
   let lost = 0;
   const early = how === 'extracted' && !isBossSector(r.sector);
-  if (how === 'escaped' || early) {
-    lost = Math.max(0, Math.round((c.credits - (r.startCredits || 0)) * (early ? TUNE.extractLoss : TUNE.escapeLoss)));
-    c.credits -= lost; ledger(s, 'escape loss', -lost);
-  }
-  c.wanted = (c.wanted || 0) + 1;
-  c.fed = false;
-  if (rngForRestock) restockMarket(s, rngForRestock);
+  forEachActor(s, (a, i) => {
+    let l = 0;
+    if (how === 'escaped' || early) {
+      l = Math.max(0, Math.round((a.credits - (a.startCredits ?? r.startCredits ?? 0)) * (early ? TUNE.extractLoss : TUNE.escapeLoss)));
+      a.credits -= l; ledger(s, 'escape loss', -l);
+    }
+    if (i === actorIdx(s)) lost = l;
+    a.wanted = (a.wanted || 0) + 1;
+    a.fed = false;
+    if (rngForRestock) restockMarket(s, rngForRestock);
+  });
   let home = '';
   const freed = Math.max(0, r.allies - (r.follower ? 1 : 0)); // the Preacher's follower isn't a rescued prisoner
   if (how === 'extracted' && freed > 0) {
@@ -1543,12 +1659,37 @@ function die(s, foe) {
   s.meta.fallen.unshift(record);
   s.meta.fallen = s.meta.fallen.slice(0, 12);
   record.perks = (c.perks || []).length;
+  if (isCoop(s)) {
+    // One of you is down: the raid is over for both. The survivor drags what they can out (finishCoopDeath).
+    c.dead = true; r.over = true;
+    s.coopDead = { idx: actorIdx(s), record };
+    log(s, `${c.name} goes down. ${charAt(s, 1 - actorIdx(s)).name} grabs what they can and runs.`, 'bad');
+    return;
+  }
   s.outcome = record;
   s.run = null;
   s.screen = 'death';
 }
+// Called with the host's operative active, after the action that killed someone has unwound.
+function finishCoopDeath(s, rng) {
+  const d = s.coopDead; s.coopDead = null;
+  const survivor = 1 - d.idx;
+  if (d.idx === 0) { s.char = null; } else { s.char2 = null; }
+  s.coopFallen = { idx: d.idx, record: d.record };
+  if (d.idx === 0) {
+    // The host is down: act as the friend to close the raid, then leave the host on the death screen.
+    const t = s.char; s.char = s.char2; s.char2 = t; s.actorIdx = 1;
+    endRun(s, 'escaped', rng);
+    s.char2 = s.char; s.char = null; s.actorIdx = 0;
+    s.outcome = d.record; s.screen = 'death';
+  } else {
+    endRun(s, 'escaped', rng);
+    s.notice = `${d.record.name} went down in ${sectorName(d.record.sector, d.record.map)}. You got out with what you could carry.`;
+  }
+}
 
-export function recruit(s, rng) {
+export function recruit(s, rng, slot = 'char') {
+  if (slot === 'char2') { s.char2 = null; return; }
   s.char = null;
   s.draft = newDraft(s.meta, rng);
   s.screen = 'create';
