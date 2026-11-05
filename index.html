@@ -616,7 +616,7 @@ const isHost = () => !!net && net.role === 'host';
 const myIdx = () => (isGuest() ? 1 : 0);
 // Actions that only touch this screen, never the game.
 const DOWNTIME = new Set(['drink', 'barchat', 'bet', 'stake', 'spin', 'invest', 'withdraw', 'shippart', 'shipcell', 'orbitgo', 'orbitact', 'orbitclose']);
-const LOCAL = new Set(['continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'emote', 'orbitarm']);
+const LOCAL = new Set(['continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'emote', 'givearm', 'orbitarm']);
 function coopChip() {
   if (!net) return '';
   const who = net.peerName || (isHost() ? 'friend' : 'host');
@@ -699,7 +699,7 @@ function startCoop(role, code, local) {
     coopStatus = net.status;
     if (net.peer) { town.resendMove(); townSent = false; } else town.setPartner(null);
     // A dropped connection mid-raid doesn't end co-op: the raid waits for them (see coopBanner).
-    if (isHost() && !state.run) { state.coop = net.peer; if (!net.peer) state.guestReady = false; }
+    if (isHost() && !state.run) { state.coop = net.peer; if (!net.peer) { state.guestReady = false; state.trade = null; } }
     if (net) render();
   });
   // Moving around the yard: these skip the game state, so walking stays cheap.
@@ -714,7 +714,7 @@ function startCoop(role, code, local) {
   net.on('bye', () => {
     if (isGuest()) { leaveCoop('The host closed the room.'); return; }
     if (state.run) { state.coop = false; }
-    state.guestReady = false;
+    state.guestReady = false; state.trade = null;
     toast = `${net.peerName || 'Your friend'} left the room.`;
     render();
   });
@@ -933,6 +933,8 @@ const POPUPS = {
   clinic: { label: 'Clinic', where: 'Doc Ilse', body: () => clinic() },
   character: { label: 'Character & Resolve', where: 'The safehouse \u00B7 Cass', body: () => character() },
   gear: { label: 'Gear', where: 'The safehouse \u00B7 your locker', body: () => `${tip('gear')}${gearTab()}` },
+  lockup: { label: 'Lockup', where: 'The safehouse \u00B7 under the floor', body: () => lockupTab() },
+  partner: { label: 'With your partner', where: 'In the yard', body: () => partnerMenu(), hidden: true },
 };
 const popupBadge = (id) => {
   const c = state.char;
@@ -947,8 +949,66 @@ function townScreen() {
     ${townSpend()}
     ${coopBar()}
     <div id="town-slot"></div>
-    <nav class="shortcuts" aria-label="Town menus">${Object.entries(POPUPS).map(([id, p]) => `<button class="btn" data-a="popup" data-v="${id}">${esc(p.label)}${popupBadge(id)}</button>`).join('')}</nav>
-  </section>${townPopup()}`;
+    <nav class="shortcuts" aria-label="Town menus">${Object.entries(POPUPS).filter(([, p]) => !p.hidden).map(([id, p]) => `<button class="btn" data-a="popup" data-v="${id}">${esc(p.label)}${popupBadge(id)}</button>`).join('')}</nav>
+  </section>${townPopup()}${tradeView()}`;
+}
+// The Lockup: spare gear that outlives operatives. Both co-op players share the shelf.
+function lockupTab() {
+  const c = state.char, m = state.meta, list = m.lockup || [], cap = E.lockupCap(m), free = cap - list.length;
+  const stored = list.length ? list.map((it, i) => {
+    const b = E.baseOf(it), ok = E.canEquip(c, it), old = c.gear[b.slot];
+    return itemCard(it, { actions: `<button class="btn primary" data-a="lockuptake" data-v="${i}" data-k="${esc(it.base)}" ${ok ? '' : 'disabled'}>${ok ? (old ? 'Swap in' : 'Take') : `Needs ${esc(E.reqText(b.req))}`}</button><button class="btn" data-a="lockupscrap" data-v="${i}" data-k="${esc(it.base)}">Scrap</button>` });
+  }).join('') : '<p class="muted">Empty. Store a spare piece below, or choose <b>Buy and keep the old one</b> when you compare at the Black Market.</p>';
+  const mine = D.SLOT_ORDER.map((sl) => [sl, c.gear[sl]]).filter(([, it]) => it).map(([sl, it]) => `<div class="set-row"><span><span class="label">${esc(SLOTS[sl].short)}</span> <b>${esc(E.itemName(it))}</b></span><button class="btn" data-a="lockupstore" data-v="${sl}" ${free > 0 ? '' : 'disabled'}>Store</button></div>`).join('');
+  const shareNote = E.isCoop(state) ? ' Your partner can use the same shelf.' : '';
+  return `<p class="muted" style="font-size:.9rem">Gear stored here survives an operative\u2019s death and waits for the next one. It does nothing for you while it sits here, and you can only reach it in town.${shareNote}</p>
+    <h3>On the shelf <span class="num muted" style="font-size:.85rem">${list.length} of ${cap}</span></h3>
+    <div class="item-grid">${stored}</div>
+    <h3>What you\u2019re wearing</h3><div>${mine || '<p class="muted">Nothing equipped.</p>'}</div>`;
+}
+// Walk up to your partner: hand something straight over, or open a trade.
+let giveArm = null;
+function partnerMenu() {
+  const c = state.char, pc = E.charAt(state, 1 - myIdx());
+  if (!pc || !E.isCoop(state)) return '<p class="muted">Your partner isn\u2019t here right now.</p>';
+  const name = esc(pc.name.split(' ')[0]);
+  const amounts = [10, 50, 100, 250].map((n) => `<button class="btn" data-a="givecredits" data-v="${n}" ${c.credits < n ? 'disabled' : ''}>${n}</button>`).join('');
+  const gear = D.SLOT_ORDER.map((sl) => [sl, c.gear[sl]]).filter(([, it]) => it).map(([sl, it]) => {
+    const canUse = E.canEquip(pc, it), armed = giveArm === sl;
+    return `<div class="set-row"><span><span class="label">${esc(SLOTS[sl].short)}</span> <b>${esc(E.itemName(it))}</b>${canUse ? '' : ` <span class="muted">(${name} can\u2019t use it yet: it goes to the Lockup)</span>`}</span><button class="btn ${armed ? 'primary' : ''}" data-a="${armed ? 'givegear' : 'givearm'}" data-v="${sl}">${armed ? 'Yes, hand it over' : 'Give'}</button></div>`;
+  }).join('');
+  return `<div class="set-row"><span><b>Trade</b> <span class="muted">both of you offer something, both accept</span></span><button class="btn primary" data-a="tradeask">Offer a trade</button></div>
+    <h3>Give credits <span class="num muted" style="font-size:.85rem">you have ${c.credits.toLocaleString()}</span></h3>
+    <div class="btnrow">${amounts}<button class="btn" data-a="givecredits" data-v="${c.credits}" ${c.credits ? '' : 'disabled'}>All</button></div>
+    <h3>Give gear</h3><div>${gear || '<p class="muted">You have nothing equipped.</p>'}</div>
+    <p class="muted" style="font-size:.88rem">${name} puts on what you give them. Anything it replaces goes to the Lockup.</p>`;
+}
+function tradeView() {
+  const t = state.trade;
+  if (!t || !E.isCoop(state)) return '';
+  const me = myIdx(), c = state.char, pc = E.charAt(state, 1 - me), name = esc(pc.name.split(' ')[0]);
+  const wrap = (body) => `<div class="popup-wrap"><div class="modal popup wide" role="dialog" aria-modal="true" aria-label="Trade">${body}</div></div>`;
+  if (!t.open) {
+    if (t.from === me) return wrap(`<div class="pop-head"><h2>Trade</h2></div><p>Waiting for ${name} to answer\u2026</p><div class="btnrow"><button class="btn" data-a="tradecancel">Cancel</button></div>`);
+    return wrap(`<div class="pop-head"><h2>Trade</h2></div><p><b>${name}</b> wants to trade.</p><div class="btnrow"><button class="btn primary" data-a="tradeanswer" data-v="yes">Open the trade</button><button class="btn" data-a="tradeanswer" data-v="no">Not now</button></div>`);
+  }
+  const mine = t.offers[me], theirs = t.offers[1 - me], why = E.tradeProblem(state, t.offers);
+  const credits = [-100, -10, 10, 100].map((n) => `<button class="btn" data-a="tradecredits" data-v="${n}">${n > 0 ? '+' : '\u2212'}${Math.abs(n)}</button>`).join('');
+  const slots = D.SLOT_ORDER.map((sl) => [sl, c.gear[sl]]).filter(([, it]) => it).map(([sl, it]) => { const on = mine.slots.includes(sl); return `<div class="set-row"><span><span class="label">${esc(SLOTS[sl].short)}</span> <b>${esc(E.itemName(it))}</b></span><button class="btn ${on ? 'primary' : ''}" data-a="tradeslot" data-v="${sl}" aria-pressed="${on}">${on ? 'Offered' : 'Offer'}</button></div>`; }).join('');
+  const offered = theirs.slots.map((sl) => { const it = pc.gear[sl]; if (!it) return ''; const usable = E.canEquip(c, it); return `${itemCard(it)}${usable ? '' : '<p class="muted" style="font-size:.85rem">You can\u2019t use this yet: it would go to the Lockup.</p>'}`; }).join('');
+  return wrap(`<div class="pop-head"><div style="display:grid;gap:2px"><span class="label">In the yard</span><h2>Trade with ${name}</h2></div><button class="tool" data-a="tradecancel" aria-label="Call off the trade">Call it off</button></div>
+    <div class="loot">
+      <div style="display:grid;gap:8px;align-content:start"><span class="label">You offer${mine.ok ? ' \u00B7 accepted' : ''}</span>
+        <div><b class="num">${mine.credits.toLocaleString()}</b> <span class="muted">of ${c.credits.toLocaleString()} ${esc(S.cur)}</span></div>
+        <div class="btnrow">${credits}<button class="btn" data-a="tradecredits" data-v="all">All</button></div>
+        <div>${slots || '<p class="muted">You have nothing equipped.</p>'}</div></div>
+      <div style="display:grid;gap:8px;align-content:start"><span class="label">${name} offers${theirs.ok ? ' \u00B7 accepted' : ''}</span>
+        <div><b class="num">${theirs.credits.toLocaleString()}</b> <span class="muted">${esc(S.cur)}</span></div>
+        ${offered || '<p class="muted">No gear yet.</p>'}</div>
+    </div>
+    ${why ? `<p class="notice lose">${esc(why)}</p>` : ''}
+    <p class="muted" style="font-size:.88rem">What you receive goes on. Anything it replaces goes to the Lockup. Any change clears both acceptances.</p>
+    <div class="btnrow"><button class="btn primary big" data-a="tradeok" ${why ? 'disabled' : ''}>${mine.ok ? 'Accepted \u00B7 waiting for them' : 'Accept this trade'}</button></div>`);
 }
 // Co-op, under the yard: where your partner is, whether they're ready, and something to say to them.
 const EMOTES = ['Over here!', 'Ready?', 'Ready.', 'Let\u2019s go', 'Hold on', 'Nice.', 'Trade?', 'Ha!'];
@@ -987,13 +1047,13 @@ function compareView() {
       <div style="display:grid;gap:6px;align-content:start"><span class="label">In the shop</span>${itemCard(it, { cls: 'new' })}</div>
       <div style="display:grid;gap:6px;align-content:start"><span class="label">What you\u2019re using</span>${old ? itemCard(old, { compare: false }) : '<p class="muted">Nothing in that slot.</p>'}</div>
     </div>
-    <div class="btnrow"><button class="btn primary big" data-a="buygear" data-v="${state.compare}" ${!ok || c.credits < net ? 'disabled' : ''}>${ok ? `Buy \u00B7 ${cr(net)}` : `Needs ${E.reqText(b.req)}`}</button><button class="btn big" data-a="closecompare">Back</button></div>
+    <div class="btnrow"><button class="btn primary big" data-a="buygear" data-v="${state.compare}" ${!ok || c.credits < net ? 'disabled' : ''}>${ok ? `Buy \u00B7 ${cr(net)}` : `Needs ${E.reqText(b.req)}`}</button>${old && E.lockupFree(state.meta) > 0 && ok && c.credits >= net ? `<button class="btn big" data-a="buygear" data-v="${state.compare}" data-k="stash">Buy and keep the old one</button>` : ''}<button class="btn big" data-a="closecompare">Back</button></div>
   </div></div>`;
 }
 function townPopup() {
   const id = state.popup, p = POPUPS[id];
   if (!p) return '';
-  const pair = id === 'character' || id === 'gear' ? `<nav class="tabs pop-tabs">${['character', 'gear'].map((k) => `<button class="tab" aria-selected="${id === k}" data-a="popup" data-v="${k}">${esc(POPUPS[k].label)}${popupBadge(k)}</button>`).join('')}</nav>` : '';
+  const pair = id === 'character' || id === 'gear' || id === 'lockup' ? `<nav class="tabs pop-tabs">${['character', 'gear', 'lockup'].map((k) => `<button class="tab" aria-selected="${id === k}" data-a="popup" data-v="${k}">${esc(POPUPS[k].label)}${popupBadge(k)}</button>`).join('')}</nav>` : '';
   return `<div class="popup-wrap town-pop"><div class="modal popup wide" role="dialog" aria-modal="true" aria-label="${esc(p.label)}">
     <div class="pop-head"><div style="display:grid;gap:2px"><span class="label">${esc(p.where)}</span><h2>${esc(p.label)}</h2></div><button class="tool" data-a="closepopup" aria-label="Close">Close</button></div>
     ${notice()}${pair}${p.body()}
@@ -1763,6 +1823,7 @@ function render() {
   if (state.coopFallen && state.coopFallen.idx === 0 && state.screen !== 'death') state.coopFallen = null;
   }
   const showStatus = state.screen !== 'intro' && !titleOpen;
+  if (state.sharedToast) { toast = state.sharedToast; state.sharedToast = null; A.play('buy'); if (isHost()) guestToast = toast; }
   if (state.contractDone) { toast = `Contract complete: ${state.contractDone}`; state.contractDone = null; A.play('perk'); if (isHost()) guestToast = toast; }
   if (state.featUnlocks && state.featUnlocks.length) { const u = state.featUnlocks; toast = `Feat: ${u.slice(0, 2).map((x) => `${x.name} ${'I II III IV'.split(' ')[x.tier - 1]} (${x.text}${x.resolve ? `, +${x.resolve} ${S.meta}` : ''})`).join(' \u00B7 ')}${u.length > 2 ? ` and ${u.length - 2} more` : ''}`; state.featUnlocks = null; A.play('perk'); if (isHost()) guestToast = toast; }
   // Keep the page where it was: scroll positions of menus and the page, and the focused button, survive the rebuild.
@@ -1793,7 +1854,7 @@ function render() {
     town.spawnShift = net ? (isGuest() ? 14 : -14) : 0;
     { const pc = net ? E.charAt(state, 1 - myIdx()) : null; if (town.partner) town.partner.name = pc ? pc.name.split(' ')[0] : (net && net.peerName) || ''; town.mateName = pc ? pc.name.split(' ')[0] : ''; }
     if (lastScreen !== 'town') town.spawnAt(['create', 'intro', 'death'].includes(lastScreen) || !lastScreen ? 'safehouse' : lastScreen === 'ending' ? 'safehouse' : 'terminal');
-    town.setBlocked(!!state.popup || !!modal);
+    town.setBlocked(!!state.popup || !!modal || !!state.trade);
   }
   if (state.screen !== 'town') state.popup = null;
   if (net && net.peer) {
@@ -1838,6 +1899,7 @@ document.addEventListener('automode', () => { A.play('click'); if (state.screen 
 // ---------- input ----------
 const stage = new Stage();
 const town = new Town();
+town.onPartner = () => { if (state.screen !== 'town' || modal || state.popup || state.trade || !E.isCoop(state)) return; giveArm = null; state.popup = 'partner'; state.notice = null; render(); };
 town.onMove = (p) => {
   if (!net || !net.peer || state.screen !== 'town' || !state.char) return;
   townSent = true;
@@ -1910,6 +1972,8 @@ function act(a, v, k) {
   if (isGuest() && !LOCAL.has(a)) {
     if (!net.online || !net.peer) { toast = 'Not connected to the host right now.'; A.play('denied'); render(); return; }
     if (a === 'buygear') state.compare = null;
+    if (a === 'tradeask') state.popup = null;
+    if (a === 'givecredits' || a === 'givegear') giveArm = null;
     if (a === 'create') { net.send({ t: 'create', draft: state.draft }); localDraft = null; A.play('click'); return; }
     if (a === 'recruit') { net.send({ t: 'recruit' }); state.coopFallen = null; A.play('click'); return; }
     if (a === 'pickmap') { toast = 'The host picks the target.'; A.play('denied'); render(); return; }
@@ -1994,7 +2058,19 @@ function applyAct(a, v, k) {
     case 'closepopup': state.popup = null; state.notice = null; state.compare = null; break;
     case 'compare': state.compare = +v; sfx('click'); break;
     case 'closecompare': state.compare = null; sfx('click'); break;
-    case 'buygear': ok = E.buyGear(state, +v); state.compare = null; break;
+    case 'buygear': ok = E.buyGear(state, +v, k === 'stash'); state.compare = null; break;
+    case 'lockupstore': ok = E.lockupStore(state, v); sfx(ok ? 'click' : 'denied'); break;
+    case 'lockuptake': ok = E.lockupTake(state, +v, k); sfx(ok ? 'buy' : 'denied'); break;
+    case 'lockupscrap': ok = E.lockupScrap(state, +v, k); sfx(ok ? 'click' : 'denied'); break;
+    case 'givearm': giveArm = v; sfx('click'); break;
+    case 'givecredits': ok = E.giveCredits(state, actingAs, +v); giveArm = null; sfx(ok ? 'buy' : 'denied'); break;
+    case 'givegear': { const why = E.giveGear(state, actingAs, v); giveArm = null; if (why) state.notice = why; sfx(why ? 'denied' : 'buy'); break; }
+    case 'tradeask': if (E.tradeAsk(state, actingAs)) state.popup = null; sfx('click'); break;
+    case 'tradeanswer': E.tradeAnswer(state, actingAs, v === 'yes'); sfx('click'); break;
+    case 'tradecancel': E.tradeCancel(state, actingAs); sfx('click'); break;
+    case 'tradecredits': E.tradeCredits(state, actingAs, v === 'all' ? 'all' : +v); sfx('click'); break;
+    case 'tradeslot': E.tradeSlot(state, actingAs, v); sfx('click'); break;
+    case 'tradeok': E.tradeAccept(state, actingAs); sfx('click'); break;
     case 'gearslot': state.gearSlot = v; sfx('click'); break;
     case 'upgradegear': ok = E.upgradeItem(state, v); break;
     case 'reroll': ok = E.rerollBonus(state, v, +k, rng); break;
@@ -2013,7 +2089,7 @@ function applyAct(a, v, k) {
     case 'spend': ok = E.spendAttr(state, v); break;
     case 'respec': ok = E.respec(state); break;
     case 'pickmap': state.gateMap = v; break;
-    case 'deploy': if (E.isCoop(state) && !state.guestReady) { ok = false; break; } state.popup = null; state.lastResult = null; E.deploy(state, state.gateMap || 'garrison', +v, rng); break;
+    case 'deploy': if (E.isCoop(state) && !state.guestReady) { ok = false; break; } state.trade = null; state.popup = null; state.lastResult = null; E.deploy(state, state.gateMap || 'garrison', +v, rng); break;
     case 'continue': E.continueAfterVictory(state, rng); break;
     case 'room': state.lastResult = null; E.enterRoom(state, +v, rng); if (state.screen === 'room') { state.lastResult = { kind: 'room', ...state.roomResult }; E.continueAfterVictory(state, rng); } break;
     case 'dismissresult': state.lastResult = null; break;
@@ -2056,6 +2132,7 @@ document.addEventListener('change', (ev) => { if (ev.target.id === 'vol') A.play
 
 document.addEventListener('keydown', (ev) => {
   if (ev.key === 'Escape' && modal) { act('closemodal'); return; }
+  if (ev.key === 'Escape' && state.trade && state.screen === 'town') { act('tradecancel'); return; }
   if (ev.key === 'Escape' && state.compare !== null && state.compare !== undefined && state.screen === 'town') { act('closecompare'); return; }
   if (modal === 'orbit' && state.orbit && !state.orbit.over && ['1', '2', '3', '4'].includes(ev.key)) { act('orbitact', ['fire', 'evade', 'overcharge', 'jump'][+ev.key - 1]); return; }
   if (ev.key === 'Escape' && state.popup && state.screen === 'town') { act('closepopup'); return; }

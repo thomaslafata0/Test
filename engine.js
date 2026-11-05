@@ -95,6 +95,8 @@ export function migrate(s, rng) {
     if (s.meta && !s.meta.ship) s.meta.ship = { hull: 0, guns: 0, shields: 0, engines: 0, cell: [] };
     if (s.meta && !s.meta.ventures) s.meta.ventures = {};
     if (s.meta && !s.meta.feats) s.meta.feats = { counters: {}, tiers: {}, v: 0 };
+    if (s.meta && !s.meta.lockup) s.meta.lockup = [];
+    s.trade = null;
     // Orbit wins from before tiers were tracked count as low-orbit wins, so older cells keep the blockade line open.
     if (s.meta && !s.meta.orbitTierWins) s.meta.orbitTierWins = s.meta.orbitWins ? { low: s.meta.orbitWins } : {};
     for (const k of (s.meta && s.meta.contracts) || []) if (!k.done) k.credits = contractCredits(k.kind, k.n);
@@ -373,13 +375,18 @@ function equip(s, it, verb) {
 }
 // Buy from the Black Market. The piece it replaces is gone: Marrow doesn't buy, he only sells.
 export const netPrice = (s, it) => price(s, itemPrice(it));
-export function buyGear(s, idx) {
+export function buyGear(s, idx, stash = false) {
   const c = s.char, it = c.market && c.market[idx];
   if (!it || !canEquip(c, it) || c.credits < netPrice(s, it)) return false;
   const cost = netPrice(s, it);
   c.credits -= cost; ledger(s, 'spend:gear', cost);
   c.market.splice(idx, 1);
   const old = equip(s, it);
+  if (old && stash && lockupFree(s.meta) > 0) {
+    s.meta.lockup.push(old);
+    s.notice = `Bought ${itemName(it)}. The old ${itemName(old)} goes in the Lockup.`;
+    return true;
+  }
   s.notice = `Bought ${itemName(it)}.${old && baseOf(old).tier > 0 ? ` The old ${itemName(old)} goes on the scrap heap.` : ''}`;
   return true;
 }
@@ -429,6 +436,147 @@ export function leaveLoot(s, rng) {
   return true;
 }
 export const sellLoot = leaveLoot;
+
+// ---------- the Lockup and trading ----------
+// The Lockup: spare gear under the safehouse floor. It belongs to the cell, so it outlives operatives and both players
+// can reach it. Whatever is in it isn't helping anyone on a raid, and it's town only: no couriers out of a raid.
+const LOCKUP_BASE = 4, LOCKUP_STEP = 2;
+export const lockupCap = (m) => LOCKUP_BASE + (hasCell(m, 'lockup1') ? LOCKUP_STEP : 0) + (hasCell(m, 'lockup2') ? LOCKUP_STEP : 0);
+export const lockupFree = (m) => lockupCap(m) - (m.lockup = m.lockup || []).length;
+function setGear(s, slot, it) {
+  const c = s.char, old = gearIn(c, slot), before = stats(s).maxHp;
+  c.gear[slot] = it;
+  const after = stats(s).maxHp;
+  c.hp = Math.max(1, after > before ? c.hp + (after - before) : Math.min(c.hp, after));
+  return old;
+}
+export function lockupStore(s, slot) {
+  const it = gearIn(s.char, slot);
+  if (s.run || !it || lockupFree(s.meta) <= 0) return false;
+  setGear(s, slot, null);
+  s.meta.lockup.push(it);
+  s.notice = `${itemName(it)} goes in the Lockup.`;
+  return true;
+}
+// Equip a stored piece; what it replaces takes its place on the shelf. base guards against the shelf having shifted
+// since the player's screen last updated (the other player may just have taken something).
+export function lockupTake(s, idx, base = null) {
+  const list = s.meta.lockup || [], it = list[idx];
+  if (s.run || !it || (base && it.base !== base) || !canEquip(s.char, it)) return false;
+  const old = equip(s, it);
+  if (old) list[idx] = old; else list.splice(idx, 1);
+  s.notice = `You take the ${itemName(it)}${old ? ` and shelve the ${itemName(old)}` : ''}.`;
+  return true;
+}
+export function lockupScrap(s, idx, base = null) {
+  const list = s.meta.lockup || [], it = list[idx];
+  if (s.run || !it || (base && it.base !== base)) return false;
+  list.splice(idx, 1);
+  s.notice = `${itemName(it)} goes on the scrap heap.`;
+  return true;
+}
+const tradeSide = () => ({ credits: 0, slots: [], ok: false });
+// Why this exchange can't happen, or null. Operatives have no bag: a piece they receive goes on, and the piece it
+// replaces (or one they can't use yet) goes to the Lockup, so the shelf needs room for those.
+export function tradeProblem(s, offers) {
+  const c = [charAt(s, 0), charAt(s, 1)];
+  if (!c[0] || !c[1]) return 'Your partner has no operative yet.';
+  let shelved = 0;
+  for (const i of [0, 1]) {
+    const o = offers[i], r = c[1 - i], other = offers[1 - i];
+    if (o.credits > c[i].credits) return `${c[i].name} doesn\u2019t have ${o.credits} ${D.SETTING.cur} any more.`;
+    for (const slot of o.slots) {
+      const it = gearIn(c[i], slot);
+      if (!it) return 'One of those pieces has moved.';
+      if (!canEquip(r, it)) shelved += 1;
+      else if (gearIn(r, slot) && !other.slots.includes(slot)) shelved += 1;
+    }
+  }
+  const free = lockupFree(s.meta);
+  if (shelved > free) return `That sends ${shelved} replaced piece${shelved > 1 ? 's' : ''} to the Lockup, which has room for ${free}. Clear a shelf first.`;
+  return null;
+}
+function tradeApply(s, offers) {
+  const c = [charAt(s, 0), charAt(s, 1)], moving = [], said = [];
+  for (const i of [0, 1]) {
+    const o = offers[i], give = [];
+    if (o.credits > 0) { c[i].credits -= o.credits; c[1 - i].credits += o.credits; give.push(`${o.credits} ${D.SETTING.cur}`); }
+    withActor(s, i, () => { for (const slot of o.slots) { const it = setGear(s, slot, null); moving.push({ to: 1 - i, slot, it }); give.push(itemName(it)); } });
+    if (give.length) said.push(`${c[i].name.split(' ')[0]} hands over ${give.join(' and ')}`);
+  }
+  for (const m of moving) withActor(s, m.to, () => {
+    if (!canEquip(s.char, m.it)) { s.meta.lockup.push(m.it); return; }
+    const old = setGear(s, m.slot, m.it);
+    if (old) s.meta.lockup.push(old);
+  });
+  s.sharedToast = `${said.join('. ') || 'Nothing changes hands'}.`;
+}
+const canTrade = (s) => isCoop(s) && !s.run;
+export function giveCredits(s, who, n) {
+  const c = charAt(s, who);
+  if (!canTrade(s) || !c) return false;
+  n = Math.min(Math.floor(n), c.credits);
+  if (n <= 0) return false;
+  const offers = [tradeSide(), tradeSide()];
+  offers[who].credits = n;
+  tradeApply(s, offers);
+  return true;
+}
+// Returns null when done, or the reason it can't happen.
+export function giveGear(s, who, slot) {
+  if (!canTrade(s)) return 'Not now.';
+  const offers = [tradeSide(), tradeSide()];
+  offers[who].slots = [slot];
+  const why = tradeProblem(s, offers);
+  if (why) return why;
+  tradeApply(s, offers);
+  return null;
+}
+// A trade: one asks, the other answers, both build their offer, both accept. Any change clears both acceptances.
+export function tradeAsk(s, who) {
+  if (!canTrade(s) || s.trade) return false;
+  s.trade = { from: who, open: false, offers: [tradeSide(), tradeSide()] };
+  return true;
+}
+export function tradeAnswer(s, who, yes) {
+  const t = s.trade;
+  if (!t || t.open || t.from === who) return false;
+  if (yes) t.open = true;
+  else { s.trade = null; s.sharedToast = `${charAt(s, who).name.split(' ')[0]} isn\u2019t trading right now.`; }
+  return true;
+}
+export function tradeCancel(s, who) {
+  if (!s.trade) return false;
+  const wasOpen = s.trade.open;
+  s.trade = null;
+  if (wasOpen) s.sharedToast = `${charAt(s, who).name.split(' ')[0]} called off the trade.`;
+  return true;
+}
+const tradeTouched = (t) => { t.offers[0].ok = false; t.offers[1].ok = false; };
+export function tradeCredits(s, who, delta) {
+  const t = s.trade, c = charAt(s, who);
+  if (!t || !t.open || !c) return false;
+  const o = t.offers[who];
+  o.credits = delta === 'all' ? c.credits : Math.max(0, Math.min(c.credits, o.credits + Math.floor(+delta || 0)));
+  tradeTouched(t);
+  return true;
+}
+export function tradeSlot(s, who, slot) {
+  const t = s.trade, c = charAt(s, who);
+  if (!t || !t.open || !c || !gearIn(c, slot)) return false;
+  const o = t.offers[who];
+  o.slots = o.slots.includes(slot) ? o.slots.filter((x) => x !== slot) : [...o.slots, slot];
+  tradeTouched(t);
+  return true;
+}
+export function tradeAccept(s, who) {
+  const t = s.trade;
+  if (!t || !t.open) return false;
+  if (tradeProblem(s, t.offers)) { tradeTouched(t); return false; }
+  t.offers[who].ok = !t.offers[who].ok;
+  if (t.offers[0].ok && t.offers[1].ok) { s.trade = null; tradeApply(s, t.offers); }
+  return true;
+}
 function afterLoot(s, rng) { if (s.run.perkOffer) s.screen = 'perk'; else offerRoute(s, rng); }
 
 // Heirloom (cell upgrade): on death, pick one piece to leave for the next operative.

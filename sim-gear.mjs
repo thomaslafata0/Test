@@ -32,8 +32,32 @@ function withItem(s, it, fn) {
 }
 
 // Buy the best value-for-money upgrades from the Black Market, keeping a cash reserve.
+// LOCKUP=1: the bot keeps replaced gear in the Lockup and reuses it, the most a sensible player would get from it.
+const LOCKUP = !!(typeof process !== 'undefined' && process.env.LOCKUP);
+function useLockup(s, style, skip, w) {
+  const list = s.meta.lockup || [];
+  for (let guard = 0; guard < 8; guard++) {
+    const base = score(s, style, w);
+    let best = -1, bestGain = 0.4;
+    list.forEach((it, i) => {
+      if (!E.canEquip(s.char, it) || skip.includes(E.baseOf(it).slot)) return;
+      const gain = withItem(s, it, () => score(s, style, w)) - base;
+      if (gain > bestGain) { bestGain = gain; best = i; }
+    });
+    if (best < 0) return;
+    E.lockupTake(s, best);
+  }
+}
+function makeRoom(s) {
+  if (E.lockupFree(s.meta) > 0) return;
+  const list = s.meta.lockup;
+  let low = 0;
+  list.forEach((it, i) => { const v = (E.baseOf(it).tier || 0) * 10 + (it.level || 0) * 3, u = (E.baseOf(list[low]).tier || 0) * 10 + (list[low].level || 0) * 3; if (v < u) low = i; });
+  E.lockupScrap(s, low);
+}
 export function shopGear(s, style, reserve = 60, skip = [], w = {}) {
   const c = s.char;
+  if (LOCKUP) useLockup(s, style, skip, w);
   for (let guard = 0; guard < 6; guard++) {
     const base = score(s, style, w);
     let best = -1, bestV = 0;
@@ -47,7 +71,8 @@ export function shopGear(s, style, reserve = 60, skip = [], w = {}) {
     });
     if (best < 0) break;
     const spent = c.credits;
-    E.buyGear(s, best);
+    if (LOCKUP) makeRoom(s);
+    E.buyGear(s, best, LOCKUP);
     if (s.spend) s.spend.gear = (s.spend.gear || 0) + spent - c.credits;
   }
 }

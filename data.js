@@ -255,6 +255,8 @@ export const CELL = [
   { id: 'ledger', name: 'Doc\u2019s Ledger', cost: 8, desc: 'Clinic treatment costs half.' },
   { id: 'mentor', name: 'Old Hand',       cost: 12, desc: 'New operatives get +1 attribute point at creation.' },
   { id: 'heirloom', name: 'Heirloom',     cost: 10, desc: 'When an operative dies, choose one piece of their gear to pass on to the next.' },
+  { id: 'lockup1', name: 'Lockup Shelving', cost: 6, desc: 'The Lockup holds 2 more pieces.' },
+  { id: 'lockup2', name: 'False Floor',   cost: 12, desc: 'The Lockup holds 2 more pieces again.' },
 ];
 
 // ---------- enemies ----------
