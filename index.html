@@ -718,6 +718,7 @@ function titleScreen() {
         ${hasRun ? `<button class="btn primary big" data-a="continue-title">${state.char && lookStill(state.char.look, state.char.background) ? `<img class="title-me" src="${lookStill(state.char.look, state.char.background)}" alt="" width="48" height="48">` : ''}Continue <span class="muted" style="font-size:.8rem;text-transform:none;letter-spacing:0">${state.char ? `${esc(state.char.name)}, operative ${state.char.number}` : `${m.operatives} operative${m.operatives === 1 ? '' : 's'} so far`}</span></button>` : `<button class="btn primary big" data-a="continue-title">Begin</button>`}
         ${hasRun ? `<button class="btn big" data-a="newcell">${confirmReset ? 'Click again: this erases everything' : 'New cell'}</button>` : ''}
         <button class="btn big" data-a="modal" data-v="board">Leaderboard</button>
+        <button class="btn big" data-a="modal" data-v="feats">Feats</button>
         <button class="btn big" data-a="modal" data-v="manual">Field manual</button>
         <button class="btn big" data-a="modal" data-v="settings">Settings &amp; co-op</button>
       </div>
@@ -1035,6 +1036,8 @@ function character() {
     <div class="two-col">
       <div style="display:grid;gap:14px;align-content:start;min-width:0">
         <span class="label">Skills \u00B7 from your weapons and attributes</span><div class="rows">${skills}</div>
+        <span class="label">Marks \u00B7 ${(c.marks || []).length} / 5 \u00B7 earned in orbit</span>${(c.marks || []).length ? `<div class="perk-list">${c.marks.map((id) => { const mk = D.MARKS[id]; return `<div class="perk-mini rare">${ico(`mark:${id}`, 'sm2')}<div><b>${esc(mk.name)}</b><span>${esc(mk.desc)}</span></div></div>`; }).join('')}</div>` : '<p class="muted">None yet. Fly the shuttle (Orbit, after curfew) on the harder runs.</p>'}
+        ${(() => { const fb = E.featBuffs(m), t = Object.entries(fb).filter(([k, v]) => k !== 'vs' && v > 0), vs = Object.keys(fb.vs).length; return `<span class="label">Feats \u00B7 the cell\u2019s permanent edges</span>${t.length || vs ? `<div class="chips">${t.map(([k, v]) => `<span class="chip good">+${(v * 100).toFixed(1).replace(/\.0$/, '')}% ${esc(E.BUFF_NAMES[k])}</span>`).join('')}${vs ? `<span class="chip good">bonus damage vs ${vs} enemy type${vs > 1 ? 's' : ''}</span>` : ''}<button class="btn" data-a="modal" data-v="feats" style="margin-left:4px">All feats</button></div>` : '<p class="muted">No tiers yet. Everything the cell does counts: see <button class="btn" data-a="modal" data-v="feats">Feats</button>.</p>'}`; })()}
         <span class="label">Contraband \u00B7 ${c.perks.length} / ${E.CONTRABAND_SLOTS} pockets</span>${c.perks.length ? `<div class="perk-list">${c.perks.map((id) => { const pk = E.perkById(id); return `<div class="perk-mini ${pk.rare ? 'rare' : ''}">${ico(`perk:${id}`, 'sm2')}<div><b>${esc(pk.name)}</b><span>${esc(pk.desc)}</span></div></div>`; }).join('')}</div>` : '<p class="muted">None yet. Elites and bosses carry it.</p>'}
       </div>
       <div style="display:grid;gap:14px;align-content:start;min-width:0">
@@ -1349,6 +1352,7 @@ function featsView() {
   if (vs) totals.push(`<span class="chip good">bonus damage vs ${vs} enemy type${vs > 1 ? 's' : ''}</span>`);
   const groups = {};
   for (const def of Object.values(E.FEAT_DEFS)) (groups[def.group] = groups[def.group] || []).push(def);
+  for (const g of ['Enemies', 'Bosses']) if (groups[g]) groups[g].sort((a, b) => ((F.tiers[b.id] || 0) - (F.tiers[a.id] || 0)) || ((F.counters[b.id] || 0) - (F.counters[a.id] || 0)));
   const row = (def) => {
     const c = F.counters[def.id] || 0, t = F.tiers[def.id] || 0, done = t >= def.tiers.length, next = def.tiers[Math.min(t, def.tiers.length - 1)], prev = t ? def.tiers[t - 1] : 0;
     const pct = done ? 1 : Math.min(1, (c - prev) / (next - prev));
