@@ -19,6 +19,7 @@ function shop(s, who, style) {
 function act(s, who, style) {
   return E.withActor(s, who, () => {
     const e = s.run.enemy, c = s.char, st = E.stats(s);
+    if (E.canUse(s, 'revive') && !process.env.NO_REVIVE) return 'revive';
     if (c.hp < st.maxHp * 0.35 && c.items.stim > 0) return 'stim';
     if ((e.intent === 'heavy' || (e.intent === 'special' && D.SPECIALS[e.id] && D.SPECIALS[e.id].status)) && !e.stun && s.run.lastAttacker === who) return 'defend';
     for (const k of ['overload', 'smash', 'aimed', 'blast', 'burst']) if (E.canUse(s, k) && G.skillAllowed(style, k)) return k;
@@ -45,8 +46,12 @@ for (let k = 0; k < CAMPAIGNS; k++) {
     while (s.run && steps++ < 4000) {
       if (s.screen === 'combat') { const who = s.run.actor; E.playerAct(s, act(s, who, who ? 'rangedFocus' : 'auto'), rng, who); }
       else if (s.screen === 'victory') E.continueAfterVictory(s, rng);
-      else if (s.screen === 'loot') G.lootChoice(s, rng, 'auto');
-      else if (s.screen === 'perk') E.choosePerk(s, s.run.perkOffer[0], rng, s.char.perks[0], 0);
+      else if (s.screen === 'loot' || s.screen === 'perk') {
+        // Each operative picks for themselves.
+        const i = E.livingActors(s).find((n) => E.withActor(s, n, () => s.run.lootOffer || s.run.perkOffer));
+        if (i === undefined) { E.continueAfterVictory(s, rng); continue; }
+        E.withActor(s, i, () => { if (s.run.lootOffer) G.lootChoice(s, rng, i ? 'rangedFocus' : 'auto'); else E.choosePerk(s, s.run.perkOffer[0], rng, s.char.perks[0]); });
+      }
       else if (s.screen === 'route') { const ch = s.run.choices, pref = ['rest', 'supply', 'cells', 'cargo', 'event', 'fight', 'elite', 'boss']; E.enterRoom(s, ch.map((x) => pref.indexOf(x)).reduce((bi, v, i, arr) => (v < arr[bi] ? i : bi), 0), rng); }
       else if (s.screen === 'room') E.offerRoute(s, rng);
       else if (s.screen === 'event') { if (s.eventResult) { E.offerRoute(s, rng); continue; } E.resolveEvent(s, 0, rng, 0); E.offerRoute(s, rng); }

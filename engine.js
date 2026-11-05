@@ -44,7 +44,7 @@ export const hardAt = (sector) => HARD[hardTier(sector)];
 export const hard = (s) => hardAt(s.run ? s.run.sector : (s.meta && s.meta.bestSector) || 0);
 export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.01, bossHp: 2.1, bossAtk: 1.4, enemyAtk: 1.74, enemyHp: 1.78, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 1.5, strAtk: 0.6, agiCrit: 0.04, agiDodge: 0.025, intOverload: 5, chaHesitate: 0.055, chaCredits: 0.05, wanted: 0.025, ambush: 1.5,
   upgradeCost: 60, eliteGear: 0.3, shopLegendary: 0.06, cover: 0.5, agiAtk: 1, early: 0.35,
-  rangedSpread: 0.15, meleeSpread: 0.3, shootGuard: 0.15, momentum: 0.15, coopHp: 1.5, coopAtk: 1, coopExtra: 4 };
+  rangedSpread: 0.15, meleeSpread: 0.3, shootGuard: 0.15, momentum: 0.15, coopHp: 1.5, coopAtk: 1, coopExtra: 4, reviveHp: 0.2, reviveAfter: 0.15, downsPerRaid: 2, bleedRounds: 3 };
 export const isBossSector = (n) => n % 5 === 0;
 // Optional credit accounting for the simulators: set s.ledger = {} and every credit gain or spend is tallied by source.
 const ledger = (s, k, n) => { if (s.ledger && n) s.ledger[k] = (s.ledger[k] || 0) + n; };
@@ -145,13 +145,13 @@ function migrateOld(s, rng) {
 // s.char is the host's operative, s.char2 the friend's. The engine always acts on s.char, so to act as the
 // friend we swap the two references (and the per-operative combat fields in s.run) for the duration of a call.
 // Saves are always written with s.actorIdx === 0, so the swap never leaks into a save.
-const BAG = ['pst', 'pfresh', 'defending', 'ready', 'momentum', 'keepDistance', 'struck', 'cooldowns', 'usedThisFight', 'adrenalUsed', 'deadmanUsed'];
-const freshBag = () => ({ pst: {}, pfresh: [], defending: false, ready: false, momentum: false, keepDistance: false, struck: false, cooldowns: {}, usedThisFight: [], adrenalUsed: false, deadmanUsed: false });
+const BAG = ['pst', 'pfresh', 'defending', 'ready', 'momentum', 'keepDistance', 'struck', 'cooldowns', 'usedThisFight', 'adrenalUsed', 'deadmanUsed', 'lootOffer', 'perkOffer'];
+const freshBag = () => ({ pst: {}, pfresh: [], defending: false, ready: false, momentum: false, keepDistance: false, struck: false, cooldowns: {}, usedThisFight: [], adrenalUsed: false, deadmanUsed: false, lootOffer: null, perkOffer: null });
 const saveBag = (r) => { const b = {}; for (const k of BAG) b[k] = r[k]; return b; };
 const loadBag = (r, b) => { for (const k of BAG) r[k] = b[k]; };
 export const isCoop = (s) => !!(s.coop && s.char && s.char2);
 export const charAt = (s, i) => ((s.actorIdx || 0) === i ? s.char : s.char2) || null;
-const aliveAt = (s, i) => { const c = charAt(s, i); return !!c && !c.dead; };
+const aliveAt = (s, i) => { const c = charAt(s, i); return !!c && !c.dead && !c.downed; };
 export const actorIdx = (s) => s.actorIdx || 0;
 export function setActor(s, i) {
   const cur = s.actorIdx || 0;
@@ -415,7 +415,7 @@ export function rerollBonus(s, slot, idx, rng) {
   return true;
 }
 // Loot drop after a fight: take it (the old piece is left behind) or leave it.
-export function takeLoot(s, rng, who = 0) {
+export function takeLoot(s, rng, who = actorIdx(s)) {
   return withActor(s, who, () => takeLootInner(s, rng));
 }
 function takeLootInner(s, rng) {
@@ -511,6 +511,19 @@ function tradeApply(s, offers) {
   });
   s.sharedToast = `${said.join('. ') || 'Nothing changes hands'}.`;
 }
+// The friend is gone for good from this raid (they left, or the host carries on without them).
+export function partnerGone(s) {
+  const r = s.run, pc = charAt(s, 1);
+  if (pc && pc.downed) { pc.downed = 0; pc.hp = 1; }
+  if (r) { if (r.cb && r.cb[1]) { r.cb[1].lootOffer = null; r.cb[1].perkOffer = null; } r.votes = null; r.exitVotes = null; r.actor = 0; r.acted = {}; }
+}
+// The host skips a dropped friend's reward choice so the raid can go on.
+export function skipPartnerReward(s, rng) {
+  const r = s.run;
+  if (!r || !r.cb || !r.cb[1]) return;
+  r.cb[1].lootOffer = null; r.cb[1].perkOffer = null;
+  if (['loot', 'perk'].includes(s.screen) && !rewardsPending(s)) offerRoute(s, rng);
+}
 const canTrade = (s) => isCoop(s) && !s.run;
 export function giveCredits(s, who, n) {
   const c = charAt(s, who);
@@ -577,7 +590,13 @@ export function tradeAccept(s, who) {
   if (t.offers[0].ok && t.offers[1].ok) { s.trade = null; tradeApply(s, t.offers); }
   return true;
 }
-function afterLoot(s, rng) { if (s.run.perkOffer) s.screen = 'perk'; else offerRoute(s, rng); }
+// Each player chooses their own loot and contraband; the raid moves on once nobody has a choice left.
+const offerOf = (s, i) => { const r = s.run, b = i === actorIdx(s) ? r : (r.cb && r.cb[i]); return !!b && !!(b.lootOffer || b.perkOffer); };
+export const rewardsPending = (s) => !!s.run && (isCoop(s) ? livingActors(s).some((i) => offerOf(s, i)) : !!(s.run.lootOffer || s.run.perkOffer));
+function afterLoot(s, rng) {
+  if (isCoop(s)) { if (rewardsPending(s)) s.screen = 'loot'; else offerRoute(s, rng); return; }
+  if (s.run.perkOffer) s.screen = 'perk'; else offerRoute(s, rng);
+}
 
 // Heirloom (cell upgrade): on death, pick one piece to leave for the next operative.
 // Any piece that isn't plain stock qualifies: bought gear, and starter gear that was upgraded, rerolled or found at a
@@ -969,7 +988,7 @@ export function offerRoute(s, rng) {
   r.enemy = null;
   if (r.room >= FIGHTS_PER_SECTOR) return clearSector(s);
   const remaining = FIGHTS_PER_SECTOR - r.room, needed = MIN_FIGHTS - (r.fightsDone || 0);
-  r.forced = false;
+  r.forced = false; r.votes = null;
   if (r.room === FIGHTS_PER_SECTOR - 1 && isBossSector(r.sector)) r.choices = ['boss'];
   else if (remaining <= needed) { r.choices = ['fight', 'elite']; r.forced = true; }
   else {
@@ -988,6 +1007,32 @@ export function offerRoute(s, rng) {
   s.screen = 'route';
 }
 export const nextEncounter = offerRoute;
+// Co-op doors: both living players vote. Change your mind until both have voted; a split vote goes to a coin.
+// Returns true once a door has been entered.
+export function voteDoor(s, who, idx, rng) {
+  const r = s.run;
+  if (!r || !r.choices || !r.choices[idx]) return false;
+  r.votes = r.votes || {};
+  r.votes[who] = idx;
+  const alive = livingActors(s);
+  if (!alive.every((i) => r.votes[i] !== undefined)) return false;
+  const picks = alive.map((i) => r.votes[i]), split = new Set(picks).size > 1, door = split ? pick(rng, picks) : picks[0];
+  if (split) s.sharedToast = `Split vote. The coin says door ${door + 1}.`;
+  r.votes = null;
+  enterRoom(s, door, rng);
+  return true;
+}
+// Deeper or home: that one has to be unanimous. Returns the decision once you agree, otherwise null.
+export function voteExit(s, who, choice) {
+  const r = s.run;
+  if (!r) return null;
+  r.exitVotes = r.exitVotes || {};
+  r.exitVotes[who] = choice;
+  const alive = livingActors(s);
+  if (!alive.every((i) => r.exitVotes[i] === choice)) return null;
+  r.exitVotes = null;
+  return choice;
+}
 
 export function enterRoom(s, idx, rng) {
   const r = s.run, kind = r.choices && r.choices[idx];
@@ -1038,15 +1083,15 @@ export function enterRoom(s, idx, rng) {
     notes.push(`INT check ${ok ? 'passed' : 'failed'}`);
   } else if (kind === 'locker') {
     const band = clamp(Math.ceil(r.sector / 3), 1, 6);
-    r.lootOffer = rollGear(rng, { tierMin: Math.max(1, band - 1), tierMax: band, odds: { rare: 0.65, elite: 0.3, legendary: 0.05 } });
-    notes.push(itemName(r.lootOffer));
+    forEachActor(s, () => { r.lootOffer = rollGear(rng, { tierMin: Math.max(1, band - 1), tierMax: band, odds: { rare: 0.65, elite: 0.3, legendary: 0.05 } }); });
+    notes.push(isCoop(s) ? 'Something for each of you' : itemName(r.lootOffer));
     text = 'The locker\u2019s seal hisses open. Something good is racked inside.';
   } else if (kind === 'bench') {
     const opts = D.SLOT_ORDER.map((sl) => gearIn(c, sl)).filter((it) => canUpgrade(it));
     if (opts.length) { const it = pick(rng, opts); it.level += 1; notes.push(`${itemName(it)}`); text = 'Somebody left the lathe running. You make good use of it.'; }
     else { const cr = Math.round(randInt(rng, 10, 16) * r.sector * creditMult(s)); c.credits += cr; r.sectorCredits += cr; notes.push(`+${cr} ${D.SETTING.cur}`); text = 'Nothing of yours needs work. You strip the bench for parts and sell them on.'; }
   } else if (kind === 'fence') {
-    r.perkOffer = offerPerks(s, rng, false);
+    forEachActor(s, () => { r.perkOffer = offerPerks(s, rng, false); });
     text = 'Behind a false wall: a smuggler\u2019s stash, labelled in a hand you don\u2019t know. Take one thing.';
   }
   s.roomResult = { kind, name, text, notes };
@@ -1200,6 +1245,7 @@ export function bestAttack(s) {
 // Auto battle: a fixed, sensible routine. Never runs or uses smoke.
 export function autoAction(s) {
   const r = s.run, e = r.enemy, c = s.char, st = stats(s), free = e.stun > 0;
+  if (canUse(s, 'revive')) return 'revive';
   if (c.hp < st.maxHp * 0.35 && c.items.stim > 0) return 'stim';
   if (!free && mechanicOf(r) === 'vents' && r.vent === 1) return 'defend';
   if (!free && (e.intent === 'heavy' || (e.intent === 'special' && D.SPECIALS[e.id] && D.SPECIALS[e.id].status))) return 'defend';
@@ -1230,7 +1276,9 @@ export function intimidateChance(s) {
   return clamp(0.15 + 0.07 * attr(s.char, 'cha') - (e.boss && !key ? 0.35 : 0) + (1 - e.hp / e.maxHp) * 0.3 + bribe, 0, 0.95);
 }
 
+export const partnerDown = (s) => { const pc = isCoop(s) ? charAt(s, 1 - actorIdx(s)) : null; return pc && pc.downed > 0 ? pc : null; };
 export function canUse(s, act) {
+  if (act === 'revive') return !!partnerDown(s);
   if (['attack', 'shoot', 'strike', 'defend', 'run'].includes(act)) return true;
   if (D.SKILLS[act]) return skillsOf(s.char).includes(act) && !(s.run.cooldowns[act] > 0);
   return (s.char.items[act] || 0) > 0;
@@ -1318,6 +1366,14 @@ export function playerAct(s, act, rng, who = 0) {
   if (s.screen !== 'combat' || !s.run) return;
   if (isCoop(s) && (s.run.actor !== who || !aliveAt(s, who))) return;
   withActor(s, who, () => playerActInner(s, act, rng, who));
+  // Knocked down on their own action (a counter, say): their turn passes on.
+  const r = s.run;
+  if (r && !s.coopDead && s.screen === 'combat' && r.enemy && !r.over && isCoop(s) && !aliveAt(s, r.actor)) {
+    r.acted[r.actor] = true;
+    const other = livingActors(s).find((i) => !r.acted[i]);
+    if (other !== undefined) r.actor = other;
+    else { r.acted = {}; enemyRound(s, rng); }
+  }
   if (s.coopDead && s.run) finishCoopDeath(s, rng);
 }
 function playerActInner(s, act, rng, who) {
@@ -1445,6 +1501,13 @@ function playerActInner(s, act, rng, who) {
       log(s, droid ? `The ion pulse fries ${e.name}\u2019s circuits for ${ionDmg}. Stunned for 3 turns.` : `The ion pulse leaves ${e.name} reeling. Stunned for a turn.`, droid ? 'crit' : 'hit');
       break;
     }
+    case 'revive': {
+      const other = 1 - who;
+      withActor(s, other, () => { const pc = s.char; pc.downed = 0; pc.hp = Math.round(stats(s).maxHp * TUNE.reviveHp); });
+      fx(s, { who: 'player', type: 'revived', actor: other });
+      log(s, `You drag ${charAt(s, other).name} back to their feet.`, 'good');
+      break;
+    }
     case 'smoke':
       c.items.smoke -= 1;
       fx(s, { who: 'player', type: 'smoke' });
@@ -1504,8 +1567,22 @@ function enemyRound(s, rng) {
   first = true;
   for (const i of livingActors(s)) { if (!fighting(s)) break; withActor(s, i, () => statusTurn(s, rng, first)); first = false; }
   r.dealt = {};
+  bleedTick(s);
   // Take turns going first.
   if (fighting(s) && coop) { const alive = livingActors(s); r.actor = alive[r.round % alive.length]; }
+}
+
+// A downed operative bleeds a little closer to death at the end of every round.
+function bleedTick(s) {
+  if (!fighting(s)) return;
+  for (const i of [0, 1]) {
+    const pc = charAt(s, i);
+    if (!pc || !pc.downed) continue;
+    pc.downed -= 1;
+    if (pc.downed > 0) { log(s, `${pc.name} is bleeding out: ${pc.downed} round${pc.downed > 1 ? 's' : ''} left.`, 'bad'); continue; }
+    withActor(s, i, () => reallyDie(s, { name: 'blood loss', id: null }));
+    return;
+  }
 }
 
 // Bosses get angrier at half health.
@@ -1686,8 +1763,16 @@ function gainXp(s, amount, out) {
   }
 }
 
+function standUp(s, hpShare) {
+  for (const i of [0, 1]) {
+    const pc = charAt(s, i);
+    if (pc && pc.downed) withActor(s, i, () => { pc.downed = 0; pc.hp = Math.max(1, Math.round(stats(s).maxHp * hpShare)); });
+  }
+}
 function winFight(s, rng, fled = false) {
   const r = s.run, e = r.enemy, c = s.char, m = s.meta;
+  // The fight's over: a downed partner gets patched up and shares in it.
+  standUp(s, TUNE.reviveAfter);
   const credits = Math.round(randInt(rng, e.cr[0], e.cr[1]) * creditMult(s) * (fled ? 0.5 : 1));
   const xp = fled ? Math.round(e.xp * 0.75) : e.xp;
   c.credits += credits; r.sectorCredits += credits; ledger(s, 'fights', credits);
@@ -1740,8 +1825,12 @@ function winFight(s, rng, fled = false) {
       log(s, `The ${out.liberated} is liberated.`, 'reward');
     }
   }
-  if (!fled && (e.boss || (e.elite && rng() < ELITE_DROP))) r.perkOffer = offerPerks(s, rng, e.boss);
-  r.lootOffer = fled ? null : rollLoot(s, rng, e);
+  const contraband = !fled && (e.boss || (e.elite && rng() < ELITE_DROP));
+  // In co-op each player gets their own roll and makes their own choice.
+  forEachActor(s, () => {
+    if (contraband) r.perkOffer = offerPerks(s, rng, e.boss);
+    r.lootOffer = fled ? null : rollLoot(s, rng, e);
+  });
   if (r.lootOffer) out.loot = itemName(r.lootOffer);
   r.enemy = null;
   s.outcome = out;
@@ -1760,7 +1849,7 @@ function offerPerks(s, rng, boss) {
   return out.length ? out : null;
 }
 // Take a piece of contraband. With full pockets, dropId names the piece to leave behind.
-export function choosePerk(s, id, rng, dropId = null, who = 0) {
+export function choosePerk(s, id, rng, dropId = null, who = actorIdx(s)) {
   return withActor(s, who, () => choosePerkInner(s, id, rng, dropId));
 }
 function choosePerkInner(s, id, rng, dropId) {
@@ -1775,12 +1864,14 @@ function choosePerkInner(s, id, rng, dropId) {
     c.perks.push(id); log(s, `Contraband: ${perkById(id).name}.`, 'reward'); feat(s, 'contraband');
   }
   r.perkOffer = null;
+  if (isCoop(s) && rewardsPending(s)) { s.screen = 'loot'; return true; }
   offerRoute(s, rng);
   return true;
 }
 
 // ---------- events ----------
 export function continueAfterVictory(s, rng) {
+  if (isCoop(s)) { if (rewardsPending(s)) s.screen = 'loot'; else offerRoute(s, rng); return; }
   if (s.run.lootOffer) { s.screen = 'loot'; return; }
   if (s.run.perkOffer) { s.screen = 'perk'; return; }
   offerRoute(s, rng);
@@ -1896,6 +1987,7 @@ export function addToBoard(m, entry) {
 
 export function endRun(s, how, rngForRestock = Math.random) {
   const r = s.run, c = s.char;
+  standUp(s, 0); // running with a downed partner over your shoulder: they make it out, barely
   let lost = 0;
   const early = how === 'extracted' && !isBossSector(r.sector);
   forEachActor(s, (a, i) => {
@@ -1983,7 +2075,31 @@ function contractEvent(s, kind, data) {
   }
 }
 
+// Co-op: going down isn't dying, the first two times in a raid (TUNE.downsPerRaid). Your partner has a few rounds to reach you. If they fall
+// while you're down, you die and they stumble out with what they can carry, so one raid never kills both.
 function die(s, foe) {
+  const r = s.run;
+  if (isCoop(s) && r && !r.orbit) {
+    const c = s.char, me = actorIdx(s), other = 1 - me, pc = charAt(s, other);
+    r.downs = r.downs || {};
+    if (pc && !pc.dead && !pc.downed && (r.downs[me] || 0) < TUNE.downsPerRaid) {
+      const n = r.downs[me] = (r.downs[me] || 0) + 1;
+      c.hp = 0; c.downed = Math.max(1, TUNE.bleedRounds - (n - 1)) + 1; // +1: the round it happens in ticks too
+      r.pst = {}; r.defending = false;
+      fx(s, { who: 'player', type: 'downed', actor: me });
+      log(s, `${c.name} goes down, bleeding out. ${pc.name} has ${c.downed - 1} round${c.downed > 2 ? 's' : ''} to reach them.`, 'bad');
+      return;
+    }
+    if (pc && pc.downed) {
+      withActor(s, other, () => reallyDie(s, { name: 'blood loss', id: null }));
+      c.hp = 1;
+      log(s, `${c.name} takes a hit that should have ended it, and runs.`, 'bad');
+      return;
+    }
+  }
+  reallyDie(s, foe);
+}
+function reallyDie(s, foe) {
   fx(s, { who: 'player', type: 'down' });
   const c = s.char, r = s.run;
   c.fed = false;
@@ -1993,9 +2109,9 @@ function die(s, foe) {
   record.perks = (c.perks || []).length;
   record.score = raidScore(r, c, 'died').score;
   record.rank = recordScore(s, c, 'died');
-  if (isCoop(s)) {
-    // One of you is down: the raid is over for both. The survivor drags what they can out (finishCoopDeath).
-    c.dead = true; r.over = true;
+  if (isCoop(s) && !r.orbit) {
+    // One of you is dead: the raid is over for both. The survivor drags what they can out (finishCoopDeath).
+    c.dead = true; c.downed = 0; r.over = true;
     s.coopDead = { idx: actorIdx(s), record };
     log(s, `${c.name} goes down. ${charAt(s, 1 - actorIdx(s)).name} grabs what they can and runs.`, 'bad');
     return;

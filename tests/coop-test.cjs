@@ -36,7 +36,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   console.log('host state:', JSON.stringify(await hostState()));
   // guest ready, host deploys
   await guest.click('button[data-a="popup"][data-v="missions"]'); await guest.waitForTimeout(200);
-  await guest.click('button[data-a="coopready"]'); await guest.waitForTimeout(500);
+  await guest.click('.popup button[data-a="coopready"]'); await guest.waitForTimeout(500);
   await host.click('button[data-a="popup"][data-v="missions"]'); await host.waitForTimeout(300);
   await host.screenshot({ path: `${OUT}/coop-host-missions.png` });
   await host.click('button[data-a="deploy"]'); await host.waitForTimeout(600);
@@ -46,7 +46,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   for (let i = 0; i < 40; i++) {
     const st = await hostState();
     if (!st.screen) break;
-    if (st.screen === 'route') { await host.keyboard.press('1'); await host.waitForTimeout(300); continue; }
+    if (st.screen === 'route') { await host.keyboard.press('1'); await guest.keyboard.press('1'); await host.waitForTimeout(400); continue; }
     if (st.screen === 'combat') {
       if (fights === 0) { await host.waitForTimeout(600); await host.screenshot({ path: `${OUT}/coop-host-combat.png` }); await guest.screenshot({ path: `${OUT}/coop-guest-combat.png` }); }
       fights++;
@@ -57,7 +57,9 @@ require('fs').mkdirSync(OUT, { recursive: true });
       await page.keyboard.press('a'); await page.waitForTimeout(2600);
       continue;
     }
-    if (['loot', 'perk', 'sectorClear', 'event'].includes(st.screen)) { await host.keyboard.press(st.screen === 'sectorClear' ? '2' : st.screen === 'event' ? 'Enter' : '2'); if (st.screen === 'event') { const b = await host.$('button[data-a="event"]'); if (b) await b.click(); await host.waitForTimeout(150); const d = await host.$('button[data-a="eventDone"]'); if (d) await d.click(); } await host.waitForTimeout(300); continue; }
+    if (['loot', 'perk'].includes(st.screen)) { for (const p of [host, guest]) { const b = (await p.$('button[data-a="lootsell"]')) || (await p.$('button[data-a="perk"][data-v=""]')); if (b) await b.click(); await p.waitForTimeout(250); } continue; }
+    if (st.screen === 'sectorClear') { await host.keyboard.press('2'); await guest.keyboard.press('2'); await host.waitForTimeout(400); continue; }
+    if (st.screen === 'event') { const b = await host.$('button[data-a="event"]'); if (b) await b.click(); await host.waitForTimeout(150); const d = await host.$('button[data-a="eventDone"]'); if (d) await d.click(); await host.waitForTimeout(300); continue; }
     if (st.screen === 'town' || st.screen === 'death' || st.screen === 'create') break;
     await host.waitForTimeout(200);
   }

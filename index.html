@@ -674,12 +674,17 @@ async function playHostFx(ev) {
 function applyHostState(m) {
   if (!isGuest()) return;
   const incoming = JSON.parse(m.s), keep = {};
+  const prevRun = state && state.run, prevEnemy = prevRun && prevRun.enemy;
   for (const k of GUEST_LOCAL) keep[k] = state[k];
   incoming.meta.journal = state && state.meta ? state.meta.journal : [];
   incoming.meta.tips = (state && state.meta && state.meta.tips) || {};
   state = incoming;
   Object.assign(state, keep);
   E.setActor(state, 1);
+  // Every update is a fresh copy of the game: it's still the same raid and the same fight, so the stage shouldn't restage them.
+  const nextRun = state.run;
+  if (prevRun && nextRun && stage.runRef === prevRun) stage.runRef = nextRun;
+  if (prevEnemy && nextRun && nextRun.enemy && stage.enemyRef === prevEnemy && prevEnemy.id === nextRun.enemy.id && prevRun.room === nextRun.room && prevRun.sector === nextRun.sector) stage.enemyRef = nextRun.enemy;
   if (!state.draft) state.draft = localDraft || (localDraft = E.newDraft(state.meta, rng));
   if (dismissedResult && JSON.stringify(state.lastResult) === dismissedResult) state.lastResult = null;
   hostSynced = true; titleOpen = false;
@@ -713,7 +718,7 @@ function startCoop(role, code, local) {
   net.on('room-full', () => { leaveCoop('That room already has two players.'); });
   net.on('bye', () => {
     if (isGuest()) { leaveCoop('The host closed the room.'); return; }
-    if (state.run) { state.coop = false; }
+    if (state.run) { E.partnerGone(state); state.coop = false; if (['loot', 'perk'].includes(state.screen) && !E.rewardsPending(state)) E.continueAfterVictory(state, rng); }
     state.guestReady = false; state.trade = null;
     toast = `${net.peerName || 'Your friend'} left the room.`;
     render();
@@ -749,7 +754,7 @@ function leaveCoop(why) {
   if (net.online) net.send({ t: 'bye' });
   net.close(); net = null; coopStatus = ''; setRoom(null); inbox = []; guestQueue = []; setAwaiting(false);
   if (wasGuest) { state = E.migrate(load(), rng); if (!state.draft && state.screen === 'create') state.draft = E.newDraft(state.meta, rng); }
-  else { state.coop = false; state.guestReady = false; }
+  else { if (state.run) { E.partnerGone(state); state.coop = false; if (['loot', 'perk'].includes(state.screen) && !E.rewardsPending(state)) E.continueAfterVictory(state, rng); } state.coop = false; state.guestReady = false; state.trade = null; }
   if (why) toast = why;
   render();
 }
@@ -762,7 +767,7 @@ function coopBanner() {
   if (isGuest()) return hostSynced ? '<div class="coop-banner" role="status"><span>The host dropped out. Waiting for them to come back\u2026</span><button class="btn" data-a="coopleave">Leave</button></div>' : '';
   if (state.run && state.coop && state.char2) {
     const who = esc(net.peerName || state.guestName || 'Your friend'), turn = state.screen === 'combat' && state.run.actor === 1;
-    return `<div class="coop-banner" role="status"><span>${who} dropped out. The raid waits for them.</span><span class="btnrow">${turn ? '<button class="btn" data-a="coopauto">Play their turn on auto</button>' : ''}<button class="btn" data-a="coopdrop">Carry on without them</button></span></div>`;
+    return `<div class="coop-banner" role="status"><span>${who} dropped out. The raid waits for them.</span><span class="btnrow">${turn ? '<button class="btn" data-a="coopauto">Play their turn on auto</button>' : ''}${['loot', 'perk'].includes(state.screen) ? '<button class="btn" data-a="coopskip">Skip their reward</button>' : ''}<button class="btn" data-a="coopdrop">Carry on without them</button></span></div>`;
   }
   return '';
 }
@@ -1306,8 +1311,10 @@ function combatScreen() {
   const intent = intentInfo(e);
   const sr = E.attackRange(state, false), mr = E.attackRange(state, true);
   const coop = E.isCoop(state), mine = !coop || r.actor === myIdx();
-  const party = coop ? `<div class="party">${[0, 1].map((i) => { const pc = E.charAt(state, i); if (!pc) return ''; const pst = E.statsOf(state.meta, pc); return `<div class="pm ${r.actor === i ? 'turn' : ''} ${i === myIdx() ? 'me' : ''}"><span class="label">${i === myIdx() ? 'You' : esc(pc.name)}${r.actor === i ? ' \u00B7 acting' : ''}</span><b>${Math.max(0, pc.hp)} / ${pst.maxHp}</b>${bar(pc.hp, pst.maxHp)}</div>`; }).join('')}</div>` : '';
-  const waiting = coop && !mine ? `<div class="notice">Waiting for ${esc(E.charAt(state, 1 - myIdx()).name)} to act\u2026</div>` : '';
+  const party = coop ? `<div class="party">${[0, 1].map((i) => { const pc = E.charAt(state, i); if (!pc) return ''; const pst = E.statsOf(state.meta, pc); return `<div class="pm ${r.actor === i ? 'turn' : ''} ${i === myIdx() ? 'me' : ''}"><span class="label">${i === myIdx() ? 'You' : esc(pc.name)}${r.actor === i ? ' \u00B7 acting' : ''}${pc.downed ? ` \u00B7 <span class="danger-text">down, ${pc.downed} round${pc.downed > 1 ? 's' : ''} left</span>` : ''}</span><b>${Math.max(0, pc.hp)} / ${pst.maxHp}</b>${bar(pc.hp, pst.maxHp)}</div>`; }).join('')}</div>` : '';
+  const waiting = coop && !mine ? `<div class="notice ${c.downed ? 'lose' : ''}">${c.downed ? `You\u2019re down, bleeding out: ${c.downed} round${c.downed > 1 ? 's' : ''} left. ${esc(E.charAt(state, 1 - myIdx()).name)} can get you up.` : `Waiting for ${esc(E.charAt(state, 1 - myIdx()).name)} to act\u2026`}</div>` : '';
+  const downedMate = coop && mine ? E.partnerDown(state) : null;
+  const reviveBtn = downedMate ? `<button class="btn primary big" data-a="act" data-v="revive" style="width:100%">Get ${esc(downedMate.name.split(' ')[0])} up \u00B7 ${downedMate.downed} round${downedMate.downed > 1 ? 's' : ''} left<span class="k">V</span></button>` : '';
   const confirmSmoke = state.confirmSmoke && c.items.smoke;
   const items = ['thermal', 'ion', 'smoke'].map((id, i) => `<button class="btn twoline ${id === 'smoke' && confirmSmoke ? 'confirm' : ''}" data-a="act" data-v="${id}" title="${esc(D.ITEMS[id].desc)}" ${c.items[id] ? '' : 'disabled'}>
       <span class="bt">${ico(`item:${id}`, 'sm')}${esc(D.ITEMS[id].name)} <span class="num">\u00D7${c.items[id]}</span><span class="k">${i + 2}</span></span>
@@ -1331,7 +1338,7 @@ function combatScreen() {
     ${D.MELEE_COUNTER[e.id] ? `<div class="quirk-line"><span class="chip bad">${esc(D.MELEE_COUNTER[e.id].name)}</span><span>${esc(D.MELEE_COUNTER[e.id].desc)}</span></div>` : ''}
     ${e.affix ? `<div class="quirk-line"><span class="chip bad">${esc(D.AFFIXES[e.affix].name)}</span><span>${esc(D.AFFIXES[e.affix].desc)}</span></div>` : ''}
     ${tip('combat')}
-    ${party}${waiting}
+    ${party}${waiting}${reviveBtn}
     <div class="actions ${mine ? '' : 'locked'}">
       <button class="btn primary twoline atk" data-a="act" data-v="shoot" title="${esc(E.weaponOf(c).name)}: ${st.atk} ATK, ${pct(E.critChance(st, e))} crit. Steady damage; cover halves it. You keep your distance, so you take ${Math.round(E.TUNE.shootGuard * 100)}% less damage this turn."><span class="bt">Shoot<span class="k">A</span></span><span class="wpn">${esc(E.weaponOf(c).name)}</span><span class="bs"><b class="rng">${sr[0]}\u2013${sr[1]}</b> dmg${e.intent === 'guard' && !e.stun ? ' (cover)' : ''} \u00B7 take ${Math.round(E.TUNE.shootGuard * 100)}% less this turn</span></button>
       <button class="btn twoline atk ${D.MELEE_COUNTER[e.id] ? 'warn' : ''}" data-a="act" data-v="strike" title="${esc(E.meleeOf(c).name)}: ${st.atkM} ATK, ${pct(E.critChance(st, e, true))} crit. Swingy damage, ignores cover, and your next attack hits ${Math.round(E.TUNE.momentum * 100)}% harder."><span class="bt">Strike<span class="k">F</span></span><span class="wpn">${esc(E.meleeOf(c).name)}</span><span class="bs"><b class="rng">${mr[0]}\u2013${mr[1]}</b> dmg \u00B7 ${D.MELEE_COUNTER[e.id] ? 'it hits back!' : `next hit +${Math.round(E.TUNE.momentum * 100)}%${e.intent === 'guard' && !e.stun ? ', ignores cover' : ''}`}</span></button>
@@ -1372,8 +1379,10 @@ function condBox(r) {
 }
 function routeScreen() {
   const r = state.run, map = E.mapById(r.map), c = state.char, st = E.stats(state);
+  const coopVote = E.isCoop(state) && net && net.peer, votes = (coopVote && r.votes) || {}, mate = E.charAt(state, 1 - myIdx());
+  const voteChips = (i) => [votes[myIdx()] === i ? '<span class="chip good">Your vote</span>' : '', mate && votes[1 - myIdx()] === i ? `<span class="chip">${esc(mate.name.split(' ')[0])}\u2019s vote</span>` : ''].join('');
   const doors = r.choices.map((k, i) => `<button class="door door-${k}" data-a="room" data-v="${i}">${ico(`room:${k}`)}
-      <span class="label">${ROOM_LABEL[k]} <span class="k">${i + 1}</span></span>
+      <span class="label">${ROOM_LABEL[k]} <span class="k">${i + 1}</span></span>${voteChips(i) ? `<span class="chips">${voteChips(i)}</span>` : ''}
       <b>${esc(E.roomName(r.map, k))}</b><span class="desc">${esc(D.ROOMS[k].desc)}</span></button>`).join('');
   const cds = Object.entries(r.cooldowns).filter(([, v]) => v > 0).map(([k, v]) => `${D.SKILLS[k].name} ${v >= 50 ? 'used' : `ready in ${v}`}`);
   return `<div class="columns"><section class="panel">
@@ -1385,6 +1394,7 @@ function routeScreen() {
     <div class="mech-row">${mechanicChip(r)}<span class="muted" style="font-size:.9rem">${esc(map.mechanic.desc)}</span></div>
     ${bulletinBox(r)}
     ${condBox(r)}
+    ${coopVote ? `<p class="muted" style="font-size:.9rem">Both of you pick a door. If you disagree, a coin decides.${votes[myIdx()] === undefined && mate && votes[1 - myIdx()] !== undefined ? ` <b>${esc(mate.name.split(' ')[0])} has voted.</b>` : ''}</p>` : ''}
     <div class="doors">${doors}</div>
     <dl class="kv"><dt>Condition</dt><dd class="${c.hp < st.maxHp * 0.4 ? 'danger-text' : ''}">${c.hp} / ${st.maxHp} HP \u00B7 ${c.items.stim} stims</dd>
       <dt>Skills</dt><dd>${cds.length ? esc(cds.join(', ')) : 'All ready'}</dd></dl>
@@ -1471,6 +1481,15 @@ function lootScreen() {
   `);
 }
 
+// Co-op rewards: each player sees only their own choice, then waits for the other.
+function rewardScreen() {
+  const r = state.run;
+  if (r.lootOffer) return lootScreen();
+  if (r.perkOffer) return perkScreen();
+  const pc = E.charAt(state, 1 - myIdx());
+  return popupView(`<span class="label">Spoils</span><h2>Picked over</h2><p>Waiting for ${esc(pc ? pc.name : 'your partner')} to choose what they\u2019re taking\u2026</p>`);
+}
+const rewardView = () => { const r = state.run; if (!r || !['loot', 'perk'].includes(state.screen)) return null; return r.lootOffer ? 'loot' : r.perkOffer ? 'perk' : null; };
 function perkScreen() {
   const r = state.run, c = state.char, full = c.perks.length >= E.CONTRABAND_SLOTS, picked = state.perkPick;
   const cards = r.perkOffer.map((id, i) => { const pk = E.perkById(id); return `<button class="perk ${pk.rare ? 'rare' : ''} ${picked === id ? 'on' : ''}" data-a="perk" data-v="${id}" aria-pressed="${picked === id}">${ico(`perk:${id}`, 'lg')}<span class="label">${pk.rare ? 'Rare contraband' : 'Contraband'} <span class="k">${i + 1}</span></span><b>${esc(pk.name)}</b><span class="desc">${esc(pk.desc)}</span></button>`; }).join('');
@@ -1526,6 +1545,7 @@ function modalView() {
       <section><h3>Quirks and bulletins</h3><p>Regular enemies often have a <b>quirk</b>, like a Drunk trooper whose shots go wild or an Overclocked droid that cooks itself. Every raid also rolls a <b>Directorate bulletin</b>, such as Payday or Staff Party, that bends the rules until you leave.</p></section>
       <section><h3>Floors and rare doors</h3><p>Past the first sector, most floors roll a <b>condition</b> (Blackout, Coolant Leak, Double Patrols, Supply Depot, Hunter Squad, Derelict Wing, Sealed Bulkheads) shown on the route screen. Rare doors turn up on every map: a <b>Marked Officer</b> bounty, a <b>Strongroom</b> to crack with INT, a <b>Field Medic Station</b>, a <b>Weapons Locker</b>, a <b>Machinist\u2019s Bench</b> that upgrades your gear for free, and a <b>Smuggler\u2019s Stash</b> of contraband.</p></section>
       <section><h3>Downtime limits</h3><p>The shuttle flies <b>once per stay in town</b>: raid, come home, and it\u2019s ready again. Ventures hold capped balances (500 / 1,500 / 3,000); Marrow\u2019s consignment opens after sector 5, the smuggler\u2019s bond after sector 10. Deeper cells see better Black Market stock, often already upgraded.</p></section>
+      <section><h3>Playing together</h3><p>Host from <b>Settings</b> and send your friend the invite link. You share the yard: walk up to your partner and press <b>E</b> to give credits or gear, or to offer a trade. The <b>Lockup</b> at the safehouse is a shared shelf for spare gear, and it survives an operative\u2019s death. On a raid you vote on doors (a split vote goes to a coin), agree on when to leave, and each choose your own loot and contraband. At 0 HP you go <b>down</b>: your partner has 3 rounds to spend a turn getting you up, and 2 the next time. A third time in one raid is fatal. If you bleed out, you die and the raid ends for both. If your partner falls while you\u2019re down, you die and they get out.</p></section>
       <section><h3>Wanted and escaping</h3><p>Every raid an operative survives raises their <b>Wanted</b> level: enemies get 2.5% tougher per level, and pay 2.5% more. Lower it by lying low at the safehouse. Extracting right after a boss keeps the whole haul; slipping out between bosses costs 45% of it in bribes, and escaping mid-fight with <b>Run</b> or <b>Smoke</b> costs 65%. Past sector 5 the Directorate tightens its grip: bribes rise to 50% and 70%, enemies get tougher and every price goes up 12%; past sector 10 it is 55%, 75% and 15%.</p></section>
       <section><h3>Getting stronger</h3><p><b>This operative</b>: levels (attribute points), gear, implants and contraband. All lost on death. <b>The cell</b>: Resolve buys permanent training and upgrades. Earn it from sectors (repeat clears pay only every other time), bosses, brave choices and contracts.</p></section>
       <section><h3>The yard</h3><p>Walk with the arrows or WASD, or tap where to go. Walk into a door to go inside; talk to the person there (<b>E</b>, Space or a tap) to open their menu. The freight terminal opens straight away. Most things in the yard can be poked at, and the noodle vendor sells a hot meal worth +5% XP for the next raid.</p></section>
@@ -1543,7 +1563,7 @@ function modalView() {
       <h3>Co-op <span class="num muted" style="font-size:.85rem">play with a friend</span></h3>
       ${net ? `<div class="set-row"><span>${isHost() ? 'Hosting' : 'Joined'} room <b class="num">${net.code}</b> \u00B7 ${net.peer ? `connected to ${esc(net.peerName || (isHost() ? 'your friend' : 'the host'))}` : coopStatus === 'error' || coopStatus === 'closed' ? 'connection failed' : 'waiting for the other player\u2026'}</span><button class="btn" data-a="coopleave">Leave</button></div>
         ${isHost() ? `<div class="set-row"><span>Invite link <span class="muted">(your friend just opens it)</span></span><span class="btnrow" style="flex:1;justify-content:flex-end"><input class="text" readonly value="${esc(inviteLink())}" aria-label="Invite link" style="flex:1;min-width:140px"><button class="btn primary" data-a="coopinvite">Copy</button></span></div>` : ''}
-        ${isHost() ? '<p class="muted" style="font-size:.88rem">Give your friend the room code. You pick the missions; they press Ready at their terminal. In fights you take turns, then the enemy acts. If either of you goes down, the raid is over for both.</p>' : '<p class="muted" style="font-size:.88rem">The host\u2019s save holds your operative while you play together. Leaving returns you to your own solo save.</p>'}`
+        ${isHost() ? '<p class="muted" style="font-size:.88rem">Give your friend the room code. You pick the missions; they press Ready at their terminal. In fights you take turns, then the enemy acts. If one of you goes down, the other has a few rounds to get them up; if an operative dies, the raid is over for both.</p>' : '<p class="muted" style="font-size:.88rem">The host\u2019s save holds your operative while you play together. Leaving returns you to your own solo save.</p>'}`
       : `<div class="coop-form">
         <label class="set-row" for="coop-name"><span>Your name</span><input id="coop-name" class="text" maxlength="16" value="${esc(getCoopPrefs().name || (state.char ? state.char.name.split(' ')[0] : ''))}"></label>
         ${location.hostname.endsWith('.workers.dev') ? '' : `<label class="set-row" for="coop-relay"><span>Relay URL <span class="muted">(from the Cloudflare Worker; leave empty to test in two tabs of this browser)</span></span><input id="coop-relay" class="text" placeholder="https://cinder-cell-coop.yourname.workers.dev" value="${esc(getCoopPrefs().relay)}"></label>`}
@@ -1747,6 +1767,13 @@ function eventScreen() {
   </section>${logPanel()}</div>`;
 }
 
+function exitVoteLine() {
+  const v = (E.isCoop(state) && net && net.peer && state.run.exitVotes) || null;
+  if (!E.isCoop(state) || !net || !net.peer) return '';
+  const pc = E.charAt(state, 1 - myIdx()), name = esc(pc.name.split(' ')[0]), lab = { deeper: 'pushing on', extract: 'extracting' };
+  const me = v && v[myIdx()], them = v && v[1 - myIdx()];
+  return `<p class="muted" style="font-size:.9rem">You both have to agree.${them ? ` <b>${name} votes for ${lab[them]}.</b>` : ''}${me ? ` You vote for ${lab[me]}.` : ''}</p>`;
+}
 function sectorClearScreen() {
   const r = state.run, o = state.outcome, c = state.char, st = E.stats(state), next = r.sector + 1;
   return popupView(`
@@ -1757,6 +1784,7 @@ function sectorClearScreen() {
       <button class="btn primary big" data-a="deeper">Push to sector ${next}<span class="k">1</span></button>
       <button class="btn big" data-a="extract">Extract with ${cr(c.credits - E.extractLoss(state))}<span class="k">2</span></button>
     </div>
+    ${exitVoteLine()}
     <p class="muted" style="font-size:.88rem">${E.extractLoss(state) ? `Slipping out between bosses costs bribes at the gate: ${Math.round(E.hard(state).extract * 100)}% of this raid\u2019s haul (${cr(E.extractLoss(state))}). Extract right after a boss and you keep it all.` : 'You\u2019ve just taken down a boss: the gate is in chaos and you can extract with everything.'}</p>
   `);
 }
@@ -1800,7 +1828,7 @@ function render() {
     hadRun = !!state.run;
     if (!state.run && net.peer) state.coop = true;
   }
-  const screens = { route: routeScreen, room: roomScreen, intro: introScreen, create: createScreen, town: townScreen, combat: combatScreen, victory: victoryScreen, event: eventScreen, sectorClear: sectorClearScreen, death: deathScreen, perk: perkScreen, loot: lootScreen, ending: endingScreen };
+  const screens = { route: routeScreen, room: roomScreen, intro: introScreen, create: createScreen, town: townScreen, combat: combatScreen, victory: victoryScreen, event: eventScreen, sectorClear: sectorClearScreen, death: deathScreen, perk: rewardScreen, loot: rewardScreen, ending: endingScreen };
   if (isGuest()) {
     // The friend's view: their own death and creation screens, the shared raid otherwise.
     if (!state.char) state.screen = state.coopFallen && state.coopFallen.idx === 1 && !state.guestSawDeath ? 'death' : 'create';
@@ -1815,8 +1843,8 @@ function render() {
   if (state.screen === 'route' && !(state.run.choices && state.run.choices.length)) E.offerRoute(state, rng);
   if (state.screen === 'room' && !state.roomResult) E.offerRoute(state, rng);
   if (state.screen === 'combat' && !state.run.enemy) E.offerRoute(state, rng);
-  if (state.screen === 'perk' && !state.run.perkOffer) E.offerRoute(state, rng);
-  if (state.screen === 'loot' && !state.run.lootOffer) E.continueAfterVictory(state, rng);
+  if (['perk', 'loot'].includes(state.screen) && !E.rewardsPending(state)) E.continueAfterVictory(state, rng);
+  else if (!E.isCoop(state) && state.screen === 'loot' && !state.run.lootOffer) E.continueAfterVictory(state, rng);
   if (state.screen === 'victory' && state.run) { state.lastResult = { kind: 'fight', ...state.outcome }; E.continueAfterVictory(state, rng); }
   if (state.screen === 'room' && state.run && state.roomResult) { state.lastResult = { kind: 'room', ...state.roomResult }; E.continueAfterVictory(state, rng); }
   if (state.screen === 'event' && !E.eventById(state.event)) state.screen = 'combat';
@@ -1869,8 +1897,8 @@ function render() {
     const r = state.run, st = E.stats(state), map = E.mapById(r.map);
     const res = stage.sync({ run: r, enemy: r.enemy, sector: r.sector, boss: r.enemy.boss, theme: map.theme, allies: r.allies,
       pst: r.pst, est: r.enemy.st, affix: r.enemy.affix ? D.AFFIXES[r.enemy.affix].name : null, quirk: r.enemy.quirk ? E.quirkById(r.enemy.quirk).name : null,
-      player: { name: state.char.name, level: state.char.level, hp: state.char.hp, maxHp: st.maxHp },
-      partner: E.isCoop(state) && E.charAt(state, 1 - myIdx()) ? (() => { const pc = E.charAt(state, 1 - myIdx()); return { idx: 1 - myIdx(), name: pc.name, hp: pc.hp, maxHp: E.statsOf(state.meta, pc).maxHp, acting: r.actor === 1 - myIdx() }; })() : null });
+      player: { name: state.char.name, level: state.char.level, hp: state.char.hp, maxHp: st.maxHp, down: !!state.char.downed },
+      partner: E.isCoop(state) && E.charAt(state, 1 - myIdx()) ? (() => { const pc = E.charAt(state, 1 - myIdx()); return { idx: 1 - myIdx(), down: !!pc.downed, name: pc.name, hp: pc.hp, maxHp: E.statsOf(state.meta, pc).maxHp, acting: r.actor === 1 - myIdx() }; })() : null });
     if (res && res.isNewBoss) {
       busy = true; document.getElementById('app').classList.add('busy');
       const info = D.BOSS_INFO[r.enemy.id] || {};
@@ -2009,7 +2037,8 @@ function applyAct(a, v, k) {
     }
     case 'coopinvite': try { navigator.clipboard.writeText(inviteLink()).then(() => { toast = 'Invite link copied.'; render(); }).catch(() => {}); } catch (e) {} sfx('click'); break;
     case 'coopauto': if (isHost() && state.run && state.screen === 'combat' && state.run.actor === 1 && !net.peer) { fight(E.withActor(state, 1, () => E.autoAction(state)), 1); } return;
-    case 'coopdrop': if (isHost()) { state.coop = false; toast = 'You carry on alone. They rejoin when the raid is over.'; } break;
+    case 'coopskip': if (isHost()) E.skipPartnerReward(state, rng); break;
+    case 'coopdrop': if (isHost()) { E.partnerGone(state); state.coop = false; toast = 'You carry on alone. They can rejoin when they\u2019re back.'; if (['loot', 'perk'].includes(state.screen) && !E.rewardsPending(state)) E.continueAfterVictory(state, rng); } break;
     case 'clearnotice': state.notice = null; break;
     case 'emote': { const t = EMOTES[+v]; if (t && net && net.peer) { net.send({ t: 'say', text: t }); town.speak('me', t, town.player.x, town.player.y); } sfx('click'); return; }
     case 'coopjoin': { setCoopPrefs({ name: (document.getElementById('coop-name') || {}).value || '', relay: ((document.getElementById('coop-relay') || {}).value || '').trim() }); const code = ((document.getElementById('coop-code') || {}).value || '').trim().toUpperCase(); if (code.length >= 4) startCoop('guest', code, !getCoopPrefs().relay); else toast = 'Enter the room code.'; break; }
@@ -2091,13 +2120,13 @@ function applyAct(a, v, k) {
     case 'pickmap': state.gateMap = v; break;
     case 'deploy': if (E.isCoop(state) && !state.guestReady) { ok = false; break; } state.trade = null; state.popup = null; state.lastResult = null; E.deploy(state, state.gateMap || 'garrison', +v, rng); break;
     case 'continue': E.continueAfterVictory(state, rng); break;
-    case 'room': state.lastResult = null; E.enterRoom(state, +v, rng); if (state.screen === 'room') { state.lastResult = { kind: 'room', ...state.roomResult }; E.continueAfterVictory(state, rng); } break;
+    case 'room': { if (E.isCoop(state) && net && net.peer) { if (!E.voteDoor(state, actingAs, +v, rng)) break; } else E.enterRoom(state, +v, rng); state.lastResult = null; } if (state.screen === 'room') { state.lastResult = { kind: 'room', ...state.roomResult }; E.continueAfterVictory(state, rng); } break;
     case 'dismissresult': state.lastResult = null; break;
     case 'roomDone': E.continueAfterVictory(state, rng); break;
     case 'event': E.resolveEvent(state, +v, rng, actingAs); break;
     case 'eventDone': state.lastResult = null; E.nextEncounter(state, rng); break;
-    case 'deeper': state.lastResult = null; E.pushDeeper(state, rng); break;
-    case 'extract': E.endRun(state, 'extracted', rng); break;
+    case 'deeper': if (E.isCoop(state) && net && net.peer && !E.voteExit(state, actingAs, 'deeper')) break; state.lastResult = null; E.pushDeeper(state, rng); break;
+    case 'extract': if (E.isCoop(state) && net && net.peer && !E.voteExit(state, actingAs, 'extract')) break; E.endRun(state, 'extracted', rng); break;
     case 'recruit': E.recruit(state, rng); state.coopFallen = null; break;
     case 'report': {
       const text = E.runReport(state);
@@ -2137,22 +2166,22 @@ document.addEventListener('keydown', (ev) => {
   if (modal === 'orbit' && state.orbit && !state.orbit.over && ['1', '2', '3', '4'].includes(ev.key)) { act('orbitact', ['fire', 'evade', 'overcharge', 'jump'][+ev.key - 1]); return; }
   if (ev.key === 'Escape' && state.popup && state.screen === 'town') { act('closepopup'); return; }
   if (ev.key === 'Escape' && state.screen === 'town' && globalThis.cinderTown && globalThis.cinderTown.interior && !globalThis.cinderTown.offer) { globalThis.cinderTown.exit(); return; }
-  if (ev.key === 'Escape' && state.screen === 'loot') { act('lootsell'); return; }
-  if (ev.key === 'Escape' && state.screen === 'perk') { act('perk', ''); return; }
+  if (ev.key === 'Escape' && rewardView() === 'loot') { act('lootsell'); return; }
+  if (ev.key === 'Escape' && rewardView() === 'perk') { act('perk', ''); return; }
   if (ev.metaKey || ev.ctrlKey || ev.altKey || busy || modal || ev.target.tagName === 'INPUT') return;
   A.unlock();
   const key = ev.key.toLowerCase();
   if (state.screen === 'combat') {
-    const map = { a: 'shoot', f: 'strike', d: 'defend', r: 'run', s: 'stim', 2: 'thermal', 3: 'ion', 4: 'smoke' };
+    const map = { a: 'shoot', f: 'strike', d: 'defend', r: 'run', s: 'stim', v: 'revive', 2: 'thermal', 3: 'ion', 4: 'smoke' };
     E.skillsOf(state.char).slice(0, 4).forEach((sk, i) => { map[SKILL_KEYS[i]] = sk; });
     if (map[key] && E.canUse(state, map[key]) && (!E.isCoop(state) || state.run.actor === myIdx())) { ev.preventDefault(); act('act', map[key]); }
   } else if (state.screen === 'route' && (key === '1' || key === '2') && state.run.choices[+key - 1]) {
     ev.preventDefault(); act('room', String(+key - 1));
   } else if (state.screen === 'sectorClear' && (key === '1' || key === '2')) {
     ev.preventDefault(); act(key === '1' ? 'deeper' : 'extract');
-  } else if (state.screen === 'loot' && (key === '1' || key === '2')) {
+  } else if (rewardView() === 'loot' && (key === '1' || key === '2')) {
     ev.preventDefault(); act(key === '1' ? 'loottake' : 'lootsell');
-  } else if (state.screen === 'perk' && ['1', '2', '3'].includes(key) && state.run.perkOffer[+key - 1]) {
+  } else if (rewardView() === 'perk' && ['1', '2', '3'].includes(key) && state.run.perkOffer[+key - 1]) {
     ev.preventDefault(); act('perk', state.run.perkOffer[+key - 1]);
   } else if (key === 'enter') {
     if (state.screen === 'victory') { ev.preventDefault(); act('continue'); }

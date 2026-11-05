@@ -185,6 +185,12 @@ export class Stage {
       this.player.ox = -150; this.player.alpha = 0;
       this.tween(500, (p) => { this.player.ox = -150 * (1 - ease(p)); this.player.alpha = p; });
     }
+    // Co-op: a downed operative stays on the floor until they're back up.
+    for (const [a, info] of [[this.player, player], [this.partner, partner]]) {
+      if (!a || !info) continue;
+      if (info.down && a.anim !== 'death') a.setAnim('death', now - 100000);
+      else if (!info.down && a.anim === 'death' && info.hp > 0) a.setAnim('idle', now);
+    }
     if (this.enemyRef !== enemy) {
       this.enemyRef = enemy;
       this.enemy = new Actor(enemy.id, 'enemy', enemy.boss);
@@ -315,6 +321,8 @@ export class Stage {
   async handle(ev) {
     // In co-op, events tagged with the friend's index animate the friend's sprite.
     const P = this.partner && this.partnerInfo && ev.actor === this.partnerInfo.idx ? this.partner : this.player, E = this.enemy, now = () => performance.now();
+    if (ev.type === 'downed') { P.setAnim('death', now()); play('hurt'); this.popup(P === this.partner ? 'partner' : 'player', 'DOWN', 'crit'); await this.wait(500); return; }
+    if (ev.type === 'revived') { P.setAnim('idle', now()); play('heal'); this.popup(P === this.partner ? 'partner' : 'player', 'Back up', 'info'); await this.wait(350); return; }
     if (ev.type === 'handoff' || ev.type === 'target') { if (ev.type === 'target' && this.partnerInfo) this.popup(ev.actor === this.partnerInfo.idx ? 'partner' : 'player', 'Targeted', 'info'); return; }
     const START = { 'player:shoot': 'shot', 'player:burst': 'burst', 'player:blast': 'blast', 'player:smash': 'whoosh', 'player:strike': 'whoosh', 'player:overload': 'zap',
       'player:intimidate': 'status', 'player:defend': 'shield', 'player:stim': 'heal', 'player:thermal': 'throw', 'player:ion': 'zap',

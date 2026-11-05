@@ -59,7 +59,7 @@ A browser roguelite in plain HTML + JS modules, no build step. A resistance cell
   - *The Wheel:* European roulette, ten bet types at real payouts, stakes 10 to 250, animated wheel that lands on the result.
   - *Orbit:* turn-based shuttle fights (Fire, Evade, Overcharge, Jump) at three tiers, **one run per stay in town** (`char.orbitFlown`, cleared when a raid ends). The cell's first flight is a shakedown (`ORBIT_SHAKEDOWN`: weaker cutter, losing tows you home). After that: low orbit needs 1 refit level, the blockade line 3 plus a low win, the Warden's watch 8 plus a blockade win (`orbitLock`). Permadeath warnings on the yard, each card and the fight; launching takes a confirm click; intent tips in the fight. Losing the shuttle kills the operative (an Ejection pod fitting gives a 50% save once). Wins pay credits and, on the two harder tiers, one of five permanent **Marks** per operative. Refits cost credits; three fittings cost Resolve and survive death. Each run card shows simulated odds for the current shuttle.
   - *Ventures:* three cell-owned investments that tick once per raid, with capped balances (growth stops at the cap): noodle stall +6% / 4% chance to lose 25%, cap 500, always open; Marrow's consignment +12% / 10% to lose 40%, cap 1,500, opens after sector 5; smuggler's bond +18% / 14% to lose 50%, cap 3,000, opens after sector 10. Expected value per raid: about +4.8%, +6.8%, +8.5%.
-- **Co-op.** Host runs the game and broadcasts state; the friend's screen mirrors it with operatives swapped. Turn-taking fights, the enemy targets whoever hurt it most, a death ends the raid for both. Works in two tabs; over the internet it needs the Worker deployed (see `docs/COOP.md`). Downtime is host only.
+- **Co-op.** Host runs the game and broadcasts state; the friend's screen mirrors it with operatives swapped. Live at https://cinder-cell.thomaslafata0.workers.dev (one Worker serves the game and relay; `npx wrangler deploy` from the repo root). Shared yard, gifts and trades, a shared Lockup, door votes, own rewards, downed and revive, reconnects and invite links: see `docs/COOP.md`. Downtime is host only.
 
 ## Art
 - **Town pack** (`town/`): complete, in use.
@@ -94,6 +94,8 @@ node tests/grid.cjs           # yard collision overlay to tests/shots/grid.png
 node tests/monkey.cjs 600 71  # random play; args are steps and seed
 node tests/orbit-sim.mjs      # orbit odds per tier and refit level
 node tests/heirloom.mjs       # heirloom eligibility, auto-pick, Weapons Cache interplay
+node tests/coop-revive.mjs    # co-op rules: downs, revives, last stand, votes, separate rewards
+node tests/coop-town.cjs      # two tabs: shared yard, gifts, trades, the Lockup
 ```
 Each prints `no errors` per width when clean. Look at the screenshots in `tests/shots/` after UI changes, at both widths. The monkey can loiter in the Gear popup clicking hidden header buttons; that is the test, not a bug.
 
@@ -104,7 +106,7 @@ Artifact tool, publish `index.html` with `url` set to the live link, `root` set 
 1. **Owner feedback.** Ask for a run report after a few sessions; tune from it.
 2. **Hair on portraits** (battle and town hair are done).
 3. **Downtime art:** bar portraits and backgrounds.
-4. **Co-op online:** owner deploys the Worker (`cd coop && wrangler deploy`) and hosts the page on Cloudflare Pages; bake the Worker URL into `net.js`; test across devices; balance with `sim-coop.mjs`. Then door votes, each player's own contraband pick, a spectate state while the host builds a new operative, downtime for the guest, and the partner's look on the guest's own screen.
+4. **Co-op:** tune from real sessions (`sim-coop.mjs`). Next ideas: team moves in combat (set-ups, cover, passing a stim), the friend's after-curfew activities, spectating for a fallen player, per-player events, co-op feats and a duo board.
 5. **Smaller polish:** furniture collision inside interiors (only the floor rectangle is used), a Tiled map for the yard if the artist makes one, and merging `loot-and-gear` into `master` when the owner agrees.
 
 ## Changes in v5
