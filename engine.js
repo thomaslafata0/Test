@@ -288,7 +288,7 @@ export function mainStat(it) {
   return { key, v: Math.round(b[key] * D.RARITY[it.rarity].mult) + it.level * upgradeGain(it) };
 }
 export const itemName = (it) => `${baseOf(it).name}${it.level ? ` +${it.level}` : ''}`;
-export const itemPrice = (it) => Math.round(baseOf(it).cost * D.RARITY[it.rarity].price);
+export const itemPrice = (it) => Math.round(baseOf(it).cost * D.RARITY[it.rarity].price) + (it.premium || 0);
 export const sellValue = () => 0; // gear is never sold: the fence doesn't buy, he only sells
 export const canUpgrade = (it) => !!it && upgradeGain(it) > 0 && it.level < D.UPGRADE_MAX;
 export const upgradeCost = (it) => Math.round(TUNE.upgradeCost * upgradeGain(it) * (it.level + 1) * D.RARITY[it.rarity].up);
@@ -316,7 +316,7 @@ export const canEquip = (c, it) => !!it && meetsReq(c, baseOf(it).req);
 
 // Pick a random item. tierMin/tierMax bound the base tier (higher tiers weighted up), odds is { rarity: weight }.
 const SLOT_WEIGHT = { ranged: 2, melee: 1.5, head: 1, chest: 1.5, legs: 1, gadget: 0.7 };
-export function rollGear(rng, { slot = null, tierMin = 1, tierMax = 5, odds, filter = null }) {
+export function rollGear(rng, { slot = null, tierMin = 1, tierMax = 6, odds, filter = null }) {
   const sl = slot || (filter ? null : pickWeighted(rng, Object.entries(SLOT_WEIGHT)));
   const ok = (b) => (!sl || b.slot === sl) && !b.unique && b.tier >= 1 && (!filter || filter(b));
   let bases = Object.keys(D.GEAR).filter((id) => { const b = D.GEAR[id]; return ok(b) && b.tier >= tierMin && b.tier <= tierMax; });
@@ -331,24 +331,35 @@ export function shopOdds(meta) {
   const legendary = Math.min(TUNE.shopLegendary, 0.004 * b), elite = Math.min(0.16, 0.03 + 0.008 * b), rare = Math.min(0.32, 0.2 + 0.008 * b);
   return { common: 1 - legendary - elite - rare, rare, elite, legendary };
 }
-export const shopBand = (meta) => clamp(1 + Math.floor((meta.bestSector || 0) / 3), 1, 5);
+export const shopBand = (meta) => clamp(1 + Math.floor((meta.bestSector || 0) / 3), 1, 6);
+// v5 shop scaling: the floor rises with the band (no more tier-1 junk at sector 12), and past sector 5 Marrow sells
+// pieces already worked on his bench (+1 per 5 sectors, up to +3), priced at 85% of what those upgrades would cost.
+export const shopFloor = (meta) => Math.max(1, shopBand(meta) - 2);
+export const shopLevel = (meta) => clamp(Math.floor((meta.bestSector || 0) / 5), 0, 3);
+function benchWork(it, lvl) {
+  let premium = 0;
+  for (let i = 0; i < lvl && canUpgrade(it); i++) { premium += upgradeCost(it); it.level += 1; }
+  if (premium) it.premium = Math.round(premium * 0.85);
+  return it;
+}
 export function restockMarket(s, rng) {
-  const c = s.char, odds = shopOdds(s.meta), band = shopBand(s.meta);
+  const c = s.char, odds = shopOdds(s.meta), band = shopBand(s.meta), lo = shopFloor(s.meta), lvl = shopLevel(s.meta);
   const slots = ['ranged', 'melee', 'head', 'chest', 'legs'];
-  c.market = slots.map((slot) => rollGear(rng, { slot, tierMin: 1, tierMax: band, odds }));
+  c.market = slots.map((slot) => rollGear(rng, { slot, tierMin: lo, tierMax: band, odds }));
   // The sixth piece suits the operative's best attribute (Marrow knows what you like), or is a gadget.
   const top = Object.keys(D.ATTRS).sort((a, b) => attr(c, b) - attr(c, a))[0];
-  c.market.push(rng() < 0.7 ? rollGear(rng, { tierMin: 1, tierMax: band, odds, filter: (b) => b.req && b.req[top] && b.req[top] <= Math.max(attr(c, top), 3) + 2 }) : rollGear(rng, { slot: 'gadget', tierMin: 1, tierMax: band, odds }));
+  c.market.push(rng() < 0.7 ? rollGear(rng, { tierMin: lo, tierMax: band, odds, filter: (b) => b.req && b.req[top] && b.req[top] <= Math.max(attr(c, top), 3) + 2 }) : rollGear(rng, { slot: 'gadget', tierMin: 1, tierMax: band, odds }));
+  if (lvl) c.market = c.market.map((it) => (rng() < 0.6 ? benchWork(it, lvl - (rng() < 0.4 ? 1 : 0)) : it));
 }
 // Gear dropped by an elite or boss in this sector.
 function rollLoot(s, rng, e) {
-  const c = s.char, r = s.run, band = clamp(Math.ceil(r.sector / 3), 1, 5);
+  const c = s.char, r = s.run, band = clamp(Math.ceil(r.sector / 3), 1, 6);
   if (e.boss) {
     const u = D.BOSS_UNIQUE[e.id];
     if (u && !hasUnique(c, D.GEAR[u].unique)) return makeItem(u);
     return rollGear(rng, { tierMin: band - 1, tierMax: band, odds: { elite: 0.6, legendary: 0.4 } });
   }
-  if (e.elite && rng() < TUNE.eliteGear) return rollGear(rng, { tierMin: band - 1, tierMax: band, odds: { rare: 0.55, elite: 0.35, legendary: 0.1 } });
+  if (e.elite && rng() < TUNE.eliteGear * (r.cond === 'hunters' ? 2 : 1)) return rollGear(rng, { tierMin: band - 1, tierMax: band, odds: { rare: 0.55, elite: 0.35, legendary: 0.1 } });
   return null;
 }
 
@@ -484,12 +495,12 @@ export function statsOf(meta, c) {
   const hp = B.hp + t.hp * D.TRAINING.hp.per + (c.level - 1) * 5 + Math.round(str * TUNE.strHp) + (c.background === 'foundry' ? 15 + 2 * (c.level - 1) : 0) + (hasImp(c, 'pain') ? 20 : 0) + gearBonus(c, 'hp');
   const mk = markSum(c), drink = c.drink ? 1 : 0, fb = featBuffs(meta);
   return {
-    maxHp: Math.round(hp * (hasTrait(c, 'stalwart') ? 1.12 : 1) * (1 + mk.hp + fb.hp)),
+    maxHp: Math.round(hp * (hasTrait(c, 'stalwart') ? 1.12 : 1) * (hasPerk(c, 'ironlung') ? 1.1 : 1) * (1 + mk.hp + fb.hp)),
     atk: common + rMain + drink + (w.type === 'heavy' ? Math.floor(str * TUNE.strAtk) : Math.floor(agi * TUNE.agiAtk)),
     atkM: common + mMain + drink + Math.floor(str * TUNE.strAtk),
-    def: B.def + (c.background === 'foundry' ? 1 : 0) + t.def * D.TRAINING.def.per + Math.floor((c.level - 1) / 2) + def + gearBonus(c, 'def') + (hasImp(c, 'dermal') ? 3 : 0) + mk.def,
+    def: B.def + (c.background === 'foundry' ? 1 : 0) + t.def * D.TRAINING.def.per + Math.floor((c.level - 1) / 2) + def + gearBonus(c, 'def') + (hasImp(c, 'dermal') ? 3 : 0) + mk.def + (hasPerk(c, 'padding') ? 2 : 0),
     spd: B.spd + (c.background === 'runner' ? 1 : 0) + t.spd * D.TRAINING.spd.per + Math.floor((c.level - 1) / 3) + agi + (hasImp(c, 'reflex') ? 2 : 0) + spd + gearBonus(c, 'spd') + mk.spd,
-    dodge: (agi - 1) * TUNE.agiDodge + (c.background === 'runner' ? 0.05 : 0) + fb.dodge,
+    dodge: (agi - 1) * TUNE.agiDodge + (c.background === 'runner' ? 0.05 : 0) + fb.dodge + (hasPerk(c, 'ghost') ? 0.1 : 0),
     crit: 0.05 + (w.crit || 0) + critAll + optic + (agi - 1) * TUNE.agiCrit + gearBonus(c, 'crit', 'ranged') / 100 + mk.crit + drink * 0.04 + fb.crit,
     critM: 0.05 + (mw.crit || 0) + critAll + optic + gearBonus(c, 'crit', 'melee') / 100 + mk.crit + drink * 0.04 + fb.crit,
     carry: 4 + (has(c, 'belt') ? 3 : 0) + carry,
@@ -717,8 +728,10 @@ export function creditMult(s) {
   const c = s.char, t = s.run ? s.run.threat : s.meta.threat || 0;
   const b = s.run ? s.run.bulletin : null;
   const cha = 1 + TUNE.chaCredits * (attr(c, 'cha') - 1), wanted = 1 + TUNE.wanted * (s.run ? s.run.wanted || 0 : 0);
-  return cha * wanted * (has(c, 'fence') ? 1.25 : 1) * (hasPerk(c, 'chit') ? 1.2 : 1) * (1 + gearBonus(c, 'credits') / 100) * (1 + 0.15 * t) * (1 + markSum(c).credits + featBuffs(s.meta).credits) * (b === 'payday' ? 1.3 : b === 'lockdown' ? 1.25 : 1);
+  return cha * wanted * (has(c, 'fence') ? 1.25 : 1) * (hasPerk(c, 'chit') ? 1.2 : 1) * (1 + gearBonus(c, 'credits') / 100) * (1 + 0.15 * t) * (1 + markSum(c).credits + featBuffs(s.meta).credits) * (b === 'payday' ? 1.3 : b === 'lockdown' ? 1.25 : 1) * condCredits(s.run);
 }
+const condCredits = (r) => (!r ? 1 : r.cond === 'toxic' ? 1.25 : r.cond === 'patrol' ? 1.3 : r.cond === 'lockdown' ? 1.2 : 1);
+export const condOf = (r) => D.SECTOR_CONDS.find((x) => x.id === (r && r.cond)) || D.SECTOR_CONDS[0];
 
 // ---------- status effects ----------
 // Durations count rounds. A status applied this round starts ticking next round.
@@ -771,7 +784,7 @@ export function deploy(s, mapId, startSector, rng) {
 export const mechanicOf = (r) => mapById(r.map).mechanic.id;
 export const bulletinOf = (r) => D.BULLETINS.find((b) => b.id === (r && r.bulletin)) || D.BULLETINS[0];
 export const quirkById = (id) => D.QUIRKS.find((q) => q.id === id);
-export const roomName = (mapId, kind) => kind === 'boss' ? 'Boss' : (mapById(mapId).roomNames[kind] || kind);
+export const roomName = (mapId, kind) => kind === 'boss' ? 'Boss' : (mapById(mapId).roomNames[kind] || D.EXTRA_ROOM_NAMES[kind] || kind);
 
 function raiseAlarm(s, n, why) {
   const r = s.run;
@@ -785,10 +798,23 @@ function beginSector(s, rng) {
   const r = s.run;
   s.meta.bestSector = Math.max(s.meta.bestSector || 0, r.sector); // reached counts for the record; cleared still drives contracts and insertions
   r.room = 0; r.fightsDone = 0; r.cooldowns = {}; r.usedThisFight = []; r.sectorCredits = 0;
+  // Boss sectors and the opening sector stay clear; everything else rolls a condition.
+  r.cond = r.sector === 1 || isBossSector(r.sector) ? 'none' : pickWeighted(rng, D.SECTOR_CONDS.map((x) => [x.id, x.weight]));
+  if (r.cond !== 'none') log(s, `${condOf(r).name}: ${condOf(r).desc}`, 'info');
   for (const b of Object.values(r.cb || {})) { b.cooldowns = {}; b.usedThisFight = []; }
   offerRoute(s, rng);
 }
 
+// Door weights for this sector: the map's own rooms, the v5 extras, bent by the sector condition.
+function roomWeights(r, map) {
+  const w = { ...map.rooms };
+  for (const [k, v] of Object.entries(D.EXTRA_ROOMS)) w[k] = (w[k] || 0) + v;
+  if (r.cond === 'supplies') { for (const k of ['supply', 'rest', 'medbay', 'cargo']) if (w[k]) w[k] *= 2.5; }
+  if (r.cond === 'derelict' && w.event) w.event *= 2;
+  if (r.cond === 'lockdown') for (const k of Object.keys(w)) if (!D.ROOMS[k].fight) delete w[k];
+  if (r.sector === 1) { delete w.bounty; delete w.fence; delete w.locker; }
+  return Object.entries(w);
+}
 // Offer two doors (or the boss). At least one door is always a fight.
 export function offerRoute(s, rng) {
   const r = s.run, map = mapById(r.map);
@@ -800,7 +826,7 @@ export function offerRoute(s, rng) {
   else if (remaining <= needed) { r.choices = ['fight', 'elite']; r.forced = true; }
   else {
     r.forced = false;
-    const entries = Object.entries(map.rooms);
+    const entries = roomWeights(r, map);
     const a = pickWeighted(rng, entries);
     let b = a;
     for (let i = 0; i < 20 && b === a; i++) b = pickWeighted(rng, entries);
@@ -841,14 +867,39 @@ export function enterRoom(s, idx, rng) {
     if (kind === 'cargo') { r.nextMod = 'alerted'; notes.push('next enemy alerted'); text = 'You crack two crates of confiscated goods. Someone heard the crowbar.'; }
     else text = 'Shelves of requisitioned supplies. You take what fits in your pockets.';
   } else if (kind === 'rest') {
-    let h = 0;
-    forEachActor(s, (a, i) => { const m2 = stats(s).maxHp, hh = Math.min(m2 - a.hp, Math.round(m2 * 0.3)); a.hp += hh; if (i === actorIdx(s)) h = hh; });
+    let h = 0; const pct = r.cond === 'supplies' ? 0.4 : 0.3;
+    forEachActor(s, (a, i) => { const m2 = stats(s).maxHp, hh = Math.min(m2 - a.hp, Math.round(m2 * pct)); a.hp += hh; if (i === actorIdx(s)) h = hh; });
     notes.push(`+${h} HP`);
     text = 'Five quiet minutes. You rewrap the bandages and breathe.';
     if (r.alert > 0) { r.alert = Math.max(0, r.alert - 2); notes.push(`alarm down to ${r.alert}`); text += ' Up on the wall, the alarm lights blink back to amber.'; }
   } else if (kind === 'cells') {
     if (r.allies < 2) { r.allies += 1; notes.push(`ally joins (${r.allies}/2)`); text = 'The lock gives. A prisoner grabs a fallen guard\u2019s baton and falls in behind you.'; }
     else { s.meta.resolve += 1; s.meta.totalResolve += 1; notes.push(`+1 ${D.SETTING.meta}`); text = 'You can\u2019t take more with you. You open the doors and point them to the vents.'; }
+  }
+  else if (kind === 'medbay') {
+    let h = 0;
+    forEachActor(s, (a, i) => { const m2 = stats(s).maxHp, hh = Math.min(m2 - a.hp, Math.round(m2 * 0.2)); a.hp += hh; if (i === actorIdx(s)) h = hh; if (a.items.stim < stats(s).carry) a.items.stim += 1; });
+    notes.push(`+${h} HP`, `+1 ${D.ITEMS.stim.name}`);
+    text = 'A medic station, abandoned mid-shift. Clean dressings, a full stim rack.';
+  } else if (kind === 'vault') {
+    const ok = rng() < clamp(0.3 + 0.1 * attr(c, 'int'), 0.3, 0.9);
+    const cr = Math.round(randInt(rng, ok ? 24 : 10, ok ? 36 : 16) * r.sector * map.credits * creditMult(s));
+    forEachActor(s, (a) => { a.credits += cr; }); r.sectorCredits += cr; ledger(s, 'rooms', cr); notes.push(`+${cr} ${D.SETTING.cur}`);
+    if (ok) text = 'The tumblers fall one by one. The strongroom is yours.';
+    else { const dmg = Math.round(st.maxHp * 0.15); c.hp = Math.max(1, c.hp - dmg); notes.push(`\u2212${dmg} HP`); text = 'A dye charge goes off in your face. You grab what you can through the smoke.'; }
+    notes.push(`INT check ${ok ? 'passed' : 'failed'}`);
+  } else if (kind === 'locker') {
+    const band = clamp(Math.ceil(r.sector / 3), 1, 6);
+    r.lootOffer = rollGear(rng, { tierMin: Math.max(1, band - 1), tierMax: band, odds: { rare: 0.65, elite: 0.3, legendary: 0.05 } });
+    notes.push(itemName(r.lootOffer));
+    text = 'The locker\u2019s seal hisses open. Something good is racked inside.';
+  } else if (kind === 'bench') {
+    const opts = D.SLOT_ORDER.map((sl) => gearIn(c, sl)).filter((it) => canUpgrade(it));
+    if (opts.length) { const it = pick(rng, opts); it.level += 1; notes.push(`${itemName(it)}`); text = 'Somebody left the lathe running. You make good use of it.'; }
+    else { const cr = Math.round(randInt(rng, 10, 16) * r.sector * creditMult(s)); c.credits += cr; r.sectorCredits += cr; notes.push(`+${cr} ${D.SETTING.cur}`); text = 'Nothing of yours needs work. You strip the bench for parts and sell them on.'; }
+  } else if (kind === 'fence') {
+    r.perkOffer = offerPerks(s, rng, false);
+    text = 'Behind a false wall: a smuggler\u2019s stash, labelled in a hand you don\u2019t know. Take one thing.';
   }
   s.roomResult = { kind, name, text, notes };
   s.screen = 'room';
@@ -858,6 +909,8 @@ function startFight(s, rng, kind) {
   const r = s.run, mech = mechanicOf(r), c = s.char;
   if (kind === 'fight' && r.threat >= 4 && rng() < 0.35) kind = 'elite';
   if (kind === 'fight' && r.bulletin === 'inspection' && rng() < 0.3) kind = 'elite';
+  if (kind === 'fight' && r.cond === 'hunters' && rng() < 0.25) kind = 'elite';
+  if (kind === 'bounty') kind = 'elite';
   const boss = kind === 'boss';
   const e = makeEnemy(r.sector, boss, rng, r.map, r.threat);
   if (!boss) applyQuirk(r, e, rng);
@@ -879,9 +932,18 @@ function startFight(s, rng, kind) {
   if (r.room === 1 && has(c, 'forger') && !boss) { e.stun = 1; log(s, 'Your forged papers buy you a free moment.', 'good'); }
   if (r.nextMod === 'stunned') { e.stun = Math.max(e.stun, 1); log(s, 'They don\u2019t see you coming.', 'good'); }
   if (r.nextMod === 'alerted') { e.atk = Math.round(e.atk * 1.2); log(s, 'The alarm is still sounding. They\u2019re ready for you.', 'bad'); }
+  if (r.nextMod === 'weakened') { e.hp = Math.round(e.maxHp * 0.75); log(s, 'They\u2019re already hurt. Your tip was good.', 'good'); }
+  // Sector conditions (v5).
+  if (r.cond === 'patrol') { e.hp = e.maxHp = Math.round(e.maxHp * 1.15); e.hp = Math.min(e.hp, e.maxHp); }
+  if (r.cond === 'derelict') e.atk = Math.round(e.atk * 0.9);
+  if (r.cond === 'blackout') { addStatus(e.st, e.fresh, { exposed: 1 }); e.xp = Math.round(e.xp * 1.15); }
+  if (r.cond === 'lockdown') e.xp = Math.round(e.xp * 1.2);
+  if (r.roomType === 'bounty') { e.cr = e.cr.map((v) => Math.round(v * 1.6)); e.bounty = true; }
   r.nextMod = null;
   if (hasPerk(c, 'spotter')) addStatus(e.st, e.fresh, { exposed: 2 });
   if (hasPerk(c, 'reputation') && e.tags.includes('human')) addStatus(e.st, e.fresh, { shaken: 2 });
+  if (hasPerk(c, 'tripwire')) addStatus(e.st, e.fresh, { bleed: 2 });
+  if (hasPerk(c, 'warpaint')) addStatus(e.st, e.fresh, { shaken: 1, exposed: 1 });
   e.fresh = [];
   if (hasPerk(c, 'dressing')) { const st = stats(s); c.hp = Math.min(st.maxHp, c.hp + Math.round(st.maxHp * 0.06)); }
   log(s, e.line, boss ? 'boss' : 'sys');
@@ -1044,6 +1106,8 @@ function hitMult(s, melee, { mult = 1, unarmoredBonus = 1 } = {}) {
   if (!e.tags.includes('armored')) mult *= unarmoredBonus;
   if (hasPerk(c, 'ambush') && !r.struck) mult *= TUNE.ambush;
   if (hasPerk(c, 'grudge') && (e.elite || e.boss)) mult *= 1.3;
+  if (hasPerk(c, 'adrenal') && c.hp < stats(s).maxHp * 0.35) mult *= 1.25;
+  if (hasPerk(c, 'coupdegrace') && e.hp < e.maxHp * 0.3) mult *= 1.5;
   return mult * outMult(r.pst, e.st);
 }
 const spreadOf = (melee) => (melee ? TUNE.meleeSpread : TUNE.rangedSpread);
@@ -1502,7 +1566,8 @@ function winFight(s, rng, fled = false) {
     const it = pick(rng, ['stim', 'thermal', 'ion', 'smoke']);
     if (c.items[it] < stats(s).carry) { c.items[it] += 1; out.items.push(D.ITEMS[it].name); }
   }
-  const hk = gearBonus(c, 'healkill');
+  if (r.cond === 'toxic' && !fled) { const st = stats(s), d = Math.round(st.maxHp * 0.04); c.hp = Math.max(1, c.hp - d); log(s, `The coolant leak burns your lungs: \u2212${d} HP.`, 'hurt'); }
+  const hk = gearBonus(c, 'healkill') + (hasPerk(c, 'tithe') ? 6 : 0);
   if (hk && !fled) { const st = stats(s), h = Math.min(st.maxHp - c.hp, Math.round(st.maxHp * hk / 100)); c.hp += h; out.healed += h; }
   if (hasPerk(c, 'quickdraw')) for (const k of Object.keys(r.cooldowns)) if (r.cooldowns[k] < 50) r.cooldowns[k] = Math.max(0, r.cooldowns[k] - 2);
   // Co-op: the partner gets the same credits and XP.
@@ -1608,7 +1673,9 @@ function resolveEventInner(s, index, rng) {
   if (fxs.items) for (const [k, n] of Object.entries(fxs.items)) { const add = Math.min(n, st.carry - c.items[k]); if (add > 0) { c.items[k] += add; notes.push(`+${add} ${D.ITEMS[k].name}`); } }
   if (fxs.resolve) { s.meta.resolve += fxs.resolve; s.meta.totalResolve += fxs.resolve; notes.push(`+${fxs.resolve} ${D.SETTING.meta}`); }
   if (fxs.next) r.nextMod = fxs.next;
+  if (fxs.cash) { c.credits += fxs.cash; r.sectorCredits += fxs.cash; ledger(s, 'events', fxs.cash); notes.push(`+${fxs.cash} ${D.SETTING.cur}`); }
   if (fxs.next === 'stunned') notes.push('next enemy surprised');
+  if (fxs.next === 'weakened') notes.push('next enemy starts hurt');
   if (fxs.next === 'alerted') { notes.push('next enemy alerted'); raiseAlarm(s, 1, 'Your cover slipped.'); }
   if (fxs.ally) {
     if (r.allies < 2) { r.allies += 1; notes.push(`ally joins (${r.allies}/2)`); }
@@ -1710,6 +1777,8 @@ export function endRun(s, how, rngForRestock = Math.random) {
     : `You escaped from ${sectorName(r.sector, r.map)}${lost ? `, but dropped ${lost} ${D.SETTING.cur} on the way out` : ''}.`) + rank;
   const vn = tickVentures(s, rngForRestock || Math.random);
   if (vn) s.notice += ' ' + vn;
+  // One orbit run per stay in town: coming home from a raid refuels the shuttle.
+  for (const k of [s.char, s.char2]) if (k) k.orbitFlown = false;
   s.run = null;
   s.screen = allLiberated(s) && !s.meta.endingSeen ? 'ending' : 'town';
   s.tab = 'clinic';
@@ -1862,9 +1931,14 @@ export function spinWheel(s, bet, stake, pick, rng) {
 }
 
 // Ventures: cell money, ticked once per raid.
+// Ventures open as the cell proves itself (deepest sector cleared anywhere) and each holds a capped balance.
+export const ventureOpen = (s, v) => (s.meta.bestSector || 0) >= (v.unlock || 0);
+export const ventureRoom = (s, v) => Math.max(0, (v.cap || Infinity) - Math.round(s.meta.ventures[v.id] || 0));
 export function invest(s, id, amount) {
   const v = D.VENTURES.find((x) => x.id === id), c = s.char;
-  if (!v || !inTown(s) || amount < v.min || c.credits < amount) return false;
+  if (!v || !inTown(s) || !ventureOpen(s, v)) return false;
+  amount = Math.min(amount, ventureRoom(s, v));
+  if (amount < Math.min(v.min, ventureRoom(s, v)) || amount <= 0 || c.credits < amount) return false;
   c.credits -= amount; ledger(s, 'spend:ventures', amount);
   s.meta.ventures[id] = Math.round((s.meta.ventures[id] || 0) + amount);
   journal(s, `${c.name} puts ${amount} ${D.SETTING.cur} into ${v.name}.`);
@@ -1889,7 +1963,9 @@ export function tickVentures(s, rng) {
       notes.push(v.loss >= 1 ? `${v.name}: the run never came back. ${lost} ${D.SETTING.cur} gone.` : `${v.name} took a hit: \u2212${lost} ${D.SETTING.cur}.`);
       journal(s, `${v.name} loses ${lost} ${D.SETTING.cur}.`, 'bad');
     } else {
-      const gain = Math.round(amt * v.rate);
+      // Growth stops at the cap: a full venture earns nothing until some of it is withdrawn.
+      const gain = Math.max(0, Math.min(Math.round(amt * v.rate), (v.cap || Infinity) - amt));
+      if (!gain) continue;
       s.meta.ventures[v.id] = amt + gain;
       journal(s, `${v.name} grows by ${gain} ${D.SETTING.cur}.`, 'good');
     }
@@ -1937,7 +2013,8 @@ export function orbitFoe(m, tierId) {
 }
 export function orbitStart(s, tierId, rng) {
   const t0 = D.ORBIT_TIERS.find((x) => x.id === tierId);
-  if (!t0 || !inTown(s) || s.orbit || orbitLock(s.meta, tierId)) return false;
+  if (!t0 || !inTown(s) || s.orbit || orbitLock(s.meta, tierId) || s.char.orbitFlown) return false;
+  s.char.orbitFlown = true;
   const t = orbitFoe(s.meta, tierId), me = shipStats(s.meta);
   s.orbit = { tier: t.id, shakedown: orbitShakedown(s.meta, tierId), hull: me.hull, maxHull: me.hull, eHull: t.hull, eMaxHull: t.hull, step: 0, intent: t.fx[0], evading: false, aimed: false, locked: false, round: 1, log: [], over: null, events: [] };
   s.orbit.log.push(`${t.shipName} on an intercept course. ${D.ORBIT_INTENTS[s.orbit.intent].label}.`);

@@ -130,6 +130,24 @@ export const GEAR = {
   injector: { slot: 'gadget', tier: 2, name: 'Stim Injector',         cost: 200, stimBoost: 0.5, desc: 'Stims heal 50% more.' },
   scanner:  { slot: 'gadget', tier: 2, name: 'Threat Scanner',        cost: 260, req: { int: 3 }, scan: true, desc: 'Shows the enemy\u2019s next two moves.' },
   coil:     { slot: 'gadget', tier: 3, name: 'Arc Coil',              cost: 380, req: { int: 4 }, overload: 0.2, desc: 'Grants Overload. Overload deals +20%.' },
+  // added in v5: more mid and deep-game pieces. Tier 6 only shows up once the cell has reached sector 15.
+  needler:  { slot: 'ranged', tier: 2, name: 'Flechette Needler',     type: 'pistol',  atk: 6,  cost: 190,  req: { agi: 2 }, crit: 0.08, desc: 'Fires a fan of steel slivers. +8% crit.' },
+  rivetgun: { slot: 'ranged', tier: 3, name: 'Rivet Gun',             type: 'heavy',   atk: 9,  cost: 340,  req: { str: 4 }, desc: 'Foundry tool, barely modified. Adds STR to ATK like a melee weapon.' },
+  smartgun: { slot: 'ranged', tier: 4, name: 'Tracking Smartgun',     type: 'tech',    atk: 13, cost: 620,  req: { int: 5 }, desc: 'Ignores half of armour, +50% against droids. The rounds argue with gravity.' },
+  railcarbine:{ slot: 'ranged', tier: 6, name: 'Rail Carbine',        type: 'carbine', atk: 20, cost: 1350, req: { agi: 6 }, crit: 0.06, desc: 'Lift-port security issue. +6% crit.' },
+  wardenrifle:{ slot: 'ranged', tier: 6, name: 'Warden-Pattern Rifle', type: 'rifle',  atk: 21, cost: 1500, req: { agi: 7 }, crit: 0.16, desc: '+16% crit chance. Built to hit things on the far side of an orbit.' },
+  pipe:     { slot: 'melee', tier: 1, name: 'Lead Pipe',              type: 'melee', atk: 3,  cost: 60,  desc: 'Plumbing, repurposed.' },
+  cleaver:  { slot: 'melee', tier: 3, name: 'Ration Cleaver',         type: 'melee', atk: 7,  cost: 300, req: { agi: 4 }, crit: 0.08, desc: 'From the depot kitchens. +8% crit.' },
+  arcblade: { slot: 'melee', tier: 5, name: 'Arc Blade',              type: 'melee', atk: 12, cost: 880, req: { int: 5 }, droid: 0.4, desc: 'A charged edge. +40% against droids.' },
+  breacher: { slot: 'melee', tier: 6, name: 'Hydraulic Breacher',     type: 'melee', atk: 17, cost: 1400, req: { str: 8 }, spd: -1, desc: '\u22121 SPD. Opens blast doors and the people behind them.' },
+  respirator:{ slot: 'head', tier: 2, name: 'Smog Respirator',        def: 1, cost: 110, spd: 1, desc: '+1 SPD. You stop coughing. You start running.' },
+  wardenhelm:{ slot: 'head', tier: 6, name: 'Warden-Pattern Helm',    def: 6, cost: 1000, req: { str: 5 }, crit: 0.04, desc: 'Targeting glass in the visor. +4% crit.' },
+  smuggler: { slot: 'chest', tier: 3, name: 'Smuggler\u2019s Duster', def: 4, cost: 320, req: { agi: 3 }, spd: 1, desc: '+1 SPD. Pockets inside the pockets.' },
+  wardenplate:{ slot: 'chest', tier: 6, name: 'Warden-Pattern Plate', def: 13, cost: 1450, req: { str: 7 }, spd: -1, desc: '\u22121 SPD. Frigate marine armour, still warm.' },
+  mag:      { slot: 'legs', tier: 4, name: 'Mag-Boots',               def: 3, cost: 480, req: { agi: 4 }, spd: 1, desc: '+1 SPD. Grip on any deck, at any angle.' },
+  wardenlegs:{ slot: 'legs', tier: 6, name: 'Warden-Pattern Greaves', def: 6, cost: 1000, req: { str: 6 }, desc: 'Armoured to the boot.' },
+  medkit:   { slot: 'gadget', tier: 3, name: 'Trauma Kit',            cost: 360, stimBoost: 0.8, desc: 'Stims heal 80% more.' },
+  bandolier:{ slot: 'gadget', tier: 4, name: 'Combat Bandolier',      cost: 520, carry: 2, desc: 'Carry 2 more of each item.' },
   // boss uniques: fixed stats and a signature effect. Bosses always drop theirs.
   halvekpistol: { slot: 'ranged', tier: 3, unique: 'halvek', name: 'Halvek\u2019s Service Pistol', type: 'pistol', atk: 11, cost: 600, crit: 0.08, bonuses: [['crit', 4]], desc: 'Critical hits cut every skill cooldown by 1.' },
   vanepistol:   { slot: 'ranged', tier: 5, unique: 'vane', name: 'Vane\u2019s Ornate Pistol', type: 'pistol', atk: 17, cost: 1200, crit: 0.1, bonuses: [['human', 20]], desc: 'Aimed Shot always crits.' },
@@ -312,7 +330,28 @@ export const ROOMS = {
   cells:  { desc: 'Free a prisoner. They fight beside you until you leave.' },
   cargo:  { desc: 'A big haul of credits, but the next enemy is alerted.' },
   boss:   { desc: 'The sector boss. No way around it.', fight: true },
+  // v5 rooms: rarer doors that show up on every map.
+  bounty: { desc: 'A marked officer with a price on their head: a veteran fight that pays +60% credits.', fight: true },
+  vault:  { desc: 'A strongroom. INT to crack it clean for a big haul; fumble it and the trap bites.' },
+  medbay: { desc: 'A field medic station: heal 20% and grab a stim.' },
+  locker: { desc: 'A sealed weapons locker: one piece of gear, rare or better.' },
+  bench:  { desc: 'An unattended workbench: +1 upgrade on one of your pieces, free.' },
+  fence:  { desc: 'A smuggler\u2019s stash: pick a piece of contraband.' },
 };
+// Extra doors every map can roll, by weight (the map's own rooms weigh 1 to 5 each).
+export const EXTRA_ROOMS = { bounty: 0.6, vault: 0.6, medbay: 0.5, locker: 0.35, bench: 0.35, fence: 0.3 };
+export const EXTRA_ROOM_NAMES = { bounty: 'Marked Officer', vault: 'Strongroom', medbay: 'Field Medic Station', locker: 'Weapons Locker', bench: 'Machinist\u2019s Bench', fence: 'Smuggler\u2019s Stash' };
+// Sector conditions: rolled for every sector after the first, shown on the route screen. They change how the floor plays.
+export const SECTOR_CONDS = [
+  { id: 'none',     name: 'Clear Floor',     weight: 5, desc: 'Nothing unusual on this level.' },
+  { id: 'blackout', name: 'Blackout',        weight: 1.5, desc: 'The lights are down. Enemies start every fight Exposed for 1 turn; +15% XP.' },
+  { id: 'toxic',    name: 'Coolant Leak',    weight: 1.2, desc: 'The air bites. You lose 4% max HP after every fight here, but everything pays +25%.' },
+  { id: 'patrol',   name: 'Double Patrols',  weight: 1.2, desc: 'Enemies +15% HP. They also carry +30% credits.' },
+  { id: 'supplies', name: 'Supply Depot',    weight: 1.2, desc: 'Supply and rest rooms are more common, and rests heal 40%.' },
+  { id: 'hunters',  name: 'Hunter Squad',    weight: 1, desc: 'A quarter of regular fights are veterans, and veterans drop gear more often.' },
+  { id: 'derelict', name: 'Derelict Wing',   weight: 1.2, desc: 'Half-abandoned. Enemies \u221210% ATK and side corridors are more common.' },
+  { id: 'lockdown', name: 'Sealed Bulkheads', weight: 0.8, desc: 'Fewer ways around: every door is a fight, but each pays +20% credits and XP.' },
+];
 
 // ---------- maps ----------
 // pool: [enemy id, sector it first appears]. unlock: deepest sector reached anywhere.
@@ -449,6 +488,93 @@ export const EVENTS = [
         win: { items: { stim: 1, ion: 1 }, text: '\u201CFor the yard, then. Just this once.\u201D' }, lose: { text: '\u201CNice try.\u201D The vent cover slides shut.' } },
       { label: 'Wave them off', win: { text: 'You don\u2019t need more friends like that.' } },
     ] },
+  // v5 events
+  { id: 'deadguard', maps: 'any', text: 'A guard lies slumped against the wall, very still. A keycard and a sidearm are still on the belt.',
+    options: [
+      { label: 'Take the keycard', check: { attr: 'agi', base: 0.45, per: 0.08 },
+        win: { next: 'stunned', credits: [6, 12], text: 'You lift it clean. The next door opens before anyone knows you\u2019re there.' }, lose: { next: 'alerted', text: 'The \u201Ccorpse\u201D grabs your wrist and yells. Not dead. Just asleep.' } },
+      { label: 'Check the pockets', win: { credits: [10, 18], text: 'Pay chits and a half-eaten ration bar.' } },
+      { label: 'Leave them be', win: { text: 'Let sleeping guards lie.' } },
+    ] },
+  { id: 'informant', maps: 'any', text: 'A nervous clerk in a Directorate jacket waves you into a supply closet. \u201CI can tell you what\u2019s ahead. For a price.\u201D',
+    options: [
+      { label: 'Pay for the tip', cost: { credits: 25 }, win: { next: 'weakened', text: '\u201CThe next one\u2019s running a fever. Sloppy.\u201D They\u2019re right: the next enemy starts hurt.' } },
+      { label: 'Lean on them', check: { attr: 'str', base: 0.35, per: 0.1 },
+        win: { next: 'weakened', resolve: 1, text: 'They talk fast. Then they offer to keep talking, to the cell.' }, lose: { next: 'alerted', text: 'They hit a panic button under the shelf.' } },
+      { label: 'Decline', win: { text: 'Informants inform on everyone.' } },
+    ] },
+  { id: 'vending', maps: 'any', text: 'A Directorate vending terminal hums in an alcove, stocked with field stims behind cracked glass.',
+    options: [
+      { label: 'Hack it', check: { attr: 'int', base: 0.4, per: 0.1 },
+        win: { items: { stim: 2 }, text: 'It dispenses two stims and a receipt thanking you for your loyalty.' }, lose: { hp: -0.08, text: 'It shocks you, then dispenses nothing, then thanks you for your loyalty.' } },
+      { label: 'Smash the glass', check: { attr: 'str', base: 0.5, per: 0.08 },
+        win: { items: { stim: 1, thermal: 1 }, next: 'alerted', text: 'You grab what you can. The crash echoes down the hall.' }, lose: { hp: -0.1, next: 'alerted', text: 'Reinforced glass. Your knuckles disagree with the design.' } },
+      { label: 'Walk past', win: { text: 'Loyalty has its rewards. Not today.' } },
+    ] },
+  { id: 'drone', maps: 'any', text: 'A surveillance drone drifts around the corner, sweeping its lens across the corridor.',
+    options: [
+      { label: 'Shoot it down', check: { attr: 'agi', base: 0.45, per: 0.08 },
+        win: { credits: [8, 14], text: 'One shot. It drops, and its salvage is worth something.' }, lose: { next: 'alerted', text: 'You miss. It doesn\u2019t. Your face is on a screen somewhere now.' } },
+      { label: 'Reprogram it', check: { attr: 'int', base: 0.3, per: 0.1 },
+        win: { next: 'stunned', attrs: { int: 1 }, text: 'It loops a recording of an empty corridor and flies off to report nothing.' }, lose: { next: 'alerted', text: 'It squeals and flees.' } },
+      { label: 'Duck into a vent', win: { hp: -0.04, text: 'Sharp edges, but it never sees you.' } },
+    ] },
+  { id: 'chapel', maps: 'any', text: 'A forgotten prayer niche, scratched into a wall. Someone keeps candles burning here.',
+    options: [
+      { label: 'Sit for a moment', win: { hp: 0.15, text: 'Quiet. The candles smell of tallow and home.' } },
+      { label: 'Leave an offering', cost: { credits: 15 }, win: { resolve: 1, hp: 0.1, text: 'A note tucked behind the candle reads: \u201CThey know about you. Keep going.\u201D' } },
+      { label: 'Move on', win: { text: 'Faith is for later.' } },
+    ] },
+  { id: 'rival', maps: 'any', text: 'Another resistance runner, from a cell you don\u2019t know, is looting the same corridor. They freeze.',
+    options: [
+      { label: 'Split the haul', check: { attr: 'cha', base: 0.45, per: 0.08 },
+        win: { credits: [12, 20], items: { smoke: 1 }, text: 'You share what you find and a smoke canister for the road.' }, lose: { credits: [4, 8], text: 'They take the best of it and leave you the scraps.' } },
+      { label: 'Recruit them', check: { attr: 'cha', base: 0.3, per: 0.1 },
+        win: { ally: 1, text: '\u201CFine. Your cell, my rules.\u201D They fall in behind you.' }, lose: { text: 'They shake their head and slip away.' } },
+      { label: 'Let them go', win: { resolve: 1, text: 'Every cell matters. They nod as they pass.' } },
+    ] },
+  { id: 'propaganda', maps: ['garrison', 'detention', 'port'], text: 'A propaganda screen loops the Supervisor\u2019s face over and over. Its maintenance hatch is open.',
+    options: [
+      { label: 'Hijack the broadcast', check: { attr: 'int', base: 0.3, per: 0.1 },
+        win: { resolve: 2, next: 'alerted', text: 'For thirty seconds the whole complex sees the cell\u2019s mark. Then the sirens.' }, lose: { next: 'alerted', hp: -0.06, text: 'The hatch sparks and the screen dies loudly.' } },
+      { label: 'Smash it', win: { attrs: { str: 1 }, next: 'alerted', text: 'Satisfying. Noisy, but satisfying.' } },
+      { label: 'Ignore it', win: { text: 'You\u2019ve seen the face enough.' } },
+    ] },
+  { id: 'crucible', maps: ['foundry'], text: 'A crucible of molten slag hangs over the walkway, chain creaking. A patrol is about to pass beneath it.',
+    options: [
+      { label: 'Drop it on them', check: { attr: 'int', base: 0.4, per: 0.1 },
+        win: { credits: [15, 25], next: 'weakened', text: 'The release lever gives. The patrol stops being a patrol.' }, lose: { hp: -0.1, text: 'The lever jams. A spatter of slag finds your sleeve.' } },
+      { label: 'Wait for them to pass', win: { text: 'They pass. The crucible keeps creaking.' } },
+    ] },
+  { id: 'riot', maps: ['detention'], text: 'A yard riot is brewing. The prisoners are looking at you, waiting to see what you\u2019ll do.',
+    options: [
+      { label: 'Start it', check: { attr: 'cha', base: 0.4, per: 0.1 },
+        win: { resolve: 2, next: 'stunned', text: 'The yard erupts. Every guard in the block runs the other way from you.' }, lose: { hp: -0.12, text: 'It starts, and it does not care whose side you\u2019re on.' } },
+      { label: 'Slip through in the noise', win: { next: 'stunned', text: 'Nobody watches the door during a riot.' } },
+    ] },
+  { id: 'fuel', maps: ['port'], text: 'A fuel bowser stands unattended next to a parked customs skiff.',
+    options: [
+      { label: 'Siphon and sell it on', check: { attr: 'int', base: 0.4, per: 0.08 },
+        win: { credits: [20, 32], text: 'A contact in the docks pays well for clean fuel.' }, lose: { hp: -0.08, text: 'You get a mouthful of it.' } },
+      { label: 'Rig it to blow', check: { attr: 'int', base: 0.3, per: 0.1 },
+        win: { resolve: 1, next: 'weakened', text: 'The skiff burns. The next post is still choking on the smoke.' }, lose: { next: 'alerted', text: 'The fuse fizzles. Someone shouts.' } },
+      { label: 'Leave it', win: { text: 'Fuel fires are hard to explain.' } },
+    ] },
+  { id: 'gambler', maps: 'any', text: 'A bored guard flips a coin over and over. \u201CCall it,\u201D they say, not looking up. \u201CDouble or nothing.\u201D',
+    options: [
+      { label: 'Call it (25 credits)', cost: { credits: 25 }, check: { attr: 'cha', base: 0.5, per: 0 },
+        win: { cash: 50, text: 'Heads. They pay up and wave you through.' }, lose: { text: 'Tails. They pocket it and laugh.' } },
+      { label: 'Knock them out', check: { attr: 'str', base: 0.45, per: 0.08 },
+        win: { credits: [6, 10], text: 'Down they go, and so does the coin.' }, lose: { next: 'alerted', text: 'They dodge and reach for the radio.' } },
+      { label: 'Walk away', win: { text: 'The house always wins.' } },
+    ] },
+  { id: 'surgeon', maps: ['detention', 'garrison'], text: 'A surgeon in a blood-flecked Directorate coat is drinking alone. \u201CI patch up whoever comes through that door,\u201D she says.',
+    options: [
+      { label: 'Let her patch you up', cost: { credits: 30 }, win: { heal: 'full', text: 'She works fast and doesn\u2019t ask questions.' } },
+      { label: 'Ask about the implants', check: { attr: 'int', base: 0.35, per: 0.1 },
+        win: { attrs: { int: 1 }, hp: 0.1, text: 'She shows you a trick with a nerve block. Useful.' }, lose: { text: '\u201CNot for you.\u201D' } },
+      { label: 'Leave', win: { text: 'Some doctors are better avoided.' } },
+    ] },
 ];
 
 // ---------- status effects (on you or the enemy) ----------
@@ -527,6 +653,14 @@ export const PERKS = [
   { id: 'quickdraw', name: 'Quickdraw',          rare: true,  desc: 'Killing an enemy cuts all skill cooldowns by 2.' },
   { id: 'capacitor', name: 'Ion Capacitor',      rare: true,  desc: 'Ion pulses stun 1 turn longer. Overload deals +30%.' },
   { id: 'reputation',name: 'Reputation',         rare: true,  desc: 'Human enemies start every fight Shaken for 2 turns.' },
+  { id: 'adrenal',   name: 'Adrenal Spike',      rare: false, desc: '+25% damage while you are below 35% HP.' },
+  { id: 'tithe',     name: 'Blood Tithe',        rare: false, desc: 'Every kill heals 6% of max HP.' },
+  { id: 'ironlung',  name: 'Iron Lung',          rare: false, desc: '+10% max HP.' },
+  { id: 'tripwire',  name: 'Tripwire Kit',       rare: false, desc: 'Enemies start every fight Bleeding for 2 turns.' },
+  { id: 'padding',   name: 'Kevlar Padding',     rare: false, desc: '+2 DEF.' },
+  { id: 'coupdegrace', name: 'Coup de Gr\u00e2ce', rare: true, desc: '+50% damage against enemies below 30% HP.' },
+  { id: 'ghost',     name: 'Ghost Protocol',     rare: true,  desc: '+10% chance to dodge every attack.' },
+  { id: 'warpaint',  name: 'War Paint',          rare: true,  desc: 'Every enemy starts every fight Shaken for 1 turn and Exposed for 1 turn.' },
 ];
 
 // ---------- contracts: optional jobs from the cell. Rewards are permanent Resolve and credits. ----------
@@ -645,9 +779,9 @@ export const ORBIT_SHAKEDOWN = { shipName: 'Limping Cutter', hull: 26, atk: 6, s
 export const ORBIT_INTENTS = { fire: { label: 'Firing', desc: 'A normal volley.' }, volley: { label: 'Full broadside', desc: 'x1.8 damage. Evade it.' }, lock: { label: 'Target lock', desc: 'Its next shot cannot miss and ignores half your deflector.' }, repair: { label: 'Damage control', desc: 'It repairs 15% of its hull. Hit it hard now.' } };
 // Ventures: the cell's money working while operatives die. Ticked after every raid.
 export const VENTURES = [
-  { id: 'stall', name: 'Noodle stall share', rate: 0.06, bust: 0.04, loss: 0.25, min: 50, desc: 'A quiet cut of the vendor\u2019s broth money. +6% per raid; a 4% chance per raid that a Directorate inspection costs a quarter of it.' },
-  { id: 'consignment', name: 'Marrow\u2019s consignment', rate: 0.14, bust: 0.12, loss: 0.5, min: 100, desc: 'Marrow moves your goods through the market. +14% per raid; a 12% chance per raid that a raid on the stall loses half.' },
-  { id: 'bond', name: 'Smuggler\u2019s bond', rate: 0.3, bust: 0.22, loss: 1, min: 150, desc: 'A share in a lift-corridor run. +30% per raid; a 22% chance per raid that the ship never comes back and the money with it.' },
+  { id: 'stall', name: 'Noodle stall share', rate: 0.06, bust: 0.04, loss: 0.25, min: 50, cap: 500, unlock: 0, desc: 'A quiet cut of the vendor\u2019s broth money. +6% per raid; a 4% chance per raid that a Directorate inspection costs a quarter of it. Holds up to 500.' },
+  { id: 'consignment', name: 'Marrow\u2019s consignment', rate: 0.12, bust: 0.1, loss: 0.4, min: 100, cap: 1500, unlock: 5, desc: 'Marrow moves your goods through the market. +12% per raid; a 10% chance per raid that a raid on the stall costs 40% of it. Holds up to 1,500.' },
+  { id: 'bond', name: 'Smuggler\u2019s bond', rate: 0.18, bust: 0.14, loss: 0.5, min: 150, cap: 3000, unlock: 10, desc: 'A share in a lift-corridor run. +18% per raid; a 14% chance per raid that a ship is seized and half the stake goes with it. Holds up to 3,000.' },
 ];
 // The Lantern: a tenement-basement bar that opens after curfew.
 export const BAR = {

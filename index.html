@@ -240,7 +240,7 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .door b { font-family: var(--display); font-size: 1.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
 .door .desc { color: var(--muted); font-size: .92rem; }
 .door-fight { --door: var(--fg); } .door-elite { --door: var(--danger); } .door-boss { --door: var(--danger); background: var(--danger-dim); }
-.door-event { --door: var(--ion); } .door-supply, .door-cargo { --door: var(--sodium); } .door-rest { --door: var(--ok); } .door-cells { --door: var(--ion); }
+.door-event { --door: var(--ion); } .door-bounty { --door: var(--danger); } .door-vault, .door-locker, .door-fence { --door: #b77be8; } .door-medbay { --door: var(--ok); } .door-bench { --door: var(--sodium); } .door-supply, .door-cargo { --door: var(--sodium); } .door-rest { --door: var(--ok); } .door-cells { --door: var(--ion); }
 
 /* ---------- overhaul: header tools, dialogs, tips ---------- */
 .status { display: grid; gap: 10px; }
@@ -370,6 +370,8 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .pop.quirk { color: #f0de78; font-family: var(--mono); font-size: clamp(.7rem, 2vw, .95rem); letter-spacing: .14em; margin-top: -1.2em; }
 .bulletin { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; align-items: baseline; padding: 10px 14px; border: 1px solid #e6d36a55; background: #e6d36a0d; }
 .bulletin .label { grid-column: 1 / -1; color: #e6d36a; }
+.bulletin.cond { border-color: #73b6d455; background: #73b6d40d; }
+.bulletin.cond .label { color: var(--ion); }
 .bulletin b { font-family: var(--display); font-size: 1.15rem; text-transform: uppercase; letter-spacing: .04em; }
 .bulletin span:last-child { font-size: .9rem; color: var(--fg); }
 @media (max-width: 520px) { .bulletin { grid-template-columns: minmax(0, 1fr); } }
@@ -539,6 +541,7 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .door.tier .chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .door.tier .odds { font-family: var(--mono); font-size: .72rem; }
 .row.i.venture > div { min-width: 0; }
+.row.i.venture.locked { opacity: .55; }
 @media (max-width: 700px) { .dt-wheel { grid-template-columns: minmax(0, 1fr); } .doors.tiers { grid-template-columns: minmax(0, 1fr); } .orbit-huds { grid-template-columns: minmax(0, 1fr); } }
 .feat-bar { height: 6px; background: var(--panel); border: 1px solid var(--line); position: relative; overflow: hidden; }
 .feat-bar i { position: absolute; inset: 0; width: 0; background: var(--sodium); transition: width .4s ease; }
@@ -1143,7 +1146,7 @@ function combatScreen() {
   </section>${logPanel()}</div>`;
 }
 
-const ROOM_LABEL = { fight: 'Fight', elite: 'Elite fight', event: 'Event', supply: 'Supplies', rest: 'Rest', cells: 'Prisoners', cargo: 'Cargo', boss: 'Boss' };
+const ROOM_LABEL = { fight: 'Fight', elite: 'Elite fight', event: 'Event', supply: 'Supplies', rest: 'Rest', cells: 'Prisoners', cargo: 'Cargo', boss: 'Boss', bounty: 'Bounty fight', vault: 'Strongroom', medbay: 'Medic', locker: 'Gear', bench: 'Upgrade', fence: 'Contraband' };
 function mechanicChip(r) {
   const m = E.mapById(r.map).mechanic;
   let v = '';
@@ -1163,6 +1166,12 @@ function roomPips(r) {
   return `<span class="pips rooms" aria-label="room ${r.room} of ${E.FIGHTS_PER_SECTOR}">${Array.from({ length: E.FIGHTS_PER_SECTOR }, (_, i) => `<i class="${i < r.room ? 'on' : ''}"></i>`).join('')}</span>`;
 }
 
+// v5: the floor condition for this sector, under the raid's bulletin.
+function condBox(r) {
+  const k = E.condOf(r);
+  if (!r.cond || r.cond === 'none') return '';
+  return `<div class="bulletin cond"><span class="label">This floor</span><b>${esc(k.name)}</b><span>${esc(k.desc)}</span></div>`;
+}
 function routeScreen() {
   const r = state.run, map = E.mapById(r.map), c = state.char, st = E.stats(state);
   const doors = r.choices.map((k, i) => `<button class="door door-${k}" data-a="room" data-v="${i}">${ico(`room:${k}`)}
@@ -1177,6 +1186,7 @@ function routeScreen() {
     ${r.forced ? '<p class="muted" style="font-size:.9rem">Every sector takes at least two fights. Both doors are hot.</p>' : ''}
     <div class="mech-row">${mechanicChip(r)}<span class="muted" style="font-size:.9rem">${esc(map.mechanic.desc)}</span></div>
     ${bulletinBox(r)}
+    ${condBox(r)}
     <div class="doors">${doors}</div>
     <dl class="kv"><dt>Condition</dt><dd class="${c.hp < st.maxHp * 0.4 ? 'danger-text' : ''}">${c.hp} / ${st.maxHp} HP \u00B7 ${c.items.stim} stims</dd>
       <dt>Skills</dt><dd>${cds.length ? esc(cds.join(', ')) : 'All ready'}</dd></dl>
@@ -1316,6 +1326,8 @@ function modalView() {
       <section><h3>Feats</h3><p>Everything the cell does is counted across every operative: enemies of each type put down, bosses, crits, shots, strikes, skills, dodges, stims, sectors, extractions, events, contraband, prisoners, credits, operatives lost, upgrades, lying low, orbit wins, spins and rounds. Each feat has four tiers (for enemy types: 1, 10, 50, 100). Every tier adds a small permanent edge, each a little smaller than the last, and the top tiers of the big ones pay Resolve. Progress shows after every fight; the full record is under <b>Feats</b>.</p></section>
       <section><h3>After curfew</h3><p>A second row of buttons in the yard. <b>The Lantern</b>: KEG-7 pours a round (+1 ATK, +4% crit next raid) and tells jokes; the regulars talk. <b>The Wheel</b>: roulette, one bet per spin, zero belongs to the house. <b>Orbit</b>: fly the cell\u2019s shuttle against the blockade. Wins pay credits and, on the harder runs, a permanent <b>Mark</b> (five exist). Lose the shuttle and the pilot dies. Refit the shuttle with credits; cell fittings cost Resolve and survive death. The odds shown are simulated for your current shuttle. <b>Ventures</b>: invest the cell\u2019s money; each venture ticks up or down once per raid and survives the operative.</p></section>
       <section><h3>Quirks and bulletins</h3><p>Regular enemies often have a <b>quirk</b>, like a Drunk trooper whose shots go wild or an Overclocked droid that cooks itself. Every raid also rolls a <b>Directorate bulletin</b>, such as Payday or Staff Party, that bends the rules until you leave.</p></section>
+      <section><h3>Floors and rare doors</h3><p>Past the first sector, most floors roll a <b>condition</b> (Blackout, Coolant Leak, Double Patrols, Supply Depot, Hunter Squad, Derelict Wing, Sealed Bulkheads) shown on the route screen. Rare doors turn up on every map: a <b>Marked Officer</b> bounty, a <b>Strongroom</b> to crack with INT, a <b>Field Medic Station</b>, a <b>Weapons Locker</b>, a <b>Machinist\u2019s Bench</b> that upgrades your gear for free, and a <b>Smuggler\u2019s Stash</b> of contraband.</p></section>
+      <section><h3>Downtime limits</h3><p>The shuttle flies <b>once per stay in town</b>: raid, come home, and it\u2019s ready again. Ventures hold capped balances (500 / 1,500 / 3,000); Marrow\u2019s consignment opens after sector 5, the smuggler\u2019s bond after sector 10. Deeper cells see better Black Market stock, often already upgraded.</p></section>
       <section><h3>Wanted and escaping</h3><p>Every raid an operative survives raises their <b>Wanted</b> level: enemies get 2.5% tougher per level, and pay 2.5% more. Lower it by lying low at the safehouse. Extracting right after a boss keeps the whole haul; slipping out between bosses costs 45% of it in bribes, and escaping mid-fight with <b>Run</b> or <b>Smoke</b> costs 65%. Past sector 5 the Directorate tightens its grip: bribes rise to 50% and 70%, enemies get tougher and every price goes up 12%; past sector 10 it is 55%, 75% and 15%.</p></section>
       <section><h3>Getting stronger</h3><p><b>This operative</b>: levels (attribute points), gear, implants and contraband. All lost on death. <b>The cell</b>: Resolve buys permanent training and upgrades. Earn it from sectors (repeat clears pay only every other time), bosses, brave choices and contracts.</p></section>
       <section><h3>The yard</h3><p>Walk with the arrows or WASD, or tap where to go. Walk into a door to go inside; talk to the person there (<b>E</b>, Space or a tap) to open their menu. The freight terminal opens straight away. Most things in the yard can be poked at, and the noodle vendor sells a hot meal worth +5% XP for the next raid.</p></section>
@@ -1481,12 +1493,12 @@ function orbitView() {
   const parts = Object.entries(D.SHIP_PARTS).map(([k, p]) => { const lvl = m.ship[k], cost = E.shipPartCost(state, k); return `<div class="row i">${ico('ship:' + k)}<div><div class="name">${esc(p.name)} <span class="num muted small">${lvl} / 3</span></div><div class="desc">${esc(p.desc)}</div><div class="pips">${[0, 1, 2].map((i) => `<i class="${i < lvl ? 'on' : ''}"></i>`).join('')}</div></div>${cost ? `<button class="btn" data-a="shippart" data-v="${k}" ${c.credits < cost ? 'disabled' : ''}>${cr(cost)}</button>` : '<span class="label">maxed</span>'}</div>`; }).join('');
   const cell = D.SHIP_CELL.map((u) => { const own = m.ship.cell.includes(u.id); return `<div class="row i ${own ? 'owned' : ''}">${ico('ship:' + u.id)}<div><div class="name">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div></div>${own ? '<span class="label">fitted</span>' : `<button class="btn ${m.resolve >= u.cost ? 'primary' : ''}" data-a="shipcell" data-v="${u.id}" ${m.resolve < u.cost ? 'disabled' : ''}>${u.cost} ${esc(S.meta)}</button>`}</div>`; }).join('');
   const tiers = D.ORBIT_TIERS.map((t) => {
-    const lock = E.orbitLock(m, t.id), shake = E.orbitShakedown(m, t.id), f = E.orbitFoe(m, t.id), od = lock ? null : orbitOdds(t.id);
+    const lock = c.orbitFlown ? 'Refuelling until your next raid.' : E.orbitLock(m, t.id), shake = E.orbitShakedown(m, t.id), f = E.orbitFoe(m, t.id), od = lock ? null : orbitOdds(t.id);
     const armed = orbitArm === t.id && !lock;
-    const odds = lock ? `<div class="odds bad">Locked. ${esc(lock)}</div>`
+    const odds = lock ? `<div class="odds bad">${c.orbitFlown ? '' : 'Locked. '}${esc(lock)}</div>`
       : shake ? `<div class="odds"><span class="good">${od.win}% win</span> \u00b7 <span>no risk: the tug tows you home</span></div>`
       : `<div class="odds"><span class="good">${od.win}% win</span> \u00b7 <span>${od.jump}% jump clear</span> \u00b7 <span class="bad">${od.dead}% ${esc(c.name)} dies</span></div>`;
-    const go = lock ? `<button class="btn" disabled>Locked</button>`
+    const go = lock ? `<button class="btn" disabled>${c.orbitFlown ? 'Refuelling' : 'Locked'}</button>`
       : shake ? `<button class="btn primary" data-a="orbitgo" data-v="${t.id}">Fly the shakedown</button>`
       : armed ? `<div class="orbit-confirm"><b>${esc(c.name)} dies if the shuttle is destroyed.</b> Credits, gear and level go with them.${m.ship.cell.includes('ejector') && !c.ejected ? ' The ejection pod gives a 50% chance to drift home.' : ''}<div class="btnrow"><button class="btn danger" data-a="orbitgo" data-v="${t.id}">Launch: risk ${esc(c.name)}\u2019s life</button><button class="btn" data-a="orbitarm" data-v="">Stay in the yard</button></div></div>`
       : `<button class="btn ${od.dead >= 50 ? '' : 'primary'}" data-a="orbitarm" data-v="${t.id}">Launch\u2026</button>`;
@@ -1495,6 +1507,7 @@ function orbitView() {
     <div class="chips"><span class="chip">hull ${f.hull} \u00b7 guns ${f.atk}</span><span class="chip">${f.credits[0]}\u2013${f.credits[1]} ${esc(S.cur)}</span><span class="chip ${t.mark ? 'good' : ''}">${t.mark ? `${Math.round(t.mark * 100)}% Mark` : 'no Mark'}</span></div>
     ${odds}${go}</div>`; }).join('');
   return `<p class="muted">The cell keeps a shuttle in a collapsed lift shaft. It flies badly, which is why the Directorate has not found it. Runs past the blockade pay in credits and, if you live, in <b>Marks</b>: permanent edges only orbit gives.</p>
+    ${c.orbitFlown ? '<div class="notice">The shuttle is refuelling. One run per stay in town: go on a raid, come home, and it\u2019s ready again.</div>' : ''}
     <div class="orbit-stakes big">Orbit is permadeath. If the shuttle is destroyed, ${esc(c.name)} dies: the run ends exactly like dying on a raid.${m.orbitWins ? '' : ' Your first flight is a shakedown with a tug on standby.'}</div>
     <div class="kv-strip"><div class="stat"><span class="label">Shuttle</span><span class="v">hull ${me.hull} \u00b7 guns ${me.atk} \u00b7 deflector ${me.shield} \u00b7 evade ${Math.round(me.evade * 100)}%</span></div><div class="stat"><span class="label">Marks</span><span class="v">${(c.marks || []).length} / 5</span></div></div>
     <h3>Runs <span class="muted small">odds are simulated for your current shuttle; refit to unlock and improve them</span></h3>
@@ -1505,8 +1518,14 @@ function orbitView() {
 }
 function venturesView() {
   const c = state.char, V = D.VENTURES, total = E.venturesTotal(state);
-  const rows = V.map((v) => { const amt = Math.round(state.meta.ventures[v.id] || 0); return `<div class="row i venture">${ico('venture:' + v.id)}<div><div class="name">${esc(v.name)} ${amt ? `<span class="num good">${amt.toLocaleString()} ${esc(S.cur)}</span>` : ''}</div><div class="desc">${esc(v.desc)}</div>
-    <div class="btnrow" style="margin-top:6px"><input class="text" type="number" id="inv-${v.id}" min="${v.min}" step="10" value="${v.min}" style="width:9ch" aria-label="Amount"><button class="btn" data-a="invest" data-v="${v.id}" ${c.credits < v.min ? 'disabled' : ''}>Invest</button>${amt ? `<button class="btn" data-a="withdraw" data-v="${v.id}">Withdraw all</button>` : ''}</div></div></div>`; }).join('');
+  const rows = V.map((v) => {
+    const amt = Math.round(state.meta.ventures[v.id] || 0), open = E.ventureOpen(state, v), room = E.ventureRoom(state, v), full = room <= 0;
+    const lo = Math.min(v.min, room), canInv = open && !full && c.credits >= lo;
+    const ctl = !open ? `<span class="label">Opens after clearing sector ${v.unlock} (deepest so far: ${state.meta.bestSector || 0})</span>`
+      : `${full ? '' : `<input class="text" type="number" id="inv-${v.id}" min="${lo}" max="${room}" step="10" value="${Math.max(lo, Math.min(room, v.min))}" style="max-width:14ch" aria-label="Amount"><button class="btn" data-a="invest" data-v="${v.id}" ${canInv ? '' : 'disabled'}>Invest</button>`}${amt ? `<button class="btn" data-a="withdraw" data-v="${v.id}">Withdraw all</button>` : ''}`;
+    return `<div class="row i venture ${open ? '' : 'locked'}">${ico('venture:' + v.id)}<div><div class="name">${esc(v.name)} ${amt ? `<span class="num good">${amt.toLocaleString()} ${esc(S.cur)}</span>` : ''} <span class="num muted small">/ ${v.cap.toLocaleString()}</span></div><div class="desc">${esc(v.desc)}</div>
+    ${open ? `<div class="feat-bar" style="margin-top:6px"><i style="width:${Math.min(100, amt / v.cap * 100)}%"></i></div>` : ''}${full ? '<div class="small" style="color:var(--sodium)">Full: it stops growing until you withdraw.</div>' : ''}
+    <div class="btnrow" style="margin-top:6px">${ctl}</div></div></div>`; }).join('');
   return `<p class="muted">Sable keeps the cell\u2019s money moving while operatives come and go. Ventures belong to the cell: they survive the operative who funded them. They tick once per raid, up or down. Safer than the Wheel. Less fun than the Wheel.</p>
     <div class="kv-strip"><div class="stat"><span class="label">Invested</span><span class="v">${total.toLocaleString()} ${esc(S.cur)}</span></div><div class="stat"><span class="label">On you</span><span class="v">${c.credits.toLocaleString()} ${esc(S.cur)}</span></div></div>
     ${rows}`;
@@ -1589,7 +1608,7 @@ function render() {
   if (state.screen === 'perk' && !state.run.perkOffer) E.offerRoute(state, rng);
   if (state.screen === 'loot' && !state.run.lootOffer) E.continueAfterVictory(state, rng);
   if (state.screen === 'victory' && state.run) { state.lastResult = { kind: 'fight', ...state.outcome }; E.continueAfterVictory(state, rng); }
-  if (state.screen === 'room' && state.run && state.roomResult) { state.lastResult = { kind: 'room', ...state.roomResult }; E.offerRoute(state, rng); }
+  if (state.screen === 'room' && state.run && state.roomResult) { state.lastResult = { kind: 'room', ...state.roomResult }; E.continueAfterVictory(state, rng); }
   if (state.screen === 'event' && !E.eventById(state.event)) state.screen = 'combat';
   if (state.coopFallen && state.coopFallen.idx === 0 && state.screen !== 'death') state.coopFallen = null;
   }
@@ -1811,9 +1830,9 @@ function applyAct(a, v, k) {
     case 'pickmap': state.gateMap = v; break;
     case 'deploy': if (E.isCoop(state) && !state.guestReady) { ok = false; break; } state.popup = null; state.lastResult = null; E.deploy(state, state.gateMap || 'garrison', +v, rng); break;
     case 'continue': E.continueAfterVictory(state, rng); break;
-    case 'room': state.lastResult = null; E.enterRoom(state, +v, rng); if (state.screen === 'room') { state.lastResult = { kind: 'room', ...state.roomResult }; E.offerRoute(state, rng); } break;
+    case 'room': state.lastResult = null; E.enterRoom(state, +v, rng); if (state.screen === 'room') { state.lastResult = { kind: 'room', ...state.roomResult }; E.continueAfterVictory(state, rng); } break;
     case 'dismissresult': state.lastResult = null; break;
-    case 'roomDone': E.offerRoute(state, rng); break;
+    case 'roomDone': E.continueAfterVictory(state, rng); break;
     case 'event': E.resolveEvent(state, +v, rng, actingAs); break;
     case 'eventDone': state.lastResult = null; E.nextEncounter(state, rng); break;
     case 'deeper': state.lastResult = null; E.pushDeeper(state, rng); break;
