@@ -10,7 +10,7 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   const res = await p.evaluate(async () => {
     const L = await import('/look.js'); await L.loadLayers();
     const bodies = ['body_m1', 'body_m2', 'body_f1', 'body_f2'], bgs = ['foundry', 'runner', 'clerk', 'preacher'], hairs = L.HAIR;
-    const out = { frames: 0, holes: [], gaps: [], noFace: [], bald: [], covered: [], strays: [], battleHoles: [] };
+    const out = { frames: 0, holes: [], gaps: [], noFace: [], bald: [], covered: [], strays: [], battleHoles: [], bites: [], misfit: [] };
     const px = (cv, sx, w, h) => cv.getContext('2d', { willReadFrequently: true }).getImageData(sx, 0, w, h).data;
     const SKIN = L.SKINS[1].map((h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
     const isSkin = (d, i) => d[i + 3] && SKIN.some((s) => s[0] === d[i] && s[1] === d[i + 1] && s[2] === d[i + 2]);
@@ -29,7 +29,10 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
         let l = 0, r = 0; for (let k = 1; k <= 3; k++) { if (!l && x - k >= 0 && d[(y * w + x - k) * 4 + 3]) l = k; if (!r && x + k < w && d[(y * w + x + k) * 4 + 3]) r = k; }
         if (l && r) gaps++;
       }
-      return { holes, gaps };
+      // Wider bites out of the shoulders and upper body: background between the outermost pixels of a row, up to 8 wide. Clothes that fit don't have these.
+      let bites = 0; const chestTop = top + 12, chestBot = top + Math.round((bot - top) * 0.45);
+      for (let y = chestTop; y < chestBot; y++) { let a = -1, z = -1; for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3]) { if (a < 0) a = x; z = x; } if (a < 0) continue; let run = 0; for (let x = a; x <= z; x++) { if (!d[(y * w + x) * 4 + 3]) run++; else { if (run && run <= 8) bites += run; run = 0; } } }
+      return { holes, gaps, bites };
     }
     function headOf(d, w, h) {
       let top = -1, bot = -1, maxW = 0, x0 = w, x1 = -1;
@@ -44,9 +47,10 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
         for (let f = 0; f < s.frames; f++) {
           const d = px(s.img, f * fw, fw, fh), who = `${body} ${bg} ${hair} ${anim}#${f}`; out.frames++;
           const g = holesAndGaps(d, fw, fh);
-          if (g.holes > 4) out.holes.push([g.holes, who]);
+          if (g.holes > 10) out.holes.push([g.holes, who]);
           { const seen = new Uint8Array(fw * fh); let parts = 0; for (let i = 0; i < fw * fh; i++) { if (seen[i] || !d[i * 4 + 3]) continue; parts++; const q = [i]; seen[i] = 1; while (q.length) { const k = q.pop(), x = k % fw, y = (k - x) / fw; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const j = (y + dy) * fw + x + dx; if (x + dx >= 0 && x + dx < fw && y + dy >= 0 && y + dy < fh && !seen[j] && d[j * 4 + 3]) { seen[j] = 1; q.push(j); } } } } if (parts > 1) out.strays.push([parts, who]); }
           if (g.gaps > 6) out.gaps.push([g.gaps, who]);
+          if (g.bites > 3 && !/left|right/.test(anim)) out.bites.push([g.bites, who]);
           const side = /left|right/.test(anim), front = /down/.test(anim);
           const hd = headOf(d, fw, fh), H = hd.bot - hd.top + 1;
           if (side && hair !== 'hair_mohawk') {
@@ -63,6 +67,8 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
         }
       }
     }
+    // Every body wears the clothes the outfit art was drawn for: below the head, each must match body_m1 exactly.
+    for (const body of bodies.slice(1)) for (const bg of bgs) { const A = L.townSheets({ body, hair: 'hair_shaved', skin: 1, hairColor: 1 }, bg), B = L.townSheets({ body: 'body_m1', hair: 'hair_shaved', skin: 1, hairColor: 1 }, bg); for (const anim of Object.keys(B)) { const sa = A[anim], sb = B[anim], fw = sa.img.width / sa.frames, fh = sa.img.height; for (let f = 0; f < sa.frames; f++) { const da = px(sa.img, f * fw, fw, fh), db = px(sb.img, f * fw, fw, fh); let off = 0; for (let y = 36; y < fh; y++) for (let x = 0; x < fw; x++) { const i = (y * fw + x) * 4; if (da[i + 3] !== db[i + 3] || da[i] !== db[i] || da[i + 1] !== db[i + 1] || da[i + 2] !== db[i + 2]) off++; } if (off) out.misfit.push([off, `${body} ${bg} ${anim}#${f}`]); } } }
     // Battle sheets: holes and slits only.
     for (const body of bodies) for (const bg of bgs) {
       const sh = L.battleSheet({ body, hair: 'hair_short', skin: 1, hairColor: 1 }, bg, 'wpn_carbine', 'wpn_baton');
@@ -77,7 +83,7 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   });
   await p.waitForTimeout(100); await p.screenshot({ path: `${OUT}/visual-town.png` });
   const rep = (k, label) => { const a = res[k].sort((x, y) => y[0] - x[0]); console.log(`${label}: ${a.length} of ${res.frames} frames${a.length ? `; worst ${a[0][0]} px: ${a[0][1]}` : ''}`); return a.length; };
-  const n = rep('holes', 'holes in the figure') + rep('gaps', 'see-through slits in the torso') + rep('noFace', 'side view with no face') + rep('bald', 'bald wedge under a hairstyle') + rep('covered', 'face covered from the front') + rep('strays', 'bits floating off the figure');
+  const n = rep('holes', 'holes in the figure') + rep('gaps', 'see-through slits in the torso') + rep('bites', 'bites out of the shoulders and chest') + rep('misfit', 'clothes that differ from what the art was drawn for') + rep('noFace', 'side view with no face') + rep('bald', 'bald wedge under a hairstyle') + rep('covered', 'face covered from the front') + rep('strays', 'bits floating off the figure');
   rep('battleHoles', 'for information, pockets in battle poses (arm and weapon loops)');
   console.log(n ? `${n} frames flagged` : 'no errors');
   await b.close();

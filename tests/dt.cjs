@@ -25,7 +25,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
     await page.click('.modal .tab[data-v="ventures"]'); await page.waitForTimeout(200);
     await page.fill('#inv-stall', '200'); await page.click('button[data-a="invest"][data-v="stall"]'); await page.waitForTimeout(200);
     await page.screenshot({ path: `${OUT}/dt-ventures-${W}.png`, fullPage: true });
-    s = await save(); console.log(W, 'ventures:', JSON.stringify(s.meta.ventures), 'credits', s.char.credits);
+    s = await save(); console.log(W, 'ventures:', JSON.stringify(s.char.ventures), 'credits', s.char.credits);
     // orbit: buy parts, launch low, fight with keys
     await page.click('.modal .tab[data-v="orbit"]'); await page.waitForTimeout(400);
     await page.screenshot({ path: `${OUT}/dt-orbit-${W}.png`, fullPage: true });

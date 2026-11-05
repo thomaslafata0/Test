@@ -273,10 +273,12 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .set-row input[type=range] { width: min(240px, 50%); accent-color: var(--sodium); }
 .btn.danger { border-color: var(--danger); color: var(--danger); }
 .payout-wrap { z-index: 35; }
-.modal.payout { width: min(480px, 100%); display: grid; gap: 12px; text-align: center; justify-items: center; }
-.payout-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+.modal.payout { width: min(560px, 100%); display: grid; gap: 12px; text-align: center; justify-items: center; }
+.payout-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; width: 100%; }
 .payout-row > div { display: grid; gap: 2px; padding: 10px; background: var(--panel-2); border: 1px solid var(--line); }
 .payout-row b { font-size: 1.7rem; color: var(--sodium); }
+.payout-line { display: flex; justify-content: space-between; gap: 8px; font-size: .9rem; text-align: left; }
+.payout-total { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--line); text-align: left; font-size: .95rem; }
 .payout-level { display: grid; gap: 4px; width: 100%; }
 .payout-bar { height: 10px; }
 .payout-up b { color: var(--ok); font-size: 1.2rem; }
@@ -1221,15 +1223,23 @@ function townScreen() {
 // Beat a boss or get out: what's now yours, counting up, then the attribute points to spend.
 const PAYOUT_TITLE = { boss: 'Boss down: everything secured', extracted: 'You made it out', escaped: 'You got away' };
 let playedPayout = 0;
+const PAYOUT_CUT = { extracted: 'Early extraction bribe', escaped: 'Dropped while escaping' };
+// Earned, what the way out cost, and what you actually come away with.
+function payoutColumn(title, kept, lost, unit, p, fresh) {
+  const earned = kept + lost, line = (label, value, cls = '') => `<div class="payout-line ${cls}"><span>${label}</span><span class="num">${value}</span></div>`;
+  return `<div><span class="label">${esc(title)}</span>
+    ${lost ? line('Earned', `+${earned.toLocaleString()}`) + line(esc(PAYOUT_CUT[p.kind] || 'Lost'), `\u2212${lost.toLocaleString()}`, 'danger-text') : ''}
+    <div class="payout-total"><span>${lost ? 'You keep' : 'Earned'}</span><b class="num" data-count="${kept}">+${fresh ? 0 : kept.toLocaleString()}</b></div></div>`;
+}
 function payoutView() {
   const p = state.char && state.char.payout;
   if (!p || modal || (titleOpen && !isGuest())) return '';
   const c = state.char, up = p.toLevel > p.fromLevel, fresh = p.id !== playedPayout;
   const spend = c.attrPoints ? `<div class="aa-spend" style="justify-content:center"><span class="label">${c.attrPoints} attribute point${c.attrPoints > 1 ? 's' : ''} to spend</span>${Object.entries(D.ATTRS).map(([k, a]) => `<button class="btn" data-a="spend" data-v="${k}" title="${esc(a.desc)}" ${c.attrs[k] >= D.ATTR_MAX ? 'disabled' : ''}>${a.short} ${c.attrs[k]}\u2192${c.attrs[k] + 1}</button>`).join('')}</div>` : '';
   return `<div class="popup-wrap payout-wrap"><div class="modal popup payout" role="dialog" aria-modal="true" aria-label="Payout">
-    <span class="label">${p.rate ? `Lost ${Math.round(p.rate * 100)}% on the way out` : 'Nothing lost'}</span><h2>${esc(PAYOUT_TITLE[p.kind] || 'Payout')}</h2>
-    <div class="payout-row"><div><span class="label">${esc(S.currency)}</span><b class="num" data-count="${p.credits}">${fresh ? 0 : p.credits.toLocaleString()}</b>${p.lostCredits ? `<span class="danger-text small">\u2212${p.lostCredits.toLocaleString()} ${esc(S.cur)}</span>` : ''}</div>
-      <div><span class="label">XP</span><b class="num" data-count="${p.xp}">${fresh ? 0 : p.xp.toLocaleString()}</b>${p.lostXp ? `<span class="danger-text small">\u2212${p.lostXp.toLocaleString()} XP</span>` : ''}</div></div>
+    <span class="label">${p.rate ? `You keep ${100 - Math.round(p.rate * 100)}% of what you picked up` : 'You keep all of it'}</span><h2>${esc(PAYOUT_TITLE[p.kind] || 'Payout')}</h2>
+    <div class="payout-row">${payoutColumn(S.currency, p.credits, p.lostCredits, S.cur, p, fresh)}${payoutColumn('XP', p.xp, p.lostXp, 'XP', p, fresh)}</div>
+    ${p.rate ? '<p class="muted" style="font-size:.85rem;margin:0">Credits you walked in with were never at risk. Beat the boss and you keep everything.</p>' : ''}
     <div class="payout-level"><span class="label">Level ${up && !fresh ? p.toLevel : p.fromLevel}</span><div class="feat-bar payout-bar"><i style="width:${Math.round((fresh ? p.fromPct : p.toPct) * 100)}%"></i></div></div>
     <div class="payout-up" ${up && !fresh ? '' : 'hidden'}><b>Level ${p.toLevel}!</b> <span class="muted">+${p.points} attribute point${p.points > 1 ? 's' : ''}</span></div>
     ${spend}
@@ -1248,7 +1258,7 @@ function animatePayout() {
   const tick = (now) => {
     if (!root.isConnected) return;
     const k = Math.min(1, (now - t0) / dur);
-    for (const n of nums) n.textContent = Math.round(+n.dataset.count * k).toLocaleString();
+    for (const n of nums) n.textContent = `+${Math.round(+n.dataset.count * k).toLocaleString()}`;
     if (k < 1) { requestAnimationFrame(tick); return; }
     const bar = root.querySelector('.payout-bar i'), lab = root.querySelector('.payout-level .label'), upEl = root.querySelector('.payout-up');
     let level = p.fromLevel;
@@ -1846,7 +1856,7 @@ function modalView() {
       <section><h3>Status effects</h3><ul>${Object.values(D.STATUSES).map((x) => `<li><b>${esc(x.name)}</b>: ${esc(x.desc)}</li>`).join('')}</ul></section>
       <section><h3>Elites and bosses</h3><p>Elites (veterans) carry a modifier, such as Regenerating or Volatile. Bosses enrage at half health. Bosses always carry <b>contraband</b> and elites sometimes do: pick one of three perks that last until your operative dies. Contraband comes in tiers I to IV, and better tiers turn up the deeper you go. A better copy of something you carry upgrades it without using a pocket. You have four pockets, so a fifth different piece means dropping one.</p></section>
       <section><h3>Achievements</h3><p>Everything the cell does is counted across every operative: enemies of each type put down, bosses, crits, shots, strikes, skills, dodges, stims, sectors, extractions, events, contraband, prisoners, credits, operatives lost, upgrades, orbit wins, spins and rounds. Each achievement has six tiers. Every tier adds a permanent edge, each a little smaller than the last, and the top tiers of the big ones pay Resolve. Progress shows after every fight; the full record is under <b>Achievements</b>.</p></section>
-      <section><h3>After curfew</h3><p>A second row of buttons in the yard. <b>The Lantern</b>: KEG-7 pours a round (+1 ATK, +4% crit next raid) and tells jokes; the regulars talk. <b>The Wheel</b>: roulette, one bet per spin, zero belongs to the house. <b>Orbit</b>: fly the cell\u2019s shuttle against the blockade. Wins pay credits and, on the harder runs, a permanent <b>Mark</b> (five exist). Lose the shuttle and the pilot dies. Refit the shuttle with credits; cell fittings cost Resolve and survive death. The odds shown are simulated for your current shuttle. <b>Ventures</b>: invest the cell\u2019s money; each venture ticks up or down once per raid and survives the operative.</p></section>
+      <section><h3>After curfew</h3><p>A second row of buttons in the yard. <b>The Lantern</b>: KEG-7 pours a round (+1 ATK, +4% crit next raid) and tells jokes; the regulars talk. <b>The Wheel</b>: roulette, one bet per spin, zero belongs to the house. <b>Orbit</b>: fly the cell\u2019s shuttle against the blockade. Wins pay credits and, on the harder runs, a permanent <b>Mark</b> (five exist). Lose the shuttle and the pilot dies. Refit the shuttle with credits; cell fittings cost Resolve and survive death. The odds shown are simulated for your current shuttle. <b>Ventures</b>: invest your operative\u2019s money; each venture ticks up or down once per raid and is lost if they die.</p></section>
       <section><h3>Quirks and bulletins</h3><p>Regular enemies often have a <b>quirk</b>, like a Drunk trooper whose shots go wild or an Overclocked droid that cooks itself. Every raid also rolls a <b>Directorate bulletin</b>, such as Payday or Staff Party, that bends the rules until you leave.</p></section>
       <section><h3>Floors and rare doors</h3><p>Past the first sector, most floors roll a <b>condition</b> (Blackout, Coolant Leak, Double Patrols, Supply Depot, Hunter Squad, Derelict Wing, Sealed Bulkheads) shown on the route screen. Rare doors turn up on every map: a <b>Marked Officer</b> bounty, a <b>Strongroom</b> to crack with INT, a <b>Field Medic Station</b>, a <b>Weapons Locker</b>, a <b>Machinist\u2019s Bench</b> that upgrades your gear for free, and a <b>Smuggler\u2019s Stash</b> of contraband.</p></section>
       <section><h3>Downtime limits</h3><p>The shuttle flies <b>once per stay in town</b>: raid, come home, and it\u2019s ready again. Ventures hold capped balances (500 / 1,500 / 3,000); Marrow\u2019s consignment opens after sector 5, the smuggler\u2019s bond after sector 10. Deeper cells see better Black Market stock, often already upgraded.</p></section>
@@ -2049,14 +2059,14 @@ function orbitView() {
 function venturesView() {
   const c = state.char, V = D.VENTURES, total = E.venturesTotal(state);
   const rows = V.map((v) => {
-    const amt = Math.round(state.meta.ventures[v.id] || 0), open = E.ventureOpen(state, v), room = E.ventureRoom(state, v), full = room <= 0;
+    const amt = Math.round(E.vent(state)[v.id] || 0), open = E.ventureOpen(state, v), room = E.ventureRoom(state, v), full = room <= 0;
     const lo = Math.min(v.min, room), canInv = open && !full && c.credits >= lo;
     const ctl = !open ? `<span class="label">Opens after clearing sector ${v.unlock} (deepest so far: ${state.meta.bestSector || 0})</span>`
       : `${full ? '' : `<input class="text" type="number" id="inv-${v.id}" min="${lo}" max="${room}" step="10" value="${Math.max(lo, Math.min(room, v.min))}" style="max-width:14ch" aria-label="Amount"><button class="btn" data-a="invest" data-v="${v.id}" ${canInv ? '' : 'disabled'}>Invest</button>`}${amt ? `<button class="btn" data-a="withdraw" data-v="${v.id}">Withdraw all</button>` : ''}`;
     return `<div class="row i venture ${open ? '' : 'locked'}">${ico('venture:' + v.id)}<div><div class="name">${esc(v.name)} ${amt ? `<span class="num good">${amt.toLocaleString()} ${esc(S.cur)}</span>` : ''} <span class="num muted small">/ ${v.cap.toLocaleString()}</span></div><div class="desc">${esc(v.desc)}</div>
     ${open ? `<div class="feat-bar" style="margin-top:6px"><i style="width:${Math.min(100, amt / v.cap * 100)}%"></i></div>` : ''}${full ? '<div class="small" style="color:var(--sodium)">Full: it stops growing until you withdraw.</div>' : ''}
     <div class="btnrow" style="margin-top:6px">${ctl}</div></div></div>`; }).join('');
-  return `<p class="muted">Sable keeps the cell\u2019s money moving while operatives come and go. Ventures belong to the cell: they survive the operative who funded them. They tick once per raid, up or down. Safer than the Wheel. Less fun than the Wheel.</p>
+  return `<p class="muted">Sable keeps your money moving between raids. Ventures belong to this operative: if they die, the money dies with them, so withdraw before you take a risk you can\u2019t afford. They tick once per raid, up or down. Safer than the Wheel. Less fun than the Wheel.</p>
     <div class="kv-strip"><div class="stat"><span class="label">Invested</span><span class="v">${total.toLocaleString()} ${esc(S.cur)}</span></div><div class="stat"><span class="label">On you</span><span class="v">${c.credits.toLocaleString()} ${esc(S.cur)}</span></div></div>
     ${rows}`;
 }

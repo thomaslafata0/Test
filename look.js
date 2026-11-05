@@ -1,6 +1,5 @@
 // Character looks: body, class outfit, hair, colours and held weapon, composited from the layered pack in chars2/
-// (manifest.json; see docs/CHARACTER_ART_PROMPT_CHATGPT.md). Every overlay was drawn on body_m1, so overlays are
-// shifted per frame to fit the other bodies (head top and centre for hair, centre for outfits and weapons).
+// (manifest.json; see docs/CHARACTER_ART_PROMPT_CHATGPT.md). Every overlay was drawn on body_m1: see compose().
 // Without the pack, everything returns null and the game falls back to the single player sheet.
 
 export const BODIES = [
@@ -77,24 +76,6 @@ function swapByLight(px, to) {
 }
 
 // ---------- fitting overlays to bodies ----------
-// Per body, scene, anim and frame: where the figure's head top and centre are, so overlays drawn on body_m1 can be shifted.
-const boxCache = {};
-function frameBoxes(bodyId, scene, anim) {
-  const key = `${bodyId}:${scene}:${anim}`;
-  if (boxCache[key]) return boxCache[key];
-  const L = layers[bodyId] && layers[bodyId][scene][anim];
-  if (!L) return (boxCache[key] = null);
-  const fw = L.img.width / L.frames, fh = L.img.height, c = document.createElement('canvas'); c.width = L.img.width; c.height = fh;
-  const g = c.getContext('2d'); g.drawImage(L.img, 0, 0);
-  const d = g.getImageData(0, 0, c.width, fh).data, out = [];
-  for (let f = 0; f < L.frames; f++) {
-    let top = fh, x0 = fw, x1 = -1, hx0 = fw, hx1 = -1;
-    for (let y = 0; y < fh; y++) for (let x = 0; x < fw; x++) if (d[((y * c.width) + f * fw + x) * 4 + 3]) { if (y < top) top = y; x0 = Math.min(x0, x); x1 = Math.max(x1, x); }
-    for (let y = top; y < Math.min(fh, top + 8); y++) for (let x = 0; x < fw; x++) if (d[((y * c.width) + f * fw + x) * 4 + 3]) { hx0 = Math.min(hx0, x); hx1 = Math.max(hx1, x); }
-    out.push({ top, cx: (x0 + x1) / 2, hcx: (hx0 + hx1) / 2 });
-  }
-  return (boxCache[key] = out);
-}
 // The bald head in one frame of a body layer: its extent, and the front of the face at eye height.
 const headCache = {};
 function headGeom(bodyId, scene, anim, f) {
@@ -121,26 +102,8 @@ function headGeom(bodyId, scene, anim, f) {
   const bot = rows[rows.length - 1].y, h = bot - top + 1, mid = rows[Math.min(rows.length - 1, Math.round(h * 0.45))];
   return (headCache[key] = { top, bot, h, x0: Math.min(...rows.map((r) => r.a)), x1: Math.max(...rows.map((r) => r.z)), left: mid.a, right: mid.z, rows });
 }
-function offsetFor(bodyId, scene, anim, f, kind) {
-  if (bodyId === 'body_m1' || kind === 'fitted') return { dx: 0, dy: 0 };
-  const a = frameBoxes(bodyId, scene, anim), b = frameBoxes('body_m1', scene, anim);
-  if (!a || !b || !a[f] || !b[f]) return { dx: 0, dy: 0 };
-  if (kind === 'hair') {
-    // From the side, line the hair up on the forehead, not the head's centre: heads differ in depth, and centring slides hair off the back.
-    const side = anim.endsWith('_left') ? 'left' : anim.endsWith('_right') ? 'right' : null, ha = side && headGeom(bodyId, scene, anim, f), hb = side && headGeom('body_m1', scene, anim, f);
-    if (ha && hb) return { dx: ha[side] - hb[side], dy: a[f].top - b[f].top };
-    return { dx: Math.round(a[f].hcx - b[f].hcx), dy: a[f].top - b[f].top };
-  }
-  return { dx: Math.round(a[f].cx - b[f].cx), dy: 0 };
-}
-
 // ---------- repairs ----------
-// The pack's overlays were all drawn on body_m1. On other bodies that leaves heads without a face from the side, scalp showing
-// where the hair stops, hair across the eyes, and background showing through sleeves cut for a thicker arm. These put it right
-// when the figure is composited. tests/visual-check.cjs measures all of it across every combination.
-// Three of the four bodies' side views have a blank or muddled head that sits badly under every overlay. At this size a body from
-// the side reads much the same either way, so all of them walk in the lean body's side strips, which have a real profile.
-const SIDE_BODY = { body_m1: 'body_m2', body_f1: 'body_m2', body_f2: 'body_m2' };
+// What compose() can't get from the pack directly. tests/visual-check.cjs measures the result across every combination.
 const NO_CAP = new Set(['hair_shaved', 'hair_mohawk']);
 // Scalp the hair art doesn't reach: top of the head, and the back of it from the side.
 function capScalp(g, ox, fw, fh, head, side, skin, hair) {
@@ -222,21 +185,24 @@ function dropStrays(g, ox, fw, fh) {
 
 // ---------- composition ----------
 const sheetCache = {};
-function compose(scene, anim, lookIn, background, weapon) {
-  const sideOn = scene === 'town' && (anim.endsWith('_left') || anim.endsWith('_right'));
-  const look = sideOn && SIDE_BODY[lookIn.body] ? { ...lookIn, body: SIDE_BODY[lookIn.body] } : lookIn;
-  const body = layers[look.body] && layers[look.body][scene][anim];
+function compose(scene, anim, look, background, weapon) {
+  // The outfit files aren't whole clothes: each holds only what differs from body_m1, and leans on that body's pixels for the rest
+  // (shoulders, sleeves, outlines). On any other body those parts go missing. So every figure is body_m1 under the outfit, with
+  // the chosen body's head on top. From the side, every head is body_m2's, the only clean profile in the pack. Real per-body
+  // outfits would need new art.
+  const base = 'body_m1', side = anim.endsWith('_left') ? 'left' : anim.endsWith('_right') ? 'right' : null, facingUs = anim.endsWith('_down');
+  const headBody = scene !== 'town' ? base : side ? 'body_m2' : look.body;
+  const body = layers[base] && layers[base][scene][anim];
   if (!body) return null;
   const fw = body.img.width / body.frames, fh = body.img.height;
   const c = document.createElement('canvas'); c.width = body.img.width; c.height = fh;
   const g = c.getContext('2d', { willReadFrequently: true });
-  const side = anim.endsWith('_left') ? 'left' : anim.endsWith('_right') ? 'right' : null, facingUs = anim.endsWith('_down');
-  const paint = (id, kind, ramp, f) => {
+  const skin = SKINS[look.skin] || SKINS[1], hair = HAIRS[look.hairColor] || HAIRS[1], outfit = OUTFITS[background];
+  const layerFrame = (id, kind, ramp, f) => {
     const L = layers[id] && layers[id][scene][anim];
-    if (!L) return;
-    const { dx, dy } = offsetFor(look.body, scene, anim, f, kind);
-    const tmp = document.createElement('canvas'); tmp.width = fw; tmp.height = fh;
-    const tg = tmp.getContext('2d'); tg.drawImage(L.img, f * fw, 0, fw, fh, 0, 0, fw, fh);
+    if (!L) return null;
+    const lw = L.img.width / L.frames, tmp = document.createElement('canvas'); tmp.width = fw; tmp.height = fh;
+    const tg = tmp.getContext('2d', { willReadFrequently: true }); tg.drawImage(L.img, (f % L.frames) * lw, 0, lw, fh, 0, 0, fw, fh);
     if (ramp) {
       const d = tg.getImageData(0, 0, fw, fh);
       // Hair art uses exactly the pack's three hair shades: swap them exactly, so the colour can't drift frame to frame.
@@ -244,22 +210,38 @@ function compose(scene, anim, lookIn, background, weapon) {
       else swapExact(d.data, manifest.skinRamp, ramp);
       tg.putImageData(d, 0, 0);
     }
-    // Hair drawn for a bigger head mustn't fall across a smaller head's face.
-    if (kind === 'hair' && facingUs && look.body !== 'body_m1') {
-      const h = headGeom(look.body, scene, anim, f);
-      if (h) tg.clearRect(h.x0 + 1 - dx, h.top + Math.round(h.h * 0.36) - dy, h.x1 - h.x0 - 1, h.bot - h.top - Math.round(h.h * 0.36) + 1);
-    }
-    g.drawImage(tmp, f * fw + dx, dy);
+    return { tmp, tg };
   };
-  const skin = SKINS[look.skin] || SKINS[1], hair = HAIRS[look.hairColor] || HAIRS[1], outfit = OUTFITS[background];
+  const paint = (id, kind, ramp, f, dx = 0, dy = 0, before = null) => {
+    const L = layerFrame(id, kind, ramp, f);
+    if (!L) return;
+    if (before) before(L.tg);
+    g.drawImage(L.tmp, f * fw + dx, dy);
+  };
+  const mid = (r) => (r.a + r.z) / 2;
   for (let f = 0; f < body.frames; f++) {
-    paint(look.body, 'body', skin, f);
-    const head = scene === 'town' && side ? headGeom(look.body, scene, anim, f) : null;
-    if (outfit) paint(outfit, 'outfit', skin, f);       // outfits show hands: same skin swap
-    if (scene === 'town' && look.hair) paint(look.hair, 'hair', hair, f);
-    if (head && look.body !== 'body_m1' && look.hair && !NO_CAP.has(look.hair)) capScalp(g, f * fw, fw, fh, head, side, skin, hair);
-    // Battle hair is pre-fitted to each body's head, frame by frame (falls included), so it is painted without an offset.
-    if (scene === 'battle' && look.hair && layers[`${look.hair}@${look.body}`]) paint(`${look.hair}@${look.body}`, 'fitted', hair, f);
+    paint(base, 'body', skin, f);
+    const hm = scene === 'town' ? headGeom(base, scene, anim, f) : null, own = hm && headBody !== base ? headGeom(headBody, scene, anim, f % layers[headBody][scene][anim].frames) : null;
+    let head = null; // where the head ended up
+    if (own) {
+      // Swap the head, neck to neck.
+      const nm = hm.rows[hm.rows.length - 1], no = own.rows[own.rows.length - 1], px = Math.round(mid(nm) - mid(no)), py = hm.bot - own.bot;
+      for (const r of hm.rows) g.clearRect(f * fw + r.a, r.y, r.z - r.a + 1, 1);
+      const L = layerFrame(headBody, 'body', skin, f);
+      if (L) for (const r of own.rows) g.drawImage(L.tmp, r.a, r.y, r.z - r.a + 1, 1, f * fw + r.a + px, r.y + py, r.z - r.a + 1, 1);
+      head = { ...own, top: own.top + py, bot: own.bot + py, x0: own.x0 + px, x1: own.x1 + px, left: own.left + px, right: own.right + px, rows: own.rows.map((r) => ({ y: r.y + py, a: r.a + px, z: r.z + px })) };
+    }
+    // Outfits show hands: same skin swap. Above the collar an outfit is drawn around body_m1's head, so a swapped head loses that part.
+    if (outfit) paint(outfit, 'outfit', skin, f, 0, 0, own ? (tg) => tg.clearRect(0, 0, fw, Math.max(0, hm.bot - 2)) : null);
+    if (scene === 'town' && look.hair) {
+      // Hair was drawn for body_m1's head: move it to this one, by the forehead from the side, by the centre otherwise.
+      const dx = !head ? 0 : side ? head[side] - hm[side] : Math.round((head.x0 + head.x1) / 2 - (hm.x0 + hm.x1) / 2), dy = !head ? 0 : head.top - hm.top;
+      const clip = head && facingUs ? (tg) => tg.clearRect(head.x0 + 1 - dx, head.top + Math.round(head.h * 0.36) - dy, head.x1 - head.x0 - 1, head.bot - head.top - Math.round(head.h * 0.36) + 1) : null; // not across a smaller face
+      paint(look.hair, 'hair', hair, f, dx, dy, clip);
+      if (head && side && !NO_CAP.has(look.hair)) capScalp(g, f * fw, fw, fh, head, side, skin, hair);
+    }
+    // Battle hair is pre-fitted to the body's head, frame by frame (falls included).
+    if (scene === 'battle' && look.hair && layers[`${look.hair}@${base}`]) paint(`${look.hair}@${base}`, 'fitted', hair, f);
     if (scene === 'battle' && weapon) paint(weapon, 'weapon', skin, f);
     if (anim !== 'death') closeGaps(g, f * fw, fw, fh);
     if (scene === 'town') dropStrays(g, f * fw, fw, fh);

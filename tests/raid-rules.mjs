@@ -65,6 +65,15 @@ for (const [sector, want] of [[1, 0.8], [2, 0.65], [3, 0.5], [4, 0.4], [5, 0], [
   for (let i = 0; i < 60 && s.run && s.run.allies && s.screen === 'combat'; i++) { const before = s.run.allyHits || 0; e.hp = e.maxHp = 100000; e.intent = 'attack'; e.stun = 0; s.char.hp = 500; E.playerAct(s, 'defend', rng, 0); if ((s.run.allyHits || 0) > before) hits++; }
   ok('an ally takes more than one hit', hits >= E.TUNE.allyGrit - 1, `hits ${hits}`);
 }
+{ // Ventures die with the operative
+  const { s, rng } = game(29); s.char.credits = 500;
+  ok('can invest', E.invest(s, D.VENTURES[0].id, 100) && E.venturesTotal(s) === 100);
+  E.deploy(s, 'garrison', 1, rng); E.endRun(s, 'extracted', rng);
+  ok('ventures tick and stay with the operative', E.venturesTotal(s) > 0, `${E.venturesTotal(s)}`);
+  const r2 = E.seededRng(3); E.recruit(s, r2); E.createChar(s, r2);
+  ok('a new operative starts with none', E.venturesTotal(s) === 0);
+  ok('old cell-wide ventures move to the current operative', (() => { const g = game(31); g.s.meta.ventures = { stall: 200 }; const m = E.migrate(JSON.parse(JSON.stringify(g.s)), g.rng); return m.char.ventures.stall === 200 && !m.meta.ventures; })());
+}
 { // Wanted is gone
   const { s, rng } = game(23); E.deploy(s, 'garrison', 1, rng); E.endRun(s, 'extracted', rng);
   ok('no Wanted level', !s.char.wanted && E.lieLow === undefined);

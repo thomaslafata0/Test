@@ -78,7 +78,7 @@ export const perkText = (id, lv) => { const p = perkById(id); return p.desc.repl
 // ---------- state ----------
 export function newMeta() {
   return { resolve: 0, totalResolve: 0, training: { hp: 0, atk: 0, def: 0, spd: 0 }, cell: [], operatives: 0, bestSector: 0, bestByMap: {},
-    fallen: [], contracts: [], liberated: {}, threat: 0, heirloom: null, tips: {}, endingSeen: false, stats: { kills: 0, bosses: 0, raids: 0 }, board: [], boardSeeded: false, ship: { hull: 0, guns: 0, shields: 0, engines: 0, cell: [] }, ventures: {}, orbitWins: 0, orbitTierWins: {}, feats: { counters: {}, tiers: {}, v: 0 } };
+    fallen: [], contracts: [], liberated: {}, threat: 0, heirloom: null, tips: {}, endingSeen: false, stats: { kills: 0, bosses: 0, raids: 0 }, board: [], boardSeeded: false, ship: { hull: 0, guns: 0, shields: 0, engines: 0, cell: [] }, orbitWins: 0, orbitTierWins: {}, feats: { counters: {}, tiers: {}, v: 0 } };
 }
 
 export function newGame(rng) {
@@ -104,7 +104,8 @@ export function migrate(s, rng) {
   if (s && s.v === VERSION) {
     if (s.meta && !s.meta.board) s.meta.board = [];
     if (s.meta && !s.meta.ship) s.meta.ship = { hull: 0, guns: 0, shields: 0, engines: 0, cell: [] };
-    if (s.meta && !s.meta.ventures) s.meta.ventures = {};
+    // Ventures used to belong to the cell. They're the operative's now, and die with them.
+    if (s.meta && s.meta.ventures) { if (s.char && !s.char.ventures) s.char.ventures = s.meta.ventures; delete s.meta.ventures; }
     if (s.meta && !s.meta.feats) s.meta.feats = { counters: {}, tiers: {}, v: 0 };
     // The Lockup used to belong to the cell. It belongs to the operative now: anything on the old shelf goes to the current one.
     if (s.meta && s.meta.lockup) { if (s.char) s.char.lockup = [...(s.char.lockup || []), ...s.meta.lockup]; delete s.meta.lockup; }
@@ -2267,24 +2268,26 @@ export function spinWheel(s, bet, stake, pick, rng) {
   return { n, red: ROULETTE_RED.has(n), win, delta, bet, stake, pick };
 }
 
-// Ventures: cell money, ticked once per raid.
+// Ventures: this operative's money at work, ticked once per raid. Lost with them, like their gear.
 // Ventures open as the cell proves itself (deepest sector cleared anywhere) and each holds a capped balance.
+const NO_VENTURES = {};
+export const vent = (s) => (s.char ? s.char.ventures || (s.char.ventures = {}) : NO_VENTURES);
 export const ventureOpen = (s, v) => (s.meta.bestSector || 0) >= (v.unlock || 0);
-export const ventureRoom = (s, v) => Math.max(0, (v.cap || Infinity) - Math.round(s.meta.ventures[v.id] || 0));
+export const ventureRoom = (s, v) => Math.max(0, (v.cap || Infinity) - Math.round(vent(s)[v.id] || 0));
 export function invest(s, id, amount) {
   const v = D.VENTURES.find((x) => x.id === id), c = s.char;
   if (!v || !inTown(s) || !ventureOpen(s, v)) return false;
   amount = Math.min(amount, ventureRoom(s, v));
   if (amount < Math.min(v.min, ventureRoom(s, v)) || amount <= 0 || c.credits < amount) return false;
   c.credits -= amount; ledger(s, 'spend:ventures', amount);
-  s.meta.ventures[id] = Math.round((s.meta.ventures[id] || 0) + amount);
+  vent(s)[id] = Math.round((vent(s)[id] || 0) + amount);
   journal(s, `${c.name} puts ${amount} ${D.SETTING.cur} into ${v.name}.`);
   return true;
 }
 export function withdraw(s, id) {
-  const amt = Math.round(s.meta.ventures[id] || 0);
+  const amt = Math.round(vent(s)[id] || 0);
   if (!inTown(s) || amt <= 0) return false;
-  s.meta.ventures[id] = 0; s.char.credits += amt; ledger(s, 'ventures', amt);
+  vent(s)[id] = 0; s.char.credits += amt; ledger(s, 'ventures', amt);
   journal(s, `${s.char.name} pulls ${amt} ${D.SETTING.cur} out of ${D.VENTURES.find((x) => x.id === id).name}.`);
   return true;
 }
@@ -2292,24 +2295,24 @@ export function withdraw(s, id) {
 export function tickVentures(s, rng) {
   const notes = [];
   for (const v of D.VENTURES) {
-    const amt = s.meta.ventures[v.id] || 0;
+    const amt = vent(s)[v.id] || 0;
     if (amt <= 0) continue;
     if (rng() < v.bust) {
       const lost = Math.round(amt * v.loss);
-      s.meta.ventures[v.id] = amt - lost;
+      vent(s)[v.id] = amt - lost;
       notes.push(v.loss >= 1 ? `${v.name}: the run never came back. ${lost} ${D.SETTING.cur} gone.` : `${v.name} took a hit: \u2212${lost} ${D.SETTING.cur}.`);
       journal(s, `${v.name} loses ${lost} ${D.SETTING.cur}.`, 'bad');
     } else {
       // Growth stops at the cap: a full venture earns nothing until some of it is withdrawn.
       const gain = Math.max(0, Math.min(Math.round(amt * v.rate), (v.cap || Infinity) - amt));
       if (!gain) continue;
-      s.meta.ventures[v.id] = amt + gain;
+      vent(s)[v.id] = amt + gain;
       journal(s, `${v.name} grows by ${gain} ${D.SETTING.cur}.`, 'good');
     }
   }
   return notes.join(' ');
 }
-export const venturesTotal = (s) => Object.values(s.meta.ventures || {}).reduce((t, v) => t + (v || 0), 0);
+export const venturesTotal = (s) => Object.values(vent(s)).reduce((t, v) => t + (v || 0), 0);
 
 // The shuttle.
 export function shipStats(m) {
