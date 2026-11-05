@@ -416,6 +416,18 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .skills { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
 .next-intent { font-family: var(--mono); font-size: .66rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ion); }
 .btn.warn .bs { color: #ff8a78; opacity: 1; }
+/* between fights */
+.aa { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; align-items: start; padding: 10px 12px; border: 1px solid var(--line); border-left: 3px solid var(--sodium); background: var(--panel-2); animation: aa-in .25s ease-out; }
+.aa-main { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: .95rem; }
+.aa-spend { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-top: 6px; border-top: 1px dashed var(--line); }
+.aa-spend .btn { padding: 4px 10px; font-size: .85rem; }
+@keyframes aa-in { from { opacity: 0; transform: translateY(-4px); } }
+.popup-wrap { position: fixed; inset: 0; z-index: 30; background: #07080a99; display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top, 0px)) 16px max(16px, env(safe-area-inset-bottom, 0px)); animation: aa-in .2s ease-out; }
+.modal.popup { width: min(720px, 100%); gap: 14px; }
+.modal.popup h2 { font-size: 1.8rem; }
+.actions .btn.atk { display: grid; gap: 1px; }
+.actions .btn .wpn { font-family: var(--body); font-size: .74rem; font-weight: 600; letter-spacing: 0; text-transform: none; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.actions .btn .rng { font-family: var(--mono); font-weight: 500; }
 /* character tab */
 .resolve-box { display: grid; gap: 14px; padding: 16px; border: 1px solid var(--sodium); background: linear-gradient(180deg, var(--sodium-dim), transparent 70%); }
 .resolve-head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 20px; align-items: center; }
@@ -810,6 +822,7 @@ function intentInfo(e) {
 function combatScreen() {
   const r = state.run, e = r.enemy, c = state.char, st = E.stats(state);
   const intent = intentInfo(e);
+  const sr = E.attackRange(state, false), mr = E.attackRange(state, true);
   const confirmSmoke = state.confirmSmoke && c.items.smoke;
   const items = ['thermal', 'ion', 'smoke'].map((id, i) => `<button class="btn twoline ${id === 'smoke' && confirmSmoke ? 'confirm' : ''}" data-a="act" data-v="${id}" title="${esc(D.ITEMS[id].desc)}" ${c.items[id] ? '' : 'disabled'}>
       <span class="bt">${ico(`item:${id}`, 'sm')}${esc(D.ITEMS[id].name)} <span class="num">\u00D7${c.items[id]}</span><span class="k">${i + 2}</span></span>
@@ -827,15 +840,15 @@ function combatScreen() {
   return `<div class="columns"><section class="panel combat">
     <div class="combat-head"><span class="label">${esc(E.mapById(r.map).name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${stage.auto ? '<span class="auto-note">Auto battle \u00B7 tap 1\u00D7 to take over</span>' : ''}${roomPips(r)}</div>
     <div id="stage-slot"></div>
-    <div class="intent ${intent.tone}"><span class="dot"></span><b>${esc(intent.label)}</b><span class="tip">${esc(intent.tip)}${st.scan && e.next ? ` <span class="next-intent">Scanner: then ${esc(intentLabel(e, e.next))}</span>` : ''}</span><span class="intent-side">${mechanicChip(r)}${r.ready ? `<span class="chip good">Aim +${E.hasPerk(c, 'steady') ? 100 : 50}%</span>` : ''}</span></div>
+    <div class="intent ${intent.tone}"><span class="dot"></span><b>${esc(intent.label)}</b><span class="tip">${esc(intent.tip)}${st.scan && e.next ? ` <span class="next-intent">Scanner: then ${esc(intentLabel(e, e.next))}</span>` : ''}</span><span class="intent-side">${mechanicChip(r)}${r.ready ? `<span class="chip good">Aim +${E.hasPerk(c, 'steady') ? 100 : 50}%</span>` : ''}${r.momentum ? `<span class="chip good">Momentum +${Math.round(E.TUNE.momentum * 100)}%</span>` : ''}</span></div>
     <div class="statline">${meta}</div>
     ${e.quirk ? `<div class="quirk-line"><span class="chip quirk">${esc(E.quirkById(e.quirk).name)}</span><span>${esc(E.quirkById(e.quirk).desc)}</span></div>` : ''}
     ${D.MELEE_COUNTER[e.id] ? `<div class="quirk-line"><span class="chip bad">${esc(D.MELEE_COUNTER[e.id].name)}</span><span>${esc(D.MELEE_COUNTER[e.id].desc)}</span></div>` : ''}
     ${e.affix ? `<div class="quirk-line"><span class="chip bad">${esc(D.AFFIXES[e.affix].name)}</span><span>${esc(D.AFFIXES[e.affix].desc)}</span></div>` : ''}
     ${tip('combat')}
     <div class="actions">
-      <button class="btn primary twoline" data-a="act" data-v="shoot" title="Ranged attack: ${st.atk} ATK, ${pct(E.critChance(st, e))} crit. Half damage against cover."><span class="bt">Shoot<span class="k">A</span></span><span class="bs">${esc(E.weaponOf(c).name)} \u00B7 ${st.atk}</span></button>
-      <button class="btn twoline ${D.MELEE_COUNTER[e.id] ? 'warn' : ''}" data-a="act" data-v="strike" title="Melee attack: ${st.atkM} ATK, ${pct(E.critChance(st, e, true))} crit. Ignores cover."><span class="bt">Strike<span class="k">F</span></span><span class="bs">${esc(E.meleeOf(c).name)} \u00B7 ${st.atkM}${D.MELEE_COUNTER[e.id] ? ' \u00B7 it hits back' : e.intent === 'guard' && !e.stun ? ' \u00B7 past cover' : ''}</span></button>
+      <button class="btn primary twoline atk" data-a="act" data-v="shoot" title="${esc(E.weaponOf(c).name)}: ${st.atk} ATK, ${pct(E.critChance(st, e))} crit. Steady damage; cover halves it. You keep your distance, so you take ${Math.round(E.TUNE.shootGuard * 100)}% less damage this turn."><span class="bt">Shoot<span class="k">A</span></span><span class="wpn">${esc(E.weaponOf(c).name)}</span><span class="bs"><b class="rng">${sr[0]}\u2013${sr[1]}</b> dmg${e.intent === 'guard' && !e.stun ? ' (cover)' : ''} \u00B7 take ${Math.round(E.TUNE.shootGuard * 100)}% less this turn</span></button>
+      <button class="btn twoline atk ${D.MELEE_COUNTER[e.id] ? 'warn' : ''}" data-a="act" data-v="strike" title="${esc(E.meleeOf(c).name)}: ${st.atkM} ATK, ${pct(E.critChance(st, e, true))} crit. Swingy damage, ignores cover, and your next attack hits ${Math.round(E.TUNE.momentum * 100)}% harder."><span class="bt">Strike<span class="k">F</span></span><span class="wpn">${esc(E.meleeOf(c).name)}</span><span class="bs"><b class="rng">${mr[0]}\u2013${mr[1]}</b> dmg \u00B7 ${D.MELEE_COUNTER[e.id] ? 'it hits back!' : `next hit +${Math.round(E.TUNE.momentum * 100)}%${e.intent === 'guard' && !e.stun ? ', ignores cover' : ''}`}</span></button>
       <button class="btn twoline" data-a="act" data-v="defend"><span class="bt">Defend<span class="k">D</span></span><span class="bs">Halve damage, aim next shot</span></button>
       <button class="btn twoline" data-a="act" data-v="stim" ${c.items.stim ? '' : 'disabled'}><span class="bt">${ico('item:stim', 'sm')}Stim <span class="num">\u00D7${c.items.stim}</span><span class="k">S</span></span><span class="bs">${esc(D.ITEMS.stim.short)}</span></button>
       <button class="btn twoline" data-a="act" data-v="run"><span class="bt">Run<span class="k">R</span></span><span class="bs">${pct(E.runChance(state))} to escape, drop half loot</span></button>
@@ -873,6 +886,7 @@ function routeScreen() {
   const cds = Object.entries(r.cooldowns).filter(([, v]) => v > 0).map(([k, v]) => `${D.SKILLS[k].name} ${v >= 50 ? 'used' : `ready in ${v}`}`);
   return `<div class="columns"><section class="panel">
     <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center"><span class="label">${esc(map.name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${roomPips(r)}</div>
+    ${afterAction()}
     <h2>${r.choices[0] === 'boss' ? 'No way around it' : r.room === 0 ? 'Which way in?' : 'Two doors'}</h2>
     ${tip('route')}
     ${r.forced ? '<p class="muted" style="font-size:.9rem">Every sector takes at least two fights. Both doors are hot.</p>' : ''}
@@ -913,9 +927,43 @@ function victoryScreen() {
   </section>${logPanel()}</div>`;
 }
 
+// ---------- between fights: a slim raid view with popups on top ----------
+function afterAction() {
+  const o = state.lastResult, c = state.char;
+  if (!o) return '';
+  let main = '', chips = [];
+  if (o.kind === 'fight') {
+    main = `<b>${esc(o.enemy)}</b> ${o.fled ? 'fled' : 'down'}`;
+    chips.push(`+${o.credits} ${S.cur}`, `+${o.xp} XP`);
+    if (o.healed) chips.push(`+${o.healed} HP`);
+    for (const it of o.items || []) chips.push(`found ${it}`);
+    for (const n of o.notes || []) chips.push(n);
+    if (o.loot) chips.push(`dropped ${o.loot}`);
+    if (o.resolve) chips.push(`+${o.resolve} ${S.meta}`);
+  } else {
+    main = `<b>${esc(o.name)}</b> <span class="muted">${esc(o.text)}</span>`;
+    chips = o.notes || [];
+  }
+  const lvl = o.kind === 'fight' && o.levelUps && o.levelUps.length ? `<span class="chip good">Level ${o.levelUps[o.levelUps.length - 1]}!</span>` : '';
+  const spend = c.attrPoints ? `<div class="aa-spend"><span class="label">${c.attrPoints} point${c.attrPoints > 1 ? 's' : ''} to spend</span>${Object.entries(D.ATTRS).map(([k, a]) => `<button class="btn" data-a="spend" data-v="${k}" title="${esc(a.desc)}" ${c.attrs[k] >= D.ATTR_MAX ? 'disabled' : ''}>${a.short} ${c.attrs[k]}\u2192${c.attrs[k] + 1}</button>`).join('')}</div>` : '';
+  return `${o.liberated ? `<div class="liberated"><span class="label">District liberated</span><b>${esc(o.liberated)}</b><span>Threat levels are now available on the Targets tab.</span></div>` : ''}
+    <div class="aa"><div class="aa-main">${main} ${lvl}<span class="chips">${chips.map((t) => `<span class="chip ${/\u2212|alerted|exploded/.test(t) ? 'bad' : 'good'}">${esc(t)}</span>`).join('')}</span></div>
+    <button class="tool" data-a="dismissresult" aria-label="Hide">\u00D7</button>${spend}</div>`;
+}
+// The view behind loot, contraband and sector-clear popups.
+function popupView(inner) {
+  const r = state.run;
+  return `<div class="columns"><section class="panel">
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center"><span class="label">${esc(E.mapById(r.map).name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${roomPips(r)}</div>
+    ${afterAction()}
+    <p class="muted">The corridor goes quiet for a moment.</p>
+  </section>${logPanel()}</div>
+  <div class="popup-wrap"><div class="modal popup" role="dialog" aria-modal="true">${inner}</div></div>`;
+}
+
 function lootScreen() {
   const r = state.run, c = state.char, it = r.lootOffer, b = E.baseOf(it), old = c.gear[b.slot], ok = E.canEquip(c, it);
-  return `<div class="columns"><section class="panel">
+  return popupView(`
     <span class="label">Dropped \u00B7 ${esc(D.RARITY[it.rarity].name)} ${esc(SLOTS[b.slot].name.toLowerCase())}</span><h2>${b.unique ? 'Something with a name on it' : 'Something worth taking'}</h2>
     ${tip('loot')}
     <div class="loot">
@@ -926,7 +974,7 @@ function lootScreen() {
       <button class="btn primary big" data-a="loottake" ${ok ? '' : 'disabled'}>${ok ? `Take it${old && E.sellValue(old) ? ` \u00B7 sell old for ${cr(E.sellValue(old))}` : ''}` : `Needs ${E.reqText(b.req)}`}<span class="k">1</span></button>
       <button class="btn big" data-a="lootsell">Sell it \u00B7 ${cr(E.sellValue(it))}<span class="k">2</span></button>
     </div>
-  </section>${logPanel()}</div>`;
+  `);
 }
 
 function perkScreen() {
@@ -934,14 +982,14 @@ function perkScreen() {
   const cards = r.perkOffer.map((id, i) => { const pk = E.perkById(id); return `<button class="perk ${pk.rare ? 'rare' : ''} ${picked === id ? 'on' : ''}" data-a="perk" data-v="${id}" aria-pressed="${picked === id}">${ico(`perk:${id}`, 'lg')}<span class="label">${pk.rare ? 'Rare contraband' : 'Contraband'} <span class="k">${i + 1}</span></span><b>${esc(pk.name)}</b><span class="desc">${esc(pk.desc)}</span></button>`; }).join('');
   const swap = full && picked ? `<div class="swap"><span class="label">Pockets full \u00B7 drop one to take the ${esc(E.perkById(picked).name)}</span>
     <div class="perk-list">${c.perks.map((id) => { const pk = E.perkById(id); return `<button class="perk-mini drop ${pk.rare ? 'rare' : ''}" data-a="perkdrop" data-v="${id}">${ico(`perk:${id}`, 'sm2')}<div><b>Drop ${esc(pk.name)}</b><span>${esc(pk.desc)}</span></div></button>`; }).join('')}</div></div>` : '';
-  return `<div class="columns"><section class="panel">
+  return popupView(`
     <span class="label">Contraband \u00B7 pick one \u00B7 pockets ${c.perks.length} / ${E.CONTRABAND_SLOTS}</span><h2>What they were carrying</h2>
     ${tip('perk')}
     <div class="perks">${cards}</div>
     ${swap}
     ${full && !picked ? '<p class="muted">Your pockets are full. Pick a piece to see what you\u2019d have to drop for it.</p>' : ''}
     <div><button class="btn" data-a="perk" data-v="">${full ? 'Keep what I have' : 'Leave it all'}</button></div>
-  </section>${logPanel()}</div>`;
+  `);
 }
 
 function endingScreen() {
@@ -971,7 +1019,7 @@ function modalView() {
         <li><b>Signature move</b>: every enemy has one, usually with a status effect. Defend halves it and blocks the status.</li>
         <li><b>Cover</b>: your attacks deal half. Heal or set up instead.</li>
         <li><b>Repair</b>: hit it hard before it heals.</li></ul></section>
-      <section><h3>Shoot or Strike</h3><p><b>Shoot</b> uses your ranged weapon and gets crit from Agility. <b>Strike</b> uses your melee weapon, adds your Strength and ignores cover, but some enemies hit back when you close in. Ranged skills use the ranged weapon; Power Strike uses the melee one.</p></section>
+      <section><h3>Shoot or Strike</h3><p><b>Shoot</b> uses your ranged weapon: steady damage, crit from Agility, and you take 15% less damage that turn because you keep your distance. <b>Strike</b> uses your melee weapon: swingier damage, adds your Strength, ignores cover and gives your next attack +15%, but some enemies hit back when you close in. Ranged skills use the ranged weapon; Power Strike uses the melee one.</p></section>
       <section><h3>Gear and loot</h3><p>Six slots: ranged, melee, helmet, chest, legs and a gadget. Pieces come in <span class="rname r-common">Common</span>, <span class="rname r-rare">Rare</span>, <span class="rname r-elite">Elite</span> and <span class="rname r-legendary">Legendary</span>, with random bonuses; bosses drop their own <span class="rname r-unique">Unique</span>. The Black Market restocks after every raid. Upgrade pieces (+1 to +5) and reroll bonuses on the Gear tab. Death takes it all, unless the cell has the Heirloom upgrade.</p></section>
       <section><h3>Your turn</h3><p><b>Defend</b> also steadies your aim: your next shot deals +50%. <b>Skills</b> come from your weapon and high attributes; their cooldowns last for the whole sector, so choose your moment. <b>Stims</b> heal and stop bleeding and burning.</p></section>
       <section><h3>Status effects</h3><ul>${Object.values(D.STATUSES).map((x) => `<li><b>${esc(x.name)}</b>: ${esc(x.desc)}</li>`).join('')}</ul></section>
@@ -1013,15 +1061,15 @@ function eventScreen() {
 
 function sectorClearScreen() {
   const r = state.run, o = state.outcome, c = state.char, st = E.stats(state), next = r.sector + 1;
-  return `<div class="columns"><section class="panel">
+  return popupView(`
     <span class="label">Sector ${r.sector} secured \u00B7 ${esc(E.mapById(r.map).name)}</span><h2>${esc(E.sectorName(r.sector, r.map))}</h2>
     <dl class="kv"><dt>Sector haul</dt><dd style="color:var(--sodium)">+${cr(o.credits)}</dd><dt>Carrying</dt><dd>${cr(c.credits)}</dd><dt>Condition</dt><dd class="${c.hp < st.maxHp * 0.4 ? 'danger-text' : ''}">${c.hp} / ${st.maxHp} HP \u00B7 ${c.items.stim} stims</dd><dt>${esc(S.meta)}</dt><dd style="color:var(--sodium)">${o.resolve ? `+${o.resolve} (banked)` : '<span class="muted">none this time: repeat clears pay every other time</span>'}</dd></dl>
     ${E.isBossSector(next) ? `<div class="notice" style="border-color:var(--danger);background:var(--danger-dim)">Sector ${next} is a boss sector. Something worse than troopers is waiting.</div>` : ''}
     <div class="btnrow">
-      <button class="btn primary big" data-a="deeper">Push to sector ${next}</button>
-      <button class="btn big" data-a="extract">Extract with ${cr(c.credits)}</button>
+      <button class="btn primary big" data-a="deeper">Push to sector ${next}<span class="k">1</span></button>
+      <button class="btn big" data-a="extract">Extract with ${cr(c.credits)}<span class="k">2</span></button>
     </div>
-  </section>${logPanel()}</div>`;
+  `);
 }
 
 function heirloomPick() {
@@ -1059,6 +1107,8 @@ function render() {
   if (state.screen === 'combat' && !state.run.enemy) E.offerRoute(state, rng);
   if (state.screen === 'perk' && !state.run.perkOffer) E.offerRoute(state, rng);
   if (state.screen === 'loot' && !state.run.lootOffer) E.continueAfterVictory(state, rng);
+  if (state.screen === 'victory' && state.run) { state.lastResult = { kind: 'fight', ...state.outcome }; E.continueAfterVictory(state, rng); }
+  if (state.screen === 'room' && state.run && state.roomResult) { state.lastResult = { kind: 'room', ...state.roomResult }; E.offerRoute(state, rng); }
   if (state.screen === 'event' && !E.eventById(state.event)) state.screen = 'combat';
   const showStatus = state.screen !== 'intro';
   if (state.contractDone) { toast = `Contract complete: ${state.contractDone}`; state.contractDone = null; A.play('perk'); }
@@ -1117,7 +1167,7 @@ async function fight(v) {
     busy = false;
     document.getElementById('app').classList.remove('busy');
     if (state.run && state.run.alert > alertBefore) A.play('alarm');
-    if (state.screen === 'victory') A.play(state.outcome.liberated ? 'liberate' : 'coin');
+    if (state.screen === 'victory') { A.play(state.outcome.liberated ? 'liberate' : 'coin'); state.lastResult = { kind: 'fight', ...state.outcome }; E.continueAfterVictory(state, rng); }
     render();
   }
 }
@@ -1166,13 +1216,14 @@ function act(a, v, k) {
     case 'spend': ok = E.spendAttr(state, v); break;
     case 'respec': ok = E.respec(state); break;
     case 'pickmap': state.gateMap = v; break;
-    case 'deploy': E.deploy(state, state.gateMap || 'garrison', +v, rng); break;
+    case 'deploy': state.lastResult = null; E.deploy(state, state.gateMap || 'garrison', +v, rng); break;
     case 'continue': E.continueAfterVictory(state, rng); break;
-    case 'room': E.enterRoom(state, +v, rng); break;
+    case 'room': state.lastResult = null; E.enterRoom(state, +v, rng); if (state.screen === 'room') { state.lastResult = { kind: 'room', ...state.roomResult }; E.offerRoute(state, rng); } break;
+    case 'dismissresult': state.lastResult = null; break;
     case 'roomDone': E.offerRoute(state, rng); break;
     case 'event': E.resolveEvent(state, +v, rng); break;
-    case 'eventDone': E.nextEncounter(state, rng); break;
-    case 'deeper': E.pushDeeper(state, rng); break;
+    case 'eventDone': state.lastResult = null; E.nextEncounter(state, rng); break;
+    case 'deeper': state.lastResult = null; E.pushDeeper(state, rng); break;
     case 'extract': E.endRun(state, 'extracted', rng); break;
     case 'recruit': E.recruit(state, rng); break;
     case 'reset':
@@ -1208,6 +1259,8 @@ document.addEventListener('keydown', (ev) => {
     if (map[key] && E.canUse(state, map[key])) { ev.preventDefault(); act('act', map[key]); }
   } else if (state.screen === 'route' && (key === '1' || key === '2') && state.run.choices[+key - 1]) {
     ev.preventDefault(); act('room', String(+key - 1));
+  } else if (state.screen === 'sectorClear' && (key === '1' || key === '2')) {
+    ev.preventDefault(); act(key === '1' ? 'deeper' : 'extract');
   } else if (state.screen === 'loot' && (key === '1' || key === '2')) {
     ev.preventDefault(); act(key === '1' ? 'loottake' : 'lootsell');
   } else if (state.screen === 'perk' && ['1', '2', '3'].includes(key) && state.run.perkOffer[+key - 1]) {

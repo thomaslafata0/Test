@@ -31,7 +31,8 @@ export const MIN_FIGHTS = 2; // fights required per sector; the rest of the room
 // Enemy growth per sector past their first appearance: linear plus a quadratic tail.
 export const growth = (lvl, lin, quad) => 1 + lin * lvl + quad * lvl * lvl;
 export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.01, bossHp: 2.4, bossAtk: 1.5, enemyAtk: 1.62, enemyHp: 1.62, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 2, strAtk: 1, agiCrit: 0.04, agiDodge: 0.025, intOverload: 3.5, chaHesitate: 0.04, chaCredits: 0.05, wanted: 0.025, escapeLoss: 0.5,
-  upgradeCost: 60, eliteGear: 0.3, shopLegendary: 0.06, cover: 0.5, agiAtk: 0.5, early: 0.5 };
+  upgradeCost: 60, eliteGear: 0.3, shopLegendary: 0.06, cover: 0.5, agiAtk: 0.5, early: 0.5,
+  rangedSpread: 0.15, meleeSpread: 0.3, shootGuard: 0.15, momentum: 0.15 };
 export const isBossSector = (n) => n % 5 === 0;
 // Optional credit accounting for the simulators: set s.ledger = {} and every credit gain or spend is tallied by source.
 const ledger = (s, k, n) => { if (s.ledger && n) s.ledger[k] = (s.ledger[k] || 0) + n; };
@@ -680,7 +681,7 @@ function startFight(s, rng, kind) {
   if (r.bulletin === 'inspection') e.xp = Math.round(e.xp * 1.2);
   if (r.bulletin === 'shift' && r.room === 1 && !boss) e.stun = Math.max(e.stun, 1);
   if (mech === 'alarm' && r.alert) { e.atk = Math.round(e.atk * (1 + 0.06 * r.alert)); e.cr = e.cr.map((v) => Math.round(v * (1 + 0.05 * r.alert))); }
-  r.enemy = e; r.defending = false; r.ready = false; r.adrenalUsed = false; r.vent = 3; r.turns = 0; r.alarmRaised = false; r.struck = false;
+  r.enemy = e; r.defending = false; r.ready = false; r.momentum = false; r.keepDistance = false; r.adrenalUsed = false; r.vent = 3; r.turns = 0; r.alarmRaised = false; r.struck = false;
   // Skills used last fight are still recharging when the next one starts (at least 2 turns), so you can't open every fight with them.
   for (const k of r.usedThisFight || []) if (r.cooldowns[k] < 50) r.cooldowns[k] = Math.max(r.cooldowns[k] || 0, CARRY_CD);
   r.usedThisFight = [];
@@ -790,8 +791,9 @@ function chooseIntent(e, rng) {
 export function bestAttack(s) {
   const e = s.run.enemy, st = stats(s);
   const guard = e.intent === 'guard' && !e.stun, counter = D.MELEE_COUNTER[e.id] && !e.stun;
-  const r = st.atk * (1 + critChance(st, e) * 0.6) * (guard ? TUNE.cover : 1);
-  const m = st.atkM * (1 + critChance(st, e, true) * 0.6) * (counter ? 0.65 : 1);
+  const heavyNext = e.intent === 'heavy' || e.intent === 'special';
+  const r = st.atk * (1 + critChance(st, e) * 0.6) * (guard ? TUNE.cover : 1) * (heavyNext ? 1.1 : 1);
+  const m = st.atkM * (1 + critChance(st, e, true) * 0.6) * (counter ? 0.65 : 1) * (1 + TUNE.momentum * 0.5);
   return m > r ? 'strike' : 'shoot';
 }
 // Auto battle: a fixed, sensible routine. Never runs or uses smoke.
@@ -834,25 +836,42 @@ export function canUse(s, act) {
 }
 
 // One weapon hit on the current enemy. melee: uses the melee weapon (ignores cover, no AGI crit). Returns damage dealt.
-function strike(s, rng, { mult = 1, critBonus = 0, pierce = 0, unarmoredBonus = 1, flat = 0, melee = false, forceCrit = false } = {}) {
-  const r = s.run, e = r.enemy, c = s.char, st = stats(s), mode = melee ? 'melee' : 'ranged', w = melee ? meleeOf(c) : weaponOf(c);
+// Damage multiplier from everything except crits and the random roll. Shared by hits and the damage range on the buttons.
+function hitMult(s, melee, { mult = 1, unarmoredBonus = 1 } = {}) {
+  const r = s.run, e = r.enemy, c = s.char, mode = melee ? 'melee' : 'ranged', w = melee ? meleeOf(c) : weaponOf(c);
   const droid = e.tags.includes('droid'), human = e.tags.includes('human');
   if (r.ready) mult *= hasPerk(c, 'steady') ? 2 : 1.5;
-  const first = !r.struck;
-  const crit = forceCrit || (first && hasUnique(c, 'ostrane')) || rng() < critChance(st, e, melee) + critBonus;
-  if (crit) mult *= hasPerk(c, 'hollow') ? 2.2 : 1.6;
-  if (w.type === 'tech') { pierce = Math.max(pierce, 0.5); if (droid) mult *= 1.5; }
+  if (r.momentum) mult *= 1 + TUNE.momentum;
+  if (w.type === 'tech' && droid) mult *= 1.5;
   if (w.droid && droid) mult *= 1 + w.droid;
   if (droid) mult *= 1 + gearBonus(c, 'droid', mode) / 100;
   if (human) mult *= 1 + gearBonus(c, 'human', mode) / 100;
   if (hasTrait(c, 'executioner', mode) && e.hp < e.maxHp * 0.3) mult *= 1.4;
   if (hasUnique(c, 'crucible') && e.st.burn) mult *= 1.25;
   if (!e.tags.includes('armored')) mult *= unarmoredBonus;
-  if (hasPerk(c, 'ambush') && first) mult *= 2;
+  if (hasPerk(c, 'ambush') && !r.struck) mult *= 2;
   if (hasPerk(c, 'grudge') && (e.elite || e.boss)) mult *= 1.3;
-  mult *= outMult(r.pst, e.st);
+  return mult * outMult(r.pst, e.st);
+}
+const spreadOf = (melee) => (melee ? TUNE.meleeSpread : TUNE.rangedSpread);
+// Damage range of a basic Shoot or Strike against the current enemy, before crits.
+export function attackRange(s, melee) {
+  const r = s.run, e = r.enemy, st = stats(s), sp = spreadOf(melee), m = hitMult(s, melee);
+  const pierce = !melee && weaponOf(s.char).type === 'tech' ? 0.5 : 0, cover = !melee && e.intent === 'guard' && e.stun === 0 ? TUNE.cover : 1;
+  const hit = (k) => Math.max(1, Math.round(mitigate((melee ? st.atkM : st.atk) * k * m, e.def * (1 - pierce)) * cover));
+  return [hit(1 - sp), hit(1 + sp)];
+}
+function strike(s, rng, { mult = 1, critBonus = 0, pierce = 0, unarmoredBonus = 1, flat = 0, melee = false, forceCrit = false } = {}) {
+  const r = s.run, e = r.enemy, c = s.char, st = stats(s), mode = melee ? 'melee' : 'ranged', w = melee ? meleeOf(c) : weaponOf(c);
+  const first = !r.struck;
+  mult = hitMult(s, melee, { mult, unarmoredBonus });
+  r.momentum = false;
+  const crit = forceCrit || (first && hasUnique(c, 'ostrane')) || rng() < critChance(st, e, melee) + critBonus;
+  if (crit) mult *= hasPerk(c, 'hollow') ? 2.2 : 1.6;
+  if (w.type === 'tech') pierce = Math.max(pierce, 0.5);
   r.struck = true;
-  let dmg = mitigate((melee ? st.atkM : st.atk) * (0.85 + rng() * 0.3) * mult + flat, e.def * (1 - pierce));
+  const sp = spreadOf(melee);
+  let dmg = mitigate((melee ? st.atkM : st.atk) * (1 - sp + rng() * 2 * sp) * mult + flat, e.def * (1 - pierce));
   if (!melee && e.intent === 'guard' && e.stun === 0) dmg = Math.max(1, Math.round(dmg * TUNE.cover));
   e.hp -= dmg;
   if (e.hp > 0) {
@@ -893,7 +912,7 @@ export function playerAct(s, act, rng) {
   if (s.screen !== 'combat' || !canUse(s, act)) return;
   const r = s.run, e = r.enemy, c = s.char, st = stats(s);
   const wasReady = r.ready;
-  r.defending = false;
+  r.defending = false; r.keepDistance = false;
   const guarded = e.intent === 'guard' && e.stun === 0;
   const skill = D.SKILLS[act];
   if (skill) {
@@ -906,14 +925,14 @@ export function playerAct(s, act, rng) {
   switch (act) {
     case 'shoot': {
       const { dmg, crit } = strike(s, rng);
-      r.ready = false;
+      r.ready = false; r.keepDistance = true;
       fx(s, { who: 'player', type: 'shoot', dmg, crit, guarded, ready: wasReady });
       log(s, `${wasReady ? 'Steadied shot. ' : ''}${crit ? 'Critical! ' : ''}You hit ${e.name} for ${dmg}${guarded ? ' through cover' : ''}.`, crit ? 'crit' : 'hit');
       break;
     }
     case 'strike': {
       const { dmg, crit } = strike(s, rng, { melee: true });
-      r.ready = false;
+      r.ready = false; r.momentum = true;
       fx(s, { who: 'player', type: 'strike', dmg, crit, ready: wasReady });
       log(s, `${wasReady ? 'Braced. ' : ''}${crit ? 'Critical! ' : ''}You strike ${e.name} with the ${meleeOf(c).name} for ${dmg}${guarded ? ', straight past their cover' : ''}.`, crit ? 'crit' : 'hit');
       meleeCounter(s, rng);
@@ -1175,7 +1194,7 @@ function enemyTurn(s, rng) {
       log(s, `${e.name} ${heavy ? 'unleashes a heavy strike' : 'fires'}, and you dodge.`, 'good');
     } else {
       const luck = q && q.gamble ? (rng() < 0.5 ? 0.5 : 1.8) : 1;
-      let dmg = mitigate(e.atk * (0.85 + rng() * 0.3) * (heavy ? 2.2 : 1) * luck * outMult(e.st, r.pst), st.def);
+      let dmg = mitigate(e.atk * (0.85 + rng() * 0.3) * (heavy ? 2.2 : 1) * luck * outMult(e.st, r.pst) * (r.keepDistance ? 1 - TUNE.shootGuard : 1), st.def);
       if (r.defending) dmg = Math.max(1, Math.round(dmg * (heavy ? 0.25 : 0.5) * (hasTrait(c, 'bulwark') ? 0.7 : 1)));
       c.hp -= dmg; vamp(dmg); reflect(dmg);
       if (q && q.bleedOnHit && !r.defending) addPlayerStatus(s, { bleed: 2 }, rng);
@@ -1185,7 +1204,7 @@ function enemyTurn(s, rng) {
     }
   } else if (e.intent === 'special') {
     const sp = D.SPECIALS[e.id];
-    let dmg = sp.mult > 0 ? mitigate(e.atk * (0.85 + rng() * 0.3) * sp.mult * outMult(e.st, r.pst), st.def) : 0;
+    let dmg = sp.mult > 0 ? mitigate(e.atk * (0.85 + rng() * 0.3) * sp.mult * outMult(e.st, r.pst) * (r.keepDistance ? 1 - TUNE.shootGuard : 1), st.def) : 0;
     if (r.defending) dmg = Math.max(dmg ? 1 : 0, Math.round(dmg * 0.5 * (hasTrait(c, 'bulwark') ? 0.7 : 1)));
     c.hp -= dmg; vamp(dmg); reflect(dmg);
     const added = r.defending ? [] : addPlayerStatus(s, sp.status, rng);
