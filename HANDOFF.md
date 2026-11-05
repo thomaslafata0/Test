@@ -18,14 +18,14 @@ A browser roguelite (HTML + JS modules, no build step) about a resistance cell r
 | `stage.js` | Animated battle canvas (384x216): sprites, effects, boss intro, partner sprite in co-op, Manual/Auto 1x/Auto 2x buttons. |
 | `town.js` | The walkable yard: layout, outline collision, doors to interiors, NPCs, hotspots, tap-to-walk. Art in `town/`. |
 | `downtime.js` | Code-drawn roulette wheel (`Wheel`) and orbit fight scene (`OrbitScene`); loads `downtime/manifest.json` art when delivered. |
-| `look.js` | Character looks (body, class, hair, colours). Composites layered sheets from `chars2/` when the pack exists; falls back to the single player sprite. |
+| `look.js` | Character looks. `townSheets(look, bg)` and `battleSheet(look, bg, rangedWpn, meleeWpn)` composite body + outfit + hair/weapon with skin (exact ramp swap) and hair (luminance ramp) recolouring; `lookStill`, `lookBattleStill`, `lookPortrait`; `weaponLayer(base)` maps gear to `wpn_*`. `index.html` `applyLook()` feeds `town.setPlayerSheets` and `stage.setLookSheets` whenever look, class or weapons change (`attackM` is the melee attack strip). |
 | `net.js` | Co-op transports (WebSocket relay, BroadcastChannel for two tabs) and the `Net` session. |
 | `coop/worker.js`, `coop/wrangler.toml` | The Cloudflare relay (Durable Object per room code). Not yet deployed. |
 | `audio.js` | Synthesised SFX, optional drone/rain, and music (`music/town.mp3`, `music/raid.mp3`, crossfaded). |
 | `icons.js`, `portraits.js` | Code-drawn pixel icons and fallback portraits. `gearIconKey()` maps gear ids to icons. |
 | `sprites/` | PixelLab battle sheets for all characters + `manifest.json`. |
 | `town/` | Town art pack (tiles, buildings, interiors, props, chars) + `manifest.json`, `CHECKLIST.md`. |
-| `chars2/manifest.json` | Placeholder (`pending: true`). Replace with the character pack when delivered. |
+| `chars2/` | The delivered character pack: 4 bodies (town 8 strips + battle 6), 4 class outfits, 6 hairstyles (town only), 8 weapons (battle idle/attack/charge, with per-frame tips), 4 portraits, `manifest.json`, `CHECKLIST.md`. Overlays were drawn on body_m1; `look.js` shifts them per frame onto the other bodies. **No battle hair in the pack**, so operatives are bald in combat and on the gear portrait: ask the artist for `hair/<id>/battle/{idle,attack,charge,hit,defend,death}.png` and `look.js` will pick them up once `compose` paints hair in the battle scene too. |
 | `sim.mjs`, `sim-builds.mjs`, `sim-gear.mjs`, `sim-coop.mjs` | Simulators (see Balance). |
 | `sim-board.mjs`, `board.json` | Builds the seed leaderboard: 50 simulator raids labelled Bot #n, spread from a sector-20 run down to a sector-4 one. Rebuild with `node sim-board.mjs 40 25 > board.json` after balance changes. |
 | `docs/COOP.md` | Co-op design, protocol, Cloudflare deploy steps. |
@@ -62,7 +62,7 @@ Knobs in `engine.js` `TUNE`. Commands: `node sim.mjs 100 30`, `MAP=port node sim
 
 ## Next
 1. **Downtime art pack** (`docs/DOWNTIME_ART_PROMPT_CHATGPT.md`): drop into `downtime/`, write the manifest; ships and bar portraits are picked up automatically. Backgrounds need a few lines in `downtime.js` and `barView`.
-2. **Character art pack** (`docs/CHARACTER_ART_PROMPT_CHATGPT.md`): drop into `chars2/`, replace the placeholder manifest. Then: make `look.js` composite town walk strips and battle strips (today it only builds the idle_down still), draw the composite in `town.js` and `stage.js` instead of the `player` sheet, show the equipped weapon layer, and add portraits to the creation screen.
+2. **Character art, second pass:** battle hair strips (see `chars2/` note), hair on the portraits, and the co-op partner's look on the friend's own screen (today the partner sprite uses the partner's look on the host only).
 2. **Co-op:** deploy the Worker, bake its URL into `net.js` as the default, test over the internet, then balance with `sim-coop.mjs`. Door votes, each player's own contraband pick, a "spectate" state when the host is building a new operative.
 3. **Furniture collision** indoors (only the floor rectangle is used), and a Tiled map for the yard if the artist makes one.
 4. Owner feedback from run reports.

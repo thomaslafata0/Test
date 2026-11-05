@@ -194,6 +194,7 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 @media (max-width: 520px) { .choices { grid-template-columns: minmax(0, 1fr); } }
 .choice { text-align: left; display: grid; gap: 4px; align-content: start; padding: 12px; background: var(--panel-2); border: 1px solid var(--line); }
 .choice b { font-family: var(--display); font-size: 1.2rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.choice .face { width: 64px; height: 64px; image-rendering: pixelated; border: 1px solid var(--line); background: var(--panel); justify-self: start; }
 .choice .desc { font-size: .88rem; color: var(--muted); }
 .choice .bg-perk { font-size: .85rem; color: var(--sodium); }
 .choice.on, .map-card.on { border-color: var(--sodium); box-shadow: inset 0 0 0 1px var(--sodium); }
@@ -561,13 +562,13 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 import * as D from './data.js';
 import * as E from './engine.js';
 import { portraitURL } from './portraits.js';
-import { Stage, loadSheets, sheetStill } from './stage.js';
+import { Stage, loadSheets, sheetStill, setLookSheets } from './stage.js';
 import * as A from './audio.js';
 import { iconURL, gearIconKey } from './icons.js';
 import { Town } from './town.js';
 import { Wheel, OrbitScene, loadDowntimeArt, artFor } from './downtime.js';
 import { Net, getCoopPrefs, setCoopPrefs, makeCode } from './net.js';
-import { BODIES, HAIR, HAIR_NAMES, SKINS, HAIRS, defaultLook, loadLayers, hasLayers, lookStill } from './look.js';
+import { BODIES, HAIR, HAIR_NAMES, SKINS, HAIRS, defaultLook, loadLayers, hasLayers, lookStill, lookBattleStill, lookPortrait, townSheets, battleSheet, weaponLayer } from './look.js';
 
 const SAVE_KEY = 'cinder-cell-save-v1';
 const rng = Math.random;
@@ -751,7 +752,7 @@ function createScreen() {
   const steps = ['Body', 'Class', 'Details'].map((l, i) => `<button class="tab" aria-selected="${d.step === i + 1}" data-a="step" data-v="${i + 1}">${i + 1}. ${l}</button>`).join('');
   let body = '';
   if (d.step === 1) {
-    body = `<div class="choices four">${BODIES.map((b) => `<button class="choice ${b.id === d.look.body ? 'on' : ''}" data-a="look" data-v="body" data-k="${b.id}" aria-pressed="${b.id === d.look.body}"><b>${esc(b.name)}</b><span class="chip">${b.sex === 'm' ? 'man' : 'woman'}</span><span class="desc">${esc(b.desc)}</span></button>`).join('')}</div>
+    body = `<div class="choices four">${BODIES.map((b) => { const pt = lookPortrait({ ...d.look, body: b.id }); return `<button class="choice ${b.id === d.look.body ? 'on' : ''}" data-a="look" data-v="body" data-k="${b.id}" aria-pressed="${b.id === d.look.body}">${pt ? `<img class="face" src="${pt}" alt="" width="64" height="64">` : ''}<b>${esc(b.name)}</b><span class="chip">${b.sex === 'm' ? 'man' : 'woman'}</span><span class="desc">${esc(b.desc)}</span></button>`; }).join('')}</div>
       <div class="btnrow"><button class="btn primary big" data-a="step" data-v="2">Next: class</button></div>`;
   } else if (d.step === 2) {
     body = `<div class="choices">${D.BACKGROUNDS.map((b) => `<button class="choice ${b.id === d.background ? 'on' : ''}" data-a="bg" data-v="${b.id}" aria-pressed="${b.id === d.background}">
@@ -912,7 +913,7 @@ function gearTab() {
     return `<button class="slot ${sel === slot ? 'on' : ''} r-${it ? it.rarity : 'none'}" data-a="gearslot" data-v="${slot}" aria-pressed="${sel === slot}">${gearIco(it, 'sm')}
       <span class="label">${esc(SLOTS[slot].short)}</span><b>${it ? esc(E.itemName(it)) : 'Empty'}</b><span class="ms">${ms ? `${ms.key === 'atk' ? 'ATK' : 'DEF'} ${ms.v}` : it ? 'utility' : 'buy one at the market'}${it && it.bonuses.length ? ` \u00B7 ${it.bonuses.length} bonus${it.bonuses.length > 1 ? 'es' : ''}` : ''}</span></button>`;
   };
-  const me = sheetStill('player') || portraitURL('player');
+  const me = lookBattleStill(c.look, c.background, weaponLayer(E.baseOf(c.gear.ranged))) || sheetStill('player') || portraitURL('player');
   const it = c.gear[sel];
   let actions = '';
   if (it) {
@@ -1581,6 +1582,7 @@ function render() {
   } else app.classList.remove('still');
   A.setAmbience(state.run ? E.mapById(state.run.map).theme : 'town');
   A.setMusic(state.run ? 'raid' : 'town');
+  applyLook();
   const wslot = document.getElementById('wheel-slot');
   if (wslot) { if (!wheel) { wheel = new Wheel(); globalThis.cinderWheel = wheel; } wslot.replaceWith(wheel.el); if (state.wheelResult && !wheelBusy) wheel.draw(state.wheelResult.n); }
   const oslot = document.getElementById('orbit-slot');
@@ -1846,6 +1848,20 @@ document.addEventListener('keydown', (ev) => {
   }
 });
 
+// Composites the operative's look into town and battle sheets whenever the look, class or weapons change.
+let lookKey = '';
+function applyLook() {
+  if (!hasLayers()) return;
+  const c = state.char, p = E.isCoop(state) ? E.charAt(state, 1 - myIdx()) : null;
+  const wp = (ch) => [weaponLayer(E.baseOf(ch.gear.ranged)), weaponLayer(E.baseOf(ch.gear.melee))];
+  const key = JSON.stringify([c && [c.look, c.background, wp(c)], p && [p.look, p.background, wp(p)]]);
+  if (key === lookKey) return;
+  lookKey = key;
+  const mine = c && c.look ? [c.look, c.background, ...wp(c)] : null, theirs = p && p.look ? [p.look, p.background, ...wp(p)] : null;
+  town.setPlayerSheets(mine ? townSheets(mine[0], mine[1]) : null);
+  setLookSheets(mine ? battleSheet(...mine) : null, theirs ? battleSheet(...theirs) : null);
+  stage.player = null; stage.partner = null;
+}
 // The leaderboard belongs to the device, not the cell: it survives New cell and Reset.
 function keepBoard(fresh) { if (state && state.meta) { fresh.meta.board = state.meta.board || []; fresh.meta.boardSeeded = !!state.meta.boardSeeded; } return fresh; }
 // Simulator raids fill the board until real raids push them off (board.json, built by sim-board.mjs).
@@ -1865,7 +1881,7 @@ function start(data) {
   titleOpen = !(data && data.state);
   render();
   seedBoard();
-  loadLayers().then((ok) => { if (ok && state.screen === 'create') render(); });
+  loadLayers().then((ok) => { if (ok) { lookKey = ''; render(); } });
   loadDowntimeArt().then((ok) => { if (ok && modal) render(); });
   // PixelLab sheets, if any have been delivered. Re-render so the stage picks them up.
   loadSheets().then((n) => { if (n && ['combat', 'victory', 'death'].includes(state.screen)) { stage.enemyRef = null; stage.player = null; render(); } });

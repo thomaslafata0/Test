@@ -13,6 +13,9 @@ const C = { amber: '#ffb35a', crit: '#fff1c9', red: '#ff5a44', ion: '#8fdcff', h
 
 // ---------- sprite sheets ----------
 const sheets = {};
+// Composited look sheets (look.js) for the player and the co-op partner; they replace sheets.player per side.
+const lookSheets = { player: null, partner: null };
+export function setLookSheets(player, partner) { lookSheets.player = player || null; lookSheets.partner = partner || null; }
 export async function loadSheets(base = 'sprites/') {
   let man;
   try { const res = await fetch(base + 'manifest.json', { cache: 'no-cache' }); if (!res.ok) return 0; man = await res.json(); } catch (e) { return 0; }
@@ -55,7 +58,7 @@ function seeded(seed) { let a = seed >>> 0; return () => { a = (a + 0x6d2b79f5) 
 class Actor {
   constructor(id, side, boss) {
     this.id = id; this.side = side; this.boss = boss;
-    this.sheet = sheets[id] || null;
+    this.sheet = (id === 'player' && lookSheets[side === 'partner' ? 'partner' : 'player']) || sheets[id] || null;
     this.drawn = this.sheet ? null : portraitCanvas(id);
     this.ox = 0; this.oy = 0; this.alpha = 1; this.flash = 0; this.flashColor = '#ffffff';
     this.anim = 'idle'; this.animStart = 0; this.rest = 'idle';
@@ -148,6 +151,7 @@ export class Stage {
   }
   muzzle(actor) {
     const a = this.anchor(actor.side, actor), s = actor.size, m = !actor.sheet && MUZZLE[actor.id];
+    if (actor.sheet && actor.sheet.look && actor.sheet.anims.attack && actor.sheet.anims.attack.tip) { const tip = actor.sheet.anims.attack.tip[0] || actor.sheet.anims.attack.tip; if (tip && tip.length === 2) return { x: a.x + actor.ox - s / 2 + (tip[0] / 96) * s, y: a.y + actor.oy - s + (tip[1] / 96) * s + this.footPad(actor) }; }
     if (actor.sheet) return actor.side === 'player' ? { x: a.x + actor.ox + s * 0.18, y: a.y + actor.oy - s * 0.36 } : { x: a.x + actor.ox - s * 0.18, y: a.y + actor.oy - s * 0.36 };
     if (m) return { x: a.x + actor.ox - s / 2 + (m[0] / 40) * s, y: a.y + actor.oy - s + (m[1] / 40) * s };
     return actor.side === 'player' ? { x: a.x + actor.ox + s * 0.35, y: a.y + actor.oy - s * 0.6 } : { x: a.x + actor.ox - s * 0.3, y: a.y + actor.oy - s * 0.5 };
@@ -363,7 +367,7 @@ export class Stage {
         break;
       }
       case 'player:smash': {
-        P.setAnim('attack', now());
+        P.setAnim(P.sheet && P.sheet.anims.attackM ? 'attackM' : 'attack', now());
         await this.move(P, 150, -70, 200);
         const c = this.center(E);
         this.ring(c.x, c.y, 34, C.amber, 260, 3);
@@ -374,7 +378,7 @@ export class Stage {
         break;
       }
       case 'player:strike': {
-        P.setAnim('attack', now());
+        P.setAnim(P.sheet && P.sheet.anims.attackM ? 'attackM' : 'attack', now());
         await this.move(P, 130, -60, 170);
         const c = this.center(E);
         this.ring(c.x, c.y, 18, ev.crit ? C.crit : C.amber, 180, 2);

@@ -1,1 +1,1601 @@
-{ "pending": true, "note": "Replace this file with the real manifest from the character art pack (see docs/CHARACTER_ART_PROMPT_CHATGPT.md). While pending, the game uses the single player sprite." }
+{
+ "layerOrder": [
+  "body",
+  "outfit",
+  "hair",
+  "weapon"
+ ],
+ "skinRamp": [
+  "#6f6f6f",
+  "#9a9a9a",
+  "#c8c8c8"
+ ],
+ "hairRamp": [
+  "#4a2c1a",
+  "#7a4a2a",
+  "#b07a4a"
+ ],
+ "town": {
+  "frame": 64,
+  "feetRow": 59,
+  "anims": {
+   "idle": {
+    "frames": 4,
+    "fps": 5,
+    "loop": true
+   },
+   "walk": {
+    "frames": 6,
+    "fps": 10,
+    "loop": true
+   }
+  },
+  "dirs": [
+   "down",
+   "up",
+   "left",
+   "right"
+  ]
+ },
+ "battle": {
+  "frame": 96,
+  "feetRow": 87,
+  "facing": "right",
+  "anims": {
+   "idle": {
+    "frames": 4,
+    "fps": 6,
+    "loop": true
+   },
+   "attack": {
+    "frames": 4,
+    "fps": 10,
+    "loop": false
+   },
+   "charge": {
+    "frames": 2,
+    "fps": 6,
+    "loop": true
+   },
+   "hit": {
+    "frames": 2,
+    "fps": 10,
+    "loop": false
+   },
+   "defend": {
+    "frames": 2,
+    "fps": 6,
+    "loop": false
+   },
+   "death": {
+    "frames": 6,
+    "fps": 8,
+    "loop": false
+   }
+  }
+ },
+ "layers": {
+  "body_f1": {
+   "kind": "body",
+   "town": {
+    "idle_down": {
+     "file": "body/body_f1/idle_down.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_up": {
+     "file": "body/body_f1/idle_up.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_left": {
+     "file": "body/body_f1/idle_left.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_right": {
+     "file": "body/body_f1/idle_right.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "walk_down": {
+     "file": "body/body_f1/walk_down.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_up": {
+     "file": "body/body_f1/walk_up.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_left": {
+     "file": "body/body_f1/walk_left.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_right": {
+     "file": "body/body_f1/walk_right.png",
+     "frames": 6,
+     "fps": 10
+    }
+   },
+   "battle": {
+    "idle": {
+     "file": "body/body_f1/battle/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "body/body_f1/battle/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "body/body_f1/battle/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "body/body_f1/battle/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "body/body_f1/battle/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "body/body_f1/battle/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "body_f2": {
+   "kind": "body",
+   "town": {
+    "idle_down": {
+     "file": "body/body_f2/idle_down.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_up": {
+     "file": "body/body_f2/idle_up.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_left": {
+     "file": "body/body_f2/idle_left.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_right": {
+     "file": "body/body_f2/idle_right.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "walk_down": {
+     "file": "body/body_f2/walk_down.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_up": {
+     "file": "body/body_f2/walk_up.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_left": {
+     "file": "body/body_f2/walk_left.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_right": {
+     "file": "body/body_f2/walk_right.png",
+     "frames": 6,
+     "fps": 10
+    }
+   },
+   "battle": {
+    "idle": {
+     "file": "body/body_f2/battle/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "body/body_f2/battle/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "body/body_f2/battle/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "body/body_f2/battle/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "body/body_f2/battle/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "body/body_f2/battle/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "body_m1": {
+   "kind": "body",
+   "town": {
+    "idle_down": {
+     "file": "body/body_m1/idle_down.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_up": {
+     "file": "body/body_m1/idle_up.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_left": {
+     "file": "body/body_m1/idle_left.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_right": {
+     "file": "body/body_m1/idle_right.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "walk_down": {
+     "file": "body/body_m1/walk_down.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_up": {
+     "file": "body/body_m1/walk_up.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_left": {
+     "file": "body/body_m1/walk_left.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_right": {
+     "file": "body/body_m1/walk_right.png",
+     "frames": 6,
+     "fps": 10
+    }
+   },
+   "battle": {
+    "idle": {
+     "file": "body/body_m1/battle/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "body/body_m1/battle/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "body/body_m1/battle/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "body/body_m1/battle/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "body/body_m1/battle/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "body/body_m1/battle/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "body_m2": {
+   "kind": "body",
+   "town": {
+    "idle_down": {
+     "file": "body/body_m2/idle_down.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_up": {
+     "file": "body/body_m2/idle_up.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_left": {
+     "file": "body/body_m2/idle_left.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_right": {
+     "file": "body/body_m2/idle_right.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "walk_down": {
+     "file": "body/body_m2/walk_down.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_up": {
+     "file": "body/body_m2/walk_up.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_left": {
+     "file": "body/body_m2/walk_left.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_right": {
+     "file": "body/body_m2/walk_right.png",
+     "frames": 6,
+     "fps": 10
+    }
+   },
+   "battle": {
+    "idle": {
+     "file": "body/body_m2/battle/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "body/body_m2/battle/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "body/body_m2/battle/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "body/body_m2/battle/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "body/body_m2/battle/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "body/body_m2/battle/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "cls_clerk": {
+   "kind": "outfit",
+   "town": {
+    "idle_down": {
+     "file": "outfit/cls_clerk/idle_down.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_up": {
+     "file": "outfit/cls_clerk/idle_up.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_left": {
+     "file": "outfit/cls_clerk/idle_left.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_right": {
+     "file": "outfit/cls_clerk/idle_right.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "walk_down": {
+     "file": "outfit/cls_clerk/walk_down.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_up": {
+     "file": "outfit/cls_clerk/walk_up.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_left": {
+     "file": "outfit/cls_clerk/walk_left.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_right": {
+     "file": "outfit/cls_clerk/walk_right.png",
+     "frames": 6,
+     "fps": 10
+    }
+   },
+   "battle": {
+    "idle": {
+     "file": "outfit/cls_clerk/battle/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "outfit/cls_clerk/battle/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "outfit/cls_clerk/battle/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "outfit/cls_clerk/battle/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "outfit/cls_clerk/battle/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "outfit/cls_clerk/battle/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "cls_foundry": {
+   "kind": "outfit",
+   "town": {
+    "idle_down": {
+     "file": "outfit/cls_foundry/idle_down.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_up": {
+     "file": "outfit/cls_foundry/idle_up.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_left": {
+     "file": "outfit/cls_foundry/idle_left.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_right": {
+     "file": "outfit/cls_foundry/idle_right.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "walk_down": {
+     "file": "outfit/cls_foundry/walk_down.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_up": {
+     "file": "outfit/cls_foundry/walk_up.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_left": {
+     "file": "outfit/cls_foundry/walk_left.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_right": {
+     "file": "outfit/cls_foundry/walk_right.png",
+     "frames": 6,
+     "fps": 10
+    }
+   },
+   "battle": {
+    "idle": {
+     "file": "outfit/cls_foundry/battle/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "outfit/cls_foundry/battle/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "outfit/cls_foundry/battle/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "outfit/cls_foundry/battle/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "outfit/cls_foundry/battle/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "outfit/cls_foundry/battle/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "cls_preacher": {
+   "kind": "outfit",
+   "town": {
+    "idle_down": {
+     "file": "outfit/cls_preacher/idle_down.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_up": {
+     "file": "outfit/cls_preacher/idle_up.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_left": {
+     "file": "outfit/cls_preacher/idle_left.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_right": {
+     "file": "outfit/cls_preacher/idle_right.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "walk_down": {
+     "file": "outfit/cls_preacher/walk_down.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_up": {
+     "file": "outfit/cls_preacher/walk_up.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_left": {
+     "file": "outfit/cls_preacher/walk_left.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_right": {
+     "file": "outfit/cls_preacher/walk_right.png",
+     "frames": 6,
+     "fps": 10
+    }
+   },
+   "battle": {
+    "idle": {
+     "file": "outfit/cls_preacher/battle/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "outfit/cls_preacher/battle/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "outfit/cls_preacher/battle/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "outfit/cls_preacher/battle/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "outfit/cls_preacher/battle/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "outfit/cls_preacher/battle/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "cls_runner": {
+   "kind": "outfit",
+   "town": {
+    "idle_down": {
+     "file": "outfit/cls_runner/idle_down.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_up": {
+     "file": "outfit/cls_runner/idle_up.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_left": {
+     "file": "outfit/cls_runner/idle_left.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_right": {
+     "file": "outfit/cls_runner/idle_right.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "walk_down": {
+     "file": "outfit/cls_runner/walk_down.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_up": {
+     "file": "outfit/cls_runner/walk_up.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_left": {
+     "file": "outfit/cls_runner/walk_left.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_right": {
+     "file": "outfit/cls_runner/walk_right.png",
+     "frames": 6,
+     "fps": 10
+    }
+   },
+   "battle": {
+    "idle": {
+     "file": "outfit/cls_runner/battle/idle.png",
+     "frames": 4,
+     "fps": 6
+    },
+    "attack": {
+     "file": "outfit/cls_runner/battle/attack.png",
+     "frames": 4,
+     "fps": 10
+    },
+    "charge": {
+     "file": "outfit/cls_runner/battle/charge.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "hit": {
+     "file": "outfit/cls_runner/battle/hit.png",
+     "frames": 2,
+     "fps": 10
+    },
+    "defend": {
+     "file": "outfit/cls_runner/battle/defend.png",
+     "frames": 2,
+     "fps": 6
+    },
+    "death": {
+     "file": "outfit/cls_runner/battle/death.png",
+     "frames": 6,
+     "fps": 8
+    }
+   }
+  },
+  "hair_bob": {
+   "kind": "hair",
+   "town": {
+    "idle_down": {
+     "file": "hair/hair_bob/idle_down.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_up": {
+     "file": "hair/hair_bob/idle_up.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_left": {
+     "file": "hair/hair_bob/idle_left.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_right": {
+     "file": "hair/hair_bob/idle_right.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "walk_down": {
+     "file": "hair/hair_bob/walk_down.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_up": {
+     "file": "hair/hair_bob/walk_up.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_left": {
+     "file": "hair/hair_bob/walk_left.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_right": {
+     "file": "hair/hair_bob/walk_right.png",
+     "frames": 6,
+     "fps": 10
+    }
+   },
+   "battle": {}
+  },
+  "hair_cropped": {
+   "kind": "hair",
+   "town": {
+    "idle_down": {
+     "file": "hair/hair_cropped/idle_down.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_up": {
+     "file": "hair/hair_cropped/idle_up.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_left": {
+     "file": "hair/hair_cropped/idle_left.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_right": {
+     "file": "hair/hair_cropped/idle_right.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "walk_down": {
+     "file": "hair/hair_cropped/walk_down.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_up": {
+     "file": "hair/hair_cropped/walk_up.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_left": {
+     "file": "hair/hair_cropped/walk_left.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_right": {
+     "file": "hair/hair_cropped/walk_right.png",
+     "frames": 6,
+     "fps": 10
+    }
+   },
+   "battle": {}
+  },
+  "hair_long_tied": {
+   "kind": "hair",
+   "town": {
+    "idle_down": {
+     "file": "hair/hair_long_tied/idle_down.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_up": {
+     "file": "hair/hair_long_tied/idle_up.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_left": {
+     "file": "hair/hair_long_tied/idle_left.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_right": {
+     "file": "hair/hair_long_tied/idle_right.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "walk_down": {
+     "file": "hair/hair_long_tied/walk_down.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_up": {
+     "file": "hair/hair_long_tied/walk_up.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_left": {
+     "file": "hair/hair_long_tied/walk_left.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_right": {
+     "file": "hair/hair_long_tied/walk_right.png",
+     "frames": 6,
+     "fps": 10
+    }
+   },
+   "battle": {}
+  },
+  "hair_mohawk": {
+   "kind": "hair",
+   "town": {
+    "idle_down": {
+     "file": "hair/hair_mohawk/idle_down.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_up": {
+     "file": "hair/hair_mohawk/idle_up.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_left": {
+     "file": "hair/hair_mohawk/idle_left.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_right": {
+     "file": "hair/hair_mohawk/idle_right.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "walk_down": {
+     "file": "hair/hair_mohawk/walk_down.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_up": {
+     "file": "hair/hair_mohawk/walk_up.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_left": {
+     "file": "hair/hair_mohawk/walk_left.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_right": {
+     "file": "hair/hair_mohawk/walk_right.png",
+     "frames": 6,
+     "fps": 10
+    }
+   },
+   "battle": {}
+  },
+  "hair_shaved": {
+   "kind": "hair",
+   "town": {
+    "idle_down": {
+     "file": "hair/hair_shaved/idle_down.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_up": {
+     "file": "hair/hair_shaved/idle_up.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_left": {
+     "file": "hair/hair_shaved/idle_left.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_right": {
+     "file": "hair/hair_shaved/idle_right.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "walk_down": {
+     "file": "hair/hair_shaved/walk_down.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_up": {
+     "file": "hair/hair_shaved/walk_up.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_left": {
+     "file": "hair/hair_shaved/walk_left.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_right": {
+     "file": "hair/hair_shaved/walk_right.png",
+     "frames": 6,
+     "fps": 10
+    }
+   },
+   "battle": {}
+  },
+  "hair_short": {
+   "kind": "hair",
+   "town": {
+    "idle_down": {
+     "file": "hair/hair_short/idle_down.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_up": {
+     "file": "hair/hair_short/idle_up.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_left": {
+     "file": "hair/hair_short/idle_left.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_right": {
+     "file": "hair/hair_short/idle_right.png",
+     "frames": 4,
+     "fps": 5
+    },
+    "walk_down": {
+     "file": "hair/hair_short/walk_down.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_up": {
+     "file": "hair/hair_short/walk_up.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_left": {
+     "file": "hair/hair_short/walk_left.png",
+     "frames": 6,
+     "fps": 10
+    },
+    "walk_right": {
+     "file": "hair/hair_short/walk_right.png",
+     "frames": 6,
+     "fps": 10
+    }
+   },
+   "battle": {}
+  },
+  "wpn_baton": {
+   "kind": "weapon",
+   "town": {},
+   "battle": {
+    "idle": {
+     "file": "weapon/wpn_baton/battle/idle.png",
+     "frames": 4,
+     "fps": 6,
+     "tip": [
+      [
+       78,
+       37
+      ],
+      [
+       78,
+       33
+      ],
+      [
+       78,
+       33
+      ],
+      [
+       78,
+       32
+      ]
+     ]
+    },
+    "attack": {
+     "file": "weapon/wpn_baton/battle/attack.png",
+     "frames": 4,
+     "fps": 10,
+     "tip": [
+      [
+       78,
+       42
+      ],
+      [
+       70,
+       46
+      ],
+      [
+       70,
+       31
+      ],
+      [
+       88,
+       32
+      ]
+     ]
+    },
+    "charge": {
+     "file": "weapon/wpn_baton/battle/charge.png",
+     "frames": 2,
+     "fps": 6,
+     "tip": [
+      [
+       77,
+       45
+      ],
+      [
+       80,
+       47
+      ]
+     ]
+    }
+   },
+   "tipFrame1Attack": [
+    78,
+    42
+   ],
+   "sprite": {
+    "length": 19,
+    "scale": "1/6",
+    "note": "same sprite pinned to the right fist every frame; tip moves only with the fist"
+   }
+  },
+  "wpn_cannon": {
+   "kind": "weapon",
+   "town": {},
+   "battle": {
+    "idle": {
+     "file": "weapon/wpn_cannon/battle/idle.png",
+     "frames": 4,
+     "fps": 6,
+     "tip": [
+      [
+       82,
+       28
+      ],
+      [
+       82,
+       24
+      ],
+      [
+       82,
+       24
+      ],
+      [
+       82,
+       23
+      ]
+     ]
+    },
+    "attack": {
+     "file": "weapon/wpn_cannon/battle/attack.png",
+     "frames": 4,
+     "fps": 10,
+     "tip": [
+      [
+       82,
+       33
+      ],
+      [
+       74,
+       37
+      ],
+      [
+       74,
+       22
+      ],
+      [
+       92,
+       23
+      ]
+     ]
+    },
+    "charge": {
+     "file": "weapon/wpn_cannon/battle/charge.png",
+     "frames": 2,
+     "fps": 6,
+     "tip": [
+      [
+       81,
+       36
+      ],
+      [
+       84,
+       38
+      ]
+     ]
+    }
+   },
+   "tipFrame1Attack": [
+    82,
+    33
+   ],
+   "sprite": {
+    "length": 29,
+    "scale": "1/4",
+    "note": "same sprite pinned to the right fist every frame; tip moves only with the fist"
+   }
+  },
+  "wpn_carbine": {
+   "kind": "weapon",
+   "town": {},
+   "battle": {
+    "idle": {
+     "file": "weapon/wpn_carbine/battle/idle.png",
+     "frames": 4,
+     "fps": 6,
+     "tip": [
+      [
+       70,
+       32
+      ],
+      [
+       70,
+       28
+      ],
+      [
+       70,
+       28
+      ],
+      [
+       70,
+       27
+      ]
+     ]
+    },
+    "attack": {
+     "file": "weapon/wpn_carbine/battle/attack.png",
+     "frames": 4,
+     "fps": 10,
+     "tip": [
+      [
+       70,
+       37
+      ],
+      [
+       62,
+       41
+      ],
+      [
+       62,
+       26
+      ],
+      [
+       80,
+       27
+      ]
+     ]
+    },
+    "charge": {
+     "file": "weapon/wpn_carbine/battle/charge.png",
+     "frames": 2,
+     "fps": 6,
+     "tip": [
+      [
+       69,
+       40
+      ],
+      [
+       72,
+       42
+      ]
+     ]
+    }
+   },
+   "tipFrame1Attack": [
+    70,
+    37
+   ],
+   "sprite": {
+    "length": 23,
+    "scale": "1/5",
+    "note": "same sprite pinned to the right fist every frame; tip moves only with the fist"
+   }
+  },
+  "wpn_knife": {
+   "kind": "weapon",
+   "town": {},
+   "battle": {
+    "idle": {
+     "file": "weapon/wpn_knife/battle/idle.png",
+     "frames": 4,
+     "fps": 6,
+     "tip": [
+      [
+       77,
+       36
+      ],
+      [
+       77,
+       32
+      ],
+      [
+       77,
+       32
+      ],
+      [
+       77,
+       31
+      ]
+     ]
+    },
+    "attack": {
+     "file": "weapon/wpn_knife/battle/attack.png",
+     "frames": 4,
+     "fps": 10,
+     "tip": [
+      [
+       77,
+       41
+      ],
+      [
+       69,
+       45
+      ],
+      [
+       69,
+       30
+      ],
+      [
+       87,
+       31
+      ]
+     ]
+    },
+    "charge": {
+     "file": "weapon/wpn_knife/battle/charge.png",
+     "frames": 2,
+     "fps": 6,
+     "tip": [
+      [
+       76,
+       44
+      ],
+      [
+       79,
+       46
+      ]
+     ]
+    }
+   },
+   "tipFrame1Attack": [
+    77,
+    41
+   ],
+   "sprite": {
+    "length": 18,
+    "scale": "1/6",
+    "note": "same sprite pinned to the right fist every frame; tip moves only with the fist"
+   }
+  },
+  "wpn_maul": {
+   "kind": "weapon",
+   "town": {},
+   "battle": {
+    "idle": {
+     "file": "weapon/wpn_maul/battle/idle.png",
+     "frames": 4,
+     "fps": 6,
+     "tip": [
+      [
+       87,
+       37
+      ],
+      [
+       87,
+       33
+      ],
+      [
+       87,
+       33
+      ],
+      [
+       87,
+       32
+      ]
+     ]
+    },
+    "attack": {
+     "file": "weapon/wpn_maul/battle/attack.png",
+     "frames": 4,
+     "fps": 10,
+     "tip": [
+      [
+       87,
+       42
+      ],
+      [
+       79,
+       46
+      ],
+      [
+       79,
+       31
+      ],
+      [
+       97,
+       32
+      ]
+     ]
+    },
+    "charge": {
+     "file": "weapon/wpn_maul/battle/charge.png",
+     "frames": 2,
+     "fps": 6,
+     "tip": [
+      [
+       86,
+       45
+      ],
+      [
+       89,
+       47
+      ]
+     ]
+    }
+   },
+   "tipFrame1Attack": [
+    87,
+    42
+   ],
+   "sprite": {
+    "length": 28,
+    "scale": "1/4",
+    "note": "same sprite pinned to the right fist every frame; tip moves only with the fist"
+   }
+  },
+  "wpn_pistol": {
+   "kind": "weapon",
+   "town": {},
+   "battle": {
+    "idle": {
+     "file": "weapon/wpn_pistol/battle/idle.png",
+     "frames": 4,
+     "fps": 6,
+     "tip": [
+      [
+       74,
+       29
+      ],
+      [
+       74,
+       25
+      ],
+      [
+       74,
+       25
+      ],
+      [
+       74,
+       24
+      ]
+     ]
+    },
+    "attack": {
+     "file": "weapon/wpn_pistol/battle/attack.png",
+     "frames": 4,
+     "fps": 10,
+     "tip": [
+      [
+       74,
+       34
+      ],
+      [
+       66,
+       38
+      ],
+      [
+       66,
+       23
+      ],
+      [
+       84,
+       24
+      ]
+     ]
+    },
+    "charge": {
+     "file": "weapon/wpn_pistol/battle/charge.png",
+     "frames": 2,
+     "fps": 6,
+     "tip": [
+      [
+       73,
+       37
+      ],
+      [
+       76,
+       39
+      ]
+     ]
+    }
+   },
+   "tipFrame1Attack": [
+    74,
+    34
+   ],
+   "sprite": {
+    "length": 17,
+    "scale": "1/6",
+    "note": "same sprite pinned to the right fist every frame; tip moves only with the fist"
+   }
+  },
+  "wpn_rifle": {
+   "kind": "weapon",
+   "town": {},
+   "battle": {
+    "idle": {
+     "file": "weapon/wpn_rifle/battle/idle.png",
+     "frames": 4,
+     "fps": 6,
+     "tip": [
+      [
+       83,
+       33
+      ],
+      [
+       83,
+       29
+      ],
+      [
+       83,
+       29
+      ],
+      [
+       83,
+       28
+      ]
+     ]
+    },
+    "attack": {
+     "file": "weapon/wpn_rifle/battle/attack.png",
+     "frames": 4,
+     "fps": 10,
+     "tip": [
+      [
+       83,
+       38
+      ],
+      [
+       75,
+       42
+      ],
+      [
+       75,
+       27
+      ],
+      [
+       93,
+       28
+      ]
+     ]
+    },
+    "charge": {
+     "file": "weapon/wpn_rifle/battle/charge.png",
+     "frames": 2,
+     "fps": 6,
+     "tip": [
+      [
+       82,
+       41
+      ],
+      [
+       85,
+       43
+      ]
+     ]
+    }
+   },
+   "tipFrame1Attack": [
+    83,
+    38
+   ],
+   "sprite": {
+    "length": 30,
+    "scale": "1/4",
+    "note": "same sprite pinned to the right fist every frame; tip moves only with the fist"
+   }
+  },
+  "wpn_scattergun": {
+   "kind": "weapon",
+   "town": {},
+   "battle": {
+    "idle": {
+     "file": "weapon/wpn_scattergun/battle/idle.png",
+     "frames": 4,
+     "fps": 6,
+     "tip": [
+      [
+       77,
+       34
+      ],
+      [
+       77,
+       30
+      ],
+      [
+       77,
+       30
+      ],
+      [
+       77,
+       29
+      ]
+     ]
+    },
+    "attack": {
+     "file": "weapon/wpn_scattergun/battle/attack.png",
+     "frames": 4,
+     "fps": 10,
+     "tip": [
+      [
+       77,
+       39
+      ],
+      [
+       69,
+       43
+      ],
+      [
+       69,
+       28
+      ],
+      [
+       87,
+       29
+      ]
+     ]
+    },
+    "charge": {
+     "file": "weapon/wpn_scattergun/battle/charge.png",
+     "frames": 2,
+     "fps": 6,
+     "tip": [
+      [
+       76,
+       42
+      ],
+      [
+       79,
+       44
+      ]
+     ]
+    }
+   },
+   "tipFrame1Attack": [
+    77,
+    39
+   ],
+   "sprite": {
+    "length": 21,
+    "scale": "1/5",
+    "note": "same sprite pinned to the right fist every frame; tip moves only with the fist"
+   }
+  }
+ },
+ "portraits": {
+  "body_f1": {
+   "file": "portrait/body_f1.png",
+   "w": 64,
+   "h": 64
+  },
+  "body_f2": {
+   "file": "portrait/body_f2.png",
+   "w": 64,
+   "h": 64
+  },
+  "body_m1": {
+   "file": "portrait/body_m1.png",
+   "w": 64,
+   "h": 64
+  },
+  "body_m2": {
+   "file": "portrait/body_m2.png",
+   "w": 64,
+   "h": 64
+  }
+ }
+}

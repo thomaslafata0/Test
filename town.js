@@ -459,8 +459,12 @@ export class Town {
   }
 
   // ---------- drawing ----------
+  // Composited look strips from look.js ({ idle_down: { img, frames, fps }, ... }) replace the stock player sheets.
+  setPlayerSheets(sheets) { this.playerSheets = sheets || null; }
   sprite(id, anim, dir, x, y, t) {
     const a = this.m.chars[id] && this.m.chars[id].anims[anim];
+    const custom = id === 'player' && this.playerSheets && (this.playerSheets[`${anim}_${dir}`] || this.playerSheets.idle_down);
+    if (custom) { const f = Math.floor(t * custom.fps) % custom.frames; this.g.drawImage(custom.img, f * 64, 0, 64, 64, Math.round(x - FEET.x - this.cam.x), Math.round(y - FEET.y - this.cam.y), 64, 64); return; }
     let im = this.img[`c:${id}:${anim}_${dir}`];
     let frames = a ? a.frames : 4, fps = a ? a.fps : 5;
     if (!im) { im = this.img[`c:${id}:idle_down`]; const ia = this.m.chars[id] && this.m.chars[id].anims.idle; frames = ia ? ia.frames : 4; fps = ia ? ia.fps : 5; }
