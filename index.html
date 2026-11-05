@@ -596,6 +596,7 @@ import { Stage, loadSheets, sheetStill, setLookSheets } from './stage.js';
 import * as A from './audio.js';
 import { iconURL, gearIconKey } from './icons.js';
 import { Town, SHOPS } from './town.js';
+import { autoStep, loadDev, BUILDS } from './dev.js';
 import { Wheel, OrbitScene, loadDowntimeArt, artFor } from './downtime.js';
 import { Net, getCoopPrefs, setCoopPrefs, makeCode, getRoom, setRoom, getLastRoom, setLastRoom } from './net.js';
 import { BODIES, HAIR, HAIR_NAMES, SKINS, HAIRS, defaultLook, loadLayers, hasLayers, lookStill, lookBattleStill, lookPortrait, townSheets, battleSheet, weaponLayer } from './look.js';
@@ -614,6 +615,7 @@ function load() {
 }
 // Writes only when something changed, stamping the save and the operative with when, so copies of them can be compared.
 let lastBody = '', saveFailed = false;
+const bodyOf = (s) => { const a = s.savedAt, c = s.char, b = c && c.savedAt; delete s.savedAt; if (c) delete c.savedAt; const t = JSON.stringify(s); if (a !== undefined) s.savedAt = a; if (c && b !== undefined) c.savedAt = b; return t; };
 function writeSave(s) {
   const a = s.savedAt, c = s.char, b = c && c.savedAt;
   delete s.savedAt; if (c) delete c.savedAt;
@@ -621,12 +623,182 @@ function writeSave(s) {
   const now = Date.now();
   s.savedAt = changed ? now : a; if (c) c.savedAt = changed ? now : b;
   if (!changed) return;
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(s)); lastBody = body; saveFailed = false; if (typeof cloudTouched === 'function') cloudTouched(); } catch (e) { saveFailed = true; }
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(s)); lastBody = body; saveFailed = false; cloudTouched(); } catch (e) { saveFailed = true; }
 }
 // The friend's own game (home) is the real save; what's on their screen in co-op is a mirror of the host's.
 function save() {
   if (!isGuest()) { writeSave(state); return; }
   if (home && !net.local) writeSave(home);
+}
+
+// ---------- cloud saves ----------
+// A cell code is the key to a copy of this save on the server (coop/worker.js, Vault). Pushes when something changed, no more than
+// twice a minute and when the tab goes away. On loading, whichever copy is newer wins; the server keeps the last few versions.
+const CLOUD_KEY = 'cinder-cell-cloud', CLOUD_ON = typeof location !== 'undefined' && location.hostname.endsWith('.workers.dev');
+const CLOUD_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+let cloud = (() => { try { return JSON.parse(localStorage.getItem(CLOUD_KEY)) || {}; } catch (e) { return {}; } })();
+let cloudDirty = false, cloudBusy = false, cloudLast = 0, cloudStatus = '', cloudNewer = null, cloudVersions = null, cloudArm = false;
+const storeCloud = () => { try { localStorage.setItem(CLOUD_KEY, JSON.stringify(cloud)); } catch (e) {} };
+function cloudCode() {
+  if (!cloud.code) { const a = crypto.getRandomValues(new Uint8Array(12)); cloud.code = Array.from(a, (x) => CLOUD_ALPHABET[x % 32]).join(''); cloud.rev = 0; storeCloud(); }
+  return cloud.code;
+}
+const prettyCode = (c) => c.replace(/(.{4})(?=.)/g, '$1-');
+const ago = (t) => { const s = Math.round((Date.now() - t) / 1000); return s < 60 ? 'just now' : s < 3600 ? `${Math.round(s / 60)} min ago` : s < 86400 ? `${Math.round(s / 3600)} h ago` : `${Math.round(s / 86400)} d ago`; };
+function cloudTouched() { cloudDirty = true; }
+async function cloudPull(code, rev) {
+  const r = await fetch(`/save/${code}${rev ? `?rev=${rev}` : ''}`, { cache: 'no-store' });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error(`cloud ${r.status}`);
+  return r.json();
+}
+async function cloudPush({ force = false, keepalive = false } = {}) {
+  if (!CLOUD_ON || cloudBusy || (net && net.local)) return;
+  const data = localStorage.getItem(SAVE_KEY);
+  if (!data) return;
+  let parsed; try { parsed = JSON.parse(data); } catch (e) { return; }
+  // Nothing worth keeping yet: don't overwrite a real save with a blank start.
+  if (!parsed.meta || !(parsed.meta.operatives > 0)) { cloudDirty = false; return; }
+  cloudBusy = true; cloudDirty = false;
+  try {
+    const body = JSON.stringify({ base: cloud.rev || 0, at: parsed.savedAt || Date.now(), data, force });
+    const r = await fetch(`/save/${cloudCode()}`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body, keepalive: keepalive && body.length < 60000 });
+    const o = await r.json().catch(() => ({}));
+    if (r.ok) { cloud.rev = o.rev; cloud.at = o.at; cloud.pushed = Date.now(); storeCloud(); cloudStatus = ''; cloudLast = Date.now(); cloudNewer = null; }
+    else if (r.status === 409) {
+      // Another device saved since. If that copy is older than this one, this one wins; otherwise ask before going further.
+      if ((o.at || 0) > (parsed.savedAt || 0)) { cloudNewer = o; cloudStatus = 'A newer save is in the cloud.'; }
+      else { cloud.rev = o.rev; cloudDirty = true; cloudBusy = false; return cloudPush({ force: true }); }
+    } else { cloudDirty = true; if (r.status !== 429) cloudStatus = `Cloud save failed (${r.status}).`; }
+  } catch (e) { cloudDirty = true; cloudStatus = 'Offline: will save to the cloud when back.'; }
+  cloudBusy = false;
+}
+function cloudStart() {
+  if (!CLOUD_ON) return;
+  setInterval(() => { if (cloudDirty && !cloudNewer && Date.now() - cloudLast > 30000) cloudPush(); }, 5000);
+  const bye = () => { if (cloudDirty && !cloudNewer) cloudPush({ keepalive: true }); };
+  window.addEventListener('pagehide', bye);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') bye(); });
+  window.addEventListener('online', () => { if (cloudDirty) cloudPush(); });
+}
+function adoptSave(data, rev, code) {
+  const parsed = JSON.parse(data);
+  state = E.migrate(parsed, rng);
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) {}
+  lastBody = bodyOf(state);
+  cloud = { ...cloud, code: code || cloud.code, rev, at: parsed.savedAt }; storeCloud();
+  cloudDirty = false; cloudNewer = null; cloudVersions = null; cloudStatus = '';
+}
+function cloudSection() {
+  if (!CLOUD_ON) return '<p class="muted" style="font-size:.88rem">Cloud saves work on the live site.</p>';
+  const code = cloudCode();
+  const when = cloud.pushed ? `Saved to the cloud ${ago(cloud.pushed)}.` : 'Saves to the cloud once you have an operative.';
+  return `<div class="set-row"><span>Cell code <span class="muted">(enter it on any browser or device to load this cell. Anyone with it can load it, and it can\u2019t be recovered if lost.)</span></span><span class="btnrow"><b class="num">${esc(prettyCode(code))}</b><button class="btn" data-a="cloudcopy">Copy</button></span></div>
+    <p class="muted" style="font-size:.88rem">${esc(cloudStatus || when)}${net ? ' Your own operative and progress keep saving while you\u2019re in co-op.' : ''}</p>
+    ${cloudNewer ? `<div class="set-row"><span>The cloud has a newer save from ${esc(ago(cloudNewer.at))}.</span><span class="btnrow"><button class="btn primary" data-a="cloudrestore" data-v="${cloudNewer.rev}">Load it</button><button class="btn" data-a="cloudkeep">Keep this one</button></span></div>` : ''}
+    <div class="set-row"><span class="btnrow" style="flex:1"><input id="cloud-code" class="text" maxlength="14" placeholder="Enter a cell code" style="flex:1;min-width:120px;text-transform:uppercase"><button class="btn" data-a="cloudload" ${net ? 'disabled' : ''}>${cloudArm ? 'Click again: replaces this cell' : 'Load'}</button></span></div>
+    <div class="set-row"><span>Older versions of this cell</span><button class="btn" data-a="cloudversions">Show</button></div>
+    ${cloudVersions ? (cloudVersions.length ? cloudVersions.map((v) => `<div class="set-row"><span class="muted num">Version ${v.rev} \u00B7 ${esc(ago(v.at))} \u00B7 ${Math.ceil(v.bytes / 1024)} KB</span><button class="btn" data-a="cloudrestore" data-v="${v.rev}" ${net ? 'disabled' : ''}>Restore</button></div>`).join('') : '<p class="muted">Nothing saved yet.</p>') : ''}`;
+}
+
+// ---------- dev mode ----------
+const DEV_CODE = '444481', DEV_KEY = 'cinder-cell-dev';
+let devOn = (() => { try { return localStorage.getItem(DEV_KEY) === '1'; } catch (e) { return false; } })();
+let auto = null, autoLast = { build: 'strength', target: 15, stopOnDeath: false, map: '' }, autoResult = null;
+function stopAuto(why) {
+  if (!auto) return;
+  autoResult = `${why || 'Stopped.'} ${auto.stats.ops} new operatives, ${auto.stats.raids} raids, ${auto.stats.deaths} deaths, deepest sector ${auto.stats.deepest}, ${Math.round((Date.now() - auto.t0) / 1000)} s.`;
+  if (auto.mode === 'fast' && auto.sfx) A.setPref('sfx', true);
+  auto = null; toast = autoResult; document.getElementById('app').classList.remove('busy');
+  render();
+}
+function startAuto(mode) {
+  if (net) { toast = 'Leave co-op to use autoplay.'; render(); return; }
+  const num = +((document.getElementById('auto-target') || {}).value || 0);
+  autoLast = { build: (document.getElementById('auto-build') || {}).value || 'strength', target: Math.max(0, num), stopOnDeath: !!(document.getElementById('auto-death') || {}).checked, map: (document.getElementById('auto-map') || {}).value || '' };
+  loadDev().then(() => {
+    modal = null; titleOpen = false; state.meta.dev = true; state.popup = null; state.compare = null; state.trade = null;
+    auto = { ...autoLast, mode, t0: Date.now(), lastDraw: 0, stats: { ops: 0, raids: 0, deaths: 0, deepest: 0 }, sfx: A.getPrefs().sfx };
+    if (mode === 'fast' && auto.sfx) A.setPref('sfx', false);
+    runAuto();
+  }).catch((e) => { toast = `Autoplay couldn\u2019t load: ${e.message}`; render(); });
+}
+function runAuto() {
+  if (!auto) return;
+  const mine = auto;
+  const finish = (why) => { if (auto === mine) stopAuto(why); };
+  if (mine.mode === 'fast') {
+    const t = performance.now();
+    try {
+      while (auto === mine && performance.now() - t < 14) { const r = autoStep(state, rng, mine); if (r && r.stop) return finish(r.stop); }
+    } catch (e) { console.error(e); return finish(`Autoplay hit an error: ${e.message}.`); }
+    if (Date.now() - mine.lastDraw > 350) { mine.lastDraw = Date.now(); try { render(); } catch (e) { console.error(e); return finish(`Autoplay hit a screen error: ${e.message}.`); } }
+    setTimeout(runAuto, 0);
+    return;
+  }
+  // Watch mode: one decision at a time, on screen, with fights animated.
+  (async () => {
+    try {
+      if (busy) { setTimeout(runAuto, 100); return; }
+      const r = autoStep(state, rng, mine, true);
+      if (r && r.stop) return finish(r.stop);
+      render();
+      if (r && r.fight) await fight(r.fight, 0);
+      setTimeout(runAuto, r && r.fight ? 60 : 350);
+    } catch (e) { console.error(e); finish(`Autoplay hit an error: ${e.message}.`); }
+  })();
+}
+function autoBar() {
+  if (!auto) return '';
+  const c = state.char, r = state.run, st = auto.stats;
+  return `<div class="coop-banner" role="status"><span>Autoplay (${auto.mode}) \u00B7 ${c ? `${esc(c.name)} Lv ${c.level}` : 'new operative'} \u00B7 ${r ? `sector ${r.sector}` : 'in town'} \u00B7 ${st.raids} raids \u00B7 ${st.deaths} deaths \u00B7 deepest ${st.deepest}${auto.target ? ` of ${auto.target}` : ''}</span><button class="btn" data-a="autostop">Stop</button></div>`;
+}
+function devView() {
+  const c = state.char, inRun = !!state.run, b = (a, v, k, label, off) => `<button class="btn" data-a="${a}" data-v="${v}" ${k !== '' ? `data-k="${k}"` : ''} ${off ? 'disabled' : ''}>${label}</button>`;
+  const row = (label, btns) => `<div class="set-row"><span>${label}</span><span class="btnrow">${btns}</span></div>`;
+  const noc = !c;
+  return `<div class="modal-wrap" data-a="closemodal"><div class="modal board" role="dialog" aria-modal="true" aria-label="Dev mode">
+    <div class="pop-head"><div style="display:grid;gap:2px"><span class="label">Tools for testing</span><h2>Dev mode</h2></div><button class="tool" data-a="closemodal" aria-label="Close">Close</button></div>
+    <p class="notice">These change this cell for good and keep it off the leaderboard. Copy a save code first, or start a <b>New cell</b>, if you want to keep it clean.</p>
+    ${autoResult ? `<p class="muted" style="font-size:.9rem">Last autoplay: ${esc(autoResult)}</p>` : ''}
+    <h3>Autoplay <span class="num muted" style="font-size:.85rem">plays the whole game: shop, raids, loot, recruits</span></h3>
+    <label class="set-row" for="auto-build"><span>Build</span><select id="auto-build" class="text">${Object.entries(BUILDS).map(([k, x]) => `<option value="${k}" ${autoLast.build === k ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>
+    <label class="set-row" for="auto-map"><span>Map</span><select id="auto-map" class="text"><option value="">Next unliberated</option>${D.MAPS.map((mp) => `<option value="${mp.id}" ${autoLast.map === mp.id ? 'selected' : ''}>${esc(mp.name)}</option>`).join('')}</select></label>
+    <label class="set-row" for="auto-target"><span>Stop on clearing sector <span class="muted">(0 keeps going until you press Stop)</span></span><input id="auto-target" class="text" type="number" min="0" max="99" value="${autoLast.target}" style="width:7ch"></label>
+    <label class="set-row" for="auto-death"><span>Stop when an operative dies</span><input id="auto-death" type="checkbox" ${autoLast.stopOnDeath ? 'checked' : ''}></label>
+    <div class="set-row"><span>Run it</span><span class="btnrow"><button class="btn primary" data-a="autostart" data-v="fast" ${net ? 'disabled' : ''}>Fast</button><button class="btn" data-a="autostart" data-v="watch" ${net ? 'disabled' : ''}>Watch</button></span></div>
+    <h3>This operative</h3>
+    ${row(`Credits${c ? ` <span class="muted num">${c.credits.toLocaleString()}</span>` : ''}`, [100, 1000, 10000, 100000].map((n) => b('dev', 'credits', n, `+${n.toLocaleString()}`, noc)).join(''))}
+    ${row(`Attribute points${c ? ` <span class="muted num">${c.attrPoints}</span>` : ''}`, [1, 5, 20].map((n) => b('dev', 'points', n, `+${n}`, noc)).join(''))}
+    ${row(`XP${c ? ` <span class="muted num">level ${c.level}</span>` : ''}`, b('dev', 'xp', 100, '+100', noc) + b('dev', 'xp', 1000, '+1,000', noc) + b('dev', 'xp', 10000, '+10,000', noc))}
+    ${row('Patch up', b('dev', 'heal', '', 'Full HP', noc) + b('dev', 'items', '', 'Fill items', noc))}
+    ${row('Gear', ['common', 'rare', 'elite', 'legendary'].map((r) => b('dev', 'gear', r, `Random ${r}`, noc)).join(''))}
+    ${row('Contraband', [0, 1, 2, 3].map((t) => b('dev', 'perk', t, `Tier ${E.ROMAN[t]}`, noc || inRun)).join(''))}
+    ${row('Unlock insertion points', [6, 11, 16, 21].map((n) => b('dev', 'sector', n, `Sector ${n}`, noc)).join(''))}
+    ${inRun ? row('This fight', b('dev', 'kill', '', 'Enemy to 1 HP', state.screen !== 'combat')) : ''}
+    <h3>The cell</h3>
+    ${row(`Resolve <span class="muted num">${state.meta.resolve}</span>`, [10, 100, 1000].map((n) => b('dev', 'resolve', n, `+${n}`, false)).join(''))}
+    ${row('Everything', b('dev', 'alltrain', '', 'Max training', false) + b('dev', 'allcell', '', 'All upgrades', false))}
+    <div class="set-row"><span>Turn dev mode off on this browser</span><button class="btn" data-a="devoff">Turn off</button></div>
+  </div></div>`;
+}
+function applyDev(v, k) {
+  const c = state.char, n = +k;
+  state.meta.dev = true;
+  switch (v) {
+    case 'credits': if (c) c.credits += n; break;
+    case 'points': if (c) c.attrPoints += n; break;
+    case 'xp': E.devAddXp(state, n); break;
+    case 'heal': if (c) c.hp = E.stats(state).maxHp; break;
+    case 'items': if (c) { const m = E.stats(state).carry; for (const id of Object.keys(D.ITEMS)) c.items[id] = m; } break;
+    case 'gear': if (c) { const band = Math.min(6, Math.max(1, Math.ceil((c.deepest || 1) / 3) + 1)); const it = E.rollGear(rng, { tierMin: Math.max(1, band - 1), tierMax: band, odds: { [k]: 1 } }); if (it) { const sl = E.baseOf(it).slot, old = c.gear[sl]; c.gear[sl] = it; if (old) (c.lockup = c.lockup || []).push(old); toast = `${E.itemName(it)} equipped.`; } } break;
+    case 'perk': if (c && !state.run) { const left = D.PERKS.filter((p) => !c.perks.includes(p.id)); const owned = c.perks.filter((id) => E.perkLevel(c, id) < n); const id = c.perks.length >= E.CONTRABAND_SLOTS ? owned[0] : (left[Math.floor(rng() * left.length)] || {}).id; if (id) { if (!c.perks.includes(id)) c.perks.push(id); c.perkLv = c.perkLv || {}; c.perkLv[id] = n; toast = `${E.perkName(id, n)}: ${E.perkText(id, n)}`; } else toast = 'No room for that tier.'; } break;
+    case 'sector': if (c) { const mp = state.gateMap || 'garrison', p = E.mapProgress(c, mp); if (!p.insertions.includes(n)) p.insertions.push(n); p.deepest = Math.max(p.deepest || 0, n - 1); c.deepest = Math.max(c.deepest || 0, n - 1); state.meta.bestSector = Math.max(state.meta.bestSector, n - 1); state.meta.bestByMap[mp] = Math.max(state.meta.bestByMap[mp] || 0, n - 1); toast = `Sector ${n} unlocked on ${E.mapById(mp).name}.`; } break;
+    case 'kill': if (state.run && state.run.enemy) state.run.enemy.hp = 1; break;
+    case 'resolve': state.meta.resolve += n; state.meta.totalResolve += n; break;
+    case 'alltrain': for (const key of Object.keys(D.TRAINING)) state.meta.training[key] = D.TRAINING[key].max; if (c) c.hp = E.stats(state).maxHp; break;
+    case 'allcell': for (const u of D.CELL) if (!state.meta.cell.includes(u.id)) state.meta.cell.push(u.id); break;
+  }
 }
 
 // ---------- co-op ----------
@@ -638,7 +810,7 @@ const isHost = () => !!net && net.role === 'host';
 const myIdx = () => (isGuest() ? 1 : 0);
 // Actions that only touch this screen, never the game.
 const DOWNTIME = new Set(['drink', 'barchat', 'bet', 'stake', 'spin', 'invest', 'withdraw', 'shippart', 'shipcell', 'orbitgo', 'orbitact', 'orbitclose']);
-const LOCAL = new Set(['continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm']);
+const LOCAL = new Set(['continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm', 'cloudcopy', 'cloudload', 'cloudversions', 'cloudrestore', 'cloudkeep', 'devunlock', 'devoff', 'dev', 'autostart']);
 function coopChip() {
   if (!net) return '';
   const who = net.peerName || (isHost() ? 'friend' : 'host');
@@ -754,7 +926,7 @@ function applyHostState(m) {
   if (m.toast) toast = m.toast;
   render();
 }
-let dismissedResult = null;
+let dismissedResult = null, pendingCloudCode = '';
 function startCoop(role, code, local) {
   const prefs = getCoopPrefs();
   if (net) net.close();
@@ -876,6 +1048,7 @@ function headerTools() {
     <button class="tool" data-a="sound" aria-pressed="${p.sfx}" aria-label="Toggle sound">${p.sfx ? 'Sound on' : 'Sound off'}</button>
     <button class="tool" data-a="modal" data-v="board" aria-label="Leaderboard">Board</button>
     <button class="tool" data-a="modal" data-v="feats" aria-label="Achievements">Achievements</button>
+    ${devOn && !isGuest() ? '<button class="tool" data-a="modal" data-v="dev" aria-label="Dev mode">Dev</button>' : ''}
     <button class="tool" data-a="modal" data-v="settings" aria-label="Settings">Settings</button></div>`;
 }
 function statusStrip() {
@@ -1655,6 +1828,7 @@ function modalView() {
   const p = A.getPrefs();
   if (modal === 'board') return boardView();
   if (modal === 'feats') return featsView();
+  if (modal === 'dev') return devOn && !isGuest() ? devView() : '';
   const body = modal === 'manual' ? `
     <h2>Field manual</h2>
     <div class="manual">
@@ -1676,7 +1850,8 @@ function modalView() {
       <section><h3>Quirks and bulletins</h3><p>Regular enemies often have a <b>quirk</b>, like a Drunk trooper whose shots go wild or an Overclocked droid that cooks itself. Every raid also rolls a <b>Directorate bulletin</b>, such as Payday or Staff Party, that bends the rules until you leave.</p></section>
       <section><h3>Floors and rare doors</h3><p>Past the first sector, most floors roll a <b>condition</b> (Blackout, Coolant Leak, Double Patrols, Supply Depot, Hunter Squad, Derelict Wing, Sealed Bulkheads) shown on the route screen. Rare doors turn up on every map: a <b>Marked Officer</b> bounty, a <b>Strongroom</b> to crack with INT, a <b>Field Medic Station</b>, a <b>Weapons Locker</b>, a <b>Machinist\u2019s Bench</b> that upgrades your gear for free, and a <b>Smuggler\u2019s Stash</b> of contraband.</p></section>
       <section><h3>Downtime limits</h3><p>The shuttle flies <b>once per stay in town</b>: raid, come home, and it\u2019s ready again. Ventures hold capped balances (500 / 1,500 / 3,000); Marrow\u2019s consignment opens after sector 5, the smuggler\u2019s bond after sector 10. Deeper cells see better Black Market stock, often already upgraded.</p></section>
-      <section><h3>Playing together</h3><p>Host from <b>Settings</b> and send your friend the invite link. You share the yard: walk up to your partner and press <b>E</b> to give credits or gear, or to offer a trade. Each of you has a <b>Lockup</b> at the safehouse for spare gear. On a raid you vote on doors (a split vote goes to a coin), agree on when to leave, and each choose your own loot and contraband. At 0 HP you go <b>down</b>: your partner has 3 rounds to spend a turn getting you up, and 2 the next time. A third time in one raid is fatal. If you bleed out, you die and the raid ends for both. If your partner falls while you\u2019re down, you die and they get out.</p></section>
+      <section><h3>Your save</h3><p>Your cell backs itself up to the cloud. <b>Settings</b> shows your cell code: enter it on any browser or device to carry on there. Keep it somewhere safe, because it can\u2019t be recovered, and anyone with it can load your cell. The last few versions are kept if you need to roll back.</p></section>
+      <section><h3>Playing together</h3><p>Host from <b>Settings</b> and send your friend the invite link. Each of you brings your own operative, and it stays yours: what you earn together comes home with you, and you can leave, play alone and rejoin whenever you like. You share the yard: walk up to your partner and press <b>E</b> to give credits or gear, or to offer a trade. Each of you has a <b>Lockup</b> at the safehouse for spare gear. On a raid you vote on doors (a split vote goes to a coin), agree on when to leave, and each choose your own loot and contraband. At 0 HP you go <b>down</b>: your partner has 3 rounds to spend a turn getting you up, and 2 the next time. A third time in one raid is fatal. If you bleed out, you die and the raid ends for both. If your partner falls while you\u2019re down, you die and they get out.</p></section>
       <section><h3>Getting out</h3><p>What you pick up on a raid isn\u2019t yours yet. Credits and XP stay <b>unsecured</b> until you beat a boss or leave. Levels only come when they\u2019re secured, so you can\u2019t level up mid-raid. Leaving costs a share of what\u2019s unsecured: <b>80%</b> after the first sector of a stretch, <b>65%</b> after the second, <b>50%</b> after the third, <b>40%</b> after the fourth, and nothing once the boss is down. The next stretch starts at 80% again. Running mid-fight with <b>Run</b> or <b>Smoke</b> costs 90% down to 60%. Credits you walked in with are never touched. Consumables cost more the deeper your operative has been.</p></section>
       <section><h3>Getting stronger</h3><p><b>This operative</b>: levels (attribute points), gear, Lockup, implants and contraband. All lost on death, apart from one heirloom if the cell has that upgrade. <b>The cell</b>: Resolve buys permanent training and upgrades. Earn it from sectors (repeat clears pay only every other time), bosses, brave choices and contracts.</p></section>
       <section><h3>The yard</h3><p>Walk with the arrows or WASD, or tap where to go. Walk into a door to go inside; talk to the person there (<b>E</b>, Space or a tap) to open their menu. The freight terminal opens straight away. Most things in the yard can be poked at, and the noodle vendor sells a hot meal worth +5% XP for the next raid.</p></section>
@@ -1702,7 +1877,11 @@ function modalView() {
         <div class="set-row"><span>Host a game${state.char ? '' : ' (build an operative first)'}</span><button class="btn primary" data-a="coophost" ${state.char ? '' : 'disabled'}>Host</button></div>
         <label class="set-row" for="coop-code"><span>Join with a code</span><span class="btnrow"><input id="coop-code" class="text" maxlength="8" placeholder="CODE" style="width:7ch;text-transform:uppercase"><button class="btn" data-a="coopjoin">Join</button></span></label>
       </div>`}
-      <h3>Save <span class="num muted" style="font-size:.85rem">move your cell between devices</span></h3>
+      <h3>Cloud save <span class="num muted" style="font-size:.85rem">your cell, on any device</span></h3>
+      ${cloudSection()}
+      <h3>Dev mode</h3>
+      ${devOn ? '<div class="set-row"><span>Dev mode is on.</span><button class="btn" data-a="modal" data-v="dev">Open</button></div>' : '<div class="set-row"><span class="btnrow" style="flex:1"><input id="dev-code" class="text" inputmode="numeric" maxlength="8" placeholder="Dev code" style="flex:1;min-width:100px"><button class="btn" data-a="devunlock">Enter</button></span></div>'}
+      <h3>Save <span class="num muted" style="font-size:.85rem">move your cell between devices by hand</span></h3>
       <div class="set-row"><span>Copy a save code (also shown below) and paste it on the other device</span><button class="btn" data-a="savecode">Copy save code</button></div>
       <div class="set-row"><span class="btnrow" style="flex:1"><input id="load-code" class="text" placeholder="Paste a save code" style="flex:1;min-width:120px"><button class="btn" data-a="loadcode">Load</button></span></div>
       <div class="set-row"><span>Run report: everything that happened, as text to paste into a chat for feedback (copied to the clipboard and shown below)</span><button class="btn" data-a="report">Copy run report</button></div>
@@ -1998,7 +2177,7 @@ function render() {
   const kept = [...app.querySelectorAll('.modal, .log')].map((el) => ({ cls: el.className, top: el.scrollTop })).filter((k) => k.top > 0);
   const pageY = window.scrollY, fo = document.activeElement, foKey = fo && fo.dataset && fo.dataset.a ? [fo.dataset.a, fo.dataset.v || '', fo.dataset.k || ''].join('|') : null;
   const sameView = lastView === [state.screen, state.popup || '', modal || '', state.compare == null ? '' : state.compare].join('|');
-  app.innerHTML = coopBanner() + (titleOpen && !isGuest() ? titleScreen() : (showStatus ? statusStrip() : '') + screens[state.screen]()) + modalView() + payoutView() +
+  app.innerHTML = autoBar() + coopBanner() + (titleOpen && !isGuest() ? titleScreen() : (showStatus ? statusStrip() : '') + screens[state.screen]()) + modalView() + payoutView() +
     (toast ? `<div class="toast" role="status">${esc(toast)}</div>` : '');
   toast = null;
   animatePayout();
@@ -2132,6 +2311,8 @@ async function fight(v, who = 0) {
 const BUY = new Set(['respec', 'buygear', 'upgradegear', 'reroll', 'item', 'upgrade', 'implant', 'heal', 'train', 'cell', 'spend', 'equipheirloom']);
 function act(a, v, k) {
   A.unlock();
+  if (a === 'autostop') { stopAuto(); return; }
+  if (auto) return;
   if (a === 'closemodal') { modal = null; confirmReset = false; state.report = null; render(); return; }
   if (busy && !modal) return;
   if (a === 'act') return fight(v);
@@ -2188,6 +2369,25 @@ function applyAct(a, v, k) {
       break;
     }
     case 'coopresume': { const r = getLastRoom(); if (r && (r.role === 'guest' || state.char)) { titleOpen = false; startCoop(r.role, r.code, false); } break; }
+    case 'cloudcopy': try { navigator.clipboard.writeText(prettyCode(cloudCode())).then(() => { toast = 'Cell code copied.'; render(); }).catch(() => {}); } catch (e) {} sfx('click'); break;
+    case 'cloudkeep': cloudNewer = null; cloudStatus = ''; cloudPush({ force: true }); break;
+    case 'cloudload': {
+      const code = ((document.getElementById('cloud-code') || {}).value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (code.length !== 12) { toast = 'A cell code is 12 letters and numbers.'; sfx('denied'); break; }
+      if (!cloudArm) { cloudArm = true; pendingCloudCode = code; setTimeout(() => { const el = document.getElementById('cloud-code'); if (el) el.value = code; }, 0); break; }
+      cloudArm = false;
+      cloudPull(code).then((o) => {
+        if (!o) { toast = 'Nothing saved under that code.'; render(); return; }
+        adoptSave(o.data, o.rev, code); modal = null; titleOpen = false; toast = 'Cell loaded from the cloud.'; A.play('perk'); render();
+      }).catch(() => { toast = 'Couldn\u2019t reach the cloud. Check your connection.'; render(); });
+      break;
+    }
+    case 'cloudversions': if (!CLOUD_ON) break; fetch(`/save/${cloudCode()}/versions`, { cache: 'no-store' }).then((r) => r.json()).then((o) => { cloudVersions = o.versions || []; render(); }).catch(() => { toast = 'Couldn\u2019t reach the cloud.'; render(); }); sfx('click'); break;
+    case 'cloudrestore': if (net) break; cloudPull(cloudCode(), +v).then((o) => { if (!o) return; adoptSave(o.data, o.rev); state.savedAt = Date.now(); modal = null; titleOpen = false; toast = 'That version is back.'; A.play('perk'); cloudDirty = true; cloudPush({ force: true }); render(); }).catch(() => { toast = 'Couldn\u2019t reach the cloud.'; render(); }); break;
+    case 'devunlock': if (((document.getElementById('dev-code') || {}).value || '').trim() === DEV_CODE) { devOn = true; try { localStorage.setItem(DEV_KEY, '1'); } catch (e) {} modal = 'dev'; sfx('perk'); } else { toast = 'That isn\u2019t it.'; sfx('denied'); } break;
+    case 'devoff': devOn = false; try { localStorage.removeItem(DEV_KEY); } catch (e) {} modal = null; sfx('click'); break;
+    case 'dev': if (devOn && !isGuest()) { applyDev(v, k); sfx('buy'); } break;
+    case 'autostart': if (devOn && !isGuest()) startAuto(v); return;
     case 'coopinvite': try { navigator.clipboard.writeText(inviteLink()).then(() => { toast = 'Invite link copied.'; render(); }).catch(() => {}); } catch (e) {} sfx('click'); break;
     case 'coopauto': if (isHost() && state.run && state.screen === 'combat' && state.run.actor === 1 && !net.peer) { fight(E.withActor(state, 1, () => E.autoAction(state)), 1); } return;
     case 'coopskip': if (isHost()) E.skipPartnerReward(state, rng); break;
@@ -2371,9 +2571,21 @@ function seedBoard() {
     if (modal === 'board') render();
   }).catch(() => {});
 }
-function start(data) {
-  state = E.migrate((data && data.state) || load(), rng);
+async function start(data) {
+  // Whichever is newer: this browser's copy or the cloud's. Never waits long: a bad connection falls back to what's here.
+  let saved = (data && data.state) || load(), pulledToast = null;
+  if (CLOUD_ON && cloud.code && !(data && data.state)) {
+    try {
+      const o = await Promise.race([cloudPull(cloud.code), new Promise((res) => setTimeout(() => res(undefined), 2500))]);
+      if (o && o.at > ((saved && saved.savedAt) || 0)) { saved = JSON.parse(o.data); cloud.rev = o.rev; cloud.at = o.at; storeCloud(); try { localStorage.setItem(SAVE_KEY, o.data); } catch (e) {} pulledToast = 'Loaded your newer save from the cloud.'; }
+      else if (o) { cloud.rev = o.rev; storeCloud(); }
+    } catch (e) {}
+  }
+  state = E.migrate(saved, rng);
   delete state.events;
+  lastBody = bodyOf(state);
+  if (pulledToast) toast = pulledToast;
+  cloudStart();
   if (state.screen === 'create' && !state.draft) state.draft = E.newDraft(state.meta, rng);
   titleOpen = !(data && data.state);
   // An invite link joins straight away; a reload goes back to the room this tab was in.

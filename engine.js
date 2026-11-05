@@ -1806,6 +1806,13 @@ function settle(s, kind, rate) {
   });
   return mine;
 }
+// Dev mode: XP straight to levels.
+export function devAddXp(s, n) {
+  const c = s.char;
+  if (!c) return;
+  c.xp += n;
+  while (c.xp >= xpToNext(c.level)) { const before = stats(s).maxHp; c.xp -= xpToNext(c.level); c.level += 1; c.attrPoints += 1; c.hp += stats(s).maxHp - before; }
+}
 export function closePayout(s) { if (s.char) s.char.payout = null; }
 
 function standUp(s, hpShare) {
@@ -2038,7 +2045,7 @@ export function raidScore(r, c, how) {
 }
 export function recordScore(s, c, how) {
   const r = s.run, m = s.meta;
-  if (!r || !c) return 0;
+  if (!r || !c || m.dev) return 0; // cells touched by dev mode stay off the leaderboard
   const { score, parts } = raidScore(r, c, how);
   if (score <= 0) return 0;
   const entry = { name: c.name, number: c.number, background: c.background, level: c.level, map: r.map, from: r.startSector || 1, to: r.sector, how, score, parts, kills: r.kills || 0, bosses: r.bosses || 0, cleared: r.cleared || 0, when: Date.now(), bot: false };

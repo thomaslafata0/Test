@@ -49,9 +49,48 @@ export class Room {
   }
 }
 
+// Cloud saves: one Durable Object per cell code. The code is the only key, so anyone holding it can load that cell.
+// Keeps the last few versions, so a bad save can be rolled back.
+const KEEP_VERSIONS = 6, MAX_SAVE = 2000000, MIN_WRITE_MS = 3000;
+const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
+export class Vault {
+  constructor(state) {
+    this.sql = state.storage.sql;
+    this.sql.exec('CREATE TABLE IF NOT EXISTS saves (rev INTEGER PRIMARY KEY, at INTEGER NOT NULL, data TEXT NOT NULL)');
+    this.lastWrite = 0;
+  }
+  latest() { return this.sql.exec('SELECT rev, at FROM saves ORDER BY rev DESC LIMIT 1').toArray()[0] || null; }
+  async fetch(request) {
+    const url = new URL(request.url);
+    if (request.method === 'GET') {
+      if (url.pathname.endsWith('/versions')) return json({ versions: this.sql.exec('SELECT rev, at, length(data) AS bytes FROM saves ORDER BY rev DESC').toArray() });
+      const want = url.searchParams.get('rev');
+      const row = (want ? this.sql.exec('SELECT rev, at, data FROM saves WHERE rev = ?', +want) : this.sql.exec('SELECT rev, at, data FROM saves ORDER BY rev DESC LIMIT 1')).toArray()[0];
+      return row ? json(row) : json({ error: 'none' }, 404);
+    }
+    if (request.method !== 'PUT') return json({ error: 'method' }, 405);
+    const text = await request.text();
+    if (text.length > MAX_SAVE) return json({ error: 'too big' }, 413);
+    let body;
+    try { body = JSON.parse(text); } catch (e) { return json({ error: 'bad json' }, 400); }
+    if (typeof body.data !== 'string' || !Number.isFinite(body.at)) return json({ error: 'bad save' }, 400);
+    const now = Date.now();
+    if (now - this.lastWrite < MIN_WRITE_MS) return json({ error: 'slow down' }, 429);
+    const cur = this.latest();
+    if (cur && !body.force && (body.base || 0) < cur.rev) return json({ error: 'newer', rev: cur.rev, at: cur.at }, 409);
+    const rev = (cur ? cur.rev : 0) + 1;
+    this.sql.exec('INSERT INTO saves (rev, at, data) VALUES (?, ?, ?)', rev, body.at, body.data);
+    this.sql.exec('DELETE FROM saves WHERE rev <= ?', rev - KEEP_VERSIONS);
+    this.lastWrite = now;
+    return json({ rev, at: body.at });
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    const sv = url.pathname.match(/^\/save\/([A-Z0-9]{12})(\/versions)?$/);
+    if (sv) return env.VAULT.get(env.VAULT.idFromName(sv[1])).fetch(request);
     const m = url.pathname.match(/^\/room\/([A-Z0-9]{4,8})$/i);
     if (!m) return new Response('Not found', { status: 404, headers: { 'content-type': 'text/plain' } }); // missing game files must 404: optional art is detected by res.ok
     const id = env.ROOMS.idFromName(m[1].toUpperCase());

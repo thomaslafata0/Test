@@ -10,7 +10,7 @@ Two players, one cell. The **host** runs the game; the **friend** opens an invit
 
 **If a connection drops** it retries on its own, a reload rejoins the room, and a raid waits. The host can play the friend's turn on auto, skip their reward, or carry on without them.
 
-The friend's operative lives in the host's save while you play together. The friend's own solo save is untouched; leaving co-op returns them to it.
+**Your operative is yours.** It lives in your own save. Joining brings it into the host's game, what you earn comes home with you, and leaving puts you back in your own yard with it. While you're in a room, your training and upgrades stay your own, Resolve you earn goes to your own cell, and achievement progress counts on both cells. If you drop out mid-raid and don't come back, you keep the operative as of the last thing that was secured. If you're on a solo raid, finish it before joining. If the host is on a solo raid, you wait in the room and drop in when they're back.
 
 ## Trying it on one computer (no server)
 

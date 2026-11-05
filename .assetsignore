@@ -11,5 +11,8 @@ coop
 docs
 tests
 tools
-sim*.mjs
+sim.mjs
+sim-builds.mjs
+sim-coop.mjs
+sim-board.mjs
 *.md
