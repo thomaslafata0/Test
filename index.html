@@ -1104,7 +1104,7 @@ function modalView() {
       <label class="set-row"><span>Rain</span><button class="btn" data-a="setpref" data-v="rain" aria-pressed="${p.rain}">${p.rain ? 'On' : 'Off'}</button></label>
       <label class="set-row" for="vol"><span>Volume</span><input id="vol" type="range" min="0" max="1" step="0.05" value="${p.volume}"></label>
       <p class="muted" style="font-size:.88rem">Battle mode (Manual, Auto 1\u00D7 or Auto 2\u00D7) is in the corner of the battle scene. Auto fights for you with a fixed routine until the fight ends.</p>
-      <div class="set-row"><span>Run report: everything that happened, as text to paste into a chat for feedback</span><button class="btn" data-a="report">Copy run report</button></div>
+      <div class="set-row"><span>Run report: everything that happened, as text to paste into a chat for feedback (copied to the clipboard and shown below)</span><button class="btn" data-a="report">Copy run report</button></div>
       ${state.report ? `<textarea class="report" readonly aria-label="Run report">${esc(state.report)}</textarea>` : ''}
       <div class="set-row"><span>Erase all progress, including Resolve and training</span><button class="btn danger" data-a="reset">${confirmReset ? 'Click again to confirm' : 'Reset save'}</button></div>
     </div>`;
@@ -1334,7 +1334,6 @@ function act(a, v, k) {
       const text = E.runReport(state);
       state.report = text;
       try { navigator.clipboard.writeText(text).then(() => { toast = 'Run report copied. Paste it into the chat.'; render(); }).catch(() => {}); } catch (e) {}
-      try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' })); a.download = `cinder-cell-report-${Date.now()}.txt`; a.click(); } catch (e) {}
       A.play('click'); break;
     }
     case 'reset':
