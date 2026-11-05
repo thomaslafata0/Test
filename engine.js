@@ -66,7 +66,7 @@ export const perkById = (id) => D.PERKS.find((p) => p.id === id);
 // ---------- state ----------
 export function newMeta() {
   return { resolve: 0, totalResolve: 0, training: { hp: 0, atk: 0, def: 0, spd: 0 }, cell: [], operatives: 0, bestSector: 0, bestByMap: {},
-    fallen: [], contracts: [], liberated: {}, threat: 0, heirloom: null, tips: {}, endingSeen: false, stats: { kills: 0, bosses: 0, raids: 0 } };
+    fallen: [], contracts: [], liberated: {}, threat: 0, heirloom: null, tips: {}, endingSeen: false, stats: { kills: 0, bosses: 0, raids: 0 }, board: [], boardSeeded: false };
 }
 
 export function newGame(rng) {
@@ -90,6 +90,7 @@ export function migrate(s, rng) {
     if (s.char) s.notice = 'The Black Market has new stock and your kit now has six slots. Check the Gear tab.';
   }
   if (s && s.v === VERSION) {
+    if (s.meta && !s.meta.board) s.meta.board = [];
     for (const k of (s.meta && s.meta.contracts) || []) if (!k.done) k.credits = contractCredits(k.kind, k.n);
     return s;
   }
@@ -701,7 +702,7 @@ export function deploy(s, mapId, startSector, rng) {
   const prog = mapProgress(s.char, map.id);
   if (!prog.insertions.includes(startSector)) startSector = 1;
   s.char.wanted = (s.char.wanted || 0);
-  s.run = { wanted: s.char.wanted, startCredits: s.char.credits, map: map.id, sector: startSector, room: 0, choices: null, enemy: null, nextMod: null, sectorCredits: 0,
+  s.run = { wanted: s.char.wanted, startCredits: s.char.credits, map: map.id, sector: startSector, startSector, room: 0, choices: null, enemy: null, nextMod: null, sectorCredits: 0, kills: 0, bosses: 0, cleared: 0, elites: 0,
     alert: 0, allies: 0, vent: 3, turns: 0, threat: s.meta.threat || 0, perkOffer: null, ...freshBag(), cb: {}, actor: 0, acted: {}, round: 0, lastAttacker: 0 };
   if (isCoop(s)) { s.run.cb[1] = freshBag(); s.run.wanted = Math.max(s.char.wanted, s.char2.wanted || 0); }
   s.meta.stats.raids += 1;
@@ -1426,7 +1427,7 @@ function winFight(s, rng, fled = false) {
   const out = { enemy: e.name, id: e.id, portrait: e.portrait, credits, xp, levelUps: [], healed: 0, boss: e.boss, elite: !!e.elite, resolve: 0, fled, items: [], notes: [] };
   log(s, `${e.name} ${fled ? 'flees, dropping a credit pouch' : 'goes down'}. +${credits} ${D.SETTING.cur}, +${xp} XP.`, 'reward');
   fx(s, { who: 'enemy', type: fled ? 'flee' : 'down', boss: e.boss });
-  m.stats.kills += 1;
+  m.stats.kills += 1; r.kills = (r.kills || 0) + 1; if (e.boss) r.bosses = (r.bosses || 0) + 1; if (e.elite) r.elites = (r.elites || 0) + 1;
   if (e.affix === 'volatile' && !fled) {
     const st = stats(s), dmg = r.defending ? 0 : Math.round(st.maxHp * 0.15);
     c.hp = Math.max(1, c.hp - dmg);
@@ -1561,6 +1562,7 @@ function resolveEventInner(s, index, rng) {
 
 function clearSector(s) {
   const r = s.run, c = s.char, map = mapById(r.map), m = s.meta;
+  r.cleared = (r.cleared || 0) + 1;
   const bonus = Math.round(8 * r.sector * map.credits * creditMult(s));
   const prog = mapProgress(c, r.map);
   // Resolve only for new ground: sectors this operative hasn't cleared on this map before.
@@ -1589,6 +1591,34 @@ export function pushDeeper(s, rng) {
   beginSector(s, rng);
 }
 
+// Leaderboard: every raid is scored when it ends (extracted, escaped or died) and the best BOARD_SIZE raids are kept in meta.board.
+// Score = credits brought home + 150 per sector cleared + 25 per kill + 75 per elite + 500 per boss + 100 per prisoner freed.
+// Dying brings nothing home, so the haul counts for zero; escaping mid-fight is scored on what you kept after the loss.
+export const BOARD_SIZE = 50;
+export function raidScore(r, c, how) {
+  const haul = how === 'died' ? 0 : Math.max(0, c.credits - (c.startCredits ?? r.startCredits ?? 0));
+  const freed = how === 'extracted' ? Math.max(0, (r.allies || 0) - (r.follower ? 1 : 0)) : 0;
+  const parts = { haul, cleared: (r.cleared || 0) * 150, kills: (r.kills || 0) * 25, elites: (r.elites || 0) * 75, bosses: (r.bosses || 0) * 500, freed: freed * 100 };
+  return { score: Object.values(parts).reduce((t, v) => t + v, 0), parts };
+}
+export function recordScore(s, c, how) {
+  const r = s.run, m = s.meta;
+  if (!r || !c) return 0;
+  const { score, parts } = raidScore(r, c, how);
+  if (score <= 0) return 0;
+  const entry = { name: c.name, number: c.number, background: c.background, level: c.level, map: r.map, from: r.startSector || 1, to: r.sector, how, score, parts, kills: r.kills || 0, bosses: r.bosses || 0, cleared: r.cleared || 0, when: Date.now(), bot: false };
+  return addToBoard(m, entry);
+}
+// Inserts an entry if it makes the cut; returns its 1-based rank or 0.
+export function addToBoard(m, entry) {
+  const board = m.board || (m.board = []);
+  board.push(entry);
+  board.sort((a, b) => b.score - a.score || a.when - b.when);
+  if (board.length > BOARD_SIZE) board.length = BOARD_SIZE;
+  const rank = board.indexOf(entry) + 1;
+  return rank;
+}
+
 export function endRun(s, how, rngForRestock = Math.random) {
   const r = s.run, c = s.char;
   let lost = 0;
@@ -1600,6 +1630,7 @@ export function endRun(s, how, rngForRestock = Math.random) {
       a.credits -= l; ledger(s, 'escape loss', -l);
     }
     if (i === actorIdx(s)) lost = l;
+    a.rank = recordScore(s, a, how);
     a.wanted = (a.wanted || 0) + 1;
     a.fed = false;
     if (rngForRestock) restockMarket(s, rngForRestock);
@@ -1611,9 +1642,10 @@ export function endRun(s, how, rngForRestock = Math.random) {
     home = ` You brought ${freed} prisoner${freed > 1 ? 's' : ''} home: +${freed} ${D.SETTING.meta}.`;
   }
   if (how === 'extracted') contractEvent(s, 'extract', { credits: s.char.credits, allies: freed });
-  s.notice = how === 'extracted'
+  const rank = c.rank ? ` Top ${BOARD_SIZE} raid: #${c.rank} on the leaderboard.` : '';
+  s.notice = (how === 'extracted'
     ? `You made it out of ${sectorName(r.sector, r.map)}.${lost ? ` Slipping out early cost ${lost} ${D.SETTING.cur} in bribes at the gate.` : ''}${home} Spend it before your luck runs out.`
-    : `You escaped from ${sectorName(r.sector, r.map)}${lost ? `, but dropped ${lost} ${D.SETTING.cur} on the way out` : ''}.`;
+    : `You escaped from ${sectorName(r.sector, r.map)}${lost ? `, but dropped ${lost} ${D.SETTING.cur} on the way out` : ''}.`) + rank;
   s.run = null;
   s.screen = allLiberated(s) && !s.meta.endingSeen ? 'ending' : 'town';
   s.tab = 'clinic';
@@ -1678,6 +1710,7 @@ function die(s, foe) {
   s.meta.fallen.unshift(record);
   s.meta.fallen = s.meta.fallen.slice(0, 12);
   record.perks = (c.perks || []).length;
+  record.rank = recordScore(s, c, 'died');
   if (isCoop(s)) {
     // One of you is down: the raid is over for both. The survivor drags what they can out (finishCoopDeath).
     c.dead = true; r.over = true;

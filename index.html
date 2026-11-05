@@ -99,7 +99,8 @@ p { margin: 0; }
 .hud-enemy { left: 3%; top: 5%; }
 .hud-player { right: 3%; bottom: 6%; border-color: #e8973a66; }
 .hud-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; min-width: 0; }
-.hud-name { font-family: var(--display); font-weight: 600; font-size: clamp(.85rem, 2.4vw, 1.15rem); text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.hud-name { font-family: var(--display); font-weight: 600; font-size: clamp(.85rem, 2.4vw, 1.15rem); line-height: 1.1; text-transform: uppercase; letter-spacing: .04em; overflow: hidden; min-width: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+.hud-name.long { font-size: clamp(.72rem, 2vw, .95rem); letter-spacing: .02em; }
 .hud-tag { font-family: var(--mono); font-size: .6rem; letter-spacing: .1em; color: var(--muted); white-space: nowrap; }
 .hud-hp { font-size: .68rem; color: var(--muted); justify-self: end; }
 .hud .bar i { transition: width .35s ease; }
@@ -492,6 +493,17 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .resolve-link:hover { border-color: var(--sodium); }
 .auto-note { font-family: var(--mono); font-size: .66rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ion); }
 #app.still .popup-wrap, #app.still .aa { animation: none; }
+.board-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.board-table th { text-align: left; font-family: var(--mono); font-size: .66rem; letter-spacing: .1em; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); }
+.board-table td { padding: 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.board-table .small { font-size: .78rem; }
+.board-table .score { font-weight: 700; color: var(--sodium); text-align: right; }
+.board-table th.num { text-align: right; }
+.board-table tr.mine td { background: #d9a53a14; }
+.board-table tr.bot td b { color: var(--muted); font-weight: 500; }
+.board-table .good { color: var(--ok); }
+.board-table .bad { color: var(--danger); }
+@media (max-width: 520px) { .board-table { font-size: .8rem; } .board-table td, .board-table th { padding: 5px 3px; } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 
@@ -640,6 +652,7 @@ function titleScreen() {
       <div class="title-menu">
         ${hasRun ? `<button class="btn primary big" data-a="continue-title">Continue <span class="muted" style="font-size:.8rem;text-transform:none;letter-spacing:0">${state.char ? `${esc(state.char.name)}, operative ${state.char.number}` : `${m.operatives} operative${m.operatives === 1 ? '' : 's'} so far`}</span></button>` : `<button class="btn primary big" data-a="continue-title">Begin</button>`}
         ${hasRun ? `<button class="btn big" data-a="newcell">${confirmReset ? 'Click again: this erases everything' : 'New cell'}</button>` : ''}
+        <button class="btn big" data-a="modal" data-v="board">Leaderboard</button>
         <button class="btn big" data-a="modal" data-v="manual">Field manual</button>
         <button class="btn big" data-a="modal" data-v="settings">Settings &amp; co-op</button>
       </div>
@@ -1203,6 +1216,7 @@ function endingScreen() {
 function modalView() {
   if (!modal) return '';
   const p = A.getPrefs();
+  if (modal === 'board') return boardView();
   const body = modal === 'manual' ? `
     <h2>Field manual</h2>
     <div class="manual">
@@ -1254,6 +1268,22 @@ function modalView() {
     <button class="tool close" data-a="closemodal" aria-label="Close">Close</button>${body}</div></div>`;
 }
 
+// Top raids on this device. Bot raids from the simulator seed the board until real ones push them off.
+function boardView() {
+  const board = state.meta.board || [], me = state.char;
+  const rows = board.map((e, i) => {
+    const mine = !e.bot && me && e.name === me.name && e.number === me.number;
+    const how = { extracted: 'Extracted', escaped: 'Escaped', died: 'Died' }[e.how] || e.how;
+    return `<tr class="${mine ? 'mine' : ''} ${e.bot ? 'bot' : ''}"><td class="num">${i + 1}</td><td><b>${esc(e.name)}</b>${e.bot ? '' : `<span class="muted"> #${e.number}</span>`}<div class="muted small">${esc((D.BACKGROUNDS.find((b) => b.id === e.background) || {}).name || e.background)}, lv ${e.level}</div></td><td>${esc(E.mapById(e.map).name)}<div class="muted small">sector ${e.from === e.to ? e.to : `${e.from}\u2013${e.to}`}</div></td><td class="${e.how === 'died' ? 'bad' : e.how === 'extracted' ? 'good' : ''}">${how}<div class="muted small">${e.kills} kills${e.bosses ? `, ${e.bosses} boss${e.bosses > 1 ? 'es' : ''}` : ''}</div></td><td class="num score">${e.score.toLocaleString()}</td></tr>`;
+  }).join('');
+  return `<div class="modal-wrap" data-a="closemodal"><div class="modal board" role="dialog" aria-modal="true" aria-label="Leaderboard">
+    <button class="tool close" data-a="closemodal" aria-label="Close">Close</button>
+    <h2>Leaderboard <span class="num muted" style="font-size:.9rem">top ${E.BOARD_SIZE} raids on this device</span></h2>
+    <p class="muted" style="font-size:.9rem">Every raid is scored when it ends: credits brought home, 150 per sector cleared, 25 per kill, 75 per veteran, 500 per boss, 100 per prisoner freed. Dying brings nothing home. Rows marked <span class="chip">bot</span> are simulator runs holding the places until you take them.</p>
+    ${board.length ? `<table class="board-table"><thead><tr><th>#</th><th>Operative</th><th>District</th><th>Outcome</th><th class="num">Score</th></tr></thead><tbody>${rows}</tbody></table>` : '<p class="muted">No raids scored yet.</p>'}
+  </div></div>`;
+}
+
 function eventScreen() {
   const ev = E.eventById(state.event), res = state.eventResult;
   const opts = ev.options.map((o, i) => {
@@ -1303,7 +1333,7 @@ function deathScreen() {
     <h1 class="big-title" style="color:var(--danger)">${esc(o.name)}</h1>
     ${o.killerId ? `<div class="killer">${portraitImg({ id: o.killerId, name: o.killer, portrait: o.killerPortrait })}<span class="label">Last seen<br>engaging a ${esc(o.killer)}</span></div>` : ''}
     <p class="story">Operative ${o.number} went down in the ${esc(E.sectorName(o.sector, o.map))}${o.killerId ? `, killed by a ${esc(o.killer)}` : `, taken by ${esc(o.killer)}`}. The ${o.credits.toLocaleString()} ${S.currency}, the gear, ${o.perks ? `${o.perks} piece${o.perks > 1 ? 's' : ''} of contraband, ` : ''}the implants and level ${o.level} went with them.</p>
-    <dl class="kv"><dt>${esc(S.meta)} to spend</dt><dd style="color:var(--sodium)">${state.meta.resolve}</dd><dt>Deepest ever</dt><dd>Sector ${state.meta.bestSector}</dd></dl>
+    <dl class="kv"><dt>${esc(S.meta)} to spend</dt><dd style="color:var(--sodium)">${state.meta.resolve}</dd><dt>Deepest ever</dt><dd>Sector ${state.meta.bestSector}</dd>${o.rank ? `<dt>Leaderboard</dt><dd style="color:var(--sodium)">#${o.rank} of ${E.BOARD_SIZE} <button class="btn" data-a="modal" data-v="board" style="margin-left:8px">View</button></dd>` : ''}</dl>
     ${heirloomPick()}
     <p class="muted">Spend the Resolve at the safehouse (Character & Resolve) once your next operative is in town. Training and cell upgrades carry over.</p>
     <div><button class="btn primary big" data-a="recruit">Build the next operative</button></div>
@@ -1471,7 +1501,7 @@ function applyAct(a, v, k) {
   let ok = true;
   switch (a) {
     case 'continue-title': titleOpen = false; if (state.screen === 'intro') state.screen = 'intro'; A.play('door'); break;
-    case 'newcell': if (!confirmReset) { confirmReset = true; break; } confirmReset = false; state = E.newGame(rng); titleOpen = false; break;
+    case 'newcell': if (!confirmReset) { confirmReset = true; break; } confirmReset = false; state = keepBoard(E.newGame(rng)); titleOpen = false; break;
     case 'step': state.draft.step = +v; A.play('click'); break;
     case 'look': state.draft.look = state.draft.look || defaultLook(); state.draft.look[v] = v === 'skin' || v === 'hairColor' ? +k : k; A.play('click'); break;
     case 'savecode': { const code = E.exportSave(state); state.report = code; try { navigator.clipboard.writeText(code).then(() => { toast = 'Save code copied.'; render(); }).catch(() => {}); } catch (e) {} A.play('click'); break; }
@@ -1536,7 +1566,7 @@ function applyAct(a, v, k) {
     }
     case 'reset':
       if (!confirmReset) { confirmReset = true; break; }
-      confirmReset = false; modal = null; state = E.newGame(rng); break;
+      confirmReset = false; modal = null; state = keepBoard(E.newGame(rng)); break;
   }
   if (BUY.has(a) && ok && state.notice) E.journal(state, state.notice, 'town');
   if (BUY.has(a)) A.play(ok ? 'buy' : 'denied');
@@ -1588,12 +1618,25 @@ document.addEventListener('keydown', (ev) => {
   }
 });
 
+// The leaderboard belongs to the device, not the cell: it survives New cell and Reset.
+function keepBoard(fresh) { if (state && state.meta) { fresh.meta.board = state.meta.board || []; fresh.meta.boardSeeded = !!state.meta.boardSeeded; } return fresh; }
+// Simulator raids fill the board until real raids push them off (board.json, built by sim-board.mjs).
+function seedBoard() {
+  if (state.meta.boardSeeded) return;
+  fetch('board.json').then((r) => (r.ok ? r.json() : null)).then((bots) => {
+    if (!bots || !state.meta || state.meta.boardSeeded) return;
+    for (const e of bots) E.addToBoard(state.meta, { ...e, bot: true });
+    state.meta.boardSeeded = true; save();
+    if (modal === 'board') render();
+  }).catch(() => {});
+}
 function start(data) {
   state = E.migrate((data && data.state) || load(), rng);
   delete state.events;
   if (state.screen === 'create' && !state.draft) state.draft = E.newDraft(state.meta, rng);
   titleOpen = !(data && data.state);
   render();
+  seedBoard();
   loadLayers().then((ok) => { if (ok && state.screen === 'create') render(); });
   // PixelLab sheets, if any have been delivered. Re-render so the stage picks them up.
   loadSheets().then((n) => { if (n && ['combat', 'victory', 'death'].includes(state.screen)) { stage.enemyRef = null; stage.player = null; render(); } });

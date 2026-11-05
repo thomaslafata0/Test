@@ -241,7 +241,7 @@ export class Stage {
 
   setHud(side, name, tag, hp) {
     const h = this.hud[side];
-    h.querySelector('.hud-name').textContent = name;
+    const nm = h.querySelector('.hud-name'); nm.textContent = name; nm.classList.toggle('long', name.length > 16);
     h.querySelector('.hud-tag').textContent = tag;
     this.setHp(side, hp);
   }
