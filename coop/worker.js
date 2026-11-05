@@ -86,31 +86,43 @@ export class Vault {
   }
 }
 
-// The global leaderboard: one Durable Object holding every raid from everyone. The game sends each raid when it ends.
-// Scores are worked out here from the raid's numbers, and the limits below keep out nonsense, but the numbers come from the
-// player's browser, so someone determined could still fake a run.
-const BOARD_SHOW = 100, BOARD_MAX_SHOW = 500, BOARD_KEEP = 500000, BOARD_MAX_BODY = 3000, BOARD_RATE = 40;
-const WORTH = { cleared: 150, kills: 25, elites: 75, bosses: 500, freed: 100 };
+// The global leaderboard: one Durable Object with one row per operative, for their whole life. The game sends the row after every raid.
+// The score is worked out here from how far the operative got (same formula as groundWorth in engine.js). Limits keep out nonsense,
+// but the numbers come from the player's browser, so someone determined could still fake a run.
+// Operative ids are never sent back out, because the id is what lets a row be updated. Rows carry a tag derived from it instead.
+const BOARD_SHOW = 100, BOARD_MAX_SHOW = 500, BOARD_KEEP = 500000, BOARD_MAX_BODY = 6000, BOARD_RATE = 40;
 const whole = (v, max) => { const n = Math.round(Number(v)); return Number.isFinite(n) && n >= 0 && n <= max ? n : null; };
 const label = (v, max) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, max) : '');
-function cleanRaid(e) {
-  if (!e || typeof e !== 'object' || !/^[a-z0-9]{8,32}$/.test(e.id || '') || !['extracted', 'escaped', 'died'].includes(e.how)) return null;
-  const name = label(e.name, 40), background = label(e.background, 24), map = label(e.map, 24), p = e.parts || {};
-  const nums = { number: whole(e.number, 1e6), level: whole(e.level, 999), from: whole(e.from, 9999), to: whole(e.to, 9999), kills: whole(e.kills, 1e5), bosses: whole(e.bosses, 5000), cleared: whole(e.cleared, 9999), elites: whole((p.elites || 0) / WORTH.elites, 1e5), freed: whole((p.freed || 0) / WORTH.freed, 1e4), haul: whole(p.haul || 0, 1e8) };
-  if (!name || !map || Object.values(nums).includes(null)) return null;
-  const parts = { haul: nums.haul, cleared: nums.cleared * WORTH.cleared, kills: nums.kills * WORTH.kills, elites: nums.elites * WORTH.elites, bosses: nums.bosses * WORTH.bosses, freed: nums.freed * WORTH.freed };
-  const score = Object.values(parts).reduce((t, v) => t + v, 0);
-  if (score <= 0) return null;
-  return { id: e.id, name, number: nums.number, background, level: nums.level, map, from: nums.from, to: nums.to, how: e.how, score, parts, kills: nums.kills, bosses: nums.bosses, cleared: nums.cleared };
+const groundWorth = (best, threat) => Math.round((best * 100 + Math.floor(best / 5) * 400 + (best >= 15 ? 1000 : 0)) * (1 + 0.5 * threat));
+function cleanRow(e) {
+  if (!e || typeof e !== 'object' || !/^[A-Za-z0-9_-]{6,64}$/.test(e.id || '') || !['alive', 'died'].includes(e.status)) return null;
+  if (!Array.isArray(e.progress) || !e.progress.length || e.progress.length > 40) return null;
+  const progress = [];
+  for (const p of e.progress) {
+    const map = label(p && p.map, 24), threat = whole(p && p.threat, 9), best = whole(p && p.best, 999);
+    if (!map || threat === null || best === null || progress.some((x) => x.map === map && x.threat === threat)) return null;
+    if (best > 0) progress.push({ map, threat, best });
+  }
+  const name = label(e.name, 40), nums = { number: whole(e.number, 1e6), level: whole(e.level, 999), raids: whole(e.raids, 1e5), kills: whole(e.kills, 1e7), bosses: whole(e.bosses, 1e5) };
+  if (!name || !progress.length || Object.values(nums).includes(null)) return null;
+  const top = progress.slice().sort((a, b) => b.threat - a.threat || b.best - a.best)[0];
+  return { id: e.id, name, background: label(e.background, 24), status: e.status, killer: e.status === 'died' ? label(e.killer, 40) : '', ...nums,
+    map: top.map, threat: top.threat, deepest: top.best, freed: progress.filter((x) => x.threat === 0 && x.best >= 15).length,
+    score: progress.reduce((t, x) => t + groundWorth(x.best, x.threat), 0) };
+}
+async function tagOf(id) {
+  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`cinder-cell:${id}`));
+  return [...new Uint8Array(hash)].slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 export class Board {
   constructor(state) {
     this.sql = state.storage.sql;
-    this.sql.exec('CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, score INTEGER NOT NULL, at INTEGER NOT NULL, data TEXT NOT NULL)');
-    this.sql.exec('CREATE INDEX IF NOT EXISTS runs_score ON runs (score DESC, at ASC)');
+    this.sql.exec('DROP TABLE IF EXISTS runs'); // the old board ranked single raids
+    this.sql.exec('CREATE TABLE IF NOT EXISTS ops (id TEXT PRIMARY KEY, score INTEGER NOT NULL, status TEXT NOT NULL, at INTEGER NOT NULL, data TEXT NOT NULL)');
+    this.sql.exec('CREATE INDEX IF NOT EXISTS ops_score ON ops (score DESC, at ASC)');
     this.hits = new Map();
   }
-  count() { return this.sql.exec('SELECT COUNT(*) AS n FROM runs').one().n; }
+  count() { return this.sql.exec('SELECT COUNT(*) AS n FROM ops').one().n; }
   limited(ip) {
     const now = Date.now(), minute = this.hits.get(ip);
     if (!minute || now - minute.t > 60000) { if (this.hits.size > 5000) this.hits.clear(); this.hits.set(ip, { t: now, n: 1 }); return false; }
@@ -119,23 +131,27 @@ export class Board {
   async fetch(request) {
     if (request.method === 'GET') {
       const limit = Math.min(BOARD_MAX_SHOW, Math.max(1, +new URL(request.url).searchParams.get('limit') || BOARD_SHOW));
-      const rows = this.sql.exec('SELECT at, data FROM runs ORDER BY score DESC, at ASC LIMIT ?', limit).toArray().map((r) => ({ ...JSON.parse(r.data), when: r.at }));
+      const rows = this.sql.exec('SELECT at, data FROM ops ORDER BY score DESC, at ASC LIMIT ?', limit).toArray().map((r) => ({ ...JSON.parse(r.data), when: r.at }));
       return json({ rows, total: this.count() });
     }
     if (request.method !== 'POST') return json({ error: 'method' }, 405);
     if (this.limited(request.headers.get('CF-Connecting-IP') || 'local')) return json({ error: 'slow down' }, 429);
     const text = await request.text();
     if (text.length > BOARD_MAX_BODY) return json({ error: 'too big' }, 413);
-    let raid;
-    try { raid = cleanRaid(JSON.parse(text)); } catch (e) { return json({ error: 'bad json' }, 400); }
-    if (!raid) return json({ error: 'bad raid' }, 400);
-    // The same id twice (a retry after a dropped connection) keeps the first copy.
-    this.sql.exec('INSERT OR IGNORE INTO runs (id, score, at, data) VALUES (?, ?, ?, ?)', raid.id, raid.score, Date.now(), JSON.stringify(raid));
+    let row;
+    try { row = cleanRow(JSON.parse(text)); } catch (e) { return json({ error: 'bad json' }, 400); }
+    if (!row) return json({ error: 'bad row' }, 400);
+    const { id, ...shown } = row, tag = await tagOf(id), cur = this.sql.exec('SELECT score, status, at, data FROM ops WHERE id = ?', id).toArray()[0];
+    // A dead operative's row is final. A living one's score only goes up, and its place in a tie dates from when it got there.
+    if (!cur || cur.status !== 'died') {
+      const score = cur ? Math.max(cur.score, row.score) : row.score, at = cur && score === cur.score ? cur.at : Date.now();
+      this.sql.exec('INSERT OR REPLACE INTO ops (id, score, status, at, data) VALUES (?, ?, ?, ?, ?)', id, score, row.status, at, JSON.stringify({ ...shown, score, tag }));
+    }
     const total = this.count();
-    if (total > BOARD_KEEP) this.sql.exec('DELETE FROM runs WHERE id IN (SELECT id FROM runs ORDER BY score ASC, at DESC LIMIT ?)', total - BOARD_KEEP);
-    const row = this.sql.exec('SELECT score, at FROM runs WHERE id = ?', raid.id).toArray()[0];
-    const rank = row ? this.sql.exec('SELECT COUNT(*) AS n FROM runs WHERE score > ? OR (score = ? AND at < ?)', row.score, row.score, row.at).one().n + 1 : 0;
-    return json({ rank, total, score: raid.score });
+    if (total > BOARD_KEEP) this.sql.exec('DELETE FROM ops WHERE id IN (SELECT id FROM ops ORDER BY score ASC, at DESC LIMIT ?)', total - BOARD_KEEP);
+    const now = this.sql.exec('SELECT score, at FROM ops WHERE id = ?', id).toArray()[0];
+    const rank = now ? this.sql.exec('SELECT COUNT(*) AS n FROM ops WHERE score > ? OR (score = ? AND at < ?)', now.score, now.score, now.at).one().n + 1 : 0;
+    return json({ rank, total, score: now ? now.score : 0, tag });
   }
 }
 

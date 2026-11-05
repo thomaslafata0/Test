@@ -82,7 +82,7 @@ export const perkText = (id, lv) => { const p = perkById(id); return p.desc.repl
 // ---------- state ----------
 export function newMeta() {
   return { resolve: 0, totalResolve: 0, training: { hp: 0, atk: 0, def: 0, spd: 0 }, cell: [], operatives: 0, bestSector: 0, bestByMap: {},
-    fallen: [], contracts: [], liberated: {}, threat: 0, heirloom: null, tips: {}, endingSeen: false, stats: { kills: 0, bosses: 0, raids: 0 }, board: [], boardOut: [], boardShared: true, ship: { hull: 0, guns: 0, shields: 0, engines: 0, cell: [] }, orbitWins: 0, orbitTierWins: {}, feats: { counters: {}, tiers: {}, v: 0 } };
+    fallen: [], contracts: [], liberated: {}, threat: 0, heirloom: null, tips: {}, endingSeen: false, stats: { kills: 0, bosses: 0, raids: 0 }, board: [], boardOut: [], boardV: 2, ship: { hull: 0, guns: 0, shields: 0, engines: 0, cell: [] }, orbitWins: 0, orbitTierWins: {}, feats: { counters: {}, tiers: {}, v: 0 } };
 }
 
 export function newGame(rng) {
@@ -107,14 +107,9 @@ export function migrate(s, rng) {
   }
   if (s && s.v === VERSION) {
     if (s.meta) {
-      // The leaderboard is global now: simulator rows go, and the real raids this device kept are sent up once.
-      s.meta.board = (s.meta.board || []).filter((e) => !e.bot);
-      s.meta.boardOut = s.meta.boardOut || [];
-      delete s.meta.boardSeeded;
-      if (!s.meta.boardShared) {
-        s.meta.boardShared = true;
-        if (!s.meta.dev) for (const e of s.meta.board) { e.id = e.id || boardId(); s.meta.boardOut.push(e); }
-      }
+      // The board used to rank single raids. Those rows can't become careers, so they go; operatives appear after their next raid.
+      if (s.meta.boardV !== 2) { s.meta.board = []; s.meta.boardOut = []; s.meta.boardMine = []; s.meta.boardV = 2; }
+      delete s.meta.boardSeeded; delete s.meta.boardShared;
     }
     if (s.meta && !s.meta.ship) s.meta.ship = { hull: 0, guns: 0, shields: 0, engines: 0, cell: [] };
     // Ventures used to belong to the cell. They're the operative's now, and die with them.
@@ -2050,9 +2045,10 @@ function clearSector(s) {
   const res = pays ? 1 + (r.threat >= 3 && isBossSector(r.sector) ? 1 : 0) : 0;
   c.credits += bonus; ledger(s, 'sector bonus', bonus); feat(s, 'credits', bonus);
   m.resolve += res; m.totalResolve += res;
+  markBest(c, r.map, r.threat || 0, r.sector);
   prog.deepest = Math.max(prog.deepest, r.sector);
   c.deepest = Math.max(c.deepest, r.sector);
-  for (const i of livingActors(s)) if (i !== actorIdx(s)) withActor(s, i, () => { const c2 = s.char, p2 = mapProgress(c2, r.map); c2.credits += bonus; p2.deepest = Math.max(p2.deepest, r.sector); c2.deepest = Math.max(c2.deepest, r.sector); });
+  for (const i of livingActors(s)) if (i !== actorIdx(s)) withActor(s, i, () => { const c2 = s.char, p2 = mapProgress(c2, r.map); c2.credits += bonus; markBest(c2, r.map, r.threat || 0, r.sector); p2.deepest = Math.max(p2.deepest, r.sector); c2.deepest = Math.max(c2.deepest, r.sector); });
   m.bestSector = Math.max(m.bestSector, r.sector);
   m.bestByMap[r.map] = Math.max(m.bestByMap[r.map] || 0, r.sector);
   contractEvent(s, 'sector', {});
@@ -2069,37 +2065,48 @@ export function pushDeeper(s, rng) {
   beginSector(s, rng);
 }
 
-// Leaderboard: every raid is scored when it ends (extracted, escaped or died). It goes in meta.boardOut for the page to send to the
-// global board (coop/worker.js, Board); the best BOARD_SIZE from this device stay in meta.board for when the board can't be reached.
-// Score = credits brought home + 150 per sector cleared + 25 per kill + 75 per elite + 500 per boss + 100 per prisoner freed.
-// Dying brings nothing home, so the haul counts for zero; escaping mid-fight is scored on what you kept after the loss.
+// Leaderboard: one row per operative, for their whole life. The score is how far they have got, and nothing else: the deepest sector
+// cleared on each district at each threat level, so clearing the same ground twice adds nothing. Higher threat levels count on top,
+// and for more. coop/worker.js works out the same score from the same numbers: change both together.
+// The row goes in meta.boardOut for the page to send after every raid; meta.board keeps this device's best BOARD_SIZE for when the board can't be reached.
 export const BOARD_SIZE = 50;
-export function raidScore(r, c, how) {
-  const haul = how === 'died' ? 0 : Math.max(0, c.credits - (c.startCredits ?? r.startCredits ?? 0));
-  const freed = how === 'extracted' ? Math.max(0, (r.allies || 0) - (r.follower ? 1 : 0)) : 0;
-  const parts = { haul, cleared: (r.cleared || 0) * 150, kills: (r.kills || 0) * 25, elites: (r.elites || 0) * 75, bosses: (r.bosses || 0) * 500, freed: freed * 100 };
-  return { score: Object.values(parts).reduce((t, v) => t + v, 0), parts };
+export const SECTOR_POINTS = 100, BOSS_POINTS = 400, LIBERATE_POINTS = 1000, THREAT_POINTS = 0.5;
+export const groundWorth = (best, threat = 0) => Math.round((best * SECTOR_POINTS + Math.floor(best / 5) * BOSS_POINTS + (best >= 15 ? LIBERATE_POINTS : 0)) * (1 + THREAT_POINTS * threat));
+const markBest = (c, mapId, threat, sector) => { const p = mapProgress(c, mapId), b = p.best || (p.best = { 0: p.deepest || 0 }); b[threat] = Math.max(b[threat] || 0, sector); };
+// Every district and threat level this operative has cleared sectors on, as { map, threat, best }.
+export function careerProgress(c) {
+  const out = [];
+  for (const [map, p] of Object.entries(c.maps || {})) for (const [threat, best] of Object.entries(p.best || { 0: p.deepest || 0 })) if (best > 0) out.push({ map, threat: +threat, best });
+  return out;
 }
-export function recordScore(s, c, how) {
+export const careerScore = (c) => careerProgress(c).reduce((t, x) => t + groundWorth(x.best, x.threat), 0);
+export function recordCareer(s, c, status, foe = null) {
   const r = s.run, m = s.meta;
-  if (!r || !c || m.dev) return ''; // cells touched by dev mode stay off the leaderboard
-  const { score, parts } = raidScore(r, c, how);
+  if (!r || !c) return '';
+  const k = c.career || (c.career = { raids: 0, kills: 0, bosses: 0 });
+  if (!r.orbit) { k.raids += 1; k.kills += r.kills || 0; k.bosses += r.bosses || 0; }
+  if (m.dev) return ''; // cells touched by dev mode stay off the leaderboard
+  const progress = careerProgress(c), score = careerScore(c);
   if (score <= 0) return '';
-  const entry = { id: boardId(), name: c.name, number: c.number, background: c.background, level: c.level, map: r.map, from: r.startSector || 1, to: r.sector, how, score, parts, kills: r.kills || 0, bosses: r.bosses || 0, cleared: r.cleared || 0, when: Date.now() };
+  const top = progress.slice().sort((a, b) => b.threat - a.threat || b.best - a.best)[0];
+  const entry = { id: c.uid, name: c.name, number: c.number, background: c.background, level: c.level, status, score, gain: score - (c.boardScore || 0), progress,
+    map: top.map, threat: top.threat, deepest: top.best, freed: progress.filter((x) => x.threat === 0 && x.best >= 15).length, raids: k.raids, kills: k.kills, bosses: k.bosses,
+    killer: foe ? foe.name : '', when: Date.now() };
+  c.boardScore = score;
   addToBoard(m, entry);
-  (m.boardOut || (m.boardOut = [])).push(entry);
+  m.boardOut = (m.boardOut || []).filter((e) => e.id !== entry.id);
+  m.boardOut.push(entry);
   if (m.boardOut.length > 100) m.boardOut.splice(0, m.boardOut.length - 100);
   return entry.id;
 }
-const boardId = () => Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
-// Inserts an entry if it makes this device's cut; returns its 1-based rank or 0.
+// This device's copy: one row per operative, best first.
 export function addToBoard(m, entry) {
-  const board = m.board || (m.board = []);
+  const board = (m.board || []).filter((e) => e.id !== entry.id);
   board.push(entry);
   board.sort((a, b) => b.score - a.score || a.when - b.when);
   if (board.length > BOARD_SIZE) board.length = BOARD_SIZE;
-  const rank = board.indexOf(entry) + 1;
-  return rank;
+  m.board = board;
+  return board.indexOf(entry) + 1;
 }
 
 export function endRun(s, how, rngForRestock = Math.random) {
@@ -2109,8 +2116,7 @@ export function endRun(s, how, rngForRestock = Math.random) {
   standUp(s, 0); // running with a downed partner over your shoulder: they make it out, barely
   const lost = settle(s, how, how === 'extracted' ? extractRate(r.sector) : escapeRate(r.sector));
   forEachActor(s, (a) => {
-    a.raidScore = raidScore(r, a, how).score;
-    a.boardId = recordScore(s, a, how);
+    a.boardId = recordCareer(s, a, 'alive');
     a.fed = false; a.drink = false;
     a.hp = Math.min(a.hp, stats(s).maxHp); // a Rivet Stout wearing off
     if (rngForRestock) restockMarket(s, rngForRestock);
@@ -2123,7 +2129,7 @@ export function endRun(s, how, rngForRestock = Math.random) {
     home = ` You brought ${freed} prisoner${freed > 1 ? 's' : ''} home: +${freed} ${D.SETTING.meta}.`;
   }
   if (how === 'extracted') contractEvent(s, 'extract', { credits: s.char.credits, allies: freed });
-  const rank = c.raidScore ? ` Raid score ${c.raidScore}.` : '';
+  const worth = careerScore(c), rank = worth ? ` Operative score ${worth.toLocaleString()}.` : '';
   s.notice = (how === 'extracted'
     ? `You made it out of ${sectorName(r.sector, r.map)}.${lost ? ` Slipping out early cost ${lost} ${D.SETTING.cur} in bribes at the gate.` : ''}${home} Spend it before your luck runs out.`
     : `You escaped from ${sectorName(r.sector, r.map)}${lost ? `, but dropped ${lost} ${D.SETTING.cur} on the way out` : ''}.`) + rank;
@@ -2217,8 +2223,8 @@ function reallyDie(s, foe) {
   s.meta.fallen.unshift(record); feat(s, 'fallen');
   s.meta.fallen = s.meta.fallen.slice(0, 12);
   record.perks = (c.perks || []).length;
-  record.score = raidScore(r, c, 'died').score;
-  record.boardId = recordScore(s, c, 'died');
+  record.boardId = recordCareer(s, c, 'died', foe);
+  record.score = careerScore(c);
   if (isCoop(s) && !r.orbit) {
     autoHeirloom(s);
     c.dead = true; c.downed = 0;

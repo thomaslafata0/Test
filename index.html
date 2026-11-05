@@ -635,7 +635,7 @@ function save() {
 }
 
 // ---------- global leaderboard ----------
-// Every raid goes to the shared board when it ends. Raids that can't be sent wait in meta.boardOut (part of the save) and try again later.
+// Each operative's row goes to the shared board after every raid. Rows that can't be sent wait in meta.boardOut (part of the save) and try again later.
 const BOARD_ON = typeof location !== 'undefined' && (location.hostname.endsWith('.workers.dev') || location.port === '8787');
 let globalBoard = null, boardSending = false, boardRetryAt = 0;
 async function flushBoard() {
@@ -647,14 +647,14 @@ async function flushBoard() {
       const e = state.meta.boardOut[0];
       const res = await fetch('/board', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(e) });
       if (res.status === 429 || res.status >= 500) { boardRetryAt = Date.now() + 30000; break; }
-      state.meta.boardOut = state.meta.boardOut.filter((x) => x.id !== e.id); // a 4xx means the board refused it: retrying won't help
+      state.meta.boardOut = state.meta.boardOut.filter((x) => x !== e); // a newer row for the same operative stays queued. A 4xx means the board refused it: retrying won't help
       if (res.ok) {
         sent = true;
         const o = await res.json();
-        state.meta.boardMine = [...(state.meta.boardMine || []), e.id].slice(-300);
+        if (o.tag && !(state.meta.boardMine || []).includes(o.tag)) state.meta.boardMine = [...(state.meta.boardMine || []), o.tag].slice(-300);
         const dead = state.outcome && state.outcome.boardId === e.id;
         if (dead) { state.outcome.boardRank = o.rank; state.outcome.boardTotal = o.total; }
-        if (o.rank && !state.run) toast = `Raid score ${o.score.toLocaleString()}: #${o.rank.toLocaleString()} of ${o.total.toLocaleString()} on the global leaderboard.`;
+        if (o.rank && e.gain > 0 && !state.run) toast = `Operative score ${o.score.toLocaleString()}: #${o.rank.toLocaleString()} of ${o.total.toLocaleString()} on the leaderboard.`;
       }
     }
   } catch (e) { boardRetryAt = Date.now() + 30000; }
@@ -1166,7 +1166,7 @@ function titleScreen() {
         <button class="btn big" data-a="modal" data-v="manual">Field manual</button>
         <button class="btn big" data-a="modal" data-v="settings">Settings &amp; co-op</button>
       </div>
-      ${m.operatives ? (() => { const best = (m.board || [])[0]; return `<dl class="kv title-stats"><dt>Deepest</dt><dd>Sector ${m.bestSector}</dd><dt>Raids</dt><dd>${m.stats.raids}</dd><dt>${esc(S.meta)}</dt><dd>${m.resolve}</dd>${best ? `<dt>Best raid</dt><dd>${best.score.toLocaleString()} points</dd>` : ''}</dl>`; })() : ''}
+      ${m.operatives ? (() => { const best = (m.board || [])[0]; return `<dl class="kv title-stats"><dt>Deepest</dt><dd>Sector ${m.bestSector}</dd><dt>Raids</dt><dd>${m.stats.raids}</dd><dt>${esc(S.meta)}</dt><dd>${m.resolve}</dd>${best ? `<dt>Best operative</dt><dd>${best.score.toLocaleString()} points</dd>` : ''}</dl>`; })() : ''}
     </div>
   </section>`;
 }
@@ -1981,18 +1981,19 @@ function featsView() {
 // The global leaderboard: every raid by anyone (coop/worker.js, Board). Falls back to this device's best raids when it can't be reached.
 function boardView() {
   const online = !!(globalBoard && globalBoard.rows), board = online ? globalBoard.rows : state.meta.board || [];
-  const myIds = new Set((state.meta.board || []).map((e) => e.id).concat((state.meta.boardMine || [])));
+  const mine = new Set([...(state.meta.board || []).map((e) => e.id), ...(state.meta.boardMine || [])]), me = state.char;
   const rows = board.map((e, i) => {
-    const mine = myIds.has(e.id);
-    const how = { extracted: 'Extracted', escaped: 'Escaped', died: 'Died' }[e.how] || e.how;
-    return `<tr class="${mine ? 'mine' : ''}"><td class="num">${i + 1}</td><td><b>${esc(e.name)}</b><span class="muted"> #${+e.number || 0}</span><div class="muted small">${esc((D.BACKGROUNDS.find((b) => b.id === e.background) || {}).name || e.background)}, lv ${+e.level || 1}</div></td><td>${esc(E.mapById(e.map).name)}<div class="muted small">sector ${e.from === e.to ? +e.to : `${+e.from}\u2013${+e.to}`}</div></td><td class="${e.how === 'died' ? 'bad' : e.how === 'extracted' ? 'good' : ''}">${how}<div class="muted small">${+e.kills || 0} kills${e.bosses ? `, ${e.bosses} boss${e.bosses > 1 ? 'es' : ''}` : ''}</div></td><td class="num score">${e.score.toLocaleString()}</td></tr>`;
+    const own = mine.has(e.tag || e.id) || (me && e.name === me.name && +e.number === me.number);
+    const died = e.status === 'died', threat = (D.THREAT[+e.threat] || {}).name, freed = +e.freed || 0;
+    const reached = [+e.threat ? threat : '', freed ? `${freed} district${freed > 1 ? 's' : ''} freed` : ''].filter(Boolean).join(' \u00B7 ');
+    return `<tr class="${own ? 'mine' : ''}"><td class="num">${i + 1}</td><td><b>${esc(e.name)}</b><span class="muted"> #${+e.number || 0}</span><div class="muted small">${esc((D.BACKGROUNDS.find((b) => b.id === e.background) || {}).name || e.background)}, lv ${+e.level || 1}</div></td><td>${esc(E.mapById(e.map).name)}, sector ${+e.deepest || 0}${reached ? `<div class="muted small">${esc(reached)}</div>` : ''}</td><td class="${died ? 'bad' : 'good'}">${died ? 'Died' : 'Alive'}<div class="muted small">${died && e.killer ? `to ${esc(e.killer)}, ` : ''}${+e.raids || 0} raids, ${+e.kills || 0} kills</div></td><td class="num score">${(+e.score || 0).toLocaleString()}</td></tr>`;
   }).join('');
   return `<div class="modal-wrap" data-a="closemodal"><div class="modal board" role="dialog" aria-modal="true" aria-label="Leaderboard">
     <button class="tool close" data-a="closemodal" aria-label="Close">Close</button>
-    <h2>Leaderboard <span class="num muted" style="font-size:.9rem">${online ? `top ${board.length} of ${globalBoard.total.toLocaleString()} raids by everyone` : `this device\u2019s best ${board.length} raids`}</span></h2>
-    ${!online && BOARD_ON ? `<p class="muted" style="font-size:.9rem">${globalBoard && globalBoard.loading ? 'Fetching the global board\u2026' : 'Can\u2019t reach the global board right now, so these are your own raids. Yours will be sent when the connection is back.'}</p>` : ''}
-    <p class="muted" style="font-size:.9rem">Every raid is scored when it ends: credits brought home, 150 per sector cleared, 25 per kill, 75 per veteran, 500 per boss, 100 per prisoner freed. Dying brings nothing home. Your raids are highlighted.</p>
-    ${board.length ? `<table class="board-table"><thead><tr><th>#</th><th>Operative</th><th>District</th><th>Outcome</th><th class="num">Score</th></tr></thead><tbody>${rows}</tbody></table>` : '<p class="muted">No raids scored yet.</p>'}
+    <h2>Leaderboard <span class="num muted" style="font-size:.9rem">${online ? `top ${board.length} of ${globalBoard.total.toLocaleString()} operatives, everyone\u2019s` : `this device\u2019s best ${board.length} operatives`}</span></h2>
+    ${!online && BOARD_ON ? `<p class="muted" style="font-size:.9rem">${globalBoard && globalBoard.loading ? 'Fetching the global board\u2026' : 'Can\u2019t reach the global board right now, so these are your own operatives. Yours will be sent when the connection is back.'}</p>` : ''}
+    <p class="muted" style="font-size:.9rem">One row per operative, for their whole life: how far they got, and nothing else. On each district, ${E.SECTOR_POINTS} per sector cleared, ${E.BOSS_POINTS} more per boss, ${E.LIBERATE_POINTS.toLocaleString()} more for freeing it. Going back over the same ground adds nothing. Threat levels count on top, each worth ${Math.round(E.THREAT_POINTS * 100)}% more than the last. Your operatives are highlighted.</p>
+    ${board.length ? `<table class="board-table"><thead><tr><th>#</th><th>Operative</th><th>Got to</th><th>Status</th><th class="num">Score</th></tr></thead><tbody>${rows}</tbody></table>` : '<p class="muted">No operatives on the board yet.</p>'}
   </div></div>`;
 }
 
@@ -2175,7 +2176,7 @@ function deathScreen() {
     <h1 class="big-title" style="color:var(--danger)">${esc(o.name)}</h1>
     ${o.killerId ? `<div class="killer">${(() => { const me = o.look ? lookStill(o.look, o.background) : null; return me ? `<img class="portrait" src="${me}" alt="" width="160" height="160"><span class="label vs">vs</span>` : ''; })()}${portraitImg({ id: o.killerId, name: o.killer, portrait: o.killerPortrait })}<span class="label">Last seen<br>engaging a ${esc(o.killer)}</span></div>` : ''}
     <p class="story">Operative ${o.number} ${o.orbit ? `was lost in orbit when a ${esc(o.killer)} broke the shuttle apart` : `went down in the ${esc(E.sectorName(o.sector, o.map))}${o.killerId ? `, killed by a ${esc(o.killer)}` : `, taken by ${esc(o.killer)}`}`}. The ${o.credits.toLocaleString()} ${S.currency}, the gear, ${o.perks ? `${o.perks} piece${o.perks > 1 ? 's' : ''} of contraband, ` : ''}the implants and level ${o.level} went with them.</p>
-    ${o.wipe ? '<p class="notice lose">A wipe. Both of you fell on this raid, and everything you carried went with you.</p>' : ''}<dl class="kv"><dt>${esc(S.meta)} to spend</dt><dd style="color:var(--sodium)">${state.meta.resolve}</dd><dt>Deepest ever</dt><dd>Sector ${state.meta.bestSector}</dd>${o.score ? `<dt>Last raid</dt><dd>${o.score.toLocaleString()} points${o.boardRank ? `, <b style="color:var(--sodium)">#${o.boardRank.toLocaleString()} of ${o.boardTotal.toLocaleString()}</b> worldwide` : ''} <button class="btn" data-a="modal" data-v="board" style="margin-left:8px">View</button></dd>` : ''}</dl>
+    ${o.wipe ? '<p class="notice lose">A wipe. Both of you fell on this raid, and everything you carried went with you.</p>' : ''}<dl class="kv"><dt>${esc(S.meta)} to spend</dt><dd style="color:var(--sodium)">${state.meta.resolve}</dd><dt>Deepest ever</dt><dd>Sector ${state.meta.bestSector}</dd>${o.score ? `<dt>Final score</dt><dd>${o.score.toLocaleString()} points${o.boardRank ? `, <b style="color:var(--sodium)">#${o.boardRank.toLocaleString()} of ${o.boardTotal.toLocaleString()}</b> worldwide` : ''} <button class="btn" data-a="modal" data-v="board" style="margin-left:8px">View</button></dd>` : ''}</dl>
     ${heirloomPick()}
     <p class="muted">Spend the Resolve at the safehouse (Character & Resolve) once your next operative is in town. Training and cell upgrades carry over.</p>
     <div><button class="btn primary big" data-a="recruit">Build the next operative</button></div>
