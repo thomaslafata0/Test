@@ -12,9 +12,9 @@ require('fs').mkdirSync(OUT, { recursive: true });
     const save = () => page.evaluate(() => JSON.parse(localStorage.getItem('cinder-cell-save-v1')));
     // bar
     await page.click('button[data-a="modal"][data-v="bar"]'); await page.waitForTimeout(200);
-    await page.click('button[data-a="barchat"][data-v="keg7"]'); await page.click('button[data-a="barchat"][data-v="vess"]'); await page.click('button[data-a="drink"]'); await page.waitForTimeout(200);
+    await page.click('button[data-a="drink"][data-v="stout"]'); await page.waitForTimeout(200);
     await page.screenshot({ path: `${OUT}/dt-bar-${W}.png`, fullPage: true });
-    let s = await save(); console.log(W, 'bar: drink', s.char.drink, 'credits', s.char.credits, 'say', Object.keys(s.barSay || {}));
+    let s = await save(); console.log(W, 'bar: drink', s.char.drink, 'credits', s.char.credits, 'menu', await page.$$eval('button[data-a="drink"]', (b) => b.length));
     // wheel
     await page.click('.modal .tab[data-v="wheel"]'); await page.waitForTimeout(200);
     await page.click('button[data-a="bet"][data-v="d2"]'); await page.click('button[data-a="stake"][data-v="50"]'); await page.click('button[data-a="spin"]'); await page.waitForTimeout(1200);

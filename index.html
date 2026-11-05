@@ -529,6 +529,8 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .dt-face { width: 56px; height: 56px; image-rendering: pixelated; border: 1px solid var(--line); background: var(--panel); flex: none; }
 .dt-face.ph { display: grid; place-items: center; font-family: var(--display); font-size: 1.6rem; color: var(--sodium); background: linear-gradient(160deg, #2a2d33, #15171b); }
 .dt-face.ph.keg7 { color: #9fd3ff; } .dt-face.ph.vess { color: #ff7a9a; } .dt-face.ph.juno { color: #ffd166; } .dt-face.ph.sable { color: #c8a2ff; }
+.dt-drink.mine { background: #d9a53a2a; }
+.dt-keg { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
 .dt-drink { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--sodium); background: #d9a53a12; }
 .dt-wheel { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 18px; align-items: start; }
 .dt-wheel-left { display: grid; gap: 8px; justify-items: center; text-align: center; }
@@ -581,7 +583,6 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .board-table .score { font-weight: 700; color: var(--sodium); text-align: right; }
 .board-table th.num { text-align: right; }
 .board-table tr.mine td { background: #d9a53a14; }
-.board-table tr.bot td b { color: var(--muted); font-weight: 500; }
 .board-table .good { color: var(--ok); }
 .board-table .bad { color: var(--danger); }
 @media (max-width: 520px) { .board-table { font-size: .8rem; } .board-table td, .board-table th { padding: 5px 3px; } }
@@ -598,7 +599,7 @@ import { Stage, loadSheets, sheetStill, setLookSheets } from './stage.js';
 import * as A from './audio.js';
 import { iconURL, gearIconKey } from './icons.js';
 import { Town, SHOPS } from './town.js';
-import { autoStep, loadDev, BUILDS } from './dev.js';
+import { autoStep, autoFinish, loadDev, BUILDS } from './dev.js';
 import { Wheel, OrbitScene, loadDowntimeArt, artFor } from './downtime.js';
 import { Net, getCoopPrefs, setCoopPrefs, makeCode, getRoom, setRoom, getLastRoom, setLastRoom } from './net.js';
 import { BODIES, HAIR, HAIR_NAMES, SKINS, HAIRS, defaultLook, loadLayers, hasLayers, lookStill, lookBattleStill, lookPortrait, townSheets, battleSheet, weaponLayer } from './look.js';
@@ -629,8 +630,52 @@ function writeSave(s) {
 }
 // The friend's own game (home) is the real save; what's on their screen in co-op is a mirror of the host's.
 function save() {
-  if (!isGuest()) { writeSave(state); return; }
+  if (!isGuest()) { writeSave(state); flushBoard(); return; }
   if (home && !net.local) writeSave(home);
+}
+
+// ---------- global leaderboard ----------
+// Every raid goes to the shared board when it ends. Raids that can't be sent wait in meta.boardOut (part of the save) and try again later.
+const BOARD_ON = typeof location !== 'undefined' && (location.hostname.endsWith('.workers.dev') || location.port === '8787');
+let globalBoard = null, boardSending = false, boardRetryAt = 0;
+async function flushBoard() {
+  if (!BOARD_ON || boardSending || isGuest() || Date.now() < boardRetryAt || !state || !state.meta || !(state.meta.boardOut || []).length) return;
+  boardSending = true;
+  let sent = false;
+  try {
+    while (state.meta.boardOut.length) {
+      const e = state.meta.boardOut[0];
+      const res = await fetch('/board', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(e) });
+      if (res.status === 429 || res.status >= 500) { boardRetryAt = Date.now() + 30000; break; }
+      state.meta.boardOut = state.meta.boardOut.filter((x) => x.id !== e.id); // a 4xx means the board refused it: retrying won't help
+      if (res.ok) {
+        sent = true;
+        const o = await res.json();
+        state.meta.boardMine = [...(state.meta.boardMine || []), e.id].slice(-300);
+        const dead = state.outcome && state.outcome.boardId === e.id;
+        if (dead) { state.outcome.boardRank = o.rank; state.outcome.boardTotal = o.total; }
+        if (o.rank && !state.run) toast = `Raid score ${o.score.toLocaleString()}: #${o.rank.toLocaleString()} of ${o.total.toLocaleString()} on the global leaderboard.`;
+      }
+    }
+  } catch (e) { boardRetryAt = Date.now() + 30000; }
+  boardSending = false;
+  if (sent) {
+    writeSave(state);
+    if (modal === 'board') loadBoard();
+    else if (!busy && !auto) render();
+  }
+}
+async function loadBoard() {
+  if (!BOARD_ON) return;
+  if (!(globalBoard && globalBoard.rows)) globalBoard = { loading: true };
+  flushBoard();
+  try {
+    const res = await fetch('/board?limit=100', { cache: 'no-store' });
+    if (!res.ok) throw new Error(`board ${res.status}`);
+    const o = await res.json();
+    globalBoard = { rows: o.rows || [], total: o.total || 0 };
+  } catch (e) { if (!(globalBoard && globalBoard.rows)) globalBoard = { failed: true }; }
+  if (modal === 'board') render();
 }
 
 // ---------- cloud saves ----------
@@ -709,6 +754,7 @@ let devOn = (() => { try { return localStorage.getItem(DEV_KEY) === '1'; } catch
 let auto = null, autoLast = { build: 'strength', target: 15, stopOnDeath: false, map: '' }, autoResult = null;
 function stopAuto(why) {
   if (!auto) return;
+  try { autoFinish(state, rng, auto); } catch (e) { console.error(e); }
   autoResult = `${why || 'Stopped.'} ${auto.stats.ops} new operatives, ${auto.stats.raids} raids, ${auto.stats.deaths} deaths, deepest sector ${auto.stats.deepest}, ${Math.round((Date.now() - auto.t0) / 1000)} s.`;
   if (auto.mode === 'fast' && auto.sfx) A.setPref('sfx', true);
   auto = null; toast = autoResult; document.getElementById('app').classList.remove('busy');
@@ -795,7 +841,7 @@ function applyDev(v, k) {
     case 'items': if (c) { const m = E.stats(state).carry; for (const id of Object.keys(D.ITEMS)) c.items[id] = m; } break;
     case 'gear': if (c) { const band = Math.min(6, Math.max(1, Math.ceil((c.deepest || 1) / 3) + 1)); const it = E.rollGear(rng, { tierMin: Math.max(1, band - 1), tierMax: band, odds: { [k]: 1 } }); if (it) { const sl = E.baseOf(it).slot, old = c.gear[sl]; c.gear[sl] = it; if (old) (c.lockup = c.lockup || []).push(old); toast = `${E.itemName(it)} equipped.`; } } break;
     case 'perk': if (c && !state.run) { const left = D.PERKS.filter((p) => !c.perks.includes(p.id)); const owned = c.perks.filter((id) => E.perkLevel(c, id) < n); const id = c.perks.length >= E.CONTRABAND_SLOTS ? owned[0] : (left[Math.floor(rng() * left.length)] || {}).id; if (id) { if (!c.perks.includes(id)) c.perks.push(id); c.perkLv = c.perkLv || {}; c.perkLv[id] = n; toast = `${E.perkName(id, n)}: ${E.perkText(id, n)}`; } else toast = 'No room for that tier.'; } break;
-    case 'sector': if (c) { const mp = state.gateMap || 'garrison', p = E.mapProgress(c, mp); if (!p.insertions.includes(n)) p.insertions.push(n); p.deepest = Math.max(p.deepest || 0, n - 1); c.deepest = Math.max(c.deepest || 0, n - 1); state.meta.bestSector = Math.max(state.meta.bestSector, n - 1); state.meta.bestByMap[mp] = Math.max(state.meta.bestByMap[mp] || 0, n - 1); toast = `Sector ${n} unlocked on ${E.mapById(mp).name}.`; } break;
+    case 'sector': if (c) { const mp = state.gateMap || 'garrison', p = E.mapProgress(c, mp), pins = E.insertionsAt(c, mp, state.meta.threat || 0); if (!pins.includes(n)) pins.push(n); p.deepest = Math.max(p.deepest || 0, n - 1); c.deepest = Math.max(c.deepest || 0, n - 1); state.meta.bestSector = Math.max(state.meta.bestSector, n - 1); state.meta.bestByMap[mp] = Math.max(state.meta.bestByMap[mp] || 0, n - 1); toast = `Sector ${n} unlocked on ${E.mapById(mp).name}.`; } break;
     case 'kill': if (state.run && state.run.enemy) state.run.enemy.hp = 1; break;
     case 'resolve': state.meta.resolve += n; state.meta.totalResolve += n; break;
     case 'alltrain': for (const key of Object.keys(D.TRAINING)) state.meta.training[key] = D.TRAINING[key].max; if (c) c.hp = E.stats(state).maxHp; break;
@@ -811,7 +857,7 @@ const isGuest = () => !!net && net.role === 'guest';
 const isHost = () => !!net && net.role === 'host';
 const myIdx = () => (isGuest() ? 1 : 0);
 // Actions that only touch this screen, never the game.
-const DOWNTIME = new Set(['drink', 'barchat', 'bet', 'stake', 'spin', 'invest', 'withdraw', 'shippart', 'shipcell', 'orbitgo', 'orbitact', 'orbitclose']);
+const DOWNTIME = new Set(['drink', 'bet', 'stake', 'spin', 'invest', 'withdraw', 'shippart', 'shipcell', 'orbitgo', 'orbitact', 'orbitclose']);
 const LOCAL = new Set(['continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm', 'cloudcopy', 'cloudload', 'cloudversions', 'cloudrestore', 'cloudkeep', 'devunlock', 'devoff', 'dev', 'autostart']);
 function coopChip() {
   if (!net) return '';
@@ -857,7 +903,7 @@ function syncHome(hostMeta) {
   save();
 }
 let homePayout = 0;
-const GUEST_LOCAL = ['popup', 'compare', 'gearSlot', 'confirmSmoke', 'report', 'barSay', 'draft', 'guestSawDeath'];
+const GUEST_LOCAL = ['popup', 'compare', 'gearSlot', 'confirmSmoke', 'report', 'draft', 'guestSawDeath'];
 const GUEST_VIEW = ['notice', 'perkPick', 'compare', 'popup'];
 const NEEDS_RUN = new Set(['continue', 'room', 'roomDone', 'event', 'eventDone', 'deeper', 'extract', 'loottake', 'lootsell', 'perk', 'perkdrop']);
 let guestView = {}, guestQueue = [], guestToast = null, hostSynced = false, awaitingHost = false, awaitTimer = null, inbox = [], pumping = false, hadRun = false;
@@ -1075,7 +1121,7 @@ function downtimeBar() {
   if (state.screen !== 'town' || state.run || isGuest()) return '';
   const v = E.venturesTotal(state), left = E.marksLeft(state.char).length;
   return `<nav class="tools downtime" aria-label="After curfew">
-    <button class="tool ${modal === 'bar' ? 'on' : ''}" data-a="modal" data-v="bar">The Lantern${state.char.drink ? ' \u00B7 round bought' : ''}</button>
+    <button class="tool ${modal === 'bar' ? 'on' : ''}" data-a="modal" data-v="bar">The Lantern${E.drinkOf(state.char) ? ` \u00B7 ${esc(E.drinkOf(state.char).name)}` : ''}</button>
     <button class="tool ${modal === 'wheel' ? 'on' : ''}" data-a="modal" data-v="wheel">The Wheel</button>
     <button class="tool ${modal === 'orbit' ? 'on' : ''}" data-a="modal" data-v="orbit">Orbit${state.orbit ? ' \u00B7 in flight' : left < 5 ? ` \u00B7 ${5 - left}/5 marks` : ''}</button>
     <button class="tool ${modal === 'ventures' ? 'on' : ''}" data-a="modal" data-v="ventures">Ventures${v ? ` \u00B7 ${v.toLocaleString()} ${esc(S.cur)}` : ''}</button>
@@ -1120,7 +1166,7 @@ function titleScreen() {
         <button class="btn big" data-a="modal" data-v="manual">Field manual</button>
         <button class="btn big" data-a="modal" data-v="settings">Settings &amp; co-op</button>
       </div>
-      ${m.operatives ? (() => { const best = (m.board || []).findIndex((e) => !e.bot); return `<dl class="kv title-stats"><dt>Deepest</dt><dd>Sector ${m.bestSector}</dd><dt>Raids</dt><dd>${m.stats.raids}</dd><dt>${esc(S.meta)}</dt><dd>${m.resolve}</dd>${best >= 0 ? `<dt>Best raid</dt><dd>#${best + 1} \u00B7 ${m.board[best].score.toLocaleString()}</dd>` : ''}</dl>`; })() : ''}
+      ${m.operatives ? (() => { const best = (m.board || [])[0]; return `<dl class="kv title-stats"><dt>Deepest</dt><dd>Sector ${m.bestSector}</dd><dt>Raids</dt><dd>${m.stats.raids}</dd><dt>${esc(S.meta)}</dt><dd>${m.resolve}</dd>${best ? `<dt>Best raid</dt><dd>${best.score.toLocaleString()} points</dd>` : ''}</dl>`; })() : ''}
     </div>
   </section>`;
 }
@@ -1588,10 +1634,10 @@ function gate() {
       ${traits.length ? `<span class="chips">${traits.map((t) => `<span class="chip">${t}</span>`).join('')}</span>` : ''}
       ${prog && prog.deepest ? `<span class="label">This operative: sector ${prog.deepest}</span>` : ''}</button>`;
   }).join('');
-  const ins = [...(c.maps[sel.id]?.insertions || [1])].sort((a, b) => a - b);
+  const ins = [...E.insertionsAt(c, sel.id, m.threat || 0)].sort((a, b) => a - b);
   const warn = c.hp < st.maxHp * 0.6 ? `<p class="danger-text">You\u2019re going in at ${c.hp}/${st.maxHp} HP. The clinic is right there.</p>` : '';
   const mt = E.maxThreat(state);
-  const threat = mt > 0 ? `<div class="threat"><span class="label">Threat level</span><div class="btnrow">${D.THREAT.slice(0, mt + 1).map((t, i) => `<button class="btn ${m.threat === i ? 'primary' : ''}" data-a="threat" data-v="${i}" title="${esc(t.desc)}">${esc(t.name)}</button>`).join('')}</div><p class="muted" style="font-size:.88rem">${esc(D.THREAT[m.threat].desc)}</p></div>` : '';
+  const threat = mt > 0 ? `<div class="threat"><span class="label">Threat level</span><div class="btnrow">${D.THREAT.slice(0, mt + 1).map((t, i) => `<button class="btn ${m.threat === i ? 'primary' : ''}" data-a="threat" data-v="${i}" title="${esc(t.desc)}">${esc(t.name)}</button>`).join('')}</div><p class="muted" style="font-size:.88rem">${esc(D.THREAT[m.threat].desc)}${m.threat ? ' You start again from sector 1 here: beat bosses at this threat level to earn deeper insertion points.' : ''}</p></div>` : '';
   const contracts = (m.contracts || []).map((k) => `<div class="contract ${k.done ? 'done' : ''}"><div><b>${esc(k.text)}</b><span class="muted"> ${k.done ? 'Complete' : `${Math.min(k.progress, k.n)} / ${k.n}`}</span></div><span class="chip ${k.done ? 'good' : ''}">+${k.resolve} ${esc(S.meta)} \u00B7 +${k.credits} ${S.cur}</span></div>`).join('');
   return `<div class="maps">${cards}</div>
     ${threat}
@@ -1625,7 +1671,7 @@ function combatScreen() {
   const sr = E.attackRange(state, false), mr = E.attackRange(state, true);
   const coop = E.isCoop(state), mine = !coop || r.actor === myIdx();
   const party = coop ? `<div class="party">${[0, 1].map((i) => { const pc = E.charAt(state, i); if (!pc) return ''; const pst = E.statsOf(state.meta, pc); return `<div class="pm ${r.actor === i ? 'turn' : ''} ${i === myIdx() ? 'me' : ''}"><span class="label">${i === myIdx() ? 'You' : esc(pc.name)}${r.actor === i ? ' \u00B7 acting' : ''}${pc.downed ? ` \u00B7 <span class="danger-text">down, ${pc.downed} round${pc.downed > 1 ? 's' : ''} left</span>` : ''}</span><b>${Math.max(0, pc.hp)} / ${pst.maxHp}</b>${bar(pc.hp, pst.maxHp)}</div>`; }).join('')}</div>` : '';
-  const waiting = coop && !mine ? `<div class="notice ${c.downed ? 'lose' : ''}">${c.downed ? `You\u2019re down, bleeding out: ${c.downed} round${c.downed > 1 ? 's' : ''} left. ${esc(E.charAt(state, 1 - myIdx()).name)} can get you up.` : `Waiting for ${esc(E.charAt(state, 1 - myIdx()).name)} to act\u2026`}</div>` : '';
+  const waiting = coop && !mine ? `<div class="notice ${c.downed || c.dead ? 'lose' : ''}">${c.dead ? `You\u2019re dead. ${esc(E.charAt(state, 1 - myIdx()).name)} is trying to get out alive.` : c.downed ? `You\u2019re down, bleeding out: ${c.downed} round${c.downed > 1 ? 's' : ''} left. ${esc(E.charAt(state, 1 - myIdx()).name)} can get you up.` : `Waiting for ${esc(E.charAt(state, 1 - myIdx()).name)} to act\u2026`}</div>` : '';
   const downedMate = coop && mine ? E.partnerDown(state) : null;
   const reviveBtn = downedMate ? `<button class="btn primary big" data-a="act" data-v="revive" style="width:100%">Get ${esc(downedMate.name.split(' ')[0])} up \u00B7 ${downedMate.downed} round${downedMate.downed > 1 ? 's' : ''} left<span class="k">V</span></button>` : '';
   const confirmSmoke = state.confirmSmoke && c.items.smoke;
@@ -1856,7 +1902,8 @@ function modalView() {
       <section><h3>Status effects</h3><ul>${Object.values(D.STATUSES).map((x) => `<li><b>${esc(x.name)}</b>: ${esc(x.desc)}</li>`).join('')}</ul></section>
       <section><h3>Elites and bosses</h3><p>Elites (veterans) carry a modifier, such as Regenerating or Volatile. Bosses enrage at half health. Bosses always carry <b>contraband</b> and elites sometimes do: pick one of three perks that last until your operative dies. Contraband comes in tiers I to IV, and better tiers turn up the deeper you go. A better copy of something you carry upgrades it without using a pocket. You have four pockets, so a fifth different piece means dropping one.</p></section>
       <section><h3>Achievements</h3><p>Everything the cell does is counted across every operative: enemies of each type put down, bosses, crits, shots, strikes, skills, dodges, stims, sectors, extractions, events, contraband, prisoners, credits, operatives lost, upgrades, orbit wins, spins and rounds. Each achievement has six tiers. Every tier adds a permanent edge, each a little smaller than the last, and the top tiers of the big ones pay Resolve. Progress shows after every fight; the full record is under <b>Achievements</b>.</p></section>
-      <section><h3>After curfew</h3><p>A second row of buttons in the yard. <b>The Lantern</b>: KEG-7 pours a round (+1 ATK, +4% crit next raid) and tells jokes; the regulars talk. <b>The Wheel</b>: roulette, one bet per spin, zero belongs to the house. <b>Orbit</b>: fly the cell\u2019s shuttle against the blockade. Wins pay credits and, on the harder runs, a permanent <b>Mark</b> (five exist). Lose the shuttle and the pilot dies. Refit the shuttle with credits; cell fittings cost Resolve and survive death. The odds shown are simulated for your current shuttle. <b>Ventures</b>: invest your operative\u2019s money; each venture ticks up or down once per raid and is lost if they die.</p></section>
+      <section><h3>After curfew</h3><p>A second row of buttons in the yard. <b>The Lantern</b>: order one drink before each raid for a small edge that lasts until you come home, such as +2 ATK from Foundry Gin, +6% max HP from Rivet Stout or +10% credits from Smuggler\u2019s Rum. <b>The Wheel</b>: roulette, one bet per spin, zero belongs to the house. <b>Orbit</b>: fly the cell\u2019s shuttle against the blockade. Wins pay credits and, on the harder runs, a permanent <b>Mark</b> (five exist). Lose the shuttle and the pilot dies. Refit the shuttle with credits; cell fittings cost Resolve and survive death. The odds shown are simulated for your current shuttle. <b>Ventures</b>: invest your operative\u2019s money; each venture ticks up or down once per raid and is lost if they die.</p></section>
+      <section><h3>Easy pickings</h3><p>Sectors well below your level pay less XP and fewer credits, and a boss your operative has already beaten pays half the XP and 1 Resolve instead of 3. Every district you liberate brings reinforcements to the ones still held: tougher enemies, better pay.</p></section>
       <section><h3>Quirks and bulletins</h3><p>Regular enemies often have a <b>quirk</b>, like a Drunk trooper whose shots go wild or an Overclocked droid that cooks itself. Every raid also rolls a <b>Directorate bulletin</b>, such as Payday or Staff Party, that bends the rules until you leave.</p></section>
       <section><h3>Floors and rare doors</h3><p>Past the first sector, most floors roll a <b>condition</b> (Blackout, Coolant Leak, Double Patrols, Supply Depot, Hunter Squad, Derelict Wing, Sealed Bulkheads) shown on the route screen. Rare doors turn up on every map: a <b>Marked Officer</b> bounty, a <b>Strongroom</b> to crack with INT, a <b>Field Medic Station</b>, a <b>Weapons Locker</b>, a <b>Machinist\u2019s Bench</b> that upgrades your gear for free, and a <b>Smuggler\u2019s Stash</b> of contraband.</p></section>
       <section><h3>Downtime limits</h3><p>The shuttle flies <b>once per stay in town</b>: raid, come home, and it\u2019s ready again. Ventures hold capped balances (500 / 1,500 / 3,000); Marrow\u2019s consignment opens after sector 5, the smuggler\u2019s bond after sector 10. Deeper cells see better Black Market stock, often already upgraded.</p></section>
@@ -1931,18 +1978,20 @@ function featsView() {
     ${order.filter((g) => groups[g]).map((g) => `<h3>${esc(g)}</h3><div class="feat-grid">${groups[g].map(row).join('')}</div>`).join('')}
   </div></div>`;
 }
-// Top raids on this device. Bot raids from the simulator seed the board until real ones push them off.
+// The global leaderboard: every raid by anyone (coop/worker.js, Board). Falls back to this device's best raids when it can't be reached.
 function boardView() {
-  const board = state.meta.board || [], me = state.char;
+  const online = !!(globalBoard && globalBoard.rows), board = online ? globalBoard.rows : state.meta.board || [];
+  const myIds = new Set((state.meta.board || []).map((e) => e.id).concat((state.meta.boardMine || [])));
   const rows = board.map((e, i) => {
-    const mine = !e.bot && me && e.name === me.name && e.number === me.number;
+    const mine = myIds.has(e.id);
     const how = { extracted: 'Extracted', escaped: 'Escaped', died: 'Died' }[e.how] || e.how;
-    return `<tr class="${mine ? 'mine' : ''} ${e.bot ? 'bot' : ''}"><td class="num">${i + 1}</td><td><b>${esc(e.name)}</b>${e.bot ? '' : `<span class="muted"> #${e.number}</span>`}<div class="muted small">${esc((D.BACKGROUNDS.find((b) => b.id === e.background) || {}).name || e.background)}, lv ${e.level}</div></td><td>${esc(E.mapById(e.map).name)}<div class="muted small">sector ${e.from === e.to ? e.to : `${e.from}\u2013${e.to}`}</div></td><td class="${e.how === 'died' ? 'bad' : e.how === 'extracted' ? 'good' : ''}">${how}<div class="muted small">${e.kills} kills${e.bosses ? `, ${e.bosses} boss${e.bosses > 1 ? 'es' : ''}` : ''}</div></td><td class="num score">${e.score.toLocaleString()}</td></tr>`;
+    return `<tr class="${mine ? 'mine' : ''}"><td class="num">${i + 1}</td><td><b>${esc(e.name)}</b><span class="muted"> #${+e.number || 0}</span><div class="muted small">${esc((D.BACKGROUNDS.find((b) => b.id === e.background) || {}).name || e.background)}, lv ${+e.level || 1}</div></td><td>${esc(E.mapById(e.map).name)}<div class="muted small">sector ${e.from === e.to ? +e.to : `${+e.from}\u2013${+e.to}`}</div></td><td class="${e.how === 'died' ? 'bad' : e.how === 'extracted' ? 'good' : ''}">${how}<div class="muted small">${+e.kills || 0} kills${e.bosses ? `, ${e.bosses} boss${e.bosses > 1 ? 'es' : ''}` : ''}</div></td><td class="num score">${e.score.toLocaleString()}</td></tr>`;
   }).join('');
   return `<div class="modal-wrap" data-a="closemodal"><div class="modal board" role="dialog" aria-modal="true" aria-label="Leaderboard">
     <button class="tool close" data-a="closemodal" aria-label="Close">Close</button>
-    <h2>Leaderboard <span class="num muted" style="font-size:.9rem">top ${E.BOARD_SIZE} raids on this device</span></h2>
-    <p class="muted" style="font-size:.9rem">Every raid is scored when it ends: credits brought home, 150 per sector cleared, 25 per kill, 75 per veteran, 500 per boss, 100 per prisoner freed. Dying brings nothing home. Rows marked <span class="chip">bot</span> are simulator runs holding the places until you take them.</p>
+    <h2>Leaderboard <span class="num muted" style="font-size:.9rem">${online ? `top ${board.length} of ${globalBoard.total.toLocaleString()} raids by everyone` : `this device\u2019s best ${board.length} raids`}</span></h2>
+    ${!online && BOARD_ON ? `<p class="muted" style="font-size:.9rem">${globalBoard && globalBoard.loading ? 'Fetching the global board\u2026' : 'Can\u2019t reach the global board right now, so these are your own raids. Yours will be sent when the connection is back.'}</p>` : ''}
+    <p class="muted" style="font-size:.9rem">Every raid is scored when it ends: credits brought home, 150 per sector cleared, 25 per kill, 75 per veteran, 500 per boss, 100 per prisoner freed. Dying brings nothing home. Your raids are highlighted.</p>
     ${board.length ? `<table class="board-table"><thead><tr><th>#</th><th>Operative</th><th>District</th><th>Outcome</th><th class="num">Score</th></tr></thead><tbody>${rows}</tbody></table>` : '<p class="muted">No raids scored yet.</p>'}
   </div></div>`;
 }
@@ -1963,17 +2012,13 @@ function dtPortrait(id, name) {
   return im ? `<img class="portrait dt-face" src="${im.src}" alt="${esc(name)}" width="96" height="96">` : `<div class="dt-face ph ${id}" aria-hidden="true"><span>${esc(name[0])}</span></div>`;
 }
 function barView() {
-  const c = state.char, B = D.BAR, cost = E.drinkCost(state), say = state.barSay || {};
-  const person = (p, who) => `<div class="dt-person"><div class="dt-who">${dtPortrait(p.id, p.name)}<div><div class="name">${esc(p.name)}</div><div class="muted small">${esc(p.role || p.desc)}</div></div></div>
-    <div class="dt-say">${say[who] ? `<p>\u201c${esc(say[who])}\u201d</p>` : `<p class="muted">${esc(p.role ? p.desc : 'Rag over one shoulder. Optics on you.')}</p>`}</div>
-    <div><button class="btn" data-a="barchat" data-v="${who}">${who === 'keg7' ? 'Ask for a joke' : 'Talk'}</button></div></div>`;
-  return `<p class="muted">Low ceiling, lower lights, a bar made from a cargo door. Nobody here is wanted. Nobody here is innocent either.</p>
-    <div class="dt-bar">
-      ${person(B.bartender, 'keg7')}
-      <div class="dt-drink"><div><div class="name">${esc(B.drink.name)} \u00b7 ${cr(cost)}</div><div class="muted small">${esc(B.drink.desc)}</div></div>
-        <button class="btn primary" data-a="drink" ${c.drink || c.credits < cost ? 'disabled' : ''}>${c.drink ? 'Round bought' : 'Buy a round'}</button></div>
-      ${B.regulars.map((r) => person(r, r.id)).join('')}
-    </div>`;
+  const c = state.char, B = D.BAR, cur = E.drinkOf(c);
+  const row = (d) => { const cost = E.drinkCost(state, d.id), mine = cur && cur.id === d.id;
+    return `<div class="dt-drink ${mine ? 'mine' : ''}"><div><div class="name">${esc(d.name)} \u00B7 ${cr(cost)}</div><div class="muted small"><b>${esc(d.effect)}</b> \u00B7 ${esc(d.desc)}</div></div>
+      <button class="btn ${mine ? '' : 'primary'}" data-a="drink" data-v="${d.id}" ${cur || c.credits < cost ? 'disabled' : ''}>${mine ? 'In your glass' : 'Order'}</button></div>`; };
+  return `<div class="dt-who dt-keg">${dtPortrait(B.bartender.id, B.bartender.name)}<div><div class="name">${esc(B.bartender.name)}</div><div class="muted small">${esc(B.bartender.desc)}</div></div></div>
+    <p class="muted">One drink before each raid. It lasts until you come home.${cur ? ` You\u2019re drinking a <b>${esc(cur.name)}</b> (${esc(cur.effect)}).` : ''}</p>
+    <div class="dt-bar">${B.menu.map(row).join('')}</div>`;
 }
 let wheel = null, wheelBusy = false;
 function wheelView() {
@@ -2130,7 +2175,7 @@ function deathScreen() {
     <h1 class="big-title" style="color:var(--danger)">${esc(o.name)}</h1>
     ${o.killerId ? `<div class="killer">${(() => { const me = o.look ? lookStill(o.look, o.background) : null; return me ? `<img class="portrait" src="${me}" alt="" width="160" height="160"><span class="label vs">vs</span>` : ''; })()}${portraitImg({ id: o.killerId, name: o.killer, portrait: o.killerPortrait })}<span class="label">Last seen<br>engaging a ${esc(o.killer)}</span></div>` : ''}
     <p class="story">Operative ${o.number} ${o.orbit ? `was lost in orbit when a ${esc(o.killer)} broke the shuttle apart` : `went down in the ${esc(E.sectorName(o.sector, o.map))}${o.killerId ? `, killed by a ${esc(o.killer)}` : `, taken by ${esc(o.killer)}`}`}. The ${o.credits.toLocaleString()} ${S.currency}, the gear, ${o.perks ? `${o.perks} piece${o.perks > 1 ? 's' : ''} of contraband, ` : ''}the implants and level ${o.level} went with them.</p>
-    <dl class="kv"><dt>${esc(S.meta)} to spend</dt><dd style="color:var(--sodium)">${state.meta.resolve}</dd><dt>Deepest ever</dt><dd>Sector ${state.meta.bestSector}</dd>${o.rank ? `<dt>Leaderboard</dt><dd style="color:var(--sodium)">#${o.rank} of ${E.BOARD_SIZE} \u00B7 ${o.score} points <button class="btn" data-a="modal" data-v="board" style="margin-left:8px">View</button></dd>` : o.score ? `<dt>Last raid</dt><dd>${o.score} points <span class="muted">(#${E.BOARD_SIZE} holds ${E.boardFloor(state.meta)})</span></dd>` : ''}</dl>
+    ${o.wipe ? '<p class="notice lose">A wipe. Both of you fell on this raid, and everything you carried went with you.</p>' : ''}<dl class="kv"><dt>${esc(S.meta)} to spend</dt><dd style="color:var(--sodium)">${state.meta.resolve}</dd><dt>Deepest ever</dt><dd>Sector ${state.meta.bestSector}</dd>${o.score ? `<dt>Last raid</dt><dd>${o.score.toLocaleString()} points${o.boardRank ? `, <b style="color:var(--sodium)">#${o.boardRank.toLocaleString()} of ${o.boardTotal.toLocaleString()}</b> worldwide` : ''} <button class="btn" data-a="modal" data-v="board" style="margin-left:8px">View</button></dd>` : ''}</dl>
     ${heirloomPick()}
     <p class="muted">Spend the Resolve at the safehouse (Character & Resolve) once your next operative is in town. Training and cell upgrades carry over.</p>
     <div><button class="btn primary big" data-a="recruit">Build the next operative</button></div>
@@ -2226,8 +2271,8 @@ function render() {
     const r = state.run, st = E.stats(state), map = E.mapById(r.map);
     const res = stage.sync({ run: r, enemy: r.enemy, sector: r.sector, boss: r.enemy.boss, theme: map.theme, allies: r.allies,
       pst: r.pst, est: r.enemy.st, affix: r.enemy.affix ? D.AFFIXES[r.enemy.affix].name : null, quirk: r.enemy.quirk ? E.quirkById(r.enemy.quirk).name : null,
-      player: { name: state.char.name, level: state.char.level, hp: state.char.hp, maxHp: st.maxHp, down: !!state.char.downed },
-      partner: E.isCoop(state) && E.charAt(state, 1 - myIdx()) ? (() => { const pc = E.charAt(state, 1 - myIdx()); return { idx: 1 - myIdx(), down: !!pc.downed, name: pc.name, hp: pc.hp, maxHp: E.statsOf(state.meta, pc).maxHp, acting: r.actor === 1 - myIdx() }; })() : null });
+      player: { name: state.char.name, level: state.char.level, hp: state.char.hp, maxHp: st.maxHp, down: !!state.char.downed || !!state.char.dead },
+      partner: E.isCoop(state) && E.charAt(state, 1 - myIdx()) ? (() => { const pc = E.charAt(state, 1 - myIdx()); return { idx: 1 - myIdx(), down: !!pc.downed || !!pc.dead, name: pc.name, hp: pc.hp, maxHp: E.statsOf(state.meta, pc).maxHp, acting: r.actor === 1 - myIdx() }; })() : null });
     if (res && res.isNewBoss) {
       busy = true; document.getElementById('app').classList.add('busy');
       const info = D.BOSS_INFO[r.enemy.id] || {};
@@ -2263,6 +2308,7 @@ town.onMove = (p) => {
   net.send({ t: 'pos', ...p, menu: state.popup || null });
 };
 globalThis.cinderTown = town; // handy for debugging in the console
+globalThis.cinderGame = { state: () => state, rng: () => rng, after: () => { save(); if (isHost()) broadcast(); render(); } }; // for tests/coop-wipe.cjs
 let lastScreen = null, lastView = '';
 // Walking into a building (or talking to its NPC) opens that building's menu.
 town.onOpen = (id) => { if (state.screen !== 'town' || modal) return; state.popup = id; state.notice = null; A.play('click'); render(); };
@@ -2408,9 +2454,8 @@ function applyAct(a, v, k) {
     case 'coopjoin': { setCoopPrefs({ name: (document.getElementById('coop-name') || {}).value || '', relay: ((document.getElementById('coop-relay') || {}).value || '').trim() }); const code = ((document.getElementById('coop-code') || {}).value || '').trim().toUpperCase(); if (code.length >= 4) startCoop('guest', code, !getCoopPrefs().relay); else toast = 'Enter the room code.'; break; }
     case 'coopleave': leaveCoop(); return;
     case 'coopready': state.guestReady = !state.guestReady; if (net) net.send({ t: 'ready', on: state.guestReady }); sfx('click'); break;
-    case 'modal': modal = v; sfx('click'); break;
-    case 'drink': ok = E.buyDrink(state); if (ok) { toast = 'KEG-7 pours. It does not spill. It is proud of that.'; sfx('perk'); } break;
-    case 'barchat': state.barSay = { ...(state.barSay || {}), [v]: E.barLine(state, v, rng) }; sfx('click'); break;
+    case 'modal': modal = v; if (v === 'board') loadBoard(); sfx('click'); break;
+    case 'drink': ok = E.buyDrink(state, v); if (ok) { toast = `KEG-7 slides you a ${E.drinkOf(state.char).name}.`; sfx('perk'); } break;
     case 'bet': state.wheel.bet = v; sfx('click'); break;
     case 'stake': state.wheel.stake = +v; sfx('click'); break;
     case 'spin': {
@@ -2490,7 +2535,7 @@ function applyAct(a, v, k) {
     case 'eventDone': state.lastResult = null; E.nextEncounter(state, rng); break;
     case 'deeper': if (E.isCoop(state) && net && net.peer && !E.voteExit(state, actingAs, 'deeper')) break; state.lastResult = null; E.pushDeeper(state, rng); break;
     case 'extract': if (E.isCoop(state) && net && net.peer && !E.voteExit(state, actingAs, 'extract')) break; E.endRun(state, 'extracted', rng); break;
-    case 'recruit': E.recruit(state, rng); state.coopFallen = null; break;
+    case 'recruit': E.recruit(state, rng); if (!state.coopFallen || state.coopFallen.idx !== 1) state.coopFallen = null; break;
     case 'report': {
       const text = E.runReport(state);
       state.report = text;
@@ -2569,18 +2614,8 @@ function applyLook() {
   setLookSheets(mine ? battleSheet(...mine) : null, theirs ? battleSheet(...theirs) : null);
   stage.player = null; stage.partner = null;
 }
-// The leaderboard belongs to the device, not the cell: it survives New cell and Reset.
-function keepBoard(fresh) { if (state && state.meta) { fresh.meta.board = state.meta.board || []; fresh.meta.boardSeeded = !!state.meta.boardSeeded; } return fresh; }
-// Simulator raids fill the board until real raids push them off (board.json, built by sim-board.mjs).
-function seedBoard() {
-  if (state.meta.boardSeeded) return;
-  fetch('board.json').then((r) => (r.ok ? r.json() : null)).then((bots) => {
-    if (!bots || !state.meta || state.meta.boardSeeded) return;
-    for (const e of bots) E.addToBoard(state.meta, { ...e, bot: true });
-    state.meta.boardSeeded = true; save();
-    if (modal === 'board') render();
-  }).catch(() => {});
-}
+// This device's raids and any still waiting to be sent survive New cell and Reset.
+function keepBoard(fresh) { if (state && state.meta) { fresh.meta.board = state.meta.board || []; fresh.meta.boardOut = state.meta.boardOut || []; fresh.meta.boardMine = state.meta.boardMine || []; } return fresh; }
 async function start(data) {
   // Whichever is newer: this browser's copy or the cloud's. Never waits long: a bad connection falls back to what's here.
   let saved = (data && data.state) || load(), pulledToast = null;
@@ -2605,7 +2640,7 @@ async function start(data) {
   else state.coop = false;
   try { navigator.storage && navigator.storage.persist && navigator.storage.persist().catch(() => {}); } catch (e) {}
   render();
-  if (!isGuest()) seedBoard();
+  flushBoard();
   loadLayers().then((ok) => { if (ok) { lookKey = ''; render(); } });
   loadDowntimeArt().then((ok) => { if (ok && modal) render(); });
   // PixelLab sheets, if any have been delivered. Re-render so the stage picks them up.

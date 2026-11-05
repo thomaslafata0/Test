@@ -14,5 +14,5 @@ tools
 sim.mjs
 sim-builds.mjs
 sim-coop.mjs
-sim-board.mjs
+sim-balance.mjs
 *.md

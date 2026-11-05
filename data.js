@@ -221,7 +221,7 @@ export const ITEMS = {
 
 // Implants: installed at the clinic, lost on death. Slots: 2, +1 at INT 4 and INT 8.
 export const IMPLANTS = [
-  { id: 'reflex',  name: 'Reflex Booster',       cost: 150, desc: '+2 SPD.' },
+  { id: 'reflex',  name: 'Reflex Booster',       cost: 150, desc: '+3 SPD.' },
   { id: 'dermal',  name: 'Subdermal Plating',    cost: 180, desc: '+3 DEF.' },
   { id: 'optic',   name: 'Targeting Optic',      cost: 160, desc: '+8% crit chance.' },
   { id: 'pain',    name: 'Pain Editor',          cost: 200, desc: '+20 max HP.' },
@@ -651,20 +651,20 @@ export const PERKS = [
   { id: 'secondwind',name: 'Second Wind',        rare: false, vals: [3, 4, 5, 7], desc: 'Defending also heals {v}% of max HP.' },
   { id: 'scavenger', name: 'Scavenger',          rare: false, vals: [10, 15, 22, 30], desc: '{v}% chance to find an item after each fight.' },
   { id: 'spotter',   name: 'Spotter',            rare: false, vals: [1, 2, 3, 4], desc: 'Enemies start every fight Exposed for {v} turns.' },
-  { id: 'thick',     name: 'Thick Skin',         rare: false, vals: [1, 1, 2, 3], desc: 'Status effects on you last {v} turn(s) less.' },
+  { id: 'thick',     name: 'Thick Skin',         rare: false, vals: [1, 2, 2, 3], desc: 'Status effects on you last {v} turn(s) less.' },
   { id: 'ambush',    name: 'Ambusher',           rare: true,  vals: [30, 40, 50, 70], desc: 'Your first attack in every fight deals +{v}% damage.' },
   { id: 'deadman',   name: 'Dead Man\u2019s Switch', rare: true, vals: [1, 5, 10, 20], desc: 'Once per raid, survive a killing blow with {v}% of max HP.' },
   { id: 'grudge',    name: 'Grudge',             rare: true,  vals: [15, 20, 30, 40], desc: '+{v}% damage against elites and bosses.' },
-  { id: 'quickdraw', name: 'Quickdraw',          rare: true,  vals: [1, 2, 3, 4], desc: 'Killing an enemy cuts all skill cooldowns by {v}.' },
-  { id: 'capacitor', name: 'Ion Capacitor',      rare: true,  vals: [15, 20, 30, 45], desc: 'Ion pulses stun 1 turn longer. Overload deals +{v}%.' },
+  { id: 'quickdraw', name: 'Quickdraw',          rare: true,  vals: [2, 3, 4, 5], desc: 'Killing an enemy cuts all skill cooldowns by {v}.' },
+  { id: 'capacitor', name: 'Ion Capacitor',      rare: true,  vals: [25, 35, 50, 70], desc: 'Ion pulses stun 1 turn longer. Overload deals +{v}%.' },
   { id: 'reputation',name: 'Reputation',         rare: true,  vals: [1, 2, 3, 4], desc: 'Human enemies start every fight Shaken for {v} turns.' },
-  { id: 'adrenal',   name: 'Adrenal Spike',      rare: false, vals: [15, 20, 25, 35], desc: '+{v}% damage while you are below 35% HP.' },
+  { id: 'adrenal',   name: 'Adrenal Spike',      rare: false, vals: [25, 35, 50, 70], desc: '+{v}% damage while you are below 35% HP.' },
   { id: 'tithe',     name: 'Blood Tithe',        rare: false, vals: [3, 4, 6, 8], desc: 'Every kill heals {v}% of max HP.' },
   { id: 'ironlung',  name: 'Iron Lung',          rare: false, vals: [5, 8, 12, 15], desc: '+{v}% max HP.' },
   { id: 'tripwire',  name: 'Tripwire Kit',       rare: false, vals: [1, 2, 3, 4], desc: 'Enemies start every fight Bleeding for {v} turns.' },
-  { id: 'padding',   name: 'Kevlar Padding',     rare: false, vals: [1, 2, 3, 4], desc: '+{v} DEF.' },
+  { id: 'padding',   name: 'Kevlar Padding',     rare: false, vals: [2, 3, 4, 6], desc: '+{v} DEF.' },
   { id: 'coupdegrace', name: 'Coup de Gr\u00E2ce', rare: true, vals: [30, 40, 50, 70], desc: '+{v}% damage against enemies below 30% HP.' },
-  { id: 'ghost',     name: 'Ghost Protocol',     rare: true,  vals: [5, 7, 10, 14], desc: '+{v}% chance to dodge every attack.' },
+  { id: 'ghost',     name: 'Ghost Protocol',     rare: true,  vals: [7, 10, 14, 18], desc: '+{v}% chance to dodge every attack.' },
   { id: 'warpaint',  name: 'War Paint',          rare: true,  vals: [1, 1, 2, 3], desc: 'Every enemy starts every fight Shaken and Exposed for {v} turn(s).' },
 ];
 
@@ -682,6 +682,7 @@ export const CONTRACTS = [
 ];
 
 // ---------- threat levels: unlocked by liberating maps (beating their sector 15 boss) ----------
+// Each level starts from sector 1: insertion points are earned separately at every threat level (E.insertionsAt).
 export const THREAT = [
   { name: 'Standard',  desc: 'The Directorate as it is.' },
   { name: 'Threat I',  desc: 'Enemies +12% HP and ATK. +15% credits.' },
@@ -790,47 +791,16 @@ export const VENTURES = [
 ];
 // The Lantern: a tenement-basement bar that opens after curfew.
 export const BAR = {
-  drink: { name: 'A round', cost: 6, desc: 'Foundry gin. +1 ATK and +4% crit on your next raid.' },
-  bartender: { id: 'keg7', name: 'KEG-7', desc: 'A loader droid somebody bolted a bar towel onto. It has opinions.', jokes: [
-    'Why did the Directorate auditor cross the road? To count the chickens on the other side. Twice.',
-    'I used to lift crates for a living. Now I lift spirits. The pay is the same: nothing.',
-    'A patrol trooper walks into a bar. Everyone else walks out the back. Classic.',
-    'What do you call a Supervisor with a sense of humour? Reassigned.',
-    'My cousin was a cargo crawler. Three wheels, no brakes. He runs the freight office now.',
-    'They say the curfew is for our safety. Mine too, apparently. I was built in daylight.',
-    'I told the Supervisor a joke about the quota. He didn\u2019t laugh. Then he raised it.',
-    'Two droids walk into a bar. The second one should have seen it coming; the first one had no optics.',
-    'Doc Ilse says I drink too much coolant. Doc Ilse also charges by the stitch.',
-    'The casino next door is fair. Fair to the house. That is a kind of fair.',
-    'Heard the garrison got hit last night. Not by me. I was here, polishing glasses. Loudly.',
-    'A Mark from orbit? Impressive. I got mine from a forklift. It is on my chassis.',
-    'You look like you need a drink. Everyone does. It is the lighting.',
-    'What is the difference between the Directorate and a leaky valve? You can fix a valve.',
-    'I once served the Warden. Terrible tipper. Wonderful hull.',
-    'Last call is at dawn. First call was three years ago, and nobody answered.',
-  ] },
-  regulars: [
-    { id: 'vess', name: 'Vess', role: 'Dancer, The Lantern', desc: 'Runs the floor and half the rumours in the yard. Smiles like she already knows how your night ends.', lines: [
-      'You walk like someone who just came back from the garrison. Buy me a drink and I won\u2019t say that any louder.',
-      'The Wheel? I only play the numbers KEG-7 can\u2019t count to. So all of them.',
-      'If you make it to orbit, bring me back a star. A real one. I\u2019ll know.',
-      'Careful with Juno. She\u2019ll talk you into a cockpit and out of your credits.',
-      'You\u2019ve got a look. Not a good look. A look that comes back, though. Keep it.',
-    ] },
-    { id: 'juno', name: 'Juno', role: 'Lift pilot, grounded', desc: 'Flew the orbital lift until the Directorate took her licence. Still smells of ozone.', lines: [
-      'The frigate on the Warden\u2019s watch rolls left before every broadside. Evade left. You\u2019re welcome.',
-      'They grounded me for \u201cunauthorised joy\u201d. It\u2019s on the form.',
-      'Your shuttle? I\u2019ve seen it. I\u2019ve seen toasters with better shielding. Fix the deflector first.',
-      'Buy me a round and I\u2019ll tell you where the cutter patrols are thin. Buy two and I\u2019ll fly it myself. Kidding. Mostly.',
-      'You came back. Pilots who come back get a nickname. Yours is \u201cagain\u201d.',
-    ] },
-    { id: 'sable', name: 'Sable', role: 'Marrow\u2019s cousin', desc: 'Keeps the books nobody is supposed to see, and dresses like the curfew is optional.', lines: [
-      'Marrow\u2019s consignment pays. Until it doesn\u2019t. I\u2019d keep half in the stall. Boring money is still money.',
-      'The dozens on the Wheel pay two to one. The house still wins. That\u2019s why it has a roof.',
-      'You spend like someone who doesn\u2019t expect a next week. Sweet. Dumb, but sweet.',
-      'I don\u2019t date operatives. I did once. I have his coat. It\u2019s a good coat.',
-      'If you ever hit the top of that leaderboard, I\u2019ll frame it. Right next to the warrants.',
-    ] },
+  bartender: { id: 'keg7', name: 'KEG-7', desc: 'A loader droid somebody bolted a bar towel onto. Pours straight and says nothing.' },
+  // One drink per raid. It lasts until you come home. hp, crit, credits and tech are fractions; atk, def and spd are flat.
+  menu: [
+    { id: 'gin', name: 'Foundry Gin', cost: 6, atk: 2, effect: '+2 ATK', desc: 'Clear, sharp and made somewhere it shouldn\u2019t be.' },
+    { id: 'stout', name: 'Rivet Stout', cost: 6, hp: 0.06, effect: '+6% max HP', desc: 'Thick enough to count as a meal.' },
+    { id: 'whisky', name: 'Tin Whisky', cost: 7, def: 1, effect: '+1 DEF', desc: 'You stop noticing the small hits. And the big ones, for a bit.' },
+    { id: 'fizz', name: 'Static Fizz', cost: 7, spd: 3, effect: '+3 SPD', desc: 'Tastes like a battery. Works like one too.' },
+    { id: 'sour', name: 'Marksman\u2019s Sour', cost: 8, crit: 0.05, effect: '+5% crit', desc: 'Steadies the hand. Nobody knows why.' },
+    { id: 'rum', name: 'Smuggler\u2019s Rum', cost: 8, credits: 0.1, effect: '+10% credits', desc: 'Puts you in the mood to check every pocket.' },
+    { id: 'tonic', name: 'Clerk\u2019s Tonic', cost: 8, tech: 0.15, effect: 'Items +15%', desc: 'Bitter, bright and very good with instructions.' },
   ],
 };
 

@@ -36,23 +36,43 @@ const actor = (s) => s.run.actor;
   ok('revive restores some HP', !down.downed && down.hp === Math.round(mx * E.TUNE.reviveHp), `${down.hp}/${mx}`);
   ok('actor swap never leaks', !s.actorIdx);
 }
-{ // Bleed out ends the raid; survivor keeps going home
+{ // Bleeding out: the survivor still has to get out of the fight
   const { s, rng } = game(11), e = fight(s, rng);
-  s.char2.hp = 0; s.char2.downed = 2; s.run.actor = 0; e.atk = 0;
-  for (let i = 0; i < 6 && s.run; i++) { s.char.hp = 500; E.playerAct(s, 'defend', rng, 0); }
-  ok('bleeding out kills and ends the raid', !s.char2 && !s.run && !!s.char && s.coopFallen && s.coopFallen.idx === 1);
+  s.char2.hp = 0; s.char2.downed = 2; s.run.actor = 0; e.atk = 0; e.hp = e.maxHp = 100000;
+  const before = e.maxHp;
+  for (let i = 0; i < 6 && s.run && !s.run.fallen; i++) { s.char.hp = 500; E.playerAct(s, 'defend', rng, 0); }
+  ok('a bleed-out does not end the raid by itself', !!s.run && s.run.fallen && s.run.fallen.idx === 1 && s.char2.dead && s.screen === 'combat');
+  ok('the enemy drops back to one-player strength', e.maxHp < before, `${before} -> ${e.maxHp}`);
+  e.hp = 1; e.def = 0; let n = 0;
+  while (s.screen === 'combat' && n++ < 20) E.playerAct(s, s.run.actor === 0 ? 'shoot' : 'defend', rng, s.run.actor);
+  for (let i = 0; i < 6 && s.run; i++) { if (s.screen === 'loot' || s.screen === 'perk') { E.withActor(s, 0, () => { if (s.run.lootOffer) E.leaveLoot(s, rng); else E.choosePerk(s, '', rng); }); } E.continueAfterVictory(s, rng); }
+  ok('winning alone takes the survivor home', !s.run && !!s.char && !s.char2 && s.coopFallen && s.coopFallen.idx === 1, `${s.screen}`);
 }
-{ // Last stand: partner falls while you're down
+{ // Running alone
+  const { s, rng } = game(12), e = fight(s, rng);
+  s.char2.hp = 0; s.char2.downed = 2; s.run.actor = 0; e.atk = 0; e.boss = false; e.hp = e.maxHp = 100000; s.char.credits += 100;
+  for (let i = 0; i < 40 && s.run && s.char; i++) { s.char.hp = 500; E.playerAct(s, s.run.fallen ? 'run' : 'defend', rng, 0); }
+  ok('running alone gets out and clears the dead partner', !s.run && !!s.char && !s.char2 && s.coopFallen && s.coopFallen.idx === 1 && s.screen !== 'death');
+}
+{ // The survivor falls too
+  const { s, rng } = game(14), e = fight(s, rng);
+  s.char2.hp = 0; s.char2.downed = 2; s.run.actor = 0; e.atk = 0; e.hp = e.maxHp = 100000;
+  for (let i = 0; i < 6 && !s.run.fallen; i++) { s.char.hp = 500; E.playerAct(s, 'defend', rng, 0); }
+  e.atk = 100000; e.intent = 'attack'; e.stun = 0; s.char.hp = 1;
+  for (let i = 0; i < 12 && s.run; i++) { s.char.hp = 1; e.intent = 'attack'; e.stun = 0; E.playerAct(s, 'shoot', rng, 0); }
+  ok('dying after your partner is a wipe', !s.run && s.char.dead && !s.char2 && s.screen === 'death' && s.outcome.wipe && s.coopFallen.idx === 1 && s.coopFallen.record.wipe, s.screen);
+}
+{ // Last stand: you fall while your partner is down
   const { s, rng } = game(13), e = fight(s, rng);
-  s.char2.hp = 0; s.char2.downed = 3; s.run.actor = 0; e.atk = 100000; e.intent = 'attack'; s.char.hp = 1;
-  for (let i = 0; i < 6 && s.run; i++) { s.char.hp = 1; E.playerAct(s, 'shoot', rng, 0); e.intent = 'attack'; }
-  ok('one raid never kills both', !s.run && !!s.char && !s.char.dead && !s.char2, `hp ${s.char && s.char.hp}`);
+  s.char2.hp = 0; s.char2.downed = 3; s.run.actor = 0; e.atk = 100000; e.intent = 'attack'; e.hp = e.maxHp = 100000; s.char.hp = 1;
+  for (let i = 0; i < 6 && s.run; i++) { if (s.char) s.char.hp = 1; e.intent = 'attack'; e.stun = 0; E.playerAct(s, 'shoot', rng, 0); }
+  ok('falling while your partner is down is a wipe', !s.run && s.char.dead && !s.char2 && s.screen === 'death' && s.outcome.wipe, s.screen);
 }
 { // Third down in a raid is fatal
   const { s, rng } = game(17), e = fight(s, rng);
   s.run.downs = { 1: E.TUNE.downsPerRaid }; s.char2.hp = 1; s.run.actor = 0; e.atk = 100000; e.intent = 'attack';
-  for (let i = 0; i < 12 && s.run && s.char2; i++) { s.char.hp = 100000; if (s.char2.hp > 0) s.char2.hp = 1; E.playerAct(s, 'defend', rng, s.run.actor); e.intent = 'attack'; e.stun = 0; }
-  ok('out of downs: the next one is fatal', !s.char2 || !s.char || !s.run);
+  for (let i = 0; i < 12 && s.run && s.char2 && !s.char2.dead; i++) { s.char.hp = 100000; if (s.char2.hp > 0) s.char2.hp = 1; E.playerAct(s, 'defend', rng, s.run.actor); e.intent = 'attack'; e.stun = 0; }
+  ok('out of downs: the next one is fatal', !s.char2 || s.char2.dead);
 }
 { // Win revives and pays the downed partner
   const { s, rng } = game(19), e = fight(s, rng);

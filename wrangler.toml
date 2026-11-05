@@ -4,7 +4,7 @@ compatibility_date = "2025-01-01"
 
 [assets]
 directory = "."
-run_worker_first = ["/room/*", "/save/*"]
+run_worker_first = ["/room/*", "/save/*", "/board"]
 
 [[durable_objects.bindings]]
 name = "ROOMS"
@@ -22,3 +22,11 @@ class_name = "Vault"
 [[migrations]]
 tag = "v2"
 new_sqlite_classes = ["Vault"]
+
+[[durable_objects.bindings]]
+name = "BOARD"
+class_name = "Board"
+
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["Board"]

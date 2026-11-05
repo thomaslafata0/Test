@@ -40,7 +40,7 @@ A browser roguelite in plain HTML + JS modules, no build step. A resistance cell
 | `downtime/` | `manifest.json` + `ships/` (shuttle, cutter, corvette, frigate: PixelLab side views facing right). Bar portraits and backgrounds not yet delivered. |
 | `tests/visual-check.cjs` | Measures every composited character for see-through gaps, faceless profiles, bald wedges, hair over faces and floating bits. |
 | `tools/` | `bhair_build.py` (battle hair from PixelLab hair states of battle body_m1), `hair_pin.py` (one stable town hair shape per direction). |
-| `sim.mjs`, `sim-builds.mjs`, `sim-gear.mjs`, `sim-coop.mjs`, `sim-board.mjs` | Simulators (see **Balance**). `board.json` is the seeded leaderboard. |
+| `sim-balance.mjs` (the main report), `sim.mjs`, `sim-builds.mjs`, `sim-gear.mjs`, `sim-coop.mjs` | Simulators (see **Balance**). |
 | `tests/*.cjs` | Playwright browser tests (see **Testing**). Screenshots go to `tests/shots/` (ignored). |
 | `docs/` | `COOP.md` (design, protocol, deploy), art briefs for town, characters and downtime. |
 | `manifest.webmanifest`, `icon-*.png` | Add to home screen. |
@@ -55,10 +55,10 @@ A browser roguelite in plain HTML + JS modules, no build step. A resistance cell
 - **Difficulty tiers** (`HARD`, `hard(s)`, by current sector in a raid and deepest sector in the yard): enemy HP x1.18, prices x1.10; after sector 5: x1.21 / x1.12; after 10: x1.25 / x1.15. Consumables also scale with the operative's deepest sector (`itemCost`, `TUNE.itemScale` 0.3 per sector).
 - **Securing a haul.** Credits and XP earned on a raid are unsecured; no levels mid-raid (`c.xpBank`, `c.safeCredits`). `settle()` pays out when a boss is beaten or on leaving, and leaves `c.payout` for the payout screen. Leaving costs a share by position in the five-sector stretch: 80 / 65 / 50 / 40 / 0% (`TUNE.extractRates`), Run or Smoke 90 / 85 / 75 / 65 / 60% (`escapeRates`). Money walked in with is never touched. The leaderboard haul still counts from raid start.
 - **Contraband tiers.** Tiers I to IV (`vals` in `D.PERKS`, `D.PERK_TIER_ODDS`, `c.perkLv`). Better tiers roll deeper, bosses a band higher. A better copy of something carried upgrades in place with no pocket needed. Older saves' contraband counts as tier III.
-- **Leaderboard.** `raidScore`: haul brought home + 150 per sector cleared + 25 per kill + 75 per veteran + 500 per boss + 100 per prisoner; dying zeroes the haul. Top 50 in `meta.board`, per device (survives New cell and Reset). Seeded once from `board.json` as Bot #1 to #50, a ladder from about 15,000 down to 1,600. Rank or gap shows after every raid and on the death screen.
+- **Leaderboard.** Global: every raid by anyone goes to one `Board` Durable Object (`coop/worker.js`, `POST /board`, `GET /board?limit=100`). `raidScore`: haul brought home + 150 per sector cleared + 25 per kill + 75 per veteran + 500 per boss + 100 per prisoner; dying zeroes the haul. The server recomputes the score and rejects nonsense, but numbers come from the browser, so a determined cheat is possible. Raids wait in `meta.boardOut` (part of the save) until sent, keyed by id so retries don't double up. `meta.board` keeps this device's best 50 as the offline fallback. Dev cells stay off. Live only on `*.workers.dev` or port 8787.
 - **Achievements** (called feats in the code). 20 general ones plus one per enemy type (`FEAT_DEFS`), six tiers each (enemy types 1/10/50/100/250/500, bosses 1/3/10/25/50/100). Each tier adds a permanent buff, shrinking by `FEAT_FALLOFF` (0.6, 0.5, 0.4, 0.35, 0.3, 0.25 of `per`); the big ones pay Resolve on top tiers. `featBuffs(meta)` feeds stats, damage (including per-enemy), credits, escape and XP. Unlock toasts, after-fight bars, a Feats screen, and totals on the Character tab.
 - **After curfew** (second row of buttons in the yard, host only):
-  - *The Lantern:* KEG-7 the droid bartender tells jokes; a round (+1 ATK, +4% crit next raid); regulars Vess, Juno and Sable with flirty lines and tips.
+  - *The Lantern:* a bar. `D.BAR.menu`: seven drinks, one per raid (`c.drink` holds the id; `true` in old saves means the gin), each a small edge until you come home.
   - *The Wheel:* European roulette, ten bet types at real payouts, stakes 10 to 250, animated wheel that lands on the result.
   - *Orbit:* turn-based shuttle fights (Fire, Evade, Overcharge, Jump) at three tiers, **one run per stay in town** (`char.orbitFlown`, cleared when a raid ends). The cell's first flight is a shakedown (`ORBIT_SHAKEDOWN`: weaker cutter, losing tows you home). After that: low orbit needs 1 refit level, the blockade line 3 plus a low win, the Warden's watch 8 plus a blockade win (`orbitLock`). Permadeath warnings on the yard, each card and the fight; launching takes a confirm click; intent tips in the fight. Losing the shuttle kills the operative (an Ejection pod fitting gives a 50% save once). Wins pay credits and, on the two harder tiers, one of five permanent **Marks** per operative. Refits cost credits; three fittings cost Resolve and survive death. Each run card shows simulated odds for the current shuttle.
   - *Ventures:* three cell-owned investments that tick once per raid, with capped balances (growth stops at the cap): noodle stall +6% / 4% chance to lose 25%, cap 500, always open; Marrow's consignment +12% / 10% to lose 40%, cap 1,500, opens after sector 5; smuggler's bond +18% / 14% to lose 50%, cap 3,000, opens after sector 10. Expected value per raid: about +4.8%, +6.8%, +8.5%.
@@ -70,16 +70,11 @@ A browser roguelite in plain HTML + JS modules, no build step. A resistance cell
 - **Downtime pack:** ships delivered (PixelLab, `downtime/ships/`, also shown on the orbit run cards). Still missing: bar portraits and backgrounds (brief in `docs/DOWNTIME_ART_PROMPT_CHATGPT.md`). Portraits are picked up automatically; `bg:orbit` is already wired in `downtime.js`.
 
 ## Balance
-Commands: `node sim.mjs 100 30`, `MAP=port node sim.mjs 100 40`, `node sim-builds.mjs 60 60` (or `ONLY=a,b`), `ECON=1` for the economy, `ABLATE=perk:x|unique:x|trait:x|bonus:x|loot` for outliers, `TUNE='{...}'` overrides, `node sim-coop.mjs` / `SOLO=1 node sim-coop.mjs`, `node sim-board.mjs 40 25 > board.json` to rebuild the seed board. Sims count boss progress by cleared sectors (`bestByMap`), not `bestSector`, which counts entry.
+`node sim-balance.mjs` is the main report. `SECTIONS=builds,styles,coop,maps,items,early,econ`, `CAMP=60`, `OPS=300`, `TUNE='{...}'` overrides. Bots spend like a player (mods, implants, drinks, upgrades), go home after bosses, and flee when low. Item tests use the `pusher` style, because a bot that leaves on low HP makes healing look harmful: it stops going home to spend. Older tools: `node sim-builds.mjs`, `node sim.mjs` (`ABLATE=` to remove loot), `node sim-coop.mjs`, `node tests/orbit-sim.mjs`.
 
-Current numbers (median operative to reach each boss, main bot):
-| Boss | Operative |
-|---|---|
-| Garrison sector 5 | 3 |
-| Garrison sector 10 | 10 |
-| Garrison sector 15 | 21 (93% within 30) |
+Knobs in `TUNE`: `earlyCurve` (enemy strength sectors 1-10 until a district has been freed), `reinforce` (by districts already freed), `overFree`/`overStep`/`overMin` (pay drop when overlevelled), `bossRepeatXp`/`bossRepeatResolve`, `coopHp` 2.1, `coopAtk` 1.2, `coopExtra` 3, `coopCr` 1.
 
-Builds at 60 campaigns, operatives to the sector-15 boss: strength 20, balanced 20, tank 20, intellect 22, strAgi 22, hybrid 22, dotBuild 22, charisma 23, meleeOnly 24, critStack 25, rangedOnly 26, agility 28, glass 31 (92%). Cautious play 11, greedy 37 (15% finish). Orbit (`node tests/orbit-sim.mjs`, sensible pilot / fire-spammer): shakedown 100/100%; low orbit with 1 refit 98/77%; blockade line at 3 refits 68/10%, at 4 79/19%; Warden's watch at 9 refits 41/70%, maxed 84/85%. v5 rooms, conditions, items and shop scaling left the campaign curve where it was (`node sim.mjs`: bosses at sectors 5/10/15 reached at operative 4/10/19 vs 3/11/20 before). Co-op knobs (`coopHp` 1.5, `coopAtk` 1, `coopExtra` 4) are a first guess. These numbers predate the raid economy rework: see **Changes in v6**.
+Median to the sector-15 boss on the Garrison (operatives / raids): strength 22/69, charisma 21/60, agility 28/89, intellect 25/111, glass 30/90 (88% finish), co-op strength + agility 19/66 per player with about 20% of raids wiping. Cautious 4/55, diver 20/57, greedy 34/43 (43% finish), farmer 6/44. First raid fatal: 20-49% by build. Whole game, solo strength: 67, 95, 116, 132 raids to free each district in turn. These are bots: tune from real sessions next. Careful play still loses far fewer operatives, and farming to level 8 first is still the most efficient route.
 
 ## Testing
 Start the server, then from the repo root:
@@ -91,7 +86,8 @@ node tests/town2.cjs          # yard: shops on talk, lie low, noodles, tenement,
 node tests/coop-test.cjs      # two tabs over BroadcastChannel, alternating turns
 node tests/dt.cjs             # Lantern, Wheel, Ventures, an orbit fight
 node tests/feats.cjs          # feat unlock toast, after-fight bars, Feats screen
-node tests/board.cjs          # leaderboard seeding, ranks on extract and death, survives New cell
+node tests/board.cjs          # global board: run `npx wrangler dev --port 8787` first. API, two players, offline queue, dev cells
+node tests/coop-wipe.cjs      # friend bleeds out, host fights on and falls: both death screens
 node tests/look-test.cjs      # composited looks grid and in-game screens
 node tests/grid.cjs           # yard collision overlay to tests/shots/grid.png
 node tests/monkey.cjs 600 71  # random play; args are steps and seed

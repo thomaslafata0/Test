@@ -42,9 +42,13 @@ export const hardTier = (sector) => (sector > 10 ? 2 : sector > 5 ? 1 : 0);
 export const hardAt = (sector) => HARD[hardTier(sector)];
 // In a raid the current sector sets the tier; in the yard, the deepest sector the cell has reached.
 export const hard = (s) => hardAt(s.run ? s.run.sector : (s.meta && s.meta.bestSector) || 0);
-export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.01, bossHp: 2.1, bossAtk: 1.4, enemyAtk: 1.74, enemyHp: 1.78, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 1.5, strAtk: 0.6, agiCrit: 0.04, agiDodge: 0.025, intOverload: 5, chaHesitate: 0.055, chaCredits: 0.05, wanted: 0.025, ambush: 1.5,
-  upgradeCost: 60, eliteGear: 0.3, shopLegendary: 0.06, cover: 0.5, agiAtk: 1, early: 0.35,
-  rangedSpread: 0.15, meleeSpread: 0.3, shootGuard: 0.15, momentum: 0.15, coopHp: 1.5, coopAtk: 1, coopExtra: 4, reviveHp: 0.2, reviveAfter: 0.15, downsPerRaid: 2, bleedRounds: 3,
+export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.01, bossHp: 2.1, bossAtk: 1.4, enemyAtk: 1.74, enemyHp: 1.78, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 1.5, strAtk: 0.6, agiCrit: 0.05, agiDodge: 0.035, intOverload: 5, chaHesitate: 0.055, chaCredits: 0.05, wanted: 0.025, ambush: 1.5,
+  upgradeCost: 60, eliteGear: 0.3, shopLegendary: 0.06, cover: 0.5, agiAtk: 1.2,
+  // Enemy strength in sectors 1-5. Nobody levels up during a raid, so a first raid has to be winnable on level-1 stats.
+  earlyCurve: [1, 0.95, 0.85, 0.8, 0.8, 0.88, 0.88, 0.88, 0.88, 0.88],
+  // Rewards shrink once an operative is more than overFree levels above the sector. reinforce: enemy strength by districts already freed.
+  overFree: 2, overStep: 0.2, overMin: 0.25, coopCr: 1, repeatPay: 2, reinforce: [0, 0.5, 0.5, 0.35], bossRepeatXp: 0.5, bossRepeatResolve: 1,
+  rangedSpread: 0.15, meleeSpread: 0.3, shootGuard: 0.15, momentum: 0.15, coopHp: 2.1, coopAtk: 1.2, coopExtra: 3, reviveHp: 0.2, reviveAfter: 0.15, downsPerRaid: 2, bleedRounds: 3,
   // Share of unsecured credits and XP lost, by position in the five-sector run to the next boss. Beating the boss secures everything.
   extractRates: [0.8, 0.65, 0.5, 0.4, 0], escapeRates: [0.9, 0.85, 0.75, 0.65, 0.6],
   itemScale: 0.3, allyGrit: 3 };
@@ -78,7 +82,7 @@ export const perkText = (id, lv) => { const p = perkById(id); return p.desc.repl
 // ---------- state ----------
 export function newMeta() {
   return { resolve: 0, totalResolve: 0, training: { hp: 0, atk: 0, def: 0, spd: 0 }, cell: [], operatives: 0, bestSector: 0, bestByMap: {},
-    fallen: [], contracts: [], liberated: {}, threat: 0, heirloom: null, tips: {}, endingSeen: false, stats: { kills: 0, bosses: 0, raids: 0 }, board: [], boardSeeded: false, ship: { hull: 0, guns: 0, shields: 0, engines: 0, cell: [] }, orbitWins: 0, orbitTierWins: {}, feats: { counters: {}, tiers: {}, v: 0 } };
+    fallen: [], contracts: [], liberated: {}, threat: 0, heirloom: null, tips: {}, endingSeen: false, stats: { kills: 0, bosses: 0, raids: 0 }, board: [], boardOut: [], boardShared: true, ship: { hull: 0, guns: 0, shields: 0, engines: 0, cell: [] }, orbitWins: 0, orbitTierWins: {}, feats: { counters: {}, tiers: {}, v: 0 } };
 }
 
 export function newGame(rng) {
@@ -102,7 +106,16 @@ export function migrate(s, rng) {
     if (s.char) s.notice = 'The Black Market has new stock and your kit now has six slots. Check the Gear tab.';
   }
   if (s && s.v === VERSION) {
-    if (s.meta && !s.meta.board) s.meta.board = [];
+    if (s.meta) {
+      // The leaderboard is global now: simulator rows go, and the real raids this device kept are sent up once.
+      s.meta.board = (s.meta.board || []).filter((e) => !e.bot);
+      s.meta.boardOut = s.meta.boardOut || [];
+      delete s.meta.boardSeeded;
+      if (!s.meta.boardShared) {
+        s.meta.boardShared = true;
+        if (!s.meta.dev) for (const e of s.meta.board) { e.id = e.id || boardId(); s.meta.boardOut.push(e); }
+      }
+    }
     if (s.meta && !s.meta.ship) s.meta.ship = { hull: 0, guns: 0, shields: 0, engines: 0, cell: [] };
     // Ventures used to belong to the cell. They're the operative's now, and die with them.
     if (s.meta && s.meta.ventures) { if (s.char && !s.char.ventures) s.char.ventures = s.meta.ventures; delete s.meta.ventures; }
@@ -534,6 +547,11 @@ function tradeApply(s, offers) {
 // The friend is gone for good from this raid (they left, or the host carries on without them).
 export function partnerGone(s) {
   const r = s.run, pc = charAt(s, 1);
+  if (r && r.fallen) {
+    // The friend left while one of them was dead. A dead host has nobody left to get them out; a dead friend just stops counting.
+    if (r.fallen.idx === 0) { s.outcome = r.fallen.record; s.run = null; s.screen = 'death'; return; }
+    r.fallen = null;
+  }
   if (pc && pc.downed) { pc.downed = 0; pc.hp = 1; }
   if (r) { if (r.cb && r.cb[1]) { r.cb[1].lootOffer = null; r.cb[1].perkOffer = null; } r.votes = null; r.exitVotes = null; r.actor = 0; r.acted = {}; }
 }
@@ -693,24 +711,26 @@ export function statsOf(meta, c) {
   const rMain = (mainStat(gearIn(c, 'ranged')) || { v: 0 }).v, mMain = (mainStat(gearIn(c, 'melee')) || { v: 0 }).v;
   const optic = hasImp(c, 'optic') ? 0.08 : 0, gadget = baseOf(gearIn(c, 'gadget')) || {};
   const hp = B.hp + t.hp * D.TRAINING.hp.per + (c.level - 1) * 5 + Math.round(str * TUNE.strHp) + (c.background === 'foundry' ? 15 + 2 * (c.level - 1) : 0) + (hasImp(c, 'pain') ? 20 : 0) + gearBonus(c, 'hp');
-  const mk = markSum(c), drink = c.drink ? 1 : 0, fb = featBuffs(meta);
+  const mk = markSum(c), drink = drinkOf(c) || {}, fb = featBuffs(meta), dAtk = drink.atk || 0, dCrit = drink.crit || 0;
   return {
-    maxHp: Math.round(hp * (hasTrait(c, 'stalwart') ? 1.12 : 1) * (1 + pv(c, 'ironlung') / 100) * (1 + mk.hp + fb.hp)),
-    atk: common + rMain + drink + (w.type === 'heavy' ? Math.floor(str * TUNE.strAtk) : Math.floor(agi * TUNE.agiAtk)),
-    atkM: common + mMain + drink + Math.floor(str * TUNE.strAtk),
-    def: B.def + (c.background === 'foundry' ? 1 : 0) + t.def * D.TRAINING.def.per + Math.floor((c.level - 1) / 2) + def + gearBonus(c, 'def') + (hasImp(c, 'dermal') ? 3 : 0) + mk.def + pv(c, 'padding'),
-    spd: B.spd + (c.background === 'runner' ? 1 : 0) + t.spd * D.TRAINING.spd.per + Math.floor((c.level - 1) / 3) + agi + (hasImp(c, 'reflex') ? 2 : 0) + spd + gearBonus(c, 'spd') + mk.spd,
+    maxHp: Math.round(hp * (hasTrait(c, 'stalwart') ? 1.12 : 1) * (1 + pv(c, 'ironlung') / 100) * (1 + mk.hp + fb.hp) * (1 + (drink.hp || 0))),
+    atk: common + rMain + dAtk + (w.type === 'heavy' ? Math.floor(str * TUNE.strAtk) : Math.floor(agi * TUNE.agiAtk)),
+    atkM: common + mMain + dAtk + Math.floor(str * TUNE.strAtk),
+    def: B.def + (c.background === 'foundry' ? 1 : 0) + t.def * D.TRAINING.def.per + Math.floor((c.level - 1) / 2) + def + gearBonus(c, 'def') + (hasImp(c, 'dermal') ? 3 : 0) + mk.def + pv(c, 'padding') + (drink.def || 0),
+    spd: B.spd + (c.background === 'runner' ? 1 : 0) + t.spd * D.TRAINING.spd.per + Math.floor((c.level - 1) / 3) + agi + (hasImp(c, 'reflex') ? 3 : 0) + spd + gearBonus(c, 'spd') + mk.spd + (drink.spd || 0),
     dodge: (agi - 1) * TUNE.agiDodge + (c.background === 'runner' ? 0.05 : 0) + fb.dodge + pv(c, 'ghost') / 100,
-    crit: 0.05 + (w.crit || 0) + critAll + optic + (agi - 1) * TUNE.agiCrit + gearBonus(c, 'crit', 'ranged') / 100 + mk.crit + drink * 0.04 + fb.crit,
-    critM: 0.05 + (mw.crit || 0) + critAll + optic + gearBonus(c, 'crit', 'melee') / 100 + mk.crit + drink * 0.04 + fb.crit,
+    crit: 0.05 + (w.crit || 0) + critAll + optic + (agi - 1) * TUNE.agiCrit + gearBonus(c, 'crit', 'ranged') / 100 + mk.crit + dCrit + fb.crit,
+    critM: 0.05 + (mw.crit || 0) + critAll + optic + gearBonus(c, 'crit', 'melee') / 100 + mk.crit + dCrit + fb.crit,
     carry: 4 + (has(c, 'belt') ? 3 : 0) + carry,
     slots: 2 + (attr(c, 'int') >= 4 ? 1 : 0) + (attr(c, 'int') >= 8 ? 1 : 0) + (c.background === 'clerk' ? 1 : 0),
-    tech: (1 + 0.1 * attr(c, 'int')) * (hasTrait(c, 'overcharge') ? 1.2 : 1) * (1 + (gadget.techBoost || 0)),
+    tech: (1 + 0.1 * attr(c, 'int')) * (hasTrait(c, 'overcharge') ? 1.2 : 1) * (1 + (gadget.techBoost || 0)) * (1 + (drink.tech || 0)),
     stimBoost: (gadget.stimBoost || 0) + fb.stim,
     scan: !!gadget.scan,
   };
 }
 export const stats = (s) => statsOf(s.meta, s.char);
+// What this operative is drinking. Old saves hold `true`: that round was the gin.
+export const drinkOf = (c) => (c && c.drink ? D.BAR.menu.find((x) => x.id === c.drink) || D.BAR.menu[0] : null);
 // Sum of an operative's permanent Marks (won in orbit).
 export function markSum(c) {
   const t = { hp: 0, crit: 0, escape: 0, credits: 0, spd: 0, def: 0 };
@@ -920,7 +940,7 @@ export function creditMult(s) {
   const c = s.char, t = s.run ? s.run.threat : s.meta.threat || 0;
   const b = s.run ? s.run.bulletin : null;
   const cha = 1 + TUNE.chaCredits * (attr(c, 'cha') - 1);
-  return cha * (has(c, 'fence') ? 1.25 : 1) * (1 + pv(c, 'chit') / 100) * (1 + gearBonus(c, 'credits') / 100) * (1 + 0.15 * t) * (1 + markSum(c).credits + featBuffs(s.meta).credits) * (b === 'payday' ? 1.3 : b === 'lockdown' ? 1.25 : 1) * condCredits(s.run);
+  return cha * (has(c, 'fence') ? 1.25 : 1) * (1 + pv(c, 'chit') / 100) * (1 + gearBonus(c, 'credits') / 100) * (1 + 0.15 * t) * (1 + markSum(c).credits + featBuffs(s.meta).credits) * (1 + ((drinkOf(c) || {}).credits || 0)) * (b === 'payday' ? 1.3 : b === 'lockdown' ? 1.25 : 1) * condCredits(s.run);
 }
 const condCredits = (r) => (!r ? 1 : r.cond === 'toxic' ? 1.25 : r.cond === 'patrol' ? 1.3 : r.cond === 'lockdown' ? 1.2 : 1);
 export const condOf = (r) => D.SECTOR_CONDS.find((x) => x.id === (r && r.cond)) || D.SECTOR_CONDS[0];
@@ -947,14 +967,23 @@ export function mapProgress(c, mapId) {
   return c.maps[mapId];
 }
 
+// Insertion points this operative has earned on a map at a threat level. Raising the threat starts again from sector 1.
+export function insertionsAt(c, mapId, threat = 0) {
+  const prog = mapProgress(c, mapId);
+  if (!threat) return prog.insertions;
+  const by = prog.byThreat || (prog.byThreat = {});
+  return by[threat] || (by[threat] = [1]);
+}
+const earnInsertion = (c, mapId, threat, sector) => { const list = insertionsAt(c, mapId, threat); if (!list.includes(sector)) list.push(sector); };
 export function deploy(s, mapId, startSector, rng) {
   const map = mapById(mapId);
   if (!mapUnlocked(s, map)) return false;
-  const prog = mapProgress(s.char, map.id);
-  if (!prog.insertions.includes(startSector)) startSector = 1;
+  if (!insertionsAt(s.char, map.id, s.meta.threat || 0).includes(startSector)) startSector = 1;
   s.run = { startCredits: s.char.credits, map: map.id, sector: startSector, startSector, room: 0, choices: null, enemy: null, nextMod: null, sectorCredits: 0, kills: 0, bosses: 0, cleared: 0, elites: 0,
     alert: 0, allies: 0, vent: 3, turns: 0, threat: s.meta.threat || 0, perkOffer: null, ...freshBag(), cb: {}, actor: 0, acted: {}, round: 0, lastAttacker: 0 };
   if (isCoop(s)) s.run.cb[1] = freshBag();
+  // Every district freed brings reinforcements to the ones still held.
+  s.run.reinforced = s.meta.liberated[map.id] ? 0 : Object.keys(s.meta.liberated).length;
   s.meta.stats.raids += 1;
   forEachActor(s, (c) => {
     c.startCredits = c.credits; c.safeCredits = c.credits; c.xpBank = 0; c.payout = null;
@@ -966,6 +995,7 @@ export function deploy(s, mapId, startSector, rng) {
   s.log = [];
   s.notice = null;
   log(s, `You slip into the ${map.name}. ${sectorName(startSector, map.id)}.`, 'sys');
+  if (s.run.reinforced) log(s, `The Directorate has reinforced this district: enemies +${Math.round((TUNE.reinforce[s.run.reinforced] || 0) * 100)}%, and they pay better.`, 'crit');
   const bl = bulletinOf(s.run);
   if (bl.id !== 'quiet') log(s, `Directorate bulletin: ${bl.name}. ${bl.desc}`, 'crit');
   beginSector(s, rng);
@@ -1129,7 +1159,7 @@ function startFight(s, rng, kind) {
   if (kind === 'fight' && r.cond === 'hunters' && rng() < 0.25) kind = 'elite';
   if (kind === 'bounty') kind = 'elite';
   const boss = kind === 'boss';
-  const e = makeEnemy(r.sector, boss, rng, r.map, r.threat);
+  const e = makeEnemy(r.sector, boss, rng, r.map, r.threat, r.reinforced || 0);
   if (!boss) applyQuirk(r, e, rng);
   if (kind === 'elite') makeElite(e, rng);
   if (r.bulletin === 'payday') e.hp = e.maxHp = Math.round(e.maxHp * 1.1);
@@ -1138,7 +1168,7 @@ function startFight(s, rng, kind) {
   if (r.bulletin === 'inspection') e.xp = Math.round(e.xp * 1.2);
   if (r.bulletin === 'shift' && r.room === 1 && !boss) e.stun = Math.max(e.stun, 1);
   if (mech === 'alarm' && r.alert) { e.atk = Math.round(e.atk * (1 + 0.06 * r.alert)); e.cr = e.cr.map((v) => Math.round(v * (1 + 0.05 * r.alert))); }
-  if (isCoop(s)) { e.hp = e.maxHp = Math.round(e.maxHp * TUNE.coopHp); e.atk = Math.round(e.atk * TUNE.coopAtk); e.cr = e.cr.map((v) => Math.round(v * 1.25)); }
+  if (isCoop(s)) { e.hp = e.maxHp = Math.round(e.maxHp * TUNE.coopHp); e.atk = Math.round(e.atk * TUNE.coopAtk); e.cr = e.cr.map((v) => Math.round(v * TUNE.coopCr)); }
   r.actor = livingActors(s)[0] || 0; r.acted = {}; r.round = 0; r.lastAttacker = r.actor;
   for (const b of Object.values(r.cb || {})) { const cd = b.cooldowns || {}; for (const k of b.usedThisFight || []) if (cd[k] < 50) cd[k] = Math.max(cd[k] || 0, CARRY_CD); Object.assign(b, freshBag(), { cooldowns: cd }); }
   r.enemy = e; r.defending = false; r.ready = false; r.momentum = false; r.keepDistance = false; r.adrenalUsed = false; r.vent = 3; r.turns = 0; r.alarmRaised = false; r.struck = false;
@@ -1205,7 +1235,7 @@ function makeElite(e, rng) {
   if (e.affix === 'relentless') { e.intents = { ...e.intents }; delete e.intents.guard; e.intents.special = (e.intents.special || 0) * 2; }
 }
 
-export function makeEnemy(sector, boss, rng, mapId = 'garrison', threat = 0) {
+export function makeEnemy(sector, boss, rng, mapId = 'garrison', threat = 0, reinforced = 0) {
   const map = mapById(mapId);
   let id, lvl;
   if (boss) {
@@ -1219,8 +1249,7 @@ export function makeEnemy(sector, boss, rng, mapId = 'garrison', threat = 0) {
     id = pid; lvl = sector - min + map.level;
   }
   const base = D.ENEMIES[id];
-  // Sectors 1-5 get extra bite (fading out by sector 6) so the stronger backgrounds don't trivialise the opening.
-  const tm = (1 + 0.12 * threat) * (1 + TUNE.early * Math.max(0, 6 - sector) / 5);
+  const tm = (1 + 0.12 * threat) * (1 + (TUNE.reinforce[reinforced] || 0)) * (reinforced ? 1 : TUNE.earlyCurve[sector - 1] || 1);
   const hp = Math.round(base.hp * TUNE.enemyHp * hardAt(sector).hp * tm * growth(lvl, TUNE.hpLin, TUNE.hpQuad) * (boss ? TUNE.bossHp : 1));
   const e = {
     id, name: base.name, tags: base.tags || [], line: base.line, portrait: base.portrait || null, boss,
@@ -1228,8 +1257,8 @@ export function makeEnemy(sector, boss, rng, mapId = 'garrison', threat = 0) {
     atk: Math.round(base.atk * TUNE.enemyAtk * tm * growth(lvl, TUNE.atkLin, TUNE.atkQuad) * (boss ? TUNE.bossAtk : 1)),
     def: base.def + Math.floor(lvl / 2),
     spd: base.spd + Math.floor(lvl / 4),
-    cr: base.cr.map((v) => Math.round(v * Math.pow(1.1, lvl) * map.credits)),
-    xp: Math.round(base.xp * Math.pow(1.12, lvl) * map.xp),
+    cr: base.cr.map((v) => Math.round(v * Math.pow(1.1, lvl) * map.credits * (1 + (TUNE.reinforce[reinforced] || 0) / 2))),
+    xp: Math.round(base.xp * Math.pow(1.12, lvl) * map.xp * (1 + (TUNE.reinforce[reinforced] || 0) / 2)),
     intents: D.SPECIALS[id] ? { ...base.intents, special: Math.round(2 * TUNE.statusRate) } : base.intents,
     intent: 'attack', lastIntent: null, stun: 0, shaken: false, st: {}, fresh: [], phase2: false,
   };
@@ -1388,7 +1417,8 @@ function meleeCounter(s, rng) {
 export function playerAct(s, act, rng, who = 0) {
   if (s.screen !== 'combat' || !s.run) return;
   if (isCoop(s) && (s.run.actor !== who || !aliveAt(s, who))) return;
-  withActor(s, who, () => playerActInner(s, act, rng, who));
+  acting++;
+  try { withActor(s, who, () => playerActInner(s, act, rng, who)); } finally { acting--; }
   // Knocked down on their own action (a counter, say): their turn passes on.
   const r = s.run;
   if (r && !s.coopDead && s.screen === 'combat' && r.enemy && !r.over && isCoop(s) && !aliveAt(s, r.actor)) {
@@ -1579,7 +1609,7 @@ const fighting = (s) => s.screen === 'combat' && s.run && s.run.enemy && !s.run.
 function enemyRound(s, rng) {
   const r = s.run;
   r.round += 1;
-  const coop = isCoop(s), actions = coop && r.round % TUNE.coopExtra === 0 ? 2 : 1;
+  const coop = isCoop(s), actions = coop && !r.fallen && r.round % TUNE.coopExtra === 0 ? 2 : 1;
   for (let n = 0; n < actions && fighting(s); n++) {
     const t = coop ? pickTarget(s, rng) : 0;
     if (coop) fx(s, { who: 'enemy', type: 'target', actor: t });
@@ -1604,7 +1634,6 @@ function bleedTick(s) {
     pc.downed -= 1;
     if (pc.downed > 0) { log(s, `${pc.name} is bleeding out: ${pc.downed} round${pc.downed > 1 ? 's' : ''} left.`, 'bad'); continue; }
     withActor(s, i, () => reallyDie(s, { name: 'blood loss', id: null }));
-    return;
   }
 }
 
@@ -1822,12 +1851,17 @@ function standUp(s, hpShare) {
     if (pc && pc.downed) withActor(s, i, () => { pc.downed = 0; pc.hp = Math.max(1, Math.round(stats(s).maxHp * hpShare)); });
   }
 }
+// Sectors far below an operative's level pay less, so going back to farm the opening is slower than pushing on.
+export const payScale = (c, sector) => { const over = c.level - sector - TUNE.overFree; return over > 0 ? Math.max(TUNE.overMin, 1 - TUNE.overStep * over) : 1; };
 function winFight(s, rng, fled = false) {
   const r = s.run, e = r.enemy, c = s.char, m = s.meta;
   // The fight's over: a downed partner gets patched up and shares in it.
   standUp(s, TUNE.reviveAfter);
-  const credits = Math.round(randInt(rng, e.cr[0], e.cr[1]) * creditMult(s) * (fled ? 0.5 : 1));
-  const xp = fled ? Math.round(e.xp * 0.75) : e.xp;
+  const easy = payScale(c, r.sector);
+  const credits = Math.round(randInt(rng, e.cr[0], e.cr[1]) * creditMult(s) * (fled ? 0.5 : 1) * easy);
+  // A boss this operative has already beaten is worth less the second time round.
+  const beaten = e.boss && r.sector <= mapProgress(c, r.map).deepest;
+  const xp = Math.round((fled ? e.xp * 0.75 : e.xp) * easy * (beaten ? TUNE.bossRepeatXp : 1));
   c.credits += credits; r.sectorCredits += credits; ledger(s, 'fights', credits);
   const out = { enemy: e.name, id: e.id, portrait: e.portrait, credits, xp, levelUps: [], healed: 0, boss: e.boss, elite: !!e.elite, resolve: 0, fled, items: [], notes: [] };
   log(s, `${e.name} ${fled ? 'flees, dropping a credit pouch' : 'goes down'}. +${credits} ${D.SETTING.cur}, +${xp} XP.`, 'reward');
@@ -1861,15 +1895,14 @@ function winFight(s, rng, fled = false) {
     const c2 = s.char;
     c2.credits += credits; gainXp(s, xp);
     if (has(c2, 'medic')) { const st2 = stats(s); c2.hp = Math.min(st2.maxHp, c2.hp + Math.round(st2.maxHp * 0.15)); }
-    if (e.boss) { const prog = mapProgress(c2, r.map), next = r.sector + 1; if (!prog.insertions.includes(next)) prog.insertions.push(next); }
+    if (e.boss) earnInsertion(c2, r.map, r.threat, r.sector + 1);
   });
   contractEvent(s, 'kill', { enemy: e });
   if (e.boss) {
     const t = r.threat;
-    out.resolve = 3 + (c.background === 'preacher' ? 1 : 0) + (t >= 4 ? 2 : t >= 2 ? 1 : 0);
+    out.resolve = beaten ? TUNE.bossRepeatResolve : 3 + (c.background === 'preacher' ? 1 : 0) + (t >= 4 ? 2 : t >= 2 ? 1 : 0);
     m.resolve += out.resolve; m.totalResolve += out.resolve; m.stats.bosses += 1;
-    const prog = mapProgress(c, r.map), next = r.sector + 1;
-    if (!prog.insertions.includes(next)) prog.insertions.push(next);
+    earnInsertion(c, r.map, r.threat, r.sector + 1);
     contractEvent(s, 'boss', {});
     if (r.sector >= 15 && !m.liberated[r.map]) {
       m.liberated[r.map] = true;
@@ -1949,6 +1982,8 @@ function choosePerkInner(s, id, rng, dropId) {
 
 // ---------- events ----------
 export function continueAfterVictory(s, rng) {
+  // Won the last fight alone: time to go home, with the dead.
+  if (s.run.fallen && !rewardsPending(s)) { closeFallen(s, rng, 'extracted'); return; }
   if (isCoop(s)) { if (rewardsPending(s)) s.screen = 'loot'; else offerRoute(s, rng); return; }
   if (s.run.lootOffer) { s.screen = 'loot'; return; }
   if (s.run.perkOffer) { s.screen = 'perk'; return; }
@@ -2005,13 +2040,13 @@ function resolveEventInner(s, index, rng) {
 function clearSector(s) {
   const r = s.run, c = s.char, map = mapById(r.map), m = s.meta;
   r.cleared = (r.cleared || 0) + 1; feat(s, 'sectors');
-  const bonus = Math.round(8 * r.sector * map.credits * creditMult(s));
+  const bonus = Math.round(8 * r.sector * map.credits * creditMult(s) * payScale(c, r.sector));
   const prog = mapProgress(c, r.map);
   // Resolve only for new ground: sectors this operative hasn't cleared on this map before.
   // Repeat clears pay every other time, so farming early sectors is slow.
   const fresh = r.sector > prog.deepest;
   if (!fresh) c.repeatClears = (c.repeatClears || 0) + 1;
-  const pays = fresh || c.repeatClears % 2 === 0;
+  const pays = fresh || c.repeatClears % TUNE.repeatPay === 0;
   const res = pays ? 1 + (r.threat >= 3 && isBossSector(r.sector) ? 1 : 0) : 0;
   c.credits += bonus; ledger(s, 'sector bonus', bonus); feat(s, 'credits', bonus);
   m.resolve += res; m.totalResolve += res;
@@ -2034,7 +2069,8 @@ export function pushDeeper(s, rng) {
   beginSector(s, rng);
 }
 
-// Leaderboard: every raid is scored when it ends (extracted, escaped or died) and the best BOARD_SIZE raids are kept in meta.board.
+// Leaderboard: every raid is scored when it ends (extracted, escaped or died). It goes in meta.boardOut for the page to send to the
+// global board (coop/worker.js, Board); the best BOARD_SIZE from this device stay in meta.board for when the board can't be reached.
 // Score = credits brought home + 150 per sector cleared + 25 per kill + 75 per elite + 500 per boss + 100 per prisoner freed.
 // Dying brings nothing home, so the haul counts for zero; escaping mid-fight is scored on what you kept after the loss.
 export const BOARD_SIZE = 50;
@@ -2046,15 +2082,17 @@ export function raidScore(r, c, how) {
 }
 export function recordScore(s, c, how) {
   const r = s.run, m = s.meta;
-  if (!r || !c || m.dev) return 0; // cells touched by dev mode stay off the leaderboard
+  if (!r || !c || m.dev) return ''; // cells touched by dev mode stay off the leaderboard
   const { score, parts } = raidScore(r, c, how);
-  if (score <= 0) return 0;
-  const entry = { name: c.name, number: c.number, background: c.background, level: c.level, map: r.map, from: r.startSector || 1, to: r.sector, how, score, parts, kills: r.kills || 0, bosses: r.bosses || 0, cleared: r.cleared || 0, when: Date.now(), bot: false };
-  return addToBoard(m, entry);
+  if (score <= 0) return '';
+  const entry = { id: boardId(), name: c.name, number: c.number, background: c.background, level: c.level, map: r.map, from: r.startSector || 1, to: r.sector, how, score, parts, kills: r.kills || 0, bosses: r.bosses || 0, cleared: r.cleared || 0, when: Date.now() };
+  addToBoard(m, entry);
+  (m.boardOut || (m.boardOut = [])).push(entry);
+  if (m.boardOut.length > 100) m.boardOut.splice(0, m.boardOut.length - 100);
+  return entry.id;
 }
-// Inserts an entry if it makes the cut; returns its 1-based rank or 0.
-// The score the last place on the board holds (0 while it has room).
-export const boardFloor = (m) => ((m.board || []).length >= BOARD_SIZE ? m.board[BOARD_SIZE - 1].score : 0);
+const boardId = () => Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
+// Inserts an entry if it makes this device's cut; returns its 1-based rank or 0.
 export function addToBoard(m, entry) {
   const board = m.board || (m.board = []);
   board.push(entry);
@@ -2066,12 +2104,15 @@ export function addToBoard(m, entry) {
 
 export function endRun(s, how, rngForRestock = Math.random) {
   const r = s.run, c = s.char;
+  // Leaving with a partner dead: the fallen operative's slot is cleared first (finishCoopDeath), which then calls back here.
+  if (r.fallen && !r.closing) { closeFallen(s, rngForRestock, how); return; }
   standUp(s, 0); // running with a downed partner over your shoulder: they make it out, barely
   const lost = settle(s, how, how === 'extracted' ? extractRate(r.sector) : escapeRate(r.sector));
   forEachActor(s, (a) => {
     a.raidScore = raidScore(r, a, how).score;
-    a.rank = recordScore(s, a, how);
+    a.boardId = recordScore(s, a, how);
     a.fed = false; a.drink = false;
+    a.hp = Math.min(a.hp, stats(s).maxHp); // a Rivet Stout wearing off
     if (rngForRestock) restockMarket(s, rngForRestock);
   });
   let home = '';
@@ -2082,7 +2123,7 @@ export function endRun(s, how, rngForRestock = Math.random) {
     home = ` You brought ${freed} prisoner${freed > 1 ? 's' : ''} home: +${freed} ${D.SETTING.meta}.`;
   }
   if (how === 'extracted') contractEvent(s, 'extract', { credits: s.char.credits, allies: freed });
-  const rank = c.rank ? ` Top ${BOARD_SIZE} raid: #${c.rank} on the leaderboard (${c.raidScore} points).` : c.raidScore ? ` Raid score ${c.raidScore}; last place on the leaderboard holds ${boardFloor(s.meta)}.` : '';
+  const rank = c.raidScore ? ` Raid score ${c.raidScore}.` : '';
   s.notice = (how === 'extracted'
     ? `You made it out of ${sectorName(r.sector, r.map)}.${lost ? ` Slipping out early cost ${lost} ${D.SETTING.cur} in bribes at the gate.` : ''}${home} Spend it before your luck runs out.`
     : `You escaped from ${sectorName(r.sector, r.map)}${lost ? `, but dropped ${lost} ${D.SETTING.cur} on the way out` : ''}.`) + rank;
@@ -2163,31 +2204,38 @@ function die(s, foe) {
       log(s, `${c.name} goes down, bleeding out. ${pc.name} has ${c.downed - 1} round${c.downed > 2 ? 's' : ''} to reach them.`, 'bad');
       return;
     }
-    if (pc && pc.downed) {
-      withActor(s, other, () => reallyDie(s, { name: 'blood loss', id: null }));
-      c.hp = 1;
-      log(s, `${c.name} takes a hit that should have ended it, and runs.`, 'bad');
-      return;
-    }
+    // The last one standing falls with their partner still on the floor: nobody is left to carry anyone. A wipe.
+    if (pc && pc.downed) withActor(s, other, () => reallyDie(s, { name: foe.name, id: foe.id, portrait: foe.portrait }));
   }
   reallyDie(s, foe);
 }
 function reallyDie(s, foe) {
-  fx(s, { who: 'player', type: 'down' });
   const c = s.char, r = s.run;
+  fx(s, { who: 'player', type: isCoop(s) && !r.orbit ? 'downed' : 'down' });
   c.fed = false;
   const record = { uid: c.uid, name: c.name, number: c.number, level: c.level, sector: r.sector, map: r.map, killer: foe.name, killerId: foe.id, killerPortrait: foe.portrait, credits: c.credits, background: c.background, look: c.look || null, marks: [...(c.marks || [])] };
   s.meta.fallen.unshift(record); feat(s, 'fallen');
   s.meta.fallen = s.meta.fallen.slice(0, 12);
   record.perks = (c.perks || []).length;
   record.score = raidScore(r, c, 'died').score;
-  record.rank = recordScore(s, c, 'died');
+  record.boardId = recordScore(s, c, 'died');
   if (isCoop(s) && !r.orbit) {
-    // One of you is dead: the raid is over for both. The survivor drags what they can out (finishCoopDeath).
     autoHeirloom(s);
-    c.dead = true; c.downed = 0; r.over = true;
-    s.coopDead = { idx: actorIdx(s), record };
-    log(s, `${c.name} goes down. ${charAt(s, 1 - actorIdx(s)).name} grabs what they can and runs.`, 'bad');
+    c.dead = true; c.downed = 0;
+    const me = actorIdx(s), mate = charAt(s, 1 - me);
+    if (r.fallen || !mate || mate.dead) {
+      // Both gone: a wipe. Everything either of them carried is lost.
+      r.over = true;
+      s.coopDead = { wipe: true, records: { ...(r.fallen ? { [r.fallen.idx]: r.fallen.record } : {}), [me]: record } };
+      log(s, 'That\u2019s both of you. Nobody is coming back from this one.', 'bad');
+      return;
+    }
+    // One dead: the survivor still has this fight to get out of. Win it or run; dying here wipes the team.
+    r.fallen = { idx: me, record };
+    r.defending = false;
+    const e = r.enemy;
+    if (e && TUNE.coopHp > 0) { const keep = e.hp / e.maxHp; e.maxHp = Math.max(1, Math.round(e.maxHp / TUNE.coopHp)); e.hp = Math.max(1, Math.round(e.maxHp * keep)); }
+    log(s, `${c.name} is dead. ${mate.name} has to win this fight or run.`, 'bad');
     return;
   }
   s.outcome = record;
@@ -2195,20 +2243,38 @@ function reallyDie(s, foe) {
   s.screen = 'death';
   autoHeirloom(s);
 }
-// Called with the host's operative active, after the action that killed someone has unwound.
+// The raid ends with one operative dead. During an action the operatives may be swapped, so playerAct finishes it once that has unwound.
+let acting = 0;
+function closeFallen(s, rng, how) {
+  const r = s.run;
+  r.over = true; s.coopDead = { ...r.fallen, how };
+  if (!acting) finishCoopDeath(s, rng);
+}
+// Runs after the action that ended things has unwound.
 function finishCoopDeath(s, rng) {
   const d = s.coopDead; s.coopDead = null;
-  const survivor = 1 - d.idx;
+  setActor(s, 0);
+  if (d.wipe) {
+    const host = d.records[0], guest = d.records[1];
+    host.wipe = guest.wipe = true;
+    s.char2 = null; // the host's dead operative stays for the death screen, as in solo, until they recruit
+    s.coopFallen = { idx: 1, record: guest };
+    s.outcome = host; s.run = null; s.screen = 'death';
+    return;
+  }
+  s.run.closing = true;
+  const how = d.how || 'escaped';
+  const deadHost = s.char;
   if (d.idx === 0) { s.char = null; } else { s.char2 = null; }
   s.coopFallen = { idx: d.idx, record: d.record };
   if (d.idx === 0) {
     // The host is down: act as the friend to close the raid, then leave the host on the death screen.
     const t = s.char; s.char = s.char2; s.char2 = t; s.actorIdx = 1;
-    endRun(s, 'escaped', rng);
-    s.char2 = s.char; s.char = null; s.actorIdx = 0;
+    endRun(s, how, rng);
+    s.char2 = s.char; s.char = deadHost; s.actorIdx = 0;
     s.outcome = d.record; s.screen = 'death';
   } else {
-    endRun(s, 'escaped', rng);
+    endRun(s, how, rng);
     s.notice = `${d.record.name} went down in ${sectorName(d.record.sector, d.record.map)}. You got out with what you could carry.`;
   }
 }
@@ -2225,25 +2291,18 @@ export function recruit(s, rng, slot = 'char') {
 // ---------- Downtime: the Lantern, the Wheel, orbit runs and ventures ----------
 export const inTown = (s) => !s.run && !!s.char && s.screen === 'town';
 
-// The Lantern.
-export function buyDrink(s) {
-  const c = s.char, cost = drinkCost(s);
-  if (!inTown(s) || c.drink || c.credits < cost) return false;
-  c.credits -= cost; c.drink = true; ledger(s, 'spend:bar', cost); feat(s, 'drinks');
-  journal(s, `${c.name} buys a round at the Lantern.`);
+// The Lantern: order one drink before a raid. It wears off when you come home.
+export function buyDrink(s, id) {
+  const c = s.char, d = D.BAR.menu.find((x) => x.id === id);
+  if (!d || !inTown(s) || c.drink) return false;
+  const cost = drinkCost(s, id), before = stats(s).maxHp;
+  if (c.credits < cost) return false;
+  c.credits -= cost; c.drink = id; ledger(s, 'spend:bar', cost); feat(s, 'drinks');
+  c.hp += stats(s).maxHp - before;
+  journal(s, `${c.name} orders a ${d.name} at the Lantern.`);
   return true;
 }
-export const drinkCost = (s) => Math.round(D.BAR.drink.cost * hard(s).price * consumableScale(s.char));
-export function barLine(s, who, rng) {
-  const c = s.char;
-  c.barSeen = c.barSeen || {};
-  if (who === 'keg7') { const j = D.BAR.bartender.jokes; const i = (c.barSeen.keg7 = ((c.barSeen.keg7 ?? Math.floor(rng() * j.length)) + 1) % j.length); return j[i]; }
-  const r = D.BAR.regulars.find((x) => x.id === who);
-  if (!r) return '';
-  const i = (c.barSeen[who] = ((c.barSeen[who] ?? Math.floor(rng() * r.lines.length)) + 1) % r.lines.length);
-  return r.lines[i];
-}
-
+export const drinkCost = (s, id) => Math.round(((D.BAR.menu.find((x) => x.id === id) || D.BAR.menu[0]).cost) * hard(s).price * consumableScale(s.char));
 // The Wheel: European roulette, one bet per spin.
 export const ROULETTE_RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
 export const WHEEL_ORDER = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];

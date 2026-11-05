@@ -86,9 +86,63 @@ export class Vault {
   }
 }
 
+// The global leaderboard: one Durable Object holding every raid from everyone. The game sends each raid when it ends.
+// Scores are worked out here from the raid's numbers, and the limits below keep out nonsense, but the numbers come from the
+// player's browser, so someone determined could still fake a run.
+const BOARD_SHOW = 100, BOARD_MAX_SHOW = 500, BOARD_KEEP = 500000, BOARD_MAX_BODY = 3000, BOARD_RATE = 40;
+const WORTH = { cleared: 150, kills: 25, elites: 75, bosses: 500, freed: 100 };
+const whole = (v, max) => { const n = Math.round(Number(v)); return Number.isFinite(n) && n >= 0 && n <= max ? n : null; };
+const label = (v, max) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, max) : '');
+function cleanRaid(e) {
+  if (!e || typeof e !== 'object' || !/^[a-z0-9]{8,32}$/.test(e.id || '') || !['extracted', 'escaped', 'died'].includes(e.how)) return null;
+  const name = label(e.name, 40), background = label(e.background, 24), map = label(e.map, 24), p = e.parts || {};
+  const nums = { number: whole(e.number, 1e6), level: whole(e.level, 999), from: whole(e.from, 9999), to: whole(e.to, 9999), kills: whole(e.kills, 1e5), bosses: whole(e.bosses, 5000), cleared: whole(e.cleared, 9999), elites: whole((p.elites || 0) / WORTH.elites, 1e5), freed: whole((p.freed || 0) / WORTH.freed, 1e4), haul: whole(p.haul || 0, 1e8) };
+  if (!name || !map || Object.values(nums).includes(null)) return null;
+  const parts = { haul: nums.haul, cleared: nums.cleared * WORTH.cleared, kills: nums.kills * WORTH.kills, elites: nums.elites * WORTH.elites, bosses: nums.bosses * WORTH.bosses, freed: nums.freed * WORTH.freed };
+  const score = Object.values(parts).reduce((t, v) => t + v, 0);
+  if (score <= 0) return null;
+  return { id: e.id, name, number: nums.number, background, level: nums.level, map, from: nums.from, to: nums.to, how: e.how, score, parts, kills: nums.kills, bosses: nums.bosses, cleared: nums.cleared };
+}
+export class Board {
+  constructor(state) {
+    this.sql = state.storage.sql;
+    this.sql.exec('CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, score INTEGER NOT NULL, at INTEGER NOT NULL, data TEXT NOT NULL)');
+    this.sql.exec('CREATE INDEX IF NOT EXISTS runs_score ON runs (score DESC, at ASC)');
+    this.hits = new Map();
+  }
+  count() { return this.sql.exec('SELECT COUNT(*) AS n FROM runs').one().n; }
+  limited(ip) {
+    const now = Date.now(), minute = this.hits.get(ip);
+    if (!minute || now - minute.t > 60000) { if (this.hits.size > 5000) this.hits.clear(); this.hits.set(ip, { t: now, n: 1 }); return false; }
+    return ++minute.n > BOARD_RATE;
+  }
+  async fetch(request) {
+    if (request.method === 'GET') {
+      const limit = Math.min(BOARD_MAX_SHOW, Math.max(1, +new URL(request.url).searchParams.get('limit') || BOARD_SHOW));
+      const rows = this.sql.exec('SELECT at, data FROM runs ORDER BY score DESC, at ASC LIMIT ?', limit).toArray().map((r) => ({ ...JSON.parse(r.data), when: r.at }));
+      return json({ rows, total: this.count() });
+    }
+    if (request.method !== 'POST') return json({ error: 'method' }, 405);
+    if (this.limited(request.headers.get('CF-Connecting-IP') || 'local')) return json({ error: 'slow down' }, 429);
+    const text = await request.text();
+    if (text.length > BOARD_MAX_BODY) return json({ error: 'too big' }, 413);
+    let raid;
+    try { raid = cleanRaid(JSON.parse(text)); } catch (e) { return json({ error: 'bad json' }, 400); }
+    if (!raid) return json({ error: 'bad raid' }, 400);
+    // The same id twice (a retry after a dropped connection) keeps the first copy.
+    this.sql.exec('INSERT OR IGNORE INTO runs (id, score, at, data) VALUES (?, ?, ?, ?)', raid.id, raid.score, Date.now(), JSON.stringify(raid));
+    const total = this.count();
+    if (total > BOARD_KEEP) this.sql.exec('DELETE FROM runs WHERE id IN (SELECT id FROM runs ORDER BY score ASC, at DESC LIMIT ?)', total - BOARD_KEEP);
+    const row = this.sql.exec('SELECT score, at FROM runs WHERE id = ?', raid.id).toArray()[0];
+    const rank = row ? this.sql.exec('SELECT COUNT(*) AS n FROM runs WHERE score > ? OR (score = ? AND at < ?)', row.score, row.score, row.at).one().n + 1 : 0;
+    return json({ rank, total, score: raid.score });
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname === '/board') return env.BOARD.get(env.BOARD.idFromName('global')).fetch(request);
     const sv = url.pathname.match(/^\/save\/([A-Z0-9]{12})(\/versions)?$/);
     if (sv) return env.VAULT.get(env.VAULT.idFromName(sv[1])).fetch(request);
     const m = url.pathname.match(/^\/room\/([A-Z0-9]{4,8})$/i);

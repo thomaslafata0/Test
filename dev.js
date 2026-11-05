@@ -20,18 +20,36 @@ function draftFor(s, rng, b) {
   for (let i = 0; i < 16 && d.points > 0; i++) if (!E.draftAdjust(d, b.attrs[i % b.attrs.length], 1)) break;
   return d;
 }
+// Spends everything a sensible player would before leaving town: Resolve, attribute points, gear, stims, mods, implants, upgrades, a drink.
+const MODS = ['medic', 'drill', 'belt', 'fence', 'forger'];
+const IMPLANTS = { str: ['pain', 'dermal', 'myomer', 'adrenal'], agi: ['reflex', 'optic', 'dermal', 'adrenal'], int: ['neural', 'synapse', 'dermal', 'pain'], cha: ['dermal', 'voice', 'pain', 'adrenal'] };
+const DRINK = { str: 'gin', agi: 'sour', int: 'tonic', cha: 'rum' };
 function shop(s, rng, b) {
   const m = s.meta, c = s.char;
   for (const u of D.CELL) E.buyCell(s, u.id);
   let t = true; while (t) t = Object.keys(D.TRAINING).sort((x, y) => m.training[x] - m.training[y]).some((x) => E.train(s, x));
   E.heal(s);
-  let guard = 0;
-  while (c.attrPoints > 0 && guard++ < 60) if (!E.spendAttr(s, b.attrs[guard % b.attrs.length])) for (const k of Object.keys(D.ATTRS)) if (E.spendAttr(s, k)) break;
+  for (let i = 0; c.attrPoints > 0 && i < 60; i++) if (!E.spendAttr(s, b.attrs[i % b.attrs.length])) for (const k of Object.keys(D.ATTRS)) if (E.spendAttr(s, k)) break;
   if (m.heirloom) E.equipHeirloom(s);
-  G.shopGear(s, b.style, 60);
+  while (c.items.stim < 2 && E.buyItem(s, 'stim'));
+  G.shopGear(s, b.style, 25);
   while (c.items.stim < 3 && E.buyItem(s, 'stim'));
-  for (const id of ['dermal', 'reflex', 'pain', 'adrenal']) if (c.credits > 150) E.installImplant(s, id);
-  G.upgradeGear(s, b.style, 150);
+  for (const id of MODS) { const u = D.UPGRADES.find((x) => x.id === id); if (c.credits >= E.price(s, u.cost) + 25) E.buyUpgrade(s, id); }
+  for (const id of IMPLANTS[b.attrs[0]] || IMPLANTS.str) E.installImplant(s, id);
+  G.upgradeGear(s, b.style, 25);
+  // Whatever is left goes on the lowest-level gear, even where the bot's score barely moves.
+  for (let i = 0; i < 40; i++) {
+    const slot = D.SLOT_ORDER.filter((k) => E.canUpgrade(c.gear[k]) && c.credits >= E.price(s, E.upgradeCost(c.gear[k])) + 25).sort((x, y) => c.gear[x].level - c.gear[y].level)[0];
+    if (!slot || !E.upgradeItem(s, slot)) break;
+  }
+  E.buyDrink(s, DRINK[b.attrs[0]] || 'gin');
+  E.buyNoodles(s);
+}
+// Called when autoplay stops, so an operative is never left in town with points or credits it would have spent.
+export function autoFinish(s, rng, o) {
+  if (!G || !s.char || s.run) return;
+  E.closePayout(s);
+  if (s.screen === 'town') shop(s, rng, BUILDS[o.build] || BUILDS.strength);
 }
 const nextMap = (s, wanted) => {
   const maps = D.MAPS.filter((mp) => E.mapUnlocked(s, mp));
@@ -53,7 +71,7 @@ export function autoStep(s, rng, o, watching = false) {
     case 'ending': s.meta.endingSeen = true; s.screen = 'town'; return null;
     case 'town': {
       shop(s, rng, b);
-      const mp = nextMap(s, o.map), ins = Math.max(...E.mapProgress(s.char, mp.id).insertions);
+      const mp = nextMap(s, o.map), ins = Math.max(...E.insertionsAt(s.char, mp.id, s.meta.threat || 0));
       s.gateMap = mp.id;
       if (E.deploy(s, mp.id, ins, rng) === false) return { stop: `Couldn\u2019t deploy to ${mp.name}.` };
       st.raids += 1;

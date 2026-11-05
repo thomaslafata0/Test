@@ -62,7 +62,7 @@ for (let k = 0; k < CAMPAIGNS; k++) {
     maxSteps = Math.max(maxSteps, steps);
     if (steps >= 4000) throw new Error('stuck at ' + s.screen);
     if (s.coopFallen) { deaths++; if (s.coopFallen.idx === 0) hostDeaths++; else guestDeaths++; s.coopFallen = null; }
-    if (s.screen === 'death') { if (SOLO) { deaths++; hostDeaths++; s.char = null; } s.screen = 'town'; }
+    if (s.screen === 'death') { if (SOLO) { deaths++; hostDeaths++; } s.char = null; s.screen = 'town'; }
     for (const b of [5, 10, 15]) if (!seen[b] && Math.max(0, ...Object.values(s.meta.bestByMap)) >= b) { seen[b] = 1; first[b].push(lives + 1); }
     if (seen[15]) break;
   }
