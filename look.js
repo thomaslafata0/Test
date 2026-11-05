@@ -25,7 +25,7 @@ export function weaponLayer(base) {
 
 const TOWN_ANIMS = ['idle_down', 'idle_up', 'idle_left', 'idle_right', 'walk_down', 'walk_up', 'walk_left', 'walk_right'];
 const BATTLE_ANIMS = ['idle', 'attack', 'charge', 'hit', 'defend', 'death'];
-let manifest = null, loading = null;
+let manifest = null, loading = null, ready = false;
 const layers = {}, portraits = {};   // layers[id][scene][anim] = { img, frames, fps, tip }
 
 export function loadLayers() {
@@ -45,11 +45,12 @@ export function loadLayers() {
     }
     for (const [id, p] of Object.entries(m.portraits || {})) jobs.push(load(p.file).then((img) => { if (img) portraits[id] = img; }));
     await Promise.all(jobs);
+    ready = true; // nothing composites until every layer is in: a half-loaded pack would crash or cache a broken figure
     return true;
   }).catch(() => false);
   return loading;
 }
-export const hasLayers = () => !!manifest;
+export const hasLayers = () => ready;
 
 // ---------- recolouring ----------
 const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
@@ -250,7 +251,7 @@ function compose(scene, anim, look, background, weapon) {
 }
 // Town strips for a look: { idle_down: {img, frames, fps}, ... } or null.
 export function townSheets(look, background) {
-  if (!manifest || !look) return null;
+  if (!ready || !look) return null;
   const key = `town:${JSON.stringify([look, background])}`;
   if (sheetCache[key]) return sheetCache[key];
   const out = {};
@@ -260,7 +261,7 @@ export function townSheets(look, background) {
 // A battle sheet in stage.js's shape: { size, anims: { idle, attack, attackM, charge, hit, defend, death } }. Ranged weapon in
 // idle, charge and attack; the melee weapon in attackM; no weapon on hit, defend and death (the pack has none there).
 export function battleSheet(look, background, ranged, melee) {
-  if (!manifest || !look) return null;
+  if (!ready || !look) return null;
   const key = `battle:${JSON.stringify([look, background, ranged, melee])}`;
   if (sheetCache[key]) return sheetCache[key];
   const anims = {};
