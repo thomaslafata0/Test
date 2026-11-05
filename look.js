@@ -95,22 +95,142 @@ function frameBoxes(bodyId, scene, anim) {
   }
   return (boxCache[key] = out);
 }
+// The bald head in one frame of a body layer: its extent, and the front of the face at eye height.
+const headCache = {};
+function headGeom(bodyId, scene, anim, f) {
+  const key = `${bodyId}:${scene}:${anim}:${f}`;
+  if (key in headCache) return headCache[key];
+  const L = layers[bodyId] && layers[bodyId][scene][anim];
+  if (!L) return (headCache[key] = null);
+  const fw = L.img.width / L.frames, fh = L.img.height, c = document.createElement('canvas'); c.width = fw; c.height = fh;
+  const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(L.img, f * fw, 0, fw, fh, 0, 0, fw, fh);
+  const d = g.getImageData(0, 0, fw, fh).data, rows = [];
+  let top = -1, maxW = 0;
+  for (let y = 0; y < fh; y++) {
+    let a = fw, z = -1;
+    for (let x = 0; x < fw; x++) if (d[(y * fw + x) * 4 + 3]) { a = Math.min(a, x); z = Math.max(z, x); }
+    if (z < 0) { if (top >= 0) break; continue; }
+    if (top < 0) top = y;
+    const w = z - a + 1;
+    if (y > top + 6 && w > maxW * 1.4) break; // the shoulders
+    if (y >= top + 16) break;
+    maxW = Math.max(maxW, w);
+    rows.push({ y, a, z });
+  }
+  if (!rows.length) return (headCache[key] = null);
+  const bot = rows[rows.length - 1].y, h = bot - top + 1, mid = rows[Math.min(rows.length - 1, Math.round(h * 0.45))];
+  return (headCache[key] = { top, bot, h, x0: Math.min(...rows.map((r) => r.a)), x1: Math.max(...rows.map((r) => r.z)), left: mid.a, right: mid.z, rows });
+}
 function offsetFor(bodyId, scene, anim, f, kind) {
   if (bodyId === 'body_m1' || kind === 'fitted') return { dx: 0, dy: 0 };
   const a = frameBoxes(bodyId, scene, anim), b = frameBoxes('body_m1', scene, anim);
   if (!a || !b || !a[f] || !b[f]) return { dx: 0, dy: 0 };
-  if (kind === 'hair') return { dx: Math.round(a[f].hcx - b[f].hcx), dy: a[f].top - b[f].top };
+  if (kind === 'hair') {
+    // From the side, line the hair up on the forehead, not the head's centre: heads differ in depth, and centring slides hair off the back.
+    const side = anim.endsWith('_left') ? 'left' : anim.endsWith('_right') ? 'right' : null, ha = side && headGeom(bodyId, scene, anim, f), hb = side && headGeom('body_m1', scene, anim, f);
+    if (ha && hb) return { dx: ha[side] - hb[side], dy: a[f].top - b[f].top };
+    return { dx: Math.round(a[f].hcx - b[f].hcx), dy: a[f].top - b[f].top };
+  }
   return { dx: Math.round(a[f].cx - b[f].cx), dy: 0 };
+}
+
+// ---------- repairs ----------
+// The pack's overlays were all drawn on body_m1. On other bodies that leaves heads without a face from the side, scalp showing
+// where the hair stops, hair across the eyes, and background showing through sleeves cut for a thicker arm. These put it right
+// when the figure is composited. tests/visual-check.cjs measures all of it across every combination.
+// Three of the four bodies' side views have a blank or muddled head that sits badly under every overlay. At this size a body from
+// the side reads much the same either way, so all of them walk in the lean body's side strips, which have a real profile.
+const SIDE_BODY = { body_m1: 'body_m2', body_f1: 'body_m2', body_f2: 'body_m2' };
+const NO_CAP = new Set(['hair_shaved', 'hair_mohawk']);
+// Scalp the hair art doesn't reach: top of the head, and the back of it from the side.
+function capScalp(g, ox, fw, fh, head, side, skin, hair) {
+  const im = g.getImageData(ox, 0, fw, fh), d = im.data, S = skin.map(hex), H = hair.map(hex), lineTop = head.top + Math.round(head.h * 0.3), lineBack = head.top + Math.round(head.h * 0.62);
+  const width = head.x1 - head.x0 + 1, backEdge = side === 'right' ? head.x0 + Math.round(width * 0.42) : head.x1 - Math.round(width * 0.42);
+  const isSkin = (i) => d[i + 3] && S.some((c) => c[0] === d[i] && c[1] === d[i + 1] && c[2] === d[i + 2]);
+  const set = [];
+  for (const r of head.rows) for (let x = r.a; x <= r.z; x++) {
+    const y = r.y, i = (y * fw + x) * 4;
+    if (!isSkin(i)) continue;
+    const back = side === 'right' ? x < backEdge : x > backEdge;
+    if (y < lineTop || (back && y < lineBack)) set.push([i, x, y]);
+  }
+  for (const [i, x, y] of set) {
+    const edge = !d[i - 4 + 3] || !d[i + 4 + 3] || !d[i - fw * 4 + 3];
+    const c = edge ? H[0] : H[(x + y) % 3 === 0 ? 2 : 1];
+    d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2];
+  }
+  g.putImageData(im, ox, 0);
+}
+// Fill background that shows through the figure: pixels the outside can't reach, and thin slits between outfit lines in the
+// torso. Legs keep their gap. Each takes the commonest non-outline colour around it.
+function closeGaps(g, ox, fw, fh) {
+  const im = g.getImageData(ox, 0, fw, fh), d = im.data, seen = new Uint8Array(fw * fh), q = [];
+  const op = (x, y) => x >= 0 && y >= 0 && x < fw && y < fh && d[(y * fw + x) * 4 + 3];
+  for (let x = 0; x < fw; x++) q.push(x, (fh - 1) * fw + x);
+  for (let y = 0; y < fh; y++) q.push(y * fw, y * fw + fw - 1);
+  while (q.length) { const i = q.pop(); if (seen[i] || d[i * 4 + 3]) continue; seen[i] = 1; const x = i % fw, y = (i - x) / fw; if (x > 0) q.push(i - 1); if (x < fw - 1) q.push(i + 1); if (y > 0) q.push(i - fw); if (y < fh - 1) q.push(i + fw); }
+  let top = fh, bot = 0;
+  for (let y = 0; y < fh; y++) for (let x = 0; x < fw; x++) if (op(x, y)) { top = Math.min(top, y); bot = Math.max(bot, y); }
+  if (top > bot) return;
+  const figure = bot - top, torsoTop = top + 10, torsoBot = top + Math.round(figure * 0.55), want = [];
+  for (let y = top; y <= bot; y++) for (let x = 0; x < fw; x++) {
+    if (op(x, y)) continue;
+    if (!seen[y * fw + x]) { want.push([x, y]); continue; }
+    if (y < torsoTop || y >= torsoBot) continue;
+    let l = 0, r = 0;
+    for (let k = 1; k <= 3; k++) { if (!l && op(x - k, y)) l = k; if (!r && op(x + k, y)) r = k; }
+    if (l && r) want.push([x, y]);
+  }
+  for (let pass = 0; pass < 3 && want.length; pass++) for (let n = want.length - 1; n >= 0; n--) {
+    const [x, y] = want[n], counts = {};
+    let best = null, bestN = 0, any = null;
+    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1], [-2, 0], [2, 0], [0, -2], [0, 2]]) {
+      if (!op(x + dx, y + dy)) continue;
+      const i = ((y + dy) * fw + x + dx) * 4, k = (d[i] << 16) | (d[i + 1] << 8) | d[i + 2];
+      any = k;
+      if (d[i] + d[i + 1] + d[i + 2] < 110) continue;
+      counts[k] = (counts[k] || 0) + 1;
+      if (counts[k] > bestN) { bestN = counts[k]; best = k; }
+    }
+    const k = best ?? any;
+    if (k == null) continue;
+    const i = (y * fw + x) * 4;
+    d[i] = (k >> 16) & 255; d[i + 1] = (k >> 8) & 255; d[i + 2] = k & 255; d[i + 3] = 255;
+    want.splice(n, 1);
+  }
+  g.putImageData(im, ox, 0);
+}
+
+// Bits of an overlay left floating off the figure, like a hood's rim above a smaller head: keep only the biggest connected piece.
+function dropStrays(g, ox, fw, fh) {
+  const im = g.getImageData(ox, 0, fw, fh), d = im.data, comp = new Int32Array(fw * fh), sizes = [0];
+  for (let i = 0; i < fw * fh; i++) {
+    if (comp[i] || !d[i * 4 + 3]) continue;
+    const id = sizes.length, q = [i]; comp[i] = id; let n = 0;
+    while (q.length) {
+      const k = q.pop(); n++;
+      const x = k % fw, y = (k - x) / fw;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= fw || ny >= fh) continue; const j = ny * fw + nx; if (!comp[j] && d[j * 4 + 3]) { comp[j] = id; q.push(j); } }
+    }
+    sizes.push(n);
+  }
+  if (sizes.length <= 2) return;
+  const main = sizes.indexOf(Math.max(...sizes));
+  for (let i = 0; i < fw * fh; i++) if (comp[i] && comp[i] !== main) d[i * 4 + 3] = 0;
+  g.putImageData(im, ox, 0);
 }
 
 // ---------- composition ----------
 const sheetCache = {};
-function compose(scene, anim, look, background, weapon) {
+function compose(scene, anim, lookIn, background, weapon) {
+  const sideOn = scene === 'town' && (anim.endsWith('_left') || anim.endsWith('_right'));
+  const look = sideOn && SIDE_BODY[lookIn.body] ? { ...lookIn, body: SIDE_BODY[lookIn.body] } : lookIn;
   const body = layers[look.body] && layers[look.body][scene][anim];
   if (!body) return null;
   const fw = body.img.width / body.frames, fh = body.img.height;
   const c = document.createElement('canvas'); c.width = body.img.width; c.height = fh;
-  const g = c.getContext('2d');
+  const g = c.getContext('2d', { willReadFrequently: true });
+  const side = anim.endsWith('_left') ? 'left' : anim.endsWith('_right') ? 'right' : null, facingUs = anim.endsWith('_down');
   const paint = (id, kind, ramp, f) => {
     const L = layers[id] && layers[id][scene][anim];
     if (!L) return;
@@ -124,16 +244,25 @@ function compose(scene, anim, look, background, weapon) {
       else swapExact(d.data, manifest.skinRamp, ramp);
       tg.putImageData(d, 0, 0);
     }
+    // Hair drawn for a bigger head mustn't fall across a smaller head's face.
+    if (kind === 'hair' && facingUs && look.body !== 'body_m1') {
+      const h = headGeom(look.body, scene, anim, f);
+      if (h) tg.clearRect(h.x0 + 1 - dx, h.top + Math.round(h.h * 0.36) - dy, h.x1 - h.x0 - 1, h.bot - h.top - Math.round(h.h * 0.36) + 1);
+    }
     g.drawImage(tmp, f * fw + dx, dy);
   };
   const skin = SKINS[look.skin] || SKINS[1], hair = HAIRS[look.hairColor] || HAIRS[1], outfit = OUTFITS[background];
   for (let f = 0; f < body.frames; f++) {
     paint(look.body, 'body', skin, f);
+    const head = scene === 'town' && side ? headGeom(look.body, scene, anim, f) : null;
     if (outfit) paint(outfit, 'outfit', skin, f);       // outfits show hands: same skin swap
     if (scene === 'town' && look.hair) paint(look.hair, 'hair', hair, f);
+    if (head && look.body !== 'body_m1' && look.hair && !NO_CAP.has(look.hair)) capScalp(g, f * fw, fw, fh, head, side, skin, hair);
     // Battle hair is pre-fitted to each body's head, frame by frame (falls included), so it is painted without an offset.
     if (scene === 'battle' && look.hair && layers[`${look.hair}@${look.body}`]) paint(`${look.hair}@${look.body}`, 'fitted', hair, f);
     if (scene === 'battle' && weapon) paint(weapon, 'weapon', skin, f);
+    if (anim !== 'death') closeGaps(g, f * fw, fw, fh);
+    if (scene === 'town') dropStrays(g, f * fw, fw, fh);
   }
   return { img: c, frames: body.frames, fps: body.fps, tip: weapon && layers[weapon] && layers[weapon].battle[anim] ? layers[weapon].battle[anim].tip : null };
 }
