@@ -10,18 +10,16 @@ Leave the Relay URL empty in Settings > Co-op. Host in one tab, open the game in
 
 ## Playing on two devices
 
-You need two things on Cloudflare (free tier is enough): the relay server, and somewhere to host the game page that your friend can open. Both are done from the project folder on your computer with Node installed.
+One Cloudflare Worker (free plan) serves both the game and the relay, so there is one URL and no Relay URL to enter. The live site fills it in by itself.
 
-1. Install the tool once: `npm install -g wrangler`, then `wrangler login` (opens a browser; sign in to your Cloudflare account).
-2. Deploy the relay: `cd coop` then `wrangler deploy`. It prints a URL like `https://cinder-cell-coop.<your-subdomain>.workers.dev`. That URL goes into Settings > Co-op > Relay URL on both devices (it's remembered).
-3. Host the game page: from the project folder, `wrangler pages deploy . --project-name cinder-cell`. It prints a URL like `https://cinder-cell.pages.dev`. Your friend opens that. (The claude.ai artifact link is private, so it won't work for them.)
-4. One of you presses Host, reads out the code, the other presses Join.
+1. From the repo root: `npx wrangler login` (once), then `npx wrangler deploy`. It prints `https://cinder-cell.<your-subdomain>.workers.dev`.
+2. Both players open that URL. One presses Host in Settings > Co-op and reads out the code; the other enters it and presses Join.
 
-Re-run step 2 or 3 whenever the game or the relay changes. Nothing is stored on the server: the relay only forwards messages between the two connections for a room code and forgets the room when both leave.
+Re-run `npx wrangler deploy` whenever the game or the relay changes. Files listed in `.assetsignore` (tests, sims, docs, tools) are not published. Nothing is stored on the server: the relay only forwards messages between the two connections for a room code. Saves stay in each player's browser.
 
 ## What's in the code
 
-- `coop/worker.js`, `coop/wrangler.toml`: the relay (a Cloudflare Worker with one Durable Object per room code).
+- `coop/worker.js`, `wrangler.toml`, `.assetsignore`: the relay (a Cloudflare Worker with one SQLite-class Durable Object per room code, which the free plan requires) and the static site.
 - `net.js`: the client side. `WsTransport` for the relay, `LocalTransport` (BroadcastChannel) for two tabs.
 - `engine.js`: `isCoop`, `withActor`, `setActor`, `forEachActor`, `livingActors`, `charAt`. The friend is `s.char2`; the engine always acts on `s.char`, so acting as the friend swaps the two (and the per-operative combat fields in `s.run`) for the duration of the call. Saves are always written unswapped.
 - `index.html`: the host runs every action and broadcasts the whole state after each render; the friend mirrors it with the operatives swapped so their screen is "theirs". Game actions on the friend's screen are sent to the host; screen-only actions (menus, tabs) stay local.

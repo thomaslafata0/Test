@@ -1,6 +1,7 @@
 // Cinder Cell co-op relay: a Cloudflare Worker with one Durable Object per room code.
 // It holds at most two WebSocket connections (host and friend) and forwards every message from one to the other.
-// Deploy from this folder: `npx wrangler login` then `npx wrangler deploy`. The printed URL goes into the game's Settings > Co-op.
+// The same Worker serves the game's files as static assets; only /room/* reaches this code (see wrangler.toml).
+// Deploy from the repo root: `npx wrangler login` then `npx wrangler deploy`.
 
 export class Room {
   constructor(state) {
@@ -17,8 +18,8 @@ export class Room {
     server.accept();
     this.sockets.set(role, server);
     const other = () => this.sockets.get(role === 'host' ? 'guest' : 'host');
-    server.addEventListener('message', (ev) => { const o = other(); if (o && o.readyState === 1) o.send(ev.data); });
-    const bye = () => { this.sockets.delete(role); const o = other(); if (o && o.readyState === 1) o.send(JSON.stringify({ t: 'peer-left', role })); };
+    server.addEventListener('message', (ev) => { if (ev.data === 'ping') return; const o = other(); if (o && o.readyState === 1) o.send(ev.data); });
+    const bye = () => { if (this.sockets.get(role) !== server) return; this.sockets.delete(role); const o = other(); if (o && o.readyState === 1) o.send(JSON.stringify({ t: 'peer-left', role })); };
     server.addEventListener('close', bye);
     server.addEventListener('error', bye);
     const o = other();
@@ -31,7 +32,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const m = url.pathname.match(/^\/room\/([A-Z0-9]{4,8})$/i);
-    if (!m) return new Response('Cinder Cell co-op relay. Connect to /room/CODE?role=host|guest', { status: 200, headers: { 'content-type': 'text/plain' } });
+    if (!m) return new Response('Not found', { status: 404, headers: { 'content-type': 'text/plain' } }); // missing game files must 404: optional art is detected by res.ok
     const id = env.ROOMS.idFromName(m[1].toUpperCase());
     return env.ROOMS.get(id).fetch(request);
   },

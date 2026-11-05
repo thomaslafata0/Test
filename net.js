@@ -3,7 +3,14 @@
 // two tabs in the same browser (handy for testing without a server).
 
 const PREFS_KEY = 'cinder-cell-coop';
-export function getCoopPrefs() { try { return Object.assign({ relay: '', name: '' }, JSON.parse(localStorage.getItem(PREFS_KEY)) || {}); } catch (e) { return { relay: '', name: '' }; } }
+// On the deployed site the same Worker serves the game and the relay, so no Relay URL needs entering.
+const DEFAULT_RELAY = typeof location !== 'undefined' && location.hostname.endsWith('.workers.dev') ? location.origin : '';
+export function getCoopPrefs() {
+  let p = { relay: '', name: '' };
+  try { p = Object.assign(p, JSON.parse(localStorage.getItem(PREFS_KEY)) || {}); } catch (e) {}
+  if (!p.relay) p.relay = DEFAULT_RELAY;
+  return p;
+}
 export function setCoopPrefs(p) { try { localStorage.setItem(PREFS_KEY, JSON.stringify(Object.assign(getCoopPrefs(), p))); } catch (e) {} }
 export const makeCode = () => Array.from({ length: 4 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
 
@@ -22,13 +29,17 @@ class WsTransport {
   constructor(url, code, role) {
     const base = url.replace(/\/+$/, '').replace(/^http/, 'ws');
     this.ws = new WebSocket(`${base}/room/${code}?role=${role}`);
-    this.ws.onopen = () => { if (this.onopen) this.onopen(); };
+    this.ws.onopen = () => {
+      // Heartbeat so a long think between turns doesn't let the connection idle out. The relay drops these.
+      this.beat = setInterval(() => { if (this.ws.readyState === 1) this.ws.send('ping'); }, 30000);
+      if (this.onopen) this.onopen();
+    };
     this.ws.onmessage = (ev) => { try { const m = JSON.parse(ev.data); if (this.onmessage) this.onmessage(m); } catch (e) {} };
-    this.ws.onclose = () => { if (this.onclose) this.onclose(); };
+    this.ws.onclose = () => { clearInterval(this.beat); if (this.onclose) this.onclose(); };
     this.ws.onerror = () => { if (this.onerror) this.onerror(); };
   }
   send(data) { if (this.ws.readyState === 1) this.ws.send(JSON.stringify(data)); }
-  close() { try { this.ws.close(); } catch (e) {} }
+  close() { clearInterval(this.beat); try { this.ws.close(); } catch (e) {} }
 }
 
 export class Net {

@@ -1,0 +1,15 @@
+.git
+.gitignore
+.assetsignore
+.wrangler
+.DS_Store
+node_modules
+dist
+wrangler.toml
+package.json
+coop
+docs
+tests
+tools
+sim*.mjs
+*.md
