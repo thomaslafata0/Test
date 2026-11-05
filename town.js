@@ -33,7 +33,7 @@ export const SHOPS = {
   tenement_b: { name: 'Tenement', hotspot: 'tenement_b' },
 };
 const PROPS = [
-  ['noticeboard', 176, 186], ['queue_barrier', 288, 214], ['queue_barrier', 356, 214], ['holosign', 100, 150], ['console', 476, 190],
+  ['noticeboard', 176, 186], ['queue_barrier', 252, 214], ['queue_barrier', 392, 214], ['holosign', 100, 150], ['console', 476, 190],
   ['streetlamp', 236, 258], ['streetlamp', 452, 258], ['streetlamp', 236, 420], ['streetlamp', 452, 420],
   ['poster_wall', 212, 336], ['vending_terminal', 500, 300], ['junction_box', 500, 332],
   ['crate', 388, 452], ['cargo_crate', 420, 452], ['barrels', 356, 462], ['cargo_crawler', 436, 376],
@@ -179,7 +179,8 @@ export class Town {
       const doorBottom = b.y + info.door.y + info.door.h;
       this.objects.push({ kind: 'building', bid: b.id, im, x: b.x, y: b.y, sortY: doorBottom });
       // Footprint from the art itself: opaque pixels in the lower part of the image block, except the doorway.
-      this.masks.push({ x: b.x, y: b.y, w: info.w, h: info.h, top: Math.round(info.h * 0.28), alpha: alphaOf(im), door: { x: info.door.x - 6, y: info.door.y, w: info.door.w + 12 } });
+      // Below the door's bottom edge, the strip around the door is ground detail (rails, dirt) and stays walkable.
+      this.masks.push({ x: b.x, y: b.y, w: info.w, h: info.h, top: Math.round(info.h * 0.28), bottom: info.door.y + info.door.h + 2, alpha: alphaOf(im), door: { x: info.door.x - 6, y: info.door.y, w: info.door.w + 12 } });
       this.doors.push({ id: b.id, enterable: info.enterable, x: b.x + info.door.x - 8, y: doorBottom - 8, w: info.door.w + 16, h: 14, front: { x: b.x + info.door.x + info.door.w / 2, y: doorBottom + 14 } });
     }
     for (const [id, x, y] of PROPS) {
@@ -216,6 +217,7 @@ export class Town {
       if (open && scene === 'town') for (const mk of this.masks) {
         const lx = x - mk.x, ly = y - mk.y;
         if (lx < 0 || ly < mk.top || lx >= mk.w || ly >= mk.h) continue;
+        if (ly >= mk.bottom && lx >= mk.door.x - 48 && lx <= mk.door.x + mk.door.w + 48) continue;
         if (lx >= mk.door.x && lx <= mk.door.x + mk.door.w && ly >= mk.door.y) continue;
         let hits = 0;
         for (const [dx, dy] of [[0, 0], [-3, 0], [3, 0], [0, -3], [0, 3]]) { const px = lx + dx, py = ly + dy; if (px >= 0 && py >= 0 && px < mk.w && py < mk.h && mk.alpha[py * mk.w + px]) hits++; }
