@@ -192,9 +192,11 @@ function compose(scene, anim, look, background, weapon) {
   // the chosen body's head on top. From the side, every head is body_m2's, the only clean profile in the pack. Real per-body
   // outfits would need new art.
   const base = 'body_m1', side = anim.endsWith('_left') ? 'left' : anim.endsWith('_right') ? 'right' : null, facingUs = anim.endsWith('_down');
-  const headBody = scene !== 'town' ? base : side ? 'body_m2' : look.body;
+  // If the chosen body's art failed to download, draw the base body's head rather than nothing.
+  const wantHead = scene !== 'town' ? base : side ? 'body_m2' : look.body, headBody = layers[wantHead] && layers[wantHead][scene][anim] ? wantHead : base;
   const body = layers[base] && layers[base][scene][anim];
   if (!body) return null;
+  const headL = layers[headBody][scene][anim];
   const fw = body.img.width / body.frames, fh = body.img.height;
   const c = document.createElement('canvas'); c.width = body.img.width; c.height = fh;
   const g = c.getContext('2d', { willReadFrequently: true });
@@ -222,7 +224,7 @@ function compose(scene, anim, look, background, weapon) {
   const mid = (r) => (r.a + r.z) / 2;
   for (let f = 0; f < body.frames; f++) {
     paint(base, 'body', skin, f);
-    const hm = scene === 'town' ? headGeom(base, scene, anim, f) : null, own = hm && headBody !== base ? headGeom(headBody, scene, anim, f % layers[headBody][scene][anim].frames) : null;
+    const hm = scene === 'town' ? headGeom(base, scene, anim, f) : null, own = hm && headBody !== base ? headGeom(headBody, scene, anim, f % headL.frames) : null;
     let head = null; // where the head ended up
     if (own) {
       // Swap the head, neck to neck.

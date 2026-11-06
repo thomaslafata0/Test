@@ -26,6 +26,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   const begin = await page.$('button[data-a="begin"]'); if (begin) { await begin.click(); await page.waitForTimeout(300); }
   await page.screenshot({ path: `${OUT}/look-create1.png` });
   await page.click('button[data-a="step"][data-v="3"]'); await page.waitForTimeout(300); await page.screenshot({ path: `${OUT}/look-create3.png` });
+  await page.click('button[data-a="step"][data-v="4"]'); await page.waitForTimeout(300); // Start is on the last step, Stats
   await page.click('button[data-a="create"]'); await page.waitForTimeout(1500);
   await page.keyboard.down('ArrowLeft'); await page.waitForTimeout(500); await page.keyboard.up('ArrowLeft'); await page.waitForTimeout(100);
   await page.screenshot({ path: `${OUT}/look-town.png`, clip: { x: 0, y: 250, width: 1100, height: 520 } });
