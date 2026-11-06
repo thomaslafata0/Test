@@ -3,7 +3,7 @@
 
 let ctx = null, master = null, sfxBus = null, ambBus = null, noiseBuf = null;
 let ambNodes = null;
-const prefs = { sfx: true, ambience: false, rain: false, music: true, musicVolume: 0.2, volume: 0.7 };
+const prefs = { muted: false, sfx: true, ambience: false, rain: false, music: true, musicVolume: 0.2, volume: 0.7 };
 try { Object.assign(prefs, JSON.parse(localStorage.getItem('cinder-cell-audio')) || {}); } catch (e) {}
 
 function save() { try { localStorage.setItem('cinder-cell-audio', JSON.stringify(prefs)); } catch (e) {} }
@@ -14,7 +14,7 @@ function ensure() {
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) return null;
   ctx = new AC();
-  master = ctx.createGain(); master.gain.value = prefs.volume; master.connect(ctx.destination);
+  master = ctx.createGain(); master.gain.value = prefs.muted ? 0 : prefs.volume; master.connect(ctx.destination);
   sfxBus = ctx.createGain(); sfxBus.gain.value = prefs.sfx ? 1 : 0; sfxBus.connect(master);
   ambBus = ctx.createGain(); ambBus.gain.value = 0; ambBus.connect(master);
   noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
@@ -29,7 +29,7 @@ export function unlock() { unlocked = true; if (ensure()) setAmbience(currentThe
 export function setPref(k, v) {
   prefs[k] = v; save();
   if (!ensure()) return;
-  master.gain.value = prefs.volume;
+  master.gain.value = prefs.muted ? 0 : prefs.volume;
   sfxBus.gain.value = prefs.sfx ? 1 : 0;
   if (ambNodes) ambNodes.rainGain.gain.setTargetAtTime(prefs.rain ? 0.35 : 0, ctx.currentTime, 0.3);
   setAmbience(currentTheme);
@@ -44,7 +44,7 @@ function trackFor(theme) { return theme === 'town' || !theme ? 'town' : 'raid'; 
 export function setMusic(theme) { wantTrack = trackFor(theme); startMusic(); }
 function startMusic() {
   if (!unlocked) return;
-  const target = prefs.music ? prefs.musicVolume * prefs.volume : 0;
+  const target = prefs.music && !prefs.muted ? prefs.musicVolume * prefs.volume : 0;
   for (const id of Object.keys(TRACKS)) {
     if (!music[id]) { const a = new Audio(TRACKS[id]); a.loop = true; a.preload = 'auto'; a.volume = 0; music[id] = a; }
     const a = music[id], want = id === wantTrack ? target : 0;
@@ -139,7 +139,7 @@ const SFX = {
 };
 
 export function play(name) {
-  if (!prefs.sfx || !ensure() || !SFX[name]) return;
+  if (prefs.muted || !prefs.sfx || !ensure() || !SFX[name]) return;
   try { SFX[name](); } catch (e) {}
 }
 

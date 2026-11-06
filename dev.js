@@ -96,10 +96,7 @@ export function autoStep(s, rng, o, watching = false) {
     case 'perk': {
       const c = s.char, offer = s.run.perkOffer;
       if (!offer) { E.continueAfterVictory(s, rng); return null; }
-      const tiers = s.run.perkTiers || {}, up = offer.find((id) => c.perks.includes(id));
-      const pick = up || offer.slice().sort((x, y) => (tiers[y] || 0) - (tiers[x] || 0))[0];
-      const low = c.perks.slice().sort((x, y) => E.perkLevel(c, x) - E.perkLevel(c, y))[0];
-      if (!E.choosePerk(s, pick, rng, up ? null : low)) E.choosePerk(s, '', rng);
+      E.choosePerk(s, offer.find((id) => c.perks.includes(id)) || offer[0], rng);
       return null;
     }
     case 'event': {

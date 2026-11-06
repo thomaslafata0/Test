@@ -90,7 +90,7 @@ const actor = (s) => s.run.actor;
   ok('host done, friend still choosing: raid waits', s.screen === 'loot' && E.rewardsPending(s));
   E.withActor(s, 1, () => { ok('friend sees their own loot', !!s.run.lootOffer); E.leaveLoot(s, rng); ok('then their own contraband', !!s.run.perkOffer); });
   const pk = D.PERKS[0].id;
-  E.choosePerk(s, pk, rng, null, 1);
+  E.choosePerk(s, pk, rng, 1);
   ok('friend got the contraband, host did not', s.char2.perks.includes(pk) && !s.char.perks.includes(pk));
   ok('everyone done: raid moves on', s.screen === 'route' && !E.rewardsPending(s), s.screen);
 }

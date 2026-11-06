@@ -54,7 +54,7 @@ A browser roguelite in plain HTML + JS modules, no build step. A resistance cell
 - **Raids.** Three rooms per sector via two doors, a boss every fifth sector, four maps with mechanics, 15 named sectors each (beating the sector-15 boss liberates a map; liberating all four plays the ending; past 15 the names loop as Sublevels). No optional veteran door in sector 1. v5: every sector after the first (bosses excepted) rolls a **condition** (`SECTOR_CONDS`: Blackout, Coolant Leak, Double Patrols, Supply Depot, Hunter Squad, Derelict Wing, Sealed Bulkheads) shown on the route screen, and six **rare doors** appear on every map (`EXTRA_ROOMS`: Marked Officer bounty fight, Strongroom INT crack, Field Medic Station, Weapons Locker gear drop, Machinist's Bench free +1, Smuggler's Stash contraband). 25 events (12 new, with new outcome keys `cash` and `next: 'weakened'`). Results strip on the door screen with feat progress bars; loot, contraband and sector clear are popups. Freed prisoners take several hits before going down (`TUNE.allyGrit`).
 - **Difficulty tiers** (`HARD`, `hard(s)`, by current sector in a raid and deepest sector in the yard): enemy HP x1.18, prices x1.10; after sector 5: x1.21 / x1.12; after 10: x1.25 / x1.15. Consumables also scale with the operative's deepest sector (`itemCost`, `TUNE.itemScale` 0.3 per sector).
 - **Securing a haul.** Credits and XP earned on a raid are unsecured; no levels mid-raid (`c.xpBank`, `c.safeCredits`). `settle()` pays out when a boss is beaten or on leaving, and leaves `c.payout` for the payout screen. Leaving costs a share by position in the five-sector stretch: 80 / 65 / 50 / 40 / 0% (`TUNE.extractRates`), Run or Smoke 90 / 85 / 75 / 65 / 60% (`escapeRates`). Money walked in with is never touched. The leaderboard haul still counts from raid start.
-- **Contraband tiers.** Tiers I to IV (`vals` in `D.PERKS`, `D.PERK_TIER_ODDS`, `c.perkLv`). Better tiers roll deeper, bosses a band higher. A better copy of something carried upgrades in place with no pocket needed. Older saves' contraband counts as tier III.
+- **Contraband stacks.** No tiers and no pocket limit. Each piece has `per` (first copy), `r` (each further copy adds r times the last, default 0.85), optional `add` and `whole` in `D.PERKS`; `E.perkValue(id, n)`, `c.perkN`. Bosses always drop it, elites 30% (`ELITE_DROP`), other fights 12% (`FIGHT_DROP`). Offers favour what you already carry. Old tiers migrate to that many copies.
 - **Leaderboard.** Global, one row per operative for their whole life (`Board` Durable Object in `coop/worker.js`; `POST /board`, `GET /board?limit=100`). Score is progress only (`groundWorth` in `engine.js`, repeated in the worker): for each district at each threat level, the deepest sector cleared (`mapProgress().best`) is worth 100 per sector + 400 per boss + 1000 for sector 15, times 1 + 0.5 per threat level. Re-clearing adds nothing. Rows are sent after every raid, marked alive or died; the server never lowers a score, treats a died row as final, and doesn't hand out operative ids (rows carry a `tag`). Numbers come from the browser, so a determined cheat is possible. Unsent rows wait in `meta.boardOut`; `meta.board` is this device's best 50 for when the board can't be reached. Dev cells stay off. Live only on `*.workers.dev` or port 8787.
 - **Achievements** (called feats in the code). 20 general ones plus one per enemy type (`FEAT_DEFS`), six tiers each (enemy types 1/10/50/100/250/500, bosses 1/3/10/25/50/100). Each tier adds a permanent buff, shrinking by `FEAT_FALLOFF` (0.6, 0.5, 0.4, 0.35, 0.3, 0.25 of `per`); the big ones pay Resolve on top tiers. `featBuffs(meta)` feeds stats, damage (including per-enemy), credits, escape and XP. Unlock toasts, after-fight bars, a Feats screen, and totals on the Character tab.
 - **After curfew** (second row of buttons in the yard, host only):
@@ -76,6 +76,9 @@ Knobs in `TUNE`: `earlyCurve` (enemy strength sectors 1-10 until a district has 
 
 Median to the sector-15 boss on the Garrison (operatives / raids): strength 22/69, charisma 21/60, agility 28/89, intellect 25/111, glass 30/90 (88% finish), co-op strength + agility 19/66 per player with about 20% of raids wiping. Cautious 4/55, diver 20/57, greedy 34/43 (43% finish), farmer 6/44. First raid fatal: 20-49% by build. Whole game, solo strength: 67, 95, 116, 132 raids to free each district in turn. These are bots: tune from real sessions next. Careful play still loses far fewer operatives, and farming to level 8 first is still the most efficient route.
 
+- **Menus:** messages raised inside a popup or modal float as toasts (`render`). Inline notices there pushed buttons away mid-click.
+- **Sound:** the header button sets `prefs.muted`, which silences effects, ambience and music together.
+
 ## Testing
 Start the server, then from the repo root:
 ```bash
@@ -87,13 +90,14 @@ node tests/coop-test.cjs      # two tabs over BroadcastChannel, alternating turn
 node tests/dt.cjs             # Lantern, Wheel, Ventures, an orbit fight
 node tests/feats.cjs          # feat unlock toast, after-fight bars, Feats screen
 node tests/board.cjs          # global board: run `npx wrangler dev --port 8787` first. API, career rows, two players, offline queue, dev cells
+node tests/menu-clicks.cjs    # buying in a menu must not move the buttons under the cursor
 node tests/coop-wipe.cjs      # friend bleeds out, host fights on and falls: both death screens
 node tests/look-test.cjs      # composited looks grid and in-game screens
 node tests/grid.cjs           # yard collision overlay to tests/shots/grid.png
 node tests/monkey.cjs 600 71  # random play; args are steps and seed
 node tests/orbit-sim.mjs      # orbit odds per tier and refit level
 node tests/heirloom.mjs       # heirloom eligibility, auto-pick, Weapons Cache interplay
-node tests/raid-rules.mjs     # banked XP, extract rates, Lockup and heirloom, contraband tiers, prices, allies
+node tests/raid-rules.mjs     # banked XP, extract rates, Lockup and heirloom, contraband stacks, prices, allies
 node tests/visual-check.cjs   # every composited character; prints flagged frames, writes tests/shots/visual-town.png
 node tests/coop-revive.mjs    # co-op rules: downs, revives, last stand, votes, separate rewards
 node tests/coop-town.cjs      # two tabs: shared yard, gifts, trades, the Lockup
@@ -121,7 +125,7 @@ Artifact tool, publish `index.html` with `url` set to the live link, `root` set 
 
 ## Changes in v6
 - **Character repairs** at compositing time in `look.js`: all bodies use body_m2's side strips (the only clean profile), hair fits to the forehead from the side and stops at the hairline from the front, `closeGaps` fills see-through gaps, `dropStrays` removes floating bits. Battle poses still have some large arm-and-weapon pockets, reported for information by the visual check.
-- **Raid economy:** see **Securing a haul** and **Contraband tiers**. Elites +45% HP and +22% ATK (were 35% and 15%), contraband drop 30% (was 40%), Wanted removed, Lockup per operative and lost on death, feats renamed Achievements in the UI with six tiers.
+- **Raid economy:** see **Securing a haul** and **Contraband stacks**. Elites +45% HP and +22% ATK (were 35% and 15%), contraband drop 30% (was 40%), Wanted removed, Lockup per operative and lost on death, feats renamed Achievements in the UI with six tiers.
 - **Balance is mid-pass.** Median operative to boss 5 / 10 / 15, 40 campaigns each, before then after: strength 4/10/20 then 6/11/20, agility 4/15/28 then 6/15/28, intellect 9/12/25 then 11/15/25, charisma 6/18/25 then 7/16/23, glass 4/14/28 (85%) then 7/19/32 (78%), cautious 2/5/12 then 4/6/9, greedy 11/28/37 (20%) then 18/35/39 (3%). Bots ignore extract costs and hold 1,100 to 1,800 unspent credits at death.
 
 ## Changes in v5

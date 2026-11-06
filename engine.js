@@ -24,7 +24,7 @@ export function seededRng(seed) {
 
 export const VERSION = 4;
 export const FIGHTS_PER_SECTOR = 3;
-export const CONTRABAND_SLOTS = 4; // pieces of contraband one operative can carry
+export const FIGHT_DROP = 0.12;  // chance an ordinary fight carries contraband
 export const ELITE_DROP = 0.3;   // chance an elite carries contraband (bosses always do)
 export const CARRY_CD = 2;       // minimum cooldown a skill used last fight starts the next fight with
 export const MIN_FIGHTS = 2; // fights required per sector; the rest of the rooms can be anything
@@ -73,11 +73,17 @@ const hasCell = (m, id) => m.cell.includes(id);
 export const hasPerk = (c, id) => !!c && (c.perks || []).includes(id);
 export const perkById = (id) => D.PERKS.find((p) => p.id === id);
 export const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI'];
-// Contraband carried from before tiers existed counts as tier III, which is what it used to do.
-export const perkLevel = (c, id) => { const v = c && c.perkLv && c.perkLv[id]; return v === undefined || v === null ? 2 : v; };
-const pv = (c, id) => (hasPerk(c, id) ? perkById(id).vals[perkLevel(c, id)] : 0);
-export const perkName = (id, lv) => `${perkById(id).name} ${ROMAN[lv]}`;
-export const perkText = (id, lv) => { const p = perkById(id); return p.desc.replace('{v}', p.vals[lv]); };
+// Contraband stacks without limit, with diminishing returns: see per and r in D.PERKS.
+export const perkStacks = (c, id) => (c && c.perkN && c.perkN[id]) || 0;
+export function perkValue(id, n) {
+  const p = perkById(id), r = p.r || 0.85;
+  if (n <= 0) return p.add || 0;
+  const v = (p.add || 0) + p.per * (1 - Math.pow(r, n)) / (1 - r);
+  return p.whole ? Math.round(v) : +v.toFixed(p.dp || 1);
+}
+const pv = (c, id) => perkValue(id, perkStacks(c, id));
+export const perkName = (id, n) => `${perkById(id).name}${n > 1 ? ` x${n}` : ''}`;
+export const perkText = (id, n) => perkById(id).desc.replace('{v}', perkValue(id, n));
 
 // ---------- state ----------
 export function newMeta() {
@@ -119,6 +125,8 @@ export function migrate(s, rng) {
     if (s.meta && s.meta.lockup) { if (s.char) s.char.lockup = [...(s.char.lockup || []), ...s.meta.lockup]; delete s.meta.lockup; }
     s.trade = null;
     for (const c of [s.char, s.char2]) if (c && !c.uid) c.uid = newUid();
+    // Contraband tiers became stacks: a tier I piece is one copy, tier IV four. Pieces from before tiers counted as tier III.
+    for (const c of [s.char, s.char2]) if (c && !c.perkN) { c.perkN = {}; for (const id of c.perks || []) c.perkN[id] = ((c.perkLv && c.perkLv[id]) ?? 2) + 1; delete c.perkLv; }
     // A partner's operative left in the host's save from before characters travelled: it goes back to them when they next join.
     if (s.char2 && !s.run) s.char2Held = true;
     // Orbit wins from before tiers were tracked count as low-orbit wins, so older cells keep the blockade line open.
@@ -169,8 +177,8 @@ function migrateOld(s, rng) {
 // s.char is the host's operative, s.char2 the friend's. The engine always acts on s.char, so to act as the
 // friend we swap the two references (and the per-operative combat fields in s.run) for the duration of a call.
 // Saves are always written with s.actorIdx === 0, so the swap never leaks into a save.
-const BAG = ['pst', 'pfresh', 'defending', 'ready', 'momentum', 'keepDistance', 'struck', 'cooldowns', 'usedThisFight', 'adrenalUsed', 'deadmanUsed', 'lootOffer', 'perkOffer', 'perkTiers'];
-const freshBag = () => ({ pst: {}, pfresh: [], defending: false, ready: false, momentum: false, keepDistance: false, struck: false, cooldowns: {}, usedThisFight: [], adrenalUsed: false, deadmanUsed: false, lootOffer: null, perkOffer: null, perkTiers: null });
+const BAG = ['pst', 'pfresh', 'defending', 'ready', 'momentum', 'keepDistance', 'struck', 'cooldowns', 'usedThisFight', 'adrenalUsed', 'deadmanUsed', 'lootOffer', 'perkOffer'];
+const freshBag = () => ({ pst: {}, pfresh: [], defending: false, ready: false, momentum: false, keepDistance: false, struck: false, cooldowns: {}, usedThisFight: [], adrenalUsed: false, deadmanUsed: false, lootOffer: null, perkOffer: null });
 const saveBag = (r) => { const b = {}; for (const k of BAG) b[k] = r[k]; return b; };
 const loadBag = (r, b) => { for (const k of BAG) r[k] = b[k]; };
 export const isCoop = (s) => !!(s.coop && s.char && s.char2);
@@ -235,7 +243,7 @@ export function createChar(s, rng, draft = null, slot = 'char') {
     attrs, attrPoints: d.points, level: 1, xp: 0, credits: 25 + (bg.start.credits || 0) + (hasCell(m, 'stash') ? 60 : 0),
     gear: starterGear(m), market: [],
     items: { stim: 2, thermal: 0, ion: 0, smoke: 0 }, upgrades: [], implants: [],
-    maps: {}, deepest: 0, hp: 1, history: [], perks: [], perkLv: {}, lockup: [], xpBank: 0, look: d.look || null,
+    maps: {}, deepest: 0, hp: 1, history: [], perks: [], perkN: {}, lockup: [], xpBank: 0, look: d.look || null,
   };
   for (const k of ['smoke', 'ion']) if (bg.start[k]) c.items[k] += bg.start[k];
   c.gear = startingGear(m, bg.id);
@@ -1905,7 +1913,7 @@ function winFight(s, rng, fled = false) {
       log(s, `The ${out.liberated} is liberated.`, 'reward');
     }
   }
-  const contraband = !fled && (e.boss || (e.elite && rng() < ELITE_DROP));
+  const contraband = !fled && (e.boss || rng() < (e.elite ? ELITE_DROP : FIGHT_DROP));
   // In co-op each player gets their own roll and makes their own choice.
   forEachActor(s, () => {
     if (contraband) r.perkOffer = offerPerks(s, rng, e.boss);
@@ -1918,56 +1926,26 @@ function winFight(s, rng, fled = false) {
 }
 
 // ---------- contraband ----------
-function rollPerkTier(sector, boss, rng) {
-  const band = Math.min(3, Math.floor((Math.max(1, sector) - 1) / 5) + (boss ? 1 : 0)), odds = D.PERK_TIER_ODDS[band];
-  let x = rng();
-  for (let i = 0; i < odds.length; i++) { x -= odds[i]; if (x <= 0) return i; }
-  return 0;
-}
+// Three different pieces. What you already carry turns up more often, so a build can be chased; a boss always offers something rare.
 function offerPerks(s, rng, boss) {
-  const c = s.char, r = s.run, tiers = {};
-  // Each piece rolls its tier. Something you already carry only turns up as an upgrade.
-  const pool = D.PERKS.filter((p) => {
-    const t = rollPerkTier(r.sector, boss, rng);
-    if (hasPerk(c, p.id) && t <= perkLevel(c, p.id)) return false;
-    tiers[p.id] = t;
-    return true;
-  });
-  const rares = pool.filter((p) => p.rare), commons = pool.filter((p) => !p.rare);
-  const out = [];
-  const take = (arr) => { if (!arr.length) return; const p = pick(rng, arr); out.push(p.id); arr.splice(arr.indexOf(p), 1); };
-  if (boss) take(rares);
-  while (out.length < 3 && (rares.length || commons.length)) take(rng() < (boss ? 0.4 : 0.2) && rares.length ? rares : commons.length ? commons : rares);
-  if (!out.length) return null;
-  r.perkTiers = tiers;
+  const c = s.char, pool = D.PERKS.slice(), out = [];
+  const weight = (p) => (p.rare ? (boss ? 2 : 1) : 3) * (hasPerk(c, p.id) ? 3 : 1);
+  const take = (list) => { const it = pickWeighted(rng, list.map((p) => [p, weight(p)])); out.push(it.id); pool.splice(pool.indexOf(it), 1); };
+  if (boss) take(pool.filter((p) => p.rare));
+  while (out.length < 3 && pool.length) take(pool);
   return out;
 }
-// Take a piece of contraband. With full pockets, dropId names the piece to leave behind.
-export function choosePerk(s, id, rng, dropId = null, who = actorIdx(s)) {
-  return withActor(s, who, () => choosePerkInner(s, id, rng, dropId));
+export function choosePerk(s, id, rng, who = actorIdx(s)) {
+  return withActor(s, who, () => choosePerkInner(s, id, rng));
 }
-function choosePerkInner(s, id, rng, dropId) {
+function choosePerkInner(s, id, rng) {
   const r = s.run, c = s.char;
   if (!r || !r.perkOffer) return false;
   if (id && r.perkOffer.includes(id)) {
-    const tier = (r.perkTiers && r.perkTiers[id]) || 0;
-    c.perkLv = c.perkLv || {};
-    if (hasPerk(c, id)) {
-      // A better copy: no pocket needed.
-      c.perkLv[id] = tier;
-      log(s, `Upgraded: ${perkName(id, tier)}.`, 'reward'); feat(s, 'contraband');
-      r.perkOffer = null; r.perkTiers = null;
-      if (isCoop(s) && rewardsPending(s)) { s.screen = 'loot'; return true; }
-      offerRoute(s, rng);
-      return true;
-    }
-    c.perkLv[id] = tier;
-    if (c.perks.length >= CONTRABAND_SLOTS) {
-      if (!dropId || !c.perks.includes(dropId)) return false;
-      c.perks = c.perks.filter((p) => p !== dropId);
-      log(s, `You leave the ${perkById(dropId).name} behind.`, 'info');
-    }
-    c.perks.push(id); log(s, `Contraband: ${perkName(id, tier)}.`, 'reward'); feat(s, 'contraband');
+    c.perkN = c.perkN || {};
+    c.perkN[id] = (c.perkN[id] || 0) + 1;
+    if (!c.perks.includes(id)) c.perks.push(id);
+    log(s, `Contraband: ${perkName(id, c.perkN[id])}.`, 'reward'); feat(s, 'contraband');
   }
   r.perkOffer = null;
   if (isCoop(s) && rewardsPending(s)) { s.screen = 'loot'; return true; }

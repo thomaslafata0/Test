@@ -360,7 +360,7 @@ export const SECTOR_CONDS = [
 // level: extra enemy levels. events: chance of an event after a fight. theme: stage backdrop.
 export const MAPS = [
   { id: 'garrison', name: 'Directorate Garrison', unlock: 0, level: 0, credits: 1, xp: 1, events: 0.3, theme: 'garrison',
-    mechanic: { id: 'alarm', name: 'Alarm', desc: 'Long fights, failed escapes and botched checks raise the alarm. Each level gives enemies +6% ATK and you +5% credits. It never drops on its own; rest rooms lower it.' },
+    mechanic: { id: 'alarm', name: 'Alarm', desc: 'Long fights and botched checks raise it. Each level: enemies +6% ATK, you +5% credits. Rest rooms lower it.' },
     rooms: { fight: 5, elite: 2, event: 2, supply: 1, rest: 1 },
     roomNames: { fight: 'Guard Post', elite: 'Armoury', event: 'Side Corridor', supply: 'Quartermaster', rest: 'Abandoned Bunk' },
     desc: 'Checkpoints, barracks and the regime\u2019s soldiers. The straight fight.',
@@ -637,35 +637,34 @@ export const BOSS_INFO = {
   vane:     { epithet: 'Master of the Lift',         phase2: 'Vane calls in the tower guns.' },
 };
 
-// ---------- contraband: run perks drafted after elites and bosses. Kept until the operative dies. ----------
-// vals: the strength at tiers I to IV (see {v} in desc). Higher tiers turn up more the deeper you are; a better copy of something
-// you already carry upgrades it in place, so full pockets still have something to find.
-export const PERK_TIER_ODDS = [[0.8, 0.2, 0, 0], [0.4, 0.45, 0.15, 0], [0.15, 0.4, 0.35, 0.1], [0.05, 0.25, 0.4, 0.3]]; // sectors 1-5, 6-10, 11-15, 16+; bosses roll one band up
+// ---------- contraband: run perks drafted after fights. Kept until the operative dies. ----------
+// No limit on how much you carry, and every copy stacks. The first copy gives per; each further copy adds r times what the last one added,
+// so stacks keep paying forever but level off (E.perkValue). add: the value before any copies. whole: rounded, for turns and flat stats.
 export const PERKS = [
-  { id: 'hollow',    name: 'Hollow-Points',      rare: false, vals: [1.8, 2, 2.2, 2.5], desc: 'Critical hits deal x{v} instead of x1.6.' },
-  { id: 'dressing',  name: 'Field Dressing',     rare: false, vals: [3, 4, 6, 8], desc: 'Heal {v}% of max HP at the start of every fight.' },
-  { id: 'chit',      name: 'Lucky Chit',         rare: false, vals: [10, 15, 20, 30], desc: '+{v}% credits from everything.' },
-  { id: 'serrated',  name: 'Serrated Rounds',    rare: false, vals: [15, 20, 30, 40], desc: 'Your attacks have a {v}% chance to cause Bleeding.' },
-  { id: 'incendiary',name: 'Incendiary Mix',     rare: false, vals: [2, 3, 4, 5], desc: 'Thermal charges also set the target Burning for {v} turns.' },
-  { id: 'steady',    name: 'Steady Hands',       rare: false, vals: [75, 100, 125, 150], desc: 'Defending boosts your next shot by +{v}% instead of +50%.' },
-  { id: 'secondwind',name: 'Second Wind',        rare: false, vals: [3, 4, 5, 7], desc: 'Defending also heals {v}% of max HP.' },
-  { id: 'scavenger', name: 'Scavenger',          rare: false, vals: [10, 15, 22, 30], desc: '{v}% chance to find an item after each fight.' },
-  { id: 'spotter',   name: 'Spotter',            rare: false, vals: [1, 2, 3, 4], desc: 'Enemies start every fight Exposed for {v} turns.' },
-  { id: 'thick',     name: 'Thick Skin',         rare: false, vals: [1, 2, 2, 3], desc: 'Status effects on you last {v} turn(s) less.' },
-  { id: 'ambush',    name: 'Ambusher',           rare: true,  vals: [30, 40, 50, 70], desc: 'Your first attack in every fight deals +{v}% damage.' },
-  { id: 'deadman',   name: 'Dead Man\u2019s Switch', rare: true, vals: [1, 5, 10, 20], desc: 'Once per raid, survive a killing blow with {v}% of max HP.' },
-  { id: 'grudge',    name: 'Grudge',             rare: true,  vals: [15, 20, 30, 40], desc: '+{v}% damage against elites and bosses.' },
-  { id: 'quickdraw', name: 'Quickdraw',          rare: true,  vals: [2, 3, 4, 5], desc: 'Killing an enemy cuts all skill cooldowns by {v}.' },
-  { id: 'capacitor', name: 'Ion Capacitor',      rare: true,  vals: [25, 35, 50, 70], desc: 'Ion pulses stun 1 turn longer. Overload deals +{v}%.' },
-  { id: 'reputation',name: 'Reputation',         rare: true,  vals: [1, 2, 3, 4], desc: 'Human enemies start every fight Shaken for {v} turns.' },
-  { id: 'adrenal',   name: 'Adrenal Spike',      rare: false, vals: [25, 35, 50, 70], desc: '+{v}% damage while you are below 35% HP.' },
-  { id: 'tithe',     name: 'Blood Tithe',        rare: false, vals: [3, 4, 6, 8], desc: 'Every kill heals {v}% of max HP.' },
-  { id: 'ironlung',  name: 'Iron Lung',          rare: false, vals: [5, 8, 12, 15], desc: '+{v}% max HP.' },
-  { id: 'tripwire',  name: 'Tripwire Kit',       rare: false, vals: [1, 2, 3, 4], desc: 'Enemies start every fight Bleeding for {v} turns.' },
-  { id: 'padding',   name: 'Kevlar Padding',     rare: false, vals: [2, 3, 4, 6], desc: '+{v} DEF.' },
-  { id: 'coupdegrace', name: 'Coup de Gr\u00E2ce', rare: true, vals: [30, 40, 50, 70], desc: '+{v}% damage against enemies below 30% HP.' },
-  { id: 'ghost',     name: 'Ghost Protocol',     rare: true,  vals: [7, 10, 14, 18], desc: '+{v}% chance to dodge every attack.' },
-  { id: 'warpaint',  name: 'War Paint',          rare: true,  vals: [1, 1, 2, 3], desc: 'Every enemy starts every fight Shaken and Exposed for {v} turn(s).' },
+  { id: 'hollow',    name: 'Hollow-Points',      rare: false, add: 1.6, per: 0.15, dp: 2, desc: 'Critical hits deal x{v} instead of x1.6.' },
+  { id: 'dressing',  name: 'Field Dressing',     rare: false, per: 1.5, desc: 'Heal {v}% of max HP at the start of every fight.' },
+  { id: 'chit',      name: 'Lucky Chit',         rare: false, per: 5, desc: '+{v}% credits from everything.' },
+  { id: 'serrated',  name: 'Serrated Rounds',    rare: false, per: 8, desc: 'Your attacks have a {v}% chance to cause Bleeding.' },
+  { id: 'incendiary',name: 'Incendiary Mix',     rare: false, per: 1, r: 0.8, whole: true, desc: 'Thermal charges also set the target Burning for {v} turns.' },
+  { id: 'steady',    name: 'Steady Hands',       rare: false, add: 50, per: 15, desc: 'Defending boosts your next shot by +{v}% instead of +50%.' },
+  { id: 'secondwind',name: 'Second Wind',        rare: false, per: 1.5, desc: 'Defending also heals {v}% of max HP.' },
+  { id: 'scavenger', name: 'Scavenger',          rare: false, per: 6, desc: '{v}% chance to find an item after each fight.' },
+  { id: 'spotter',   name: 'Spotter',            rare: false, per: 1, r: 0.8, whole: true, desc: 'Enemies start every fight Exposed for {v} turns.' },
+  { id: 'thick',     name: 'Thick Skin',         rare: false, per: 1, r: 0.7, whole: true, desc: 'Status effects on you last {v} turn(s) less.' },
+  { id: 'ambush',    name: 'Ambusher',           rare: true,  per: 15, desc: 'Your first attack in every fight deals +{v}% damage.' },
+  { id: 'deadman',   name: 'Dead Man\u2019s Switch', rare: true, per: 5, desc: 'Once per raid, survive a killing blow with {v}% of max HP.' },
+  { id: 'grudge',    name: 'Grudge',             rare: true,  per: 6, desc: '+{v}% damage against elites and bosses.' },
+  { id: 'quickdraw', name: 'Quickdraw',          rare: true,  per: 1, r: 0.8, whole: true, desc: 'Killing an enemy cuts all skill cooldowns by {v}.' },
+  { id: 'capacitor', name: 'Ion Capacitor',      rare: true,  per: 12, desc: 'Ion pulses stun 1 turn longer. Overload deals +{v}%.' },
+  { id: 'reputation',name: 'Reputation',         rare: true,  per: 1, r: 0.8, whole: true, desc: 'Human enemies start every fight Shaken for {v} turns.' },
+  { id: 'adrenal',   name: 'Adrenal Spike',      rare: false, per: 12, desc: '+{v}% damage while you are below 35% HP.' },
+  { id: 'tithe',     name: 'Blood Tithe',        rare: false, per: 1.5, desc: 'Every kill heals {v}% of max HP.' },
+  { id: 'ironlung',  name: 'Iron Lung',          rare: false, per: 3, desc: '+{v}% max HP.' },
+  { id: 'tripwire',  name: 'Tripwire Kit',       rare: false, per: 1, r: 0.8, whole: true, desc: 'Enemies start every fight Bleeding for {v} turns.' },
+  { id: 'padding',   name: 'Kevlar Padding',     rare: false, per: 1, r: 0.9, whole: true, desc: '+{v} DEF.' },
+  { id: 'coupdegrace', name: 'Coup de Gr\u00E2ce', rare: true, per: 15, desc: '+{v}% damage against enemies below 30% HP.' },
+  { id: 'ghost',     name: 'Ghost Protocol',     rare: true,  per: 3, desc: '+{v}% chance to dodge every attack.' },
+  { id: 'warpaint',  name: 'War Paint',          rare: true,  per: 1, r: 0.7, whole: true, desc: 'Every enemy starts every fight Shaken and Exposed for {v} turn(s).' },
 ];
 
 // ---------- contracts: optional jobs from the cell. Rewards are permanent Resolve and credits. ----------

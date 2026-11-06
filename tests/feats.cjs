@@ -19,6 +19,8 @@ require('fs').mkdirSync(OUT, { recursive: true });
     await page.screenshot({ path: `${OUT}/feats-strip-${W}.png` });
     const bars = await page.$$eval('.aa-feat', (els) => els.map((e) => e.textContent.trim()));
     console.log(W, 'strip bars:', bars);
+    // Ordinary fights can drop contraband now: clear the pick so the header can be reached.
+    await page.click('button[data-a="perk"][data-v=""]', { timeout: 500 }).catch(() => {}); await page.waitForTimeout(150);
     await page.click('button[data-a="modal"][data-v="feats"]'); await page.waitForTimeout(300);
     await page.screenshot({ path: `${OUT}/feats-${W}.png`, fullPage: W === 390 ? false : true });
     console.log(W, 'feat rows', await page.$$eval('.feat', (e) => e.length), 'chips', await page.$$eval('.modal.feats .chip', (e) => e.map((x) => x.textContent)));

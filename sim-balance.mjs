@@ -5,6 +5,7 @@ import * as D from './data.js';
 import * as G from './sim-gear.mjs';
 Object.assign(E.TUNE, JSON.parse(process.env.TUNE || '{}'));
 const CAMP = +process.env.CAMP || 60, OPS = +process.env.OPS || 300, LIVES = +process.env.LIVES || 40;
+const STACK = +process.env.STACK || 3;
 const SECTIONS = (process.env.SECTIONS || 'builds,styles,coop,maps,items,early,econ').split(',');
 
 const ARMOR = ['head', 'chest', 'legs'];
@@ -76,12 +77,10 @@ function act(s, st, b, who = 0) {
   for (const k of ['overload', 'smash', 'aimed', 'blast', 'burst', 'suppress']) if (E.canUse(s, k) && G.skillAllowed(b.style, k) && !(k === 'smash' && D.MELEE_COUNTER[e.id] && !free)) return k;
   return hit;
 }
+// Stacks what it already carries when it can, as a player chasing a build would.
 function pickPerk(s, rng) {
-  const c = s.char, offer = s.run.perkOffer, tiers = s.run.perkTiers || {};
-  const up = offer.find((id) => c.perks.includes(id));
-  const pick = up || offer.slice().sort((x, y) => (tiers[y] || 0) - (tiers[x] || 0))[0];
-  const low = c.perks.slice().sort((x, y) => E.perkLevel(c, x) - E.perkLevel(c, y))[0];
-  if (!E.choosePerk(s, pick, rng, up ? null : low)) E.choosePerk(s, '', rng);
+  const c = s.char, offer = s.run.perkOffer;
+  E.choosePerk(s, offer.find((id) => c.perks.includes(id)) || offer[0], rng);
 }
 function route(s, rng) {
   const ch = s.run.choices, low = E.livingActors(s).some((i) => E.withActor(s, i, () => s.char.hp < E.stats(s).maxHp * 0.5));
@@ -215,7 +214,7 @@ function single(give, ranks = 8, b = BUILDS.strAgi, stName = process.env.ITEMSTY
 if (SECTIONS.includes('items')) {
   const base = single(null), out = [];
   const tryIt = (kind, id, name, give) => out.push({ kind, id, name, v: single(give) });
-  for (const p of D.PERKS) tryIt('contraband', p.id, `${p.name} (tier II)`, (s) => { const c = s.char; if (!c.perks.includes(p.id)) c.perks.push(p.id); c.perkLv = c.perkLv || {}; c.perkLv[p.id] = 2; });
+  for (const p of D.PERKS) tryIt('contraband', p.id, `${p.name} x${STACK}`, (s) => { const c = s.char; if (!c.perks.includes(p.id)) c.perks.push(p.id); c.perkN = c.perkN || {}; c.perkN[p.id] = STACK; });
   for (const i of D.IMPLANTS) tryIt('implant', i.id, i.name, (s) => { if (!s.char.implants.includes(i.id)) s.char.implants.push(i.id); });
   for (const u of D.UPGRADES) tryIt('mod', u.id, u.name, (s) => { if (!s.char.upgrades.includes(u.id)) s.char.upgrades.push(u.id); });
   for (const d of D.BAR.menu) tryIt('drink', d.id, d.name, (s) => { s.char.drink = d.id; });

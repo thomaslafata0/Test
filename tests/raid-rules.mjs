@@ -43,18 +43,25 @@ for (const [sector, want] of [[1, 0.8], [2, 0.65], [3, 0.5], [4, 0.4], [5, 0], [
 }
 { // Contraband tiers
   const { s, rng } = game(13); E.deploy(s, 'garrison', 1, rng);
-  ok('scavenger runs 10 to 30', D.PERKS.find((p) => p.id === 'scavenger').vals[0] === 10 && D.PERKS.find((p) => p.id === 'scavenger').vals[3] === 30);
-  ok('iron lung runs 5 8 12 15', D.PERKS.find((p) => p.id === 'ironlung').vals.join() === '5,8,12,15');
   const base = E.statsOf(s.meta, s.char).maxHp;
-  s.char.perks = ['ironlung']; s.char.perkLv = { ironlung: 3 };
-  ok('tier strength applies', E.statsOf(s.meta, s.char).maxHp === Math.round(base * 1.15), `${base} -> ${E.statsOf(s.meta, s.char).maxHp}`);
-  s.char.perks = ['ironlung', 'chit', 'dressing', 'hollow']; s.char.perkLv = { ironlung: 0, chit: 0, dressing: 0, hollow: 0 };
-  s.run.perkOffer = ['ironlung']; s.run.perkTiers = { ironlung: 2 };
-  E.choosePerk(s, 'ironlung', rng);
-  ok('a better copy upgrades with full pockets', s.char.perkLv.ironlung === 2 && s.char.perks.length === 4);
-  // deeper means better
-  const avg = (sector) => { let n = 0, t = 0; for (let i = 0; i < 400; i++) { const g = game(100 + i); g.s.char.perks = []; E.deploy(g.s, 'garrison', 1, g.rng); g.s.run.sector = sector; const e2 = fight(g.s, g.rng); e2.boss = true; e2.tags = [...e2.tags, 'boss']; win(g.s, g.rng); const o = g.s.run && g.s.run.perkOffer; if (o) for (const id of o) { t += g.s.run.perkTiers[id]; n++; } } return t / Math.max(1, n); };
-  const a1 = avg(4), a2 = avg(14); ok('deeper rolls better tiers', a2 > a1 + 0.4, `${a1.toFixed(2)} -> ${a2.toFixed(2)}`);
+  const lung = (n) => E.perkValue('ironlung', n);
+  ok('one copy is a small bonus', lung(1) === 3, `${lung(1)}%`);
+  ok('every copy still adds something', lung(2) > lung(1) && lung(10) > lung(9) && lung(30) > lung(29) - 0.01);
+  ok('each copy adds less than the last', lung(2) - lung(1) > lung(3) - lung(2) && lung(3) - lung(2) > lung(10) - lung(9));
+  ok('stacks level off', lung(1000) <= 20.01, `${lung(1000)}%`);
+  s.char.perks = ['ironlung']; s.char.perkN = { ironlung: 5 };
+  ok('stacks apply to stats', E.statsOf(s.meta, s.char).maxHp === Math.round(base * (1 + lung(5) / 100)), `${base} -> ${E.statsOf(s.meta, s.char).maxHp}`);
+  // No pockets: take as many different pieces as you like, and a copy adds to the stack.
+  for (const id of D.PERKS.map((p) => p.id)) { s.run.perkOffer = [id]; s.screen = 'perk'; E.choosePerk(s, id, rng); }
+  ok('no limit on pieces', s.char.perks.length === D.PERKS.length, `${s.char.perks.length}`);
+  ok('a copy stacks instead of duplicating', s.char.perkN.ironlung === 6 && s.char.perks.filter((x) => x === 'ironlung').length === 1);
+  // Old saves: a tier becomes that many copies.
+  const old = game(14); old.s.char.perks = ['chit', 'hollow']; old.s.char.perkLv = { chit: 3 }; delete old.s.char.perkN;
+  const m = E.migrate(old.s, old.rng);
+  ok('old tiers migrate to stacks', m.char.perkN.chit === 4 && m.char.perkN.hollow === 3 && !m.char.perkLv);
+  // Whole-number pieces stay whole, and offers are three different pieces.
+  ok('turn counts stay whole', [1, 2, 3, 7].every((n) => Number.isInteger(E.perkValue('spotter', n))));
+  ok('a text shows the stacked value', E.perkText('ironlung', 5).includes(String(lung(5))));
 }
 { // Prices
   const { s } = game(17); const low = E.price(s, E.itemCost(s, 'stim')); s.char.deepest = 15; const high = E.price(s, E.itemCost(s, 'stim'));

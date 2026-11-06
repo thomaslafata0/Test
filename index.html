@@ -336,6 +336,7 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .perk.rare:hover { border-color: var(--ion); }
 .perk b { font-family: var(--display); font-size: 1.5rem; font-weight: 800; text-transform: uppercase; letter-spacing: .02em; }
 .perk .desc { color: var(--muted); }
+.perk .stack-up { font-family: var(--mono); font-size: .8rem; color: var(--sodium); }
 .perk-list { display: grid; gap: 6px; }
 .perk-mini { display: grid; gap: 2px; padding: 8px 12px; border-left: 3px solid var(--sodium); background: var(--panel-2); font-size: .88rem; }
 .perk-mini.rare { border-left-color: var(--ion); }
@@ -587,6 +588,100 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .board-table .bad { color: var(--danger); }
 @media (max-width: 520px) { .board-table { font-size: .8rem; } .board-table td, .board-table th { padding: 5px 3px; } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* compact pass: tighter spacing and type everywhere. Later rules win. */
+.set-row .btnrow { flex-wrap: nowrap; }
+.settings .text { padding: 4px 8px; font-size: .86rem; }
+.set-row .btn { padding: 4px 10px; font-size: .84rem; }
+.title-menu .btn { padding: 8px 18px; font-size: 1.05rem; min-height: 0; }
+.toast { pointer-events: none; }
+.town-spend { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 10px; font-size: .88rem; }
+.town-spend .btn { padding: 3px 9px; font-size: .82rem; }
+body { padding-block: 10px 24px; }
+.wrap { max-width: 1120px; gap: 10px; }
+h2 { font-size: 1.6rem; }
+h3 { font-size: 1.05rem; }
+.panel { padding: 12px 14px; gap: 10px; }
+.status { gap: 6px; padding-block: 0 8px; }
+.brand { font-size: 1.3rem; }
+.head-stats { gap: 6px 20px; }
+.stat { gap: 0; }
+.stat .label { font-size: .6rem; }
+.stat .v { font-size: .86rem; }
+.num-stat { min-width: 3.1em; }
+.hp { width: 120px; }
+.bar { height: 5px; }
+.tool { padding: 4px 7px; }
+.tabs .tab, .tab { padding: 6px 10px; font-size: 1rem; }
+.columns { grid-template-columns: minmax(0, 1fr) 270px; gap: 10px; }
+.log { font-size: .84rem; }
+.tipbox { padding: 5px 10px; gap: 10px; }
+.tipbox p { font-size: .86rem; }
+.notice { padding: 5px 10px; font-size: .88rem; }
+.town-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 14px; }
+.town-help { font-size: .84rem; }
+#town-slot { width: min(100%, 110vh); margin-inline: auto; }
+.shortcuts { display: flex; flex-wrap: wrap; gap: 5px; }
+.shortcuts .btn { padding: 6px 10px; font-size: .88rem; }
+.btn.quiet { background: none; }
+.combat .stage, #stage-slot { width: min(100%, 72vh); margin-inline: auto; }
+.intent { padding: 5px 10px; }
+.intent b { font-size: 1.02rem; }
+.intent .tip { font-size: .8rem; }
+.statline { font-size: .7rem; gap: 4px 12px; }
+.quirk-line { font-size: .8rem; }
+.actions { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+.actions .btn { padding: 7px 6px; font-size: 1.02rem; }
+.actions .btn .bs, .actions .btn .wpn { font-size: .68rem; }
+.skills { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 5px; }
+.skills .btn { padding: 5px 8px; }
+.sk-note { font-size: .7rem; }
+.sk-name { font-size: .95rem; }
+.items { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 5px; }
+.items .btn { padding: 4px 6px; font-size: .82rem; }
+.items .bs { font-size: .68rem; }
+.doors { gap: 8px; }
+.door { min-height: 0; padding: 10px 12px; gap: 3px; }
+.door b { font-size: 1.2rem; }
+.door .desc { font-size: .82rem; }
+.mech-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.route-status { font-family: var(--mono); font-size: .76rem; }
+.bulletin { padding: 5px 10px; font-size: .84rem; }
+.aa { padding: 6px 10px; gap: 4px 10px; }
+.aa-feats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; font-size: .72rem; }
+.perks { gap: 6px; }
+.perk { min-height: 0; padding: 10px 12px; gap: 3px; }
+.perk b { font-size: 1.15rem; }
+.perk .desc { font-size: .84rem; }
+.perk-mini { padding: 4px 8px; font-size: .8rem; }
+.perk-list { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 4px; }
+.maps { gap: 6px; }
+.map-card { padding: 9px 10px; gap: 3px; }
+.map-card b { font-size: 1.05rem; }
+.mech-line { font-size: .78rem; }
+.contract { padding: 4px 8px; font-size: .82rem; }
+.modal { padding: 14px 16px; }
+.manual { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px 22px; }
+.manual section { gap: 3px; }
+.manual h3 { font-size: .95rem; }
+.manual p, .manual li { font-size: .84rem; }
+.settings { gap: 6px; }
+.settings h3 { margin-top: 6px; color: var(--sodium); font-size: .95rem; }
+.set-row { padding-block: 3px; font-size: .88rem; }
+.set-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0 20px; }
+.rows .row { padding: 5px 8px; gap: 8px; }
+.rows .name { font-size: .9rem; }
+.rows .desc { font-size: .78rem; }
+.resolve-box { padding: 10px 12px; gap: 8px; }
+.resolve-num { font-size: 1.5rem; }
+.resolve-head { gap: 4px 14px; }
+.item { padding: 8px 10px; gap: 4px; }
+.item .desc { font-size: .78rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.item ul { font-size: .8rem; }
+.item .cmp { gap: 3px; }
+.chip { font-size: .62rem; padding: 1px 5px; }
+@media (max-width: 820px) { .columns { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 620px) { .actions { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 </style>
 
 <div class="wrap" id="app" aria-live="polite"></div>
@@ -821,7 +916,7 @@ function devView() {
     ${row(`XP${c ? ` <span class="muted num">level ${c.level}</span>` : ''}`, b('dev', 'xp', 100, '+100', noc) + b('dev', 'xp', 1000, '+1,000', noc) + b('dev', 'xp', 10000, '+10,000', noc))}
     ${row('Patch up', b('dev', 'heal', '', 'Full HP', noc) + b('dev', 'items', '', 'Fill items', noc))}
     ${row('Gear', ['common', 'rare', 'elite', 'legendary'].map((r) => b('dev', 'gear', r, `Random ${r}`, noc)).join(''))}
-    ${row('Contraband', [0, 1, 2, 3].map((t) => b('dev', 'perk', t, `Tier ${E.ROMAN[t]}`, noc || inRun)).join(''))}
+    ${row('Contraband', [1, 5, 20].map((t) => b('dev', 'perk', t, `+${t}`, noc || inRun)).join(''))}
     ${row('Unlock insertion points', [6, 11, 16, 21].map((n) => b('dev', 'sector', n, `Sector ${n}`, noc)).join(''))}
     ${inRun ? row('This fight', b('dev', 'kill', '', 'Enemy to 1 HP', state.screen !== 'combat')) : ''}
     <h3>The cell</h3>
@@ -840,7 +935,7 @@ function applyDev(v, k) {
     case 'heal': if (c) c.hp = E.stats(state).maxHp; break;
     case 'items': if (c) { const m = E.stats(state).carry; for (const id of Object.keys(D.ITEMS)) c.items[id] = m; } break;
     case 'gear': if (c) { const band = Math.min(6, Math.max(1, Math.ceil((c.deepest || 1) / 3) + 1)); const it = E.rollGear(rng, { tierMin: Math.max(1, band - 1), tierMax: band, odds: { [k]: 1 } }); if (it) { const sl = E.baseOf(it).slot, old = c.gear[sl]; c.gear[sl] = it; if (old) (c.lockup = c.lockup || []).push(old); toast = `${E.itemName(it)} equipped.`; } } break;
-    case 'perk': if (c && !state.run) { const left = D.PERKS.filter((p) => !c.perks.includes(p.id)); const owned = c.perks.filter((id) => E.perkLevel(c, id) < n); const id = c.perks.length >= E.CONTRABAND_SLOTS ? owned[0] : (left[Math.floor(rng() * left.length)] || {}).id; if (id) { if (!c.perks.includes(id)) c.perks.push(id); c.perkLv = c.perkLv || {}; c.perkLv[id] = n; toast = `${E.perkName(id, n)}: ${E.perkText(id, n)}`; } else toast = 'No room for that tier.'; } break;
+    case 'perk': if (c && !state.run) { for (let i = 0; i < n; i++) { const id = D.PERKS[Math.floor(rng() * D.PERKS.length)].id; c.perkN = c.perkN || {}; c.perkN[id] = (c.perkN[id] || 0) + 1; if (!c.perks.includes(id)) c.perks.push(id); } toast = `${n} piece${n > 1 ? 's' : ''} of contraband added.`; } break;
     case 'sector': if (c) { const mp = state.gateMap || 'garrison', p = E.mapProgress(c, mp), pins = E.insertionsAt(c, mp, state.meta.threat || 0); if (!pins.includes(n)) pins.push(n); p.deepest = Math.max(p.deepest || 0, n - 1); c.deepest = Math.max(c.deepest || 0, n - 1); state.meta.bestSector = Math.max(state.meta.bestSector, n - 1); state.meta.bestByMap[mp] = Math.max(state.meta.bestByMap[mp] || 0, n - 1); toast = `Sector ${n} unlocked on ${E.mapById(mp).name}.`; } break;
     case 'kill': if (state.run && state.run.enemy) state.run.enemy.hp = 1; break;
     case 'resolve': state.meta.resolve += n; state.meta.totalResolve += n; break;
@@ -1093,7 +1188,7 @@ const ico = (key, size = 'md') => { const src = iconURL(key); return src ? `<img
 function headerTools() {
   const p = A.getPrefs();
   return `<div class="tools"><button class="tool" data-a="modal" data-v="manual" aria-label="Field manual">Manual</button>
-    <button class="tool" data-a="sound" aria-pressed="${p.sfx}" aria-label="Toggle sound">${p.sfx ? 'Sound on' : 'Sound off'}</button>
+    <button class="tool" data-a="sound" aria-pressed="${!p.muted}" aria-label="Toggle all sound">${p.muted ? 'Sound off' : 'Sound on'}</button>
     <button class="tool" data-a="modal" data-v="board" aria-label="Leaderboard">Board</button>
     <button class="tool" data-a="modal" data-v="feats" aria-label="Achievements">Achievements</button>
     ${devOn && !isGuest() ? '<button class="tool" data-a="modal" data-v="dev" aria-label="Dev mode">Dev</button>' : ''}
@@ -1108,36 +1203,31 @@ function statusStrip() {
     <div class="head-stats">${coopChip()}
     <div class="stat"><span class="label">Operative ${c.number} \u00B7 Lv ${c.level}</span><span class="v">${esc(c.name)}</span></div>
     <div class="stat hp"><span class="label">HP</span><span class="v">${Math.max(0, c.hp)} / ${st.maxHp}</span>${bar(c.hp, st.maxHp)}</div>
-    <div class="stat"><span class="label">Shoot \u00B7 Strike \u00B7 DEF \u00B7 SPD</span><span class="v">${st.atk} \u00B7 ${st.atkM} \u00B7 ${st.def} \u00B7 ${st.spd}</span></div>
+    ${[['Shoot', st.atk], ['Strike', st.atkM], ['DEF', st.def], ['SPD', st.spd]].map(([k, v]) => `<div class="stat num-stat"><span class="label">${k}</span><span class="v">${v}</span></div>`).join('')}
     <div class="stat"><span class="label">${esc(S.currency)}</span><span class="v">${c.credits.toLocaleString()}</span></div>
     ${state.run ? `<div class="stat" title="Earned this stretch. It becomes levels when you beat the boss or get out, and leaving early costs a share."><span class="label">Unsecured</span><span class="v" style="color:var(--sodium)">${E.unsecured(state).toLocaleString()} ${esc(S.cur)} \u00B7 ${(c.xpBank || 0).toLocaleString()} XP</span></div>` : ''}
     ${state.screen === 'town' ? `<button class="stat resolve-link" data-a="tab" data-v="character" title="Spend Resolve on the Character tab"><span class="label">${esc(S.meta)} \u00B7 spend</span><span class="v" style="color:var(--sodium)">${state.meta.resolve}</span></button>` : `<div class="stat"><span class="label">${esc(S.meta)}</span><span class="v" style="color:var(--sodium)">${state.meta.resolve}</span></div>`}
     </div>
-    ${downtimeBar()}
   </header>`;
 }
 // The after-curfew row: only in the yard, only for the host.
 function downtimeBar() {
-  if (state.screen !== 'town' || state.run || isGuest()) return '';
-  const v = E.venturesTotal(state), left = E.marksLeft(state.char).length;
-  return `<nav class="tools downtime" aria-label="After curfew">
-    <button class="tool ${modal === 'bar' ? 'on' : ''}" data-a="modal" data-v="bar">The Lantern${E.drinkOf(state.char) ? ` \u00B7 ${esc(E.drinkOf(state.char).name)}` : ''}</button>
-    <button class="tool ${modal === 'wheel' ? 'on' : ''}" data-a="modal" data-v="wheel">The Wheel</button>
-    <button class="tool ${modal === 'orbit' ? 'on' : ''}" data-a="modal" data-v="orbit">Orbit${state.orbit ? ' \u00B7 in flight' : left < 5 ? ` \u00B7 ${5 - left}/5 marks` : ''}</button>
-    <button class="tool ${modal === 'ventures' ? 'on' : ''}" data-a="modal" data-v="ventures">Ventures${v ? ` \u00B7 ${v.toLocaleString()} ${esc(S.cur)}` : ''}</button>
-  </nav>`;
+  if (state.run || isGuest()) return '';
+  const v = E.venturesTotal(state), left = E.marksLeft(state.char).length, d = E.drinkOf(state.char);
+  const b = (id, label, note = '') => `<button class="btn quiet" data-a="modal" data-v="${id}">${label}${note ? ` <span class="muted">${esc(note)}</span>` : ''}</button>`;
+  return b('bar', 'Lantern', d ? d.name : '') + b('wheel', 'Wheel') + b('orbit', 'Orbit', state.orbit ? 'in flight' : left < 5 ? `${5 - left}/5` : '') + b('ventures', 'Ventures', v ? v.toLocaleString() : '');
 }
 const TIPS = {
-  town: 'Walk into the freight terminal (top) to pick a mission. Back in town, Marrow\u2019s container sells gear, Doc Ilse patches you up, and the safehouse is where you spend Resolve. The buttons under the town open them directly.',
-  route: 'Pick a door. Each sector has three rooms, and at least two of them will be fights. A boss waits at the end of every fifth sector.',
-  combat: 'Read the enemy\u2019s intent below the battle scene. Defend against heavy strikes and signature moves; it also steadies your next shot.',
-  perk: 'Contraband stays with this operative until they die. Bosses always carry some, elites sometimes. You can hold four pieces.',
-  loot: 'Bosses always drop gear (their own Unique the first time) and elites sometimes do. Take it or leave it: nobody in the yard buys old kit. Death still takes all of it.',
-  gear: 'Six slots. Tap one to see the piece and upgrade it at Marrow\u2019s bench: each +1 adds about 8% (at least +1). Shoot uses the ranged weapon, Strike the melee one.',
+  town: 'Walk into the freight terminal to pick a mission. The buttons below open every shop.',
+  route: 'Pick a door. Three rooms per sector, and a boss every fifth sector.',
+  combat: 'Watch the enemy\u2019s next move. Defend against heavy hits; it also lines up your next shot.',
+  perk: 'Lasts until this operative dies. No limit, and copies stack: each adds a bit less than the last.',
+  loot: 'Take it or leave it. Nobody buys old gear.',
+  gear: 'Tap a slot to see or upgrade it. Shoot uses the ranged weapon, Strike the melee one.',
 };
 function tip(id) {
   if (state.meta.tips[id] || !TIPS[id]) return '';
-  return `<div class="tipbox"><span class="label">Field note</span><p>${esc(TIPS[id])}</p><button class="btn" data-a="tip" data-v="${id}">Got it</button></div>`;
+  return `<div class="tipbox"><p>${esc(TIPS[id])}</p><button class="tool" data-a="tip" data-v="${id}">Got it</button></div>`;
 }
 
 function logPanel() {
@@ -1245,7 +1335,7 @@ const POPUPS = {
   missions: { label: 'Missions', where: 'Freight terminal \u00B7 the dispatcher', body: () => gate() },
   market: { label: 'Black Market', where: 'Marrow\u2019s container', body: () => market() },
   clinic: { label: 'Clinic', where: 'Doc Ilse', body: () => clinic() },
-  character: { label: 'Character & Resolve', where: 'The safehouse \u00B7 Cass', body: () => character() },
+  character: { label: 'Character', where: 'The safehouse \u00B7 Cass', body: () => character() },
   gear: { label: 'Gear', where: 'The safehouse \u00B7 your locker', body: () => `${tip('gear')}${gearTab()}` },
   lockup: { label: 'Lockup', where: 'The safehouse \u00B7 under the floor', body: () => lockupTab() },
   partner: { label: 'With your partner', where: 'In the yard', body: () => partnerMenu(), hidden: true },
@@ -1257,13 +1347,12 @@ const popupBadge = (id) => {
 };
 function townScreen() {
   return `<section class="panel town-panel">
-    <div class="town-head"><div style="display:grid;gap:4px"><span class="label">Town \u00B7 curfew in effect</span><h2>${esc(S.town)}</h2></div>
-      <p class="muted town-help">Arrows or WASD to walk, or tap where to go. Walk into a door to go inside and talk to whoever\u2019s there. <b>E</b> or tap to talk.${state.char.fed ? ' <span class="chip good">Fed: +5% XP</span>' : ''}</p></div>
+    <div class="town-head"><h2>${esc(S.town)}</h2><p class="muted town-help">WASD or tap to walk \u00B7 <b>E</b> to talk${state.char.fed ? ' <span class="chip good">Fed: +5% XP</span>' : ''}</p></div>
     ${tip('town')}${state.popup ? '' : notice()}
     ${townSpend()}
     ${coopBar()}
     <div id="town-slot"></div>
-    <nav class="shortcuts" aria-label="Town menus">${Object.entries(POPUPS).filter(([, p]) => !p.hidden).map(([id, p]) => `<button class="btn" data-a="popup" data-v="${id}">${esc(p.label)}${popupBadge(id)}</button>`).join('')}</nav>
+    <nav class="shortcuts" aria-label="Town menus">${Object.entries(POPUPS).filter(([, p]) => !p.hidden).map(([id, p]) => `<button class="btn" data-a="popup" data-v="${id}">${esc(p.label)}${popupBadge(id)}</button>`).join('')}${downtimeBar()}</nav>
   </section>${townPopup()}${tradeView()}`;
 }
 // Beat a boss or get out: what's now yours, counting up, then the attribute points to spend.
@@ -1399,8 +1488,7 @@ function coopBar() {
 function townSpend() {
   const c = state.char;
   if (!c.attrPoints) return '';
-  return `<div class="aa"><div class="aa-main"><b>${c.attrPoints} attribute point${c.attrPoints > 1 ? 's' : ''} to spend</b></div><span></span>
-    <div class="aa-spend">${Object.entries(D.ATTRS).map(([k, a]) => `<button class="btn" data-a="spend" data-v="${k}" title="${esc(a.desc)}" ${c.attrs[k] >= D.ATTR_MAX ? 'disabled' : ''}>${a.short} ${c.attrs[k]}\u2192${c.attrs[k] + 1}</button>`).join('')}</div></div>`;
+  return `<div class="aa-spend town-spend"><b>${c.attrPoints} point${c.attrPoints > 1 ? 's' : ''} to spend</b>${Object.entries(D.ATTRS).map(([k, a]) => `<button class="btn" data-a="spend" data-v="${k}" title="${esc(a.desc)}" ${c.attrs[k] >= D.ATTR_MAX ? 'disabled' : ''}>${a.short} ${c.attrs[k]}\u2192${c.attrs[k] + 1}</button>`).join('')}</div>`;
 }
 // Side-by-side comparison of a market piece and what's equipped in its slot.
 function compareView() {
@@ -1506,7 +1594,7 @@ function gearTab() {
   const heir = state.meta.heirloom;
   const locker = heir ? `<h3>Safehouse locker</h3><p class="muted" style="font-size:.9rem">Left behind by an earlier operative (Heirloom).</p>
     ${itemCard(heir, { actions: E.canEquip(c, heir) ? `<button class="btn primary" data-a="equipheirloom">Equip${E.heirloomWorthy(state.meta, c.gear[E.baseOf(heir).slot]) ? ' (your current piece goes in the locker)' : ''}</button>` : `<span class="note">You need ${E.reqText(E.baseOf(heir).req)} to use it.</span>` })}` : '';
-  return `<p class="muted">Everything here dies with ${esc(c.name)}. Buy pieces at the Black Market, take them from elites and bosses, and upgrade them at Marrow\u2019s bench.</p>
+  return `
     <div class="doll">
       <div class="col">${['ranged', 'melee', 'gadget'].map(slotBtn).join('')}</div>
       <div class="me">${me ? `<img src="${me}" alt="${esc(c.name)}" width="128" height="128">` : ''}<dl class="kv"><dt>Shoot</dt><dd>${st.atk} ATK \u00B7 ${pct(st.crit)} crit</dd><dt>Strike</dt><dd>${st.atkM} ATK \u00B7 ${pct(st.critM)} crit</dd><dt>DEF \u00B7 SPD</dt><dd>${st.def} \u00B7 ${st.spd}</dd><dt>HP</dt><dd>${c.hp} / ${st.maxHp}</dd></dl></div>
@@ -1523,10 +1611,10 @@ function marketGear() {
     const net = E.netPrice(state, it), ok = E.canEquip(c, it), old = c.gear[E.baseOf(it).slot];
     const btn = `<button class="btn primary" data-a="buygear" data-v="${i}" ${!ok || c.credits < net ? 'disabled' : ''}>${ok ? `Buy \u00B7 ${cr(net)}` : 'Requirements not met'}</button>`;
     const cmp = `<button class="btn" data-a="compare" data-v="${i}" title="See this piece next to what you have in that slot">Compare</button>`;
-    return itemCard(it, { actions: `${btn}${cmp}<span class="note">${old && E.baseOf(old).tier > 0 ? `Replaces your ${esc(E.itemName(old))}.` : 'That slot is empty.'}</span>` });
+    return itemCard(it, { actions: `${btn}${cmp}` });
   }).join('');
-  return `<h3>Gear <span class="num muted" style="font-size:.85rem">restocks after every raid</span></h3>
-    <div class="odds"><span>Odds:</span>${['common', 'rare', 'elite', 'legendary'].map((k) => `<span class="rname r-${k}">${D.RARITY[k].name} ${Math.round(o[k] * 1000) / 10}%</span>`).join('')}<span class="muted">better as the cell gets deeper</span></div>
+  return `<h3>Gear</h3>
+    <div class="odds"><span>Odds:</span>${['common', 'rare', 'elite', 'legendary'].map((k) => `<span class="rname r-${k}">${D.RARITY[k].name} ${Math.round(o[k] * 1000) / 10}%</span>`).join('')}</div>
     ${cards ? `<div class="item-grid">${cards}</div>` : '<p class="muted">Sold out. Marrow restocks after your next raid.</p>'}`;
 }
 
@@ -1539,7 +1627,7 @@ function market() {
     return `<div class="row i ${owned ? 'owned' : ''}">${ico(`upgrade:${u.id}`)}<div><div class="name">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div></div>${owned ? '<span></span>' : buyBtn('upgrade', u.id, '', u.cost)}</div>`;
   }).join('');
   const disc = 1 - E.price(state, 100) / 100;
-  return `<p class="muted">Old Marrow\u2019s stall, behind the scrap scales. No receipts, and he doesn\u2019t buy: a new piece replaces the old one for good. Upgrades are on the Gear tab. Everything is lost if you die.${disc > 0 ? ` Your Charisma gets you ${pct(disc)} off.` : ''}</p>
+  return `<p class="muted">New gear replaces the old for good. Restocks after every raid.${disc > 0 ? ` Charisma: ${pct(disc)} off.` : ''}</p>
     ${marketGear()}
     <h3>Supplies</h3><div class="rows">${items}</div>
     <h3>Contacts &amp; mods</h3><div class="rows">${ups}</div>`;
@@ -1557,7 +1645,7 @@ function clinic() {
     <div class="kv"><dt>Condition</dt><dd>${c.hp} / ${st.maxHp} HP</dd><dt>Cost</dt><dd>${cost > 0 ? cr(cost) : 'Not needed'}</dd></div>
     <div><button class="btn primary" data-a="heal" ${cost <= 0 || c.credits < cost ? 'disabled' : ''}>${cost > 0 ? `Patch me up \u00B7 ${cr(cost)}` : 'Fully healed'}</button></div>
     <h3>Implants <span class="num muted" style="font-size:.9rem">${c.implants.length} / ${st.slots} slots</span></h3>
-    <p class="muted" style="font-size:.9rem">Slots: 2, plus one at INT 4 and another at INT 8. Removing an implant frees the slot but refunds nothing.</p>
+    <p class="muted" style="font-size:.9rem">More slots at INT 4 and 8. Removing one refunds nothing.</p>
     <div class="rows">${imps}</div>`;
 }
 
@@ -1578,14 +1666,15 @@ function character() {
   }).join('');
   const cell = D.CELL.map((u) => {
     const owned = m.cell.includes(u.id);
-    return `<div class="row i ${owned ? 'owned' : ''}">${ico(`cell:${u.id}`)}<div><div class="name">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div></div>${owned ? '<span></span>' : `<button class="btn ${m.resolve >= u.cost ? 'primary' : ''}" data-a="cell" data-v="${u.id}" ${m.resolve < u.cost ? 'disabled' : ''}>${u.cost} ${esc(S.meta)}</button>`}</div>`;
+    const cellIco = ico(`cell:${u.id}`);
+    return `<div class="row ${cellIco ? 'i' : ''} ${owned ? 'owned' : ''}">${cellIco}<div><div class="name">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div></div>${owned ? '<span></span>' : `<button class="btn ${m.resolve >= u.cost ? 'primary' : ''}" data-a="cell" data-v="${u.id}" ${m.resolve < u.cost ? 'disabled' : ''}>${u.cost} ${esc(S.meta)}</button>`}</div>`;
   }).join('');
   const wall = m.fallen.length ? m.fallen.map((f) => `<div><span>${esc(f.name)} <span class="muted">\u00B7 Lv ${f.level}</span></span><span class="muted">${esc(E.sectorName(f.sector, f.map))}, ${esc(f.killer)}</span></div>`).join('') : '<p class="muted">No names yet. Keep it that way.</p>';
   const bg = D.BACKGROUNDS.find((b) => b.id === c.background);
   const n = E.respecPoints(c), rcost = E.price(state, E.respecCost(c));
   return `<section class="resolve-box">
-      <div class="resolve-head"><div><span class="label">${esc(S.meta)} \u00B7 permanent, survives death</span><div class="resolve-num">${m.resolve} <span>banked</span></div></div>
-        <p class="muted">Spend it here. Training and cell upgrades help every operative from now on. Earned from new sectors, bosses, contracts and brave choices.</p></div>
+      <div class="resolve-head"><div><span class="label">${esc(S.meta)} \u00B7 survives death</span><div class="resolve-num">${m.resolve} <span>banked</span></div></div>
+        <p class="muted">Helps every future operative. Earned from new sectors, bosses and contracts.</p></div>
       <div class="two-col">
         <div style="display:grid;gap:8px;align-content:start;min-width:0"><span class="label">Training</span><div class="rows">${rows}</div></div>
         <div style="display:grid;gap:8px;align-content:start;min-width:0"><span class="label">Cell upgrades</span><div class="rows">${cell}</div></div>
@@ -1595,24 +1684,21 @@ function character() {
       <div style="display:grid;gap:14px;align-content:start;min-width:0">
         <h3>${esc(c.name)} <span class="num muted" style="font-size:.85rem">${esc(bg.name)} \u00B7 Lv ${c.level} \u00B7 lost on death</span></h3>
         <p class="muted" style="font-size:.9rem">${esc(bg.perk)}</p>
-        ${c.attrPoints ? `<p style="color:var(--sodium)"><b>${c.attrPoints} attribute point${c.attrPoints > 1 ? 's' : ''} to spend.</b></p>` : '<p class="muted" style="font-size:.9rem">Level up to earn attribute points.</p>'}
+        ${c.attrPoints ? `<p style="color:var(--sodium)"><b>${c.attrPoints} attribute point${c.attrPoints > 1 ? 's' : ''} to spend.</b></p>` : ''}
         <div class="rows">${attrRows}</div>
-        <div class="respec"><div><b>Retrain</b> <span class="muted">\u00B7 take back the ${n || ''} point${n === 1 ? '' : 's'} you spent on levelling and spend ${n === 1 ? 'it' : 'them'} again. Gets dearer with level and every retrain.</span></div>
+        <div class="respec"><div><b>Retrain</b> <span class="muted">\u00B7 respend ${n || 'your'} levelling point${n === 1 ? '' : 's'}</span></div>
           <button class="btn" data-a="respec" ${!n || c.credits < rcost ? 'disabled' : ''}>${n ? `Retrain \u00B7 ${cr(rcost)}` : 'Nothing to retrain'}</button></div>
               </div>
       <div style="display:grid;gap:14px;align-content:start;min-width:0">
-        <h3>Kit</h3>
-        <dl class="kv"><dt>Shoot \u00B7 Strike</dt><dd>${st.atk} \u00B7 ${st.atkM} ATK</dd><dt>DEF \u00B7 SPD</dt><dd>${st.def} \u00B7 ${st.spd}</dd><dt>HP</dt><dd>${c.hp} / ${st.maxHp}</dd><dt>Implants</dt><dd>${c.implants.length} / ${st.slots}</dd></dl>
-        <div><button class="btn" data-a="tab" data-v="gear">Open gear</button></div>
+        <span class="label">Skills</span><div class="rows">${skills}</div>
       </div>
     </div>
-    <h3>Fixed for this operative</h3>
+    <h3>This operative</h3>
     <div class="two-col">
       <div style="display:grid;gap:14px;align-content:start;min-width:0">
-        <span class="label">Skills \u00B7 from your weapons and attributes</span><div class="rows">${skills}</div>
         <span class="label">Marks \u00B7 ${(c.marks || []).length} / 5 \u00B7 earned in orbit</span>${(c.marks || []).length ? `<div class="perk-list">${c.marks.map((id) => { const mk = D.MARKS[id]; return `<div class="perk-mini rare">${ico(`mark:${id}`, 'sm2')}<div><b>${esc(mk.name)}</b><span>${esc(mk.desc)}</span></div></div>`; }).join('')}</div>` : '<p class="muted">None yet. Fly the shuttle (Orbit, after curfew) on the harder runs.</p>'}
         ${(() => { const fb = E.featBuffs(m), t = Object.entries(fb).filter(([k, v]) => k !== 'vs' && v > 0), vs = Object.keys(fb.vs).length; return `<span class="label">Achievements \u00B7 the cell\u2019s permanent edges</span>${t.length || vs ? `<div class="chips">${t.map(([k, v]) => `<span class="chip good">+${(v * 100).toFixed(1).replace(/\.0$/, '')}% ${esc(E.BUFF_NAMES[k])}</span>`).join('')}${vs ? `<span class="chip good">bonus damage vs ${vs} enemy type${vs > 1 ? 's' : ''}</span>` : ''}<button class="btn" data-a="modal" data-v="feats" style="margin-left:4px">All feats</button></div>` : '<p class="muted">No tiers yet. Everything the cell does counts: see <button class="btn" data-a="modal" data-v="feats">Feats</button>.</p>'}`; })()}
-        <span class="label">Contraband \u00B7 ${c.perks.length} / ${E.CONTRABAND_SLOTS} pockets</span>${c.perks.length ? `<div class="perk-list">${c.perks.map((id) => { const pk = { ...E.perkById(id), name: E.perkName(id, E.perkLevel(c, id)), desc: E.perkText(id, E.perkLevel(c, id)) }; return `<div class="perk-mini ${pk.rare ? 'rare' : ''}">${ico(`perk:${id}`, 'sm2')}<div><b>${esc(pk.name)}</b><span>${esc(pk.desc)}</span></div></div>`; }).join('')}</div>` : '<p class="muted">None yet. Elites and bosses carry it.</p>'}
+        <span class="label">Contraband \u00B7 ${c.perks.reduce((t, id) => t + E.perkStacks(c, id), 0)} carried</span>${c.perks.length ? `<div class="perk-list">${c.perks.map((id) => { const pk = { ...E.perkById(id), name: E.perkName(id, E.perkStacks(c, id)), desc: E.perkText(id, E.perkStacks(c, id)) }; return `<div class="perk-mini ${pk.rare ? 'rare' : ''}">${ico(`perk:${id}`, 'sm2')}<div><b>${esc(pk.name)}</b><span>${esc(pk.desc)}</span></div></div>`; }).join('')}</div>` : '<p class="muted">None yet. Bosses always carry it; other enemies sometimes do.</p>'}
       </div>
       <div style="display:grid;gap:14px;align-content:start;min-width:0">
         <span class="label">Choices that changed you</span><div class="wall">${history}</div>
@@ -1628,8 +1714,8 @@ function gate() {
     const open = E.mapUnlocked(state, mp), prog = c.maps[mp.id], lib = m.liberated[mp.id];
     const traits = [mp.credits !== 1 ? `${mp.credits > 1 ? '+' : ''}${pct(mp.credits - 1)} credits` : null, mp.level ? `enemies +${mp.level} lv` : null].filter(Boolean);
     return `<button class="map-card ${mp.id === sel.id ? 'on' : ''} theme-${mp.theme}" data-a="pickmap" data-v="${mp.id}" ${open ? '' : 'disabled'} aria-pressed="${mp.id === sel.id}">
-      <span class="label">${!open ? `Locked \u00B7 reach sector ${mp.unlock} anywhere` : lib ? '<span class="lib">Liberated</span>' : `Best: sector ${m.bestByMap[mp.id] || 0} / 15`}</span>
-      <b>${esc(mp.name)}</b><span class="desc">${esc(mp.desc)}</span>
+      <span class="label">${!open ? `Locked \u00B7 reach sector ${mp.unlock}` : lib ? '<span class="lib">Liberated</span>' : `Best: sector ${m.bestByMap[mp.id] || 0} / 15`}</span>
+      <b>${esc(mp.name)}</b>
       <span class="mech-line"><b>${esc(mp.mechanic.name)}.</b> ${esc(mp.mechanic.desc)}</span>
       ${traits.length ? `<span class="chips">${traits.map((t) => `<span class="chip">${t}</span>`).join('')}</span>` : ''}
       ${prog && prog.deepest ? `<span class="label">This operative: sector ${prog.deepest}</span>` : ''}</button>`;
@@ -1637,7 +1723,7 @@ function gate() {
   const ins = [...E.insertionsAt(c, sel.id, m.threat || 0)].sort((a, b) => a - b);
   const warn = c.hp < st.maxHp * 0.6 ? `<p class="danger-text">You\u2019re going in at ${c.hp}/${st.maxHp} HP. The clinic is right there.</p>` : '';
   const mt = E.maxThreat(state);
-  const threat = mt > 0 ? `<div class="threat"><span class="label">Threat level</span><div class="btnrow">${D.THREAT.slice(0, mt + 1).map((t, i) => `<button class="btn ${m.threat === i ? 'primary' : ''}" data-a="threat" data-v="${i}" title="${esc(t.desc)}">${esc(t.name)}</button>`).join('')}</div><p class="muted" style="font-size:.88rem">${esc(D.THREAT[m.threat].desc)}${m.threat ? ' You start again from sector 1 here: beat bosses at this threat level to earn deeper insertion points.' : ''}</p></div>` : '';
+  const threat = mt > 0 ? `<div class="threat"><span class="label">Threat level</span><div class="btnrow">${D.THREAT.slice(0, mt + 1).map((t, i) => `<button class="btn ${m.threat === i ? 'primary' : ''}" data-a="threat" data-v="${i}" title="${esc(t.desc)}">${esc(t.name)}</button>`).join('')}</div><p class="muted" style="font-size:.88rem">${esc(D.THREAT[m.threat].desc)}${m.threat ? ' Starts again from sector 1.' : ''}</p></div>` : '';
   const contracts = (m.contracts || []).map((k) => `<div class="contract ${k.done ? 'done' : ''}"><div><b>${esc(k.text)}</b><span class="muted"> ${k.done ? 'Complete' : `${Math.min(k.progress, k.n)} / ${k.n}`}</span></div><span class="chip ${k.done ? 'good' : ''}">+${k.resolve} ${esc(S.meta)} \u00B7 +${k.credits} ${S.cur}</span></div>`).join('');
   return `<div class="maps">${cards}</div>
     ${threat}
@@ -1646,11 +1732,11 @@ function gate() {
         <span class="label">Insertion point \u00B7 ${esc(sel.name)}</span>
         ${isGuest() ? `<p class="muted" style="font-size:.9rem">The host picks the target. Tell them you\u2019re ready.</p><div><button class="btn ${state.guestReady ? 'primary' : ''}" data-a="coopready" aria-pressed="${!!state.guestReady}">${state.guestReady ? 'Ready \u00B7 waiting for the host' : 'Ready for the raid'}</button></div>`
         : `<div class="ins">${ins.map((n) => `<button class="btn ${n === ins[ins.length - 1] ? 'primary' : ''}" data-a="deploy" data-v="${n}" ${E.isCoop(state) && !state.guestReady ? 'disabled' : ''}>Sector ${n} \u00B7 ${esc(E.sectorName(n, sel.id))}</button>`).join('')}</div>${E.isCoop(state) ? `<p class="muted" style="font-size:.88rem">${state.guestReady ? `${esc(state.guestName || 'Your friend')} is ready.` : `Waiting for ${esc(state.guestName || 'your friend')} to press Ready at their terminal.`}</p>` : ''}`}
-        ${ins.length === 1 ? '<p class="muted" style="font-size:.88rem">Beat a boss to unlock a deeper insertion point on that map for this operative.</p>' : ''}
+        ${ins.length === 1 ? '<p class="muted" style="font-size:.88rem">Beat a boss to start deeper next time.</p>' : ''}
         ${warn}
         
       </div>
-      <div style="display:grid;gap:8px;min-width:0"><span class="label">Contracts from the cell</span><div class="contracts">${contracts || '<p class="muted">No jobs right now.</p>'}</div></div>
+      <div style="display:grid;gap:8px;min-width:0"><span class="label">Contracts</span><div class="contracts">${contracts || '<p class="muted">No jobs right now.</p>'}</div></div>
     </div>`;
 }
 
@@ -1675,7 +1761,7 @@ function combatScreen() {
   const downedMate = coop && mine ? E.partnerDown(state) : null;
   const reviveBtn = downedMate ? `<button class="btn primary big" data-a="act" data-v="revive" style="width:100%">Get ${esc(downedMate.name.split(' ')[0])} up \u00B7 ${downedMate.downed} round${downedMate.downed > 1 ? 's' : ''} left<span class="k">V</span></button>` : '';
   const confirmSmoke = state.confirmSmoke && c.items.smoke;
-  const items = ['thermal', 'ion', 'smoke'].map((id, i) => `<button class="btn twoline ${id === 'smoke' && confirmSmoke ? 'confirm' : ''}" data-a="act" data-v="${id}" title="${esc(D.ITEMS[id].desc)}" ${c.items[id] ? '' : 'disabled'}>
+  const items = ['thermal', 'ion', 'smoke'].map((id, i) => !c.items[id] ? '' : `<button class="btn twoline ${id === 'smoke' && confirmSmoke ? 'confirm' : ''}" data-a="act" data-v="${id}" title="${esc(D.ITEMS[id].desc)}" ${c.items[id] ? '' : 'disabled'}>
       <span class="bt">${ico(`item:${id}`, 'sm')}${esc(D.ITEMS[id].name)} <span class="num">\u00D7${c.items[id]}</span><span class="k">${i + 2}</span></span>
       <span class="bs">${id === 'smoke' && confirmSmoke ? 'Tap again to leave the raid' : esc(D.ITEMS[id].short)}</span></button>`).join('');
   const skills = E.skillsOf(c).slice(0, 4).map((k, i) => {
@@ -1699,14 +1785,14 @@ function combatScreen() {
     ${tip('combat')}
     ${party}${waiting}${reviveBtn}
     <div class="actions ${mine ? '' : 'locked'}">
-      <button class="btn primary twoline atk" data-a="act" data-v="shoot" title="${esc(E.weaponOf(c).name)}: ${st.atk} ATK, ${pct(E.critChance(st, e))} crit. Steady damage; cover halves it. You keep your distance, so you take ${Math.round(E.TUNE.shootGuard * 100)}% less damage this turn."><span class="bt">Shoot<span class="k">A</span></span><span class="wpn">${esc(E.weaponOf(c).name)}</span><span class="bs"><b class="rng">${sr[0]}\u2013${sr[1]}</b> dmg${e.intent === 'guard' && !e.stun ? ' (cover)' : ''} \u00B7 take ${Math.round(E.TUNE.shootGuard * 100)}% less this turn</span></button>
-      <button class="btn twoline atk ${D.MELEE_COUNTER[e.id] ? 'warn' : ''}" data-a="act" data-v="strike" title="${esc(E.meleeOf(c).name)}: ${st.atkM} ATK, ${pct(E.critChance(st, e, true))} crit. Swingy damage, ignores cover, and your next attack hits ${Math.round(E.TUNE.momentum * 100)}% harder."><span class="bt">Strike<span class="k">F</span></span><span class="wpn">${esc(E.meleeOf(c).name)}</span><span class="bs"><b class="rng">${mr[0]}\u2013${mr[1]}</b> dmg \u00B7 ${D.MELEE_COUNTER[e.id] ? 'it hits back!' : `next hit +${Math.round(E.TUNE.momentum * 100)}%${e.intent === 'guard' && !e.stun ? ', ignores cover' : ''}`}</span></button>
-      <button class="btn twoline" data-a="act" data-v="defend"><span class="bt">Defend<span class="k">D</span></span><span class="bs">Halve damage, aim next shot</span></button>
+      <button class="btn primary twoline atk" data-a="act" data-v="shoot" title="${esc(E.weaponOf(c).name)}: ${st.atk} ATK, ${pct(E.critChance(st, e))} crit. Steady damage; cover halves it. You keep your distance, so you take ${Math.round(E.TUNE.shootGuard * 100)}% less damage this turn."><span class="bt">Shoot<span class="k">A</span></span><span class="wpn">${esc(E.weaponOf(c).name)}</span><span class="bs"><b class="rng">${sr[0]}\u2013${sr[1]}</b> dmg${e.intent === 'guard' && !e.stun ? ' (cover)' : ''}</span></button>
+      <button class="btn twoline atk ${D.MELEE_COUNTER[e.id] ? 'warn' : ''}" data-a="act" data-v="strike" title="${esc(E.meleeOf(c).name)}: ${st.atkM} ATK, ${pct(E.critChance(st, e, true))} crit. Swingy damage, ignores cover, and your next attack hits ${Math.round(E.TUNE.momentum * 100)}% harder."><span class="bt">Strike<span class="k">F</span></span><span class="wpn">${esc(E.meleeOf(c).name)}</span><span class="bs"><b class="rng">${mr[0]}\u2013${mr[1]}</b> dmg${D.MELEE_COUNTER[e.id] ? ' \u00B7 hits back!' : ''}</span></button>
+      <button class="btn twoline" data-a="act" data-v="defend"><span class="bt">Defend<span class="k">D</span></span><span class="bs">Half damage, aim up</span></button>
       <button class="btn twoline" data-a="act" data-v="stim" ${c.items.stim ? '' : 'disabled'}><span class="bt">${ico('item:stim', 'sm')}Stim <span class="num">\u00D7${c.items.stim}</span><span class="k">S</span></span><span class="bs">${esc(D.ITEMS.stim.short)}</span></button>
-      <button class="btn twoline" data-a="act" data-v="run"><span class="bt">Run<span class="k">R</span></span><span class="bs">${pct(E.runChance(state))} to escape, drop ${Math.round(E.escapeRate(state.run.sector) * 100)}% of unsecured loot and XP</span></button>
+      <button class="btn twoline" data-a="act" data-v="run"><span class="bt">Run<span class="k">R</span></span><span class="bs" title="Getting away drops ${Math.round(E.escapeRate(state.run.sector) * 100)}% of unsecured credits and XP">${pct(E.runChance(state))}, lose ${Math.round(E.escapeRate(state.run.sector) * 100)}%</span></button>
     </div>
     ${skills ? `<div class="skills ${mine ? '' : 'locked'}">${skills}</div>` : ''}
-    <div class="items">${items}</div>
+    ${items.trim() ? `<div class="items">${items}</div>` : ''}
   </section>${logPanel()}</div>`;
 }
 
@@ -1749,15 +1835,11 @@ function routeScreen() {
     ${afterAction()}
     <h2>${r.choices[0] === 'boss' ? 'No way around it' : r.room === 0 ? 'Which way in?' : 'Two doors'}</h2>
     ${tip('route')}
-    ${r.forced ? '<p class="muted" style="font-size:.9rem">Every sector takes at least two fights. Both doors are hot.</p>' : ''}
-    <div class="mech-row">${mechanicChip(r)}<span class="muted" style="font-size:.9rem">${esc(map.mechanic.desc)}</span></div>
+    <div class="mech-row">${mechanicChip(r)}<span class="route-status ${c.hp < st.maxHp * 0.4 ? 'danger-text' : ''}">${c.hp} / ${st.maxHp} HP \u00B7 ${c.items.stim} stims</span><span class="route-status muted">${cds.length ? esc(cds.join(', ')) : 'Skills ready'}</span></div>
     ${bulletinBox(r)}
     ${condBox(r)}
-    ${coopVote ? `<p class="muted" style="font-size:.9rem">Both of you pick a door. If you disagree, a coin decides.${votes[myIdx()] === undefined && mate && votes[1 - myIdx()] !== undefined ? ` <b>${esc(mate.name.split(' ')[0])} has voted.</b>` : ''}</p>` : ''}
+    ${coopVote ? `<p class="muted" style="font-size:.9rem">Split votes go to a coin.${votes[myIdx()] === undefined && mate && votes[1 - myIdx()] !== undefined ? ` <b>${esc(mate.name.split(' ')[0])} has voted.</b>` : ''}</p>` : ''}
     <div class="doors">${doors}</div>
-    <dl class="kv"><dt>Condition</dt><dd class="${c.hp < st.maxHp * 0.4 ? 'danger-text' : ''}">${c.hp} / ${st.maxHp} HP \u00B7 ${c.items.stim} stims</dd>
-      <dt>Skills</dt><dd>${cds.length ? esc(cds.join(', ')) : 'All ready'}</dd></dl>
-    <p class="muted" style="font-size:.85rem">Skill cooldowns carry over between fights in a sector and reset when you enter a new one.</p>
   </section>${logPanel()}</div>`;
 }
 
@@ -1806,12 +1888,11 @@ function afterAction() {
     main = `<b>${esc(o.name)}</b> <span class="muted">${esc(o.text)}</span>`;
     chips = o.notes || [];
   }
-  const feats = o.kind === 'fight' && o.feats && o.feats.length ? `<div class="aa-feats"><span class="label" style="grid-column:1/-1">Achievement progress</span>${o.feats.slice(0, 4).map((p) => `<div class="aa-feat ${p.done ? 'done' : ''}" title="${esc(E.FEAT_DEFS[p.key].desc)}"><span class="num">${esc(p.name)} <b>${p.done ? 'Done' : `${p.count}/${p.next}`}</b></span>${featBar(p)}</div>`).join('')}</div>` : '';
+  const feats = o.kind === 'fight' && o.feats && o.feats.length ? `<div class="aa-feats">${o.feats.slice(0, 2).map((p) => `<div class="aa-feat ${p.done ? 'done' : ''}" title="${esc(E.FEAT_DEFS[p.key].desc)}"><span class="num">${esc(p.name)} <b>${p.done ? 'Done' : `${p.count}/${p.next}`}</b></span>${featBar(p)}</div>`).join('')}</div>` : '';
   const lvl = o.kind === 'fight' && o.levelUps && o.levelUps.length ? `<span class="chip good">Level ${o.levelUps[o.levelUps.length - 1]}!</span>` : '';
-  const spend = c.attrPoints ? `<div class="aa-spend"><span class="label">${c.attrPoints} point${c.attrPoints > 1 ? 's' : ''} to spend</span>${Object.entries(D.ATTRS).map(([k, a]) => `<button class="btn" data-a="spend" data-v="${k}" title="${esc(a.desc)}" ${c.attrs[k] >= D.ATTR_MAX ? 'disabled' : ''}>${a.short} ${c.attrs[k]}\u2192${c.attrs[k] + 1}</button>`).join('')}</div>` : '';
   return `${o.liberated ? `<div class="liberated"><span class="label">District liberated</span><b>${esc(o.liberated)}</b><span>Threat levels are now available under Missions.</span></div>` : ''}
     <div class="aa"><div class="aa-main">${main} ${lvl}<span class="chips">${chips.map((t) => `<span class="chip ${/\u2212|alerted|exploded/.test(t) ? 'bad' : 'good'}">${esc(t)}</span>`).join('')}</span></div>
-    <button class="tool" data-a="dismissresult" aria-label="Hide">\u00D7</button>${feats}${spend}</div>`;
+    <button class="tool" data-a="dismissresult" aria-label="Hide">\u00D7</button>${feats}</div>`;
 }
 // The view behind loot, contraband and sector-clear popups.
 function popupView(inner) {
@@ -1850,18 +1931,16 @@ function rewardScreen() {
 }
 const rewardView = () => { const r = state.run; if (!r || !['loot', 'perk'].includes(state.screen)) return null; return r.lootOffer ? 'loot' : r.perkOffer ? 'perk' : null; };
 function perkScreen() {
-  const r = state.run, c = state.char, full = c.perks.length >= E.CONTRABAND_SLOTS, picked = state.perkPick;
-  const tierOf = (id) => (r.perkTiers && r.perkTiers[id]) || 0;
-  const cards = r.perkOffer.map((id, i) => { const pk = { ...E.perkById(id), name: `${E.perkById(id).name} ${E.ROMAN[tierOf(id)]}${c.perks.includes(id) ? ` (you have ${E.ROMAN[E.perkLevel(c, id)]})` : ''}`, desc: E.perkText(id, tierOf(id)) }; return `<button class="perk ${pk.rare ? 'rare' : ''} ${picked === id ? 'on' : ''}" data-a="perk" data-v="${id}" aria-pressed="${picked === id}">${ico(`perk:${id}`, 'lg')}<span class="label">${pk.rare ? 'Rare contraband' : 'Contraband'} <span class="k">${i + 1}</span></span><b>${esc(pk.name)}</b><span class="desc">${esc(pk.desc)}</span></button>`; }).join('');
-  const swap = full && picked ? `<div class="swap"><span class="label">Pockets full \u00B7 drop one to take the ${esc(E.perkName(picked, tierOf(picked)))}</span>
-    <div class="perk-list">${c.perks.map((id) => { const pk = { ...E.perkById(id), name: E.perkName(id, E.perkLevel(c, id)), desc: E.perkText(id, E.perkLevel(c, id)) }; return `<button class="perk-mini drop ${pk.rare ? 'rare' : ''}" data-a="perkdrop" data-v="${id}">${ico(`perk:${id}`, 'sm2')}<div><b>Drop ${esc(pk.name)}</b><span>${esc(pk.desc)}</span></div></button>`; }).join('')}</div></div>` : '';
+  const r = state.run, c = state.char;
+  const cards = r.perkOffer.map((id, i) => {
+    const p = E.perkById(id), have = E.perkStacks(c, id), now = have ? E.perkValue(id, have) : null, next = E.perkValue(id, have + 1);
+    return `<button class="perk ${p.rare ? 'rare' : ''}" data-a="perk" data-v="${id}">${ico(`perk:${id}`, 'lg')}<span class="label">${have ? `You have x${have}` : p.rare ? 'Rare' : 'New'} <span class="k">${i + 1}</span></span><b>${esc(p.name)}</b><span class="desc">${esc(E.perkText(id, have + 1))}</span>${have && now !== next ? `<span class="stack-up">${now} \u2192 ${next}</span>` : have ? '<span class="stack-up">Builds toward the next step</span>' : ''}</button>`;
+  }).join('');
   return popupView(`
-    <span class="label">Contraband \u00B7 pick one \u00B7 pockets ${c.perks.length} / ${E.CONTRABAND_SLOTS}</span><h2>What they were carrying</h2>
+    <span class="label">Contraband \u00B7 pick one</span><h2>What they were carrying</h2>
     ${tip('perk')}
     <div class="perks">${cards}</div>
-    ${swap}
-    ${full && !picked ? '<p class="muted">Your pockets are full. An upgrade to something you carry needs no room; for anything else, pick it to see what you\u2019d have to drop.</p>' : ''}
-    <div><button class="btn" data-a="perk" data-v="">${full ? 'Keep what I have' : 'Leave it all'}</button></div>
+    <div><button class="btn" data-a="perk" data-v="">Leave it</button></div>
   `);
 }
 
@@ -1888,62 +1967,61 @@ function modalView() {
   const body = modal === 'manual' ? `
     <h2>Field manual</h2>
     <div class="manual">
-      <section><h3>The goal</h3><p>Four districts are under Directorate control. Beat the boss at the end of sector 15 in each to liberate it. Operatives die; the cell remembers.</p></section>
-      <section><h3>A raid</h3><p>Pick a target and an insertion point. Each sector is three rooms: you choose one of two doors each time, and at least two rooms will be fights. Every fifth sector ends in a boss. After a sector you push deeper or extract with what you\u2019re carrying.</p></section>
-      <section><h3>Reading the enemy</h3><ul>
-        <li><b>Taking aim</b>: a normal attack.</li>
-        <li><b>Heavy strike</b>: x2.2 damage. Defend to take a quarter.</li>
-        <li><b>Signature move</b>: every enemy has one, usually with a status effect. Defend halves it and blocks the status.</li>
-        <li><b>Cover</b>: your attacks deal half. Heal or set up instead.</li>
-        <li><b>Repair</b>: hit it hard before it heals.</li></ul></section>
-      <section><h3>Shoot or Strike</h3><p><b>Shoot</b> uses your ranged weapon: steady damage, crit from Agility, and you take 15% less damage that turn because you keep your distance. <b>Strike</b> uses your melee weapon: swingier damage, adds your Strength, ignores cover and gives your next attack +15%, but some enemies hit back when you close in. Ranged skills use the ranged weapon; Power Strike uses the melee one.</p></section>
-      <section><h3>Gear and loot</h3><p>Six slots: ranged, melee, helmet, chest, legs and a gadget. Pieces come in <span class="rname r-common">Common</span>, <span class="rname r-rare">Rare</span>, <span class="rname r-elite">Elite</span> and <span class="rname r-legendary">Legendary</span>, with random bonuses; bosses drop their own <span class="rname r-unique">Unique</span>. The Black Market restocks after every raid. Nobody buys old gear: a new piece replaces the old one. Upgrade pieces (+1 to +5) and reroll bonuses on the Gear tab. Death takes it all, unless the cell has the Heirloom upgrade.</p></section>
-      <section><h3>Your turn</h3><p><b>Defend</b> also steadies your aim: your next shot deals +50%. <b>Skills</b> come from your weapon and high attributes; their cooldowns last for the whole sector, so choose your moment. <b>Stims</b> heal and stop bleeding and burning.</p></section>
+      <section><h3>The goal</h3><p>Beat the sector 15 boss in all four districts. Operatives die; the cell remembers.</p></section>
+      <section><h3>A raid</h3><p>Three rooms per sector, choosing one of two doors each time. A boss every fifth sector. After each sector, push deeper or extract.</p></section>
+      <section><h3>Getting out</h3><p>Credits and XP stay <b>unsecured</b> until you beat a boss or leave, and levels only come then. Extracting costs 80%, 65%, 50%, then 40% of what\u2019s unsecured, by sector; nothing after a boss. Running mid-fight costs 90% to 60%. What you walked in with is safe.</p></section>
+      <section><h3>Your turn</h3><ul>
+        <li><b>Shoot</b>: steady, and you take 15% less that turn.</li>
+        <li><b>Strike</b>: swingy, ignores cover, next hit +15%. Some enemies hit back.</li>
+        <li><b>Defend</b>: half damage, next shot +50%.</li>
+        <li><b>Skills</b>: cooldowns last across a sector.</li></ul></section>
+      <section><h3>Enemy moves</h3><ul>
+        <li><b>Heavy strike</b>: x2.2. Defend takes a quarter.</li>
+        <li><b>Signature move</b>: Defend halves it and blocks the status.</li>
+        <li><b>Cover</b>: your shots deal half.</li>
+        <li><b>Repair</b>: hit it before it heals.</li></ul></section>
       <section><h3>Status effects</h3><ul>${Object.values(D.STATUSES).map((x) => `<li><b>${esc(x.name)}</b>: ${esc(x.desc)}</li>`).join('')}</ul></section>
-      <section><h3>Elites and bosses</h3><p>Elites (veterans) carry a modifier, such as Regenerating or Volatile. Bosses enrage at half health. Bosses always carry <b>contraband</b> and elites sometimes do: pick one of three perks that last until your operative dies. Contraband comes in tiers I to IV, and better tiers turn up the deeper you go. A better copy of something you carry upgrades it without using a pocket. You have four pockets, so a fifth different piece means dropping one.</p></section>
-      <section><h3>Achievements</h3><p>Everything the cell does is counted across every operative: enemies of each type put down, bosses, crits, shots, strikes, skills, dodges, stims, sectors, extractions, events, contraband, prisoners, credits, operatives lost, upgrades, orbit wins, spins and rounds. Each achievement has six tiers. Every tier adds a permanent edge, each a little smaller than the last, and the top tiers of the big ones pay Resolve. Progress shows after every fight; the full record is under <b>Achievements</b>.</p></section>
-      <section><h3>After curfew</h3><p>A second row of buttons in the yard. <b>The Lantern</b>: order one drink before each raid for a small edge that lasts until you come home, such as +2 ATK from Foundry Gin, +6% max HP from Rivet Stout or +10% credits from Smuggler\u2019s Rum. <b>The Wheel</b>: roulette, one bet per spin, zero belongs to the house. <b>Orbit</b>: fly the cell\u2019s shuttle against the blockade. Wins pay credits and, on the harder runs, a permanent <b>Mark</b> (five exist). Lose the shuttle and the pilot dies. Refit the shuttle with credits; cell fittings cost Resolve and survive death. The odds shown are simulated for your current shuttle. <b>Ventures</b>: invest your operative\u2019s money; each venture ticks up or down once per raid and is lost if they die.</p></section>
-      <section><h3>Easy pickings</h3><p>Sectors well below your level pay less XP and fewer credits, and a boss your operative has already beaten pays half the XP and 1 Resolve instead of 3. Every district you liberate brings reinforcements to the ones still held: tougher enemies, better pay.</p></section>
-      <section><h3>Quirks and bulletins</h3><p>Regular enemies often have a <b>quirk</b>, like a Drunk trooper whose shots go wild or an Overclocked droid that cooks itself. Every raid also rolls a <b>Directorate bulletin</b>, such as Payday or Staff Party, that bends the rules until you leave.</p></section>
-      <section><h3>Floors and rare doors</h3><p>Past the first sector, most floors roll a <b>condition</b> (Blackout, Coolant Leak, Double Patrols, Supply Depot, Hunter Squad, Derelict Wing, Sealed Bulkheads) shown on the route screen. Rare doors turn up on every map: a <b>Marked Officer</b> bounty, a <b>Strongroom</b> to crack with INT, a <b>Field Medic Station</b>, a <b>Weapons Locker</b>, a <b>Machinist\u2019s Bench</b> that upgrades your gear for free, and a <b>Smuggler\u2019s Stash</b> of contraband.</p></section>
-      <section><h3>Downtime limits</h3><p>The shuttle flies <b>once per stay in town</b>: raid, come home, and it\u2019s ready again. Ventures hold capped balances (500 / 1,500 / 3,000); Marrow\u2019s consignment opens after sector 5, the smuggler\u2019s bond after sector 10. Deeper cells see better Black Market stock, often already upgraded.</p></section>
-      <section><h3>Your save</h3><p>Your cell backs itself up to the cloud. <b>Settings</b> shows your cell code: enter it on any browser or device to carry on there. Keep it somewhere safe, because it can\u2019t be recovered, and anyone with it can load your cell. The last few versions are kept if you need to roll back.</p></section>
-      <section><h3>Playing together</h3><p>Host from <b>Settings</b> and send your friend the invite link. Each of you brings your own operative, and it stays yours: what you earn together comes home with you, and you can leave, play alone and rejoin whenever you like. You share the yard: walk up to your partner and press <b>E</b> to give credits or gear, or to offer a trade. Each of you has a <b>Lockup</b> at the safehouse for spare gear. On a raid you vote on doors (a split vote goes to a coin), agree on when to leave, and each choose your own loot and contraband. At 0 HP you go <b>down</b>: your partner has 3 rounds to spend a turn getting you up, and 2 the next time. A third time in one raid is fatal. If you bleed out, you die and the raid ends for both. If your partner falls while you\u2019re down, you die and they get out.</p></section>
-      <section><h3>Getting out</h3><p>What you pick up on a raid isn\u2019t yours yet. Credits and XP stay <b>unsecured</b> until you beat a boss or leave. Levels only come when they\u2019re secured, so you can\u2019t level up mid-raid. Leaving costs a share of what\u2019s unsecured: <b>80%</b> after the first sector of a stretch, <b>65%</b> after the second, <b>50%</b> after the third, <b>40%</b> after the fourth, and nothing once the boss is down. The next stretch starts at 80% again. Running mid-fight with <b>Run</b> or <b>Smoke</b> costs 90% down to 60%. Credits you walked in with are never touched. Consumables cost more the deeper your operative has been.</p></section>
-      <section><h3>Getting stronger</h3><p><b>This operative</b>: levels (attribute points), gear, Lockup, implants and contraband. All lost on death, apart from one heirloom if the cell has that upgrade. <b>The cell</b>: Resolve buys permanent training and upgrades. Earn it from sectors (repeat clears pay only every other time), bosses, brave choices and contracts.</p></section>
-      <section><h3>The yard</h3><p>Walk with the arrows or WASD, or tap where to go. Walk into a door to go inside; talk to the person there (<b>E</b>, Space or a tap) to open their menu. The freight terminal opens straight away. Most things in the yard can be poked at, and the noodle vendor sells a hot meal worth +5% XP for the next raid.</p></section>
-      <section><h3>Controls</h3><p class="keys"><span><b>A</b> shoot</span><span><b>F</b> strike</span><span><b>D</b> defend</span><span><b>S</b> stim</span><span><b>R</b> run</span><span><b>Q W E T</b> skills</span><span><b>2 3 4</b> items</span><span><b>1 2</b> doors</span><span><b>Enter</b> continue</span><span><b>Esc</b> close any menu</span></p></section>
+      <section><h3>Contraband</h3><p>Bosses always carry it, elites often, others sometimes. Pick one of three. No limit, and copies stack, each adding a bit less than the last. Lost on death.</p></section>
+      <section><h3>Gear</h3><p>Six slots. Rarer gear rolls more bonuses; bosses drop Uniques. The market restocks each raid, and nobody buys old gear. Upgrade and reroll on the Gear tab.</p></section>
+      <section><h3>Getting stronger</h3><p><b>Lost on death</b>: levels, gear, implants, contraband, ventures. <b>Kept</b>: Resolve, training, cell upgrades, achievements, and one heirloom with that upgrade.</p></section>
+      <section><h3>After curfew</h3><p><b>Lantern</b>: one drink per raid. <b>Wheel</b>: roulette. <b>Orbit</b>: shuttle fights for credits and permanent Marks. <b>Ventures</b>: invest for a return each raid.</p></section>
+      <section><h3>Threat and rewards</h3><p>Freeing a district opens Threat levels and reinforces the others. Sectors far below your level pay less, and a boss you\u2019ve beaten pays half XP.</p></section>
+      <section><h3>Co-op</h3><p>Host from <b>Settings</b> and share the link. You keep your own operative. Vote on doors, pick your own loot, and press <b>E</b> by your partner to trade. At 0 HP you go down and can be revived. If one of you dies, the other must win or run; if both fall, it\u2019s a wipe.</p></section>
+      <section><h3>Saves</h3><p>Your cell backs up to the cloud. Enter its code from <b>Settings</b> on any device. Anyone with the code can load it, so keep it private.</p></section>
+      <section><h3>Controls</h3><p class="keys"><span><b>WASD</b> walk</span><span><b>E</b> talk</span><span><b>A</b> shoot</span><span><b>F</b> strike</span><span><b>D</b> defend</span><span><b>S</b> stim</span><span><b>R</b> run</span><span><b>Q W E T</b> skills</span><span><b>2 3 4</b> items</span><span><b>1 2</b> doors</span><span><b>Enter</b> continue</span><span><b>Esc</b> close</span></p></section>
     </div>` : `
     <h2>Settings</h2>
     <div class="settings">
+      <h3>Sound</h3>
+      <div class="set-grid">
+      <label class="set-row" for="vol"><span>Volume</span><input id="vol" type="range" min="0" max="1" step="0.05" value="${p.volume}"></label>
+      <label class="set-row" for="mvol"><span>Music volume</span><input id="mvol" type="range" min="0" max="1" step="0.05" value="${p.musicVolume}"></label>
       <label class="set-row"><span>Sound effects</span><button class="btn" data-a="setpref" data-v="sfx" aria-pressed="${p.sfx}">${p.sfx ? 'On' : 'Off'}</button></label>
       <label class="set-row"><span>Music</span><button class="btn" data-a="setpref" data-v="music" aria-pressed="${p.music}">${p.music ? 'On' : 'Off'}</button></label>
-      <label class="set-row" for="mvol"><span>Music volume</span><input id="mvol" type="range" min="0" max="1" step="0.05" value="${p.musicVolume}"></label>
-      <label class="set-row"><span>Ambience (low drone)</span><button class="btn" data-a="setpref" data-v="ambience" aria-pressed="${p.ambience}">${p.ambience ? 'On' : 'Off'}</button></label>
+      <label class="set-row"><span>Ambience</span><button class="btn" data-a="setpref" data-v="ambience" aria-pressed="${p.ambience}">${p.ambience ? 'On' : 'Off'}</button></label>
       <label class="set-row"><span>Rain</span><button class="btn" data-a="setpref" data-v="rain" aria-pressed="${p.rain}">${p.rain ? 'On' : 'Off'}</button></label>
-      <label class="set-row" for="vol"><span>Volume</span><input id="vol" type="range" min="0" max="1" step="0.05" value="${p.volume}"></label>
-      <p class="muted" style="font-size:.88rem">Battle mode (Manual, Auto 1\u00D7 or Auto 2\u00D7) is in the corner of the battle scene. Auto fights for you with a fixed routine until the fight ends.</p>
-      <h3>Co-op <span class="num muted" style="font-size:.85rem">play with a friend</span></h3>
+      </div>
+      <h3>Co-op</h3>
       ${net ? `<div class="set-row"><span>${isHost() ? 'Hosting' : 'Joined'} room <b class="num">${net.code}</b> \u00B7 ${net.peer ? `connected to ${esc(net.peerName || (isHost() ? 'your friend' : 'the host'))}` : coopStatus === 'error' || coopStatus === 'closed' ? 'connection failed' : 'waiting for the other player\u2026'}</span><button class="btn" data-a="coopleave">Leave</button></div>
-        ${isHost() ? `<div class="set-row"><span>Invite link <span class="muted">(your friend just opens it)</span></span><span class="btnrow" style="flex:1;justify-content:flex-end"><input class="text" readonly value="${esc(inviteLink())}" aria-label="Invite link" style="flex:1;min-width:140px"><button class="btn primary" data-a="coopinvite">Copy</button></span></div>` : ''}
-        ${isGuest() ? '<p class="muted" style="font-size:.88rem">Your operative is your own: what you earn here is saved with your cell, and leaving takes them back to your solo game.</p>' : ''}
-        ${isHost() ? '<p class="muted" style="font-size:.88rem">Give your friend the room code. You pick the missions; they press Ready at their terminal. In fights you take turns, then the enemy acts. If one of you goes down, the other has a few rounds to get them up; if an operative dies, the raid is over for both.</p>' : ''}`
+        ${isHost() ? `<div class="set-row"><span>Invite link</span><span class="btnrow" style="flex:1;justify-content:flex-end"><input class="text" readonly value="${esc(inviteLink())}" aria-label="Invite link" style="flex:1;min-width:140px"><button class="btn primary" data-a="coopinvite">Copy</button></span></div>` : ''}
+        ${isGuest() ? '<p class="muted" style="font-size:.88rem">Your operative stays yours, and leaving takes them back to your solo game.</p>' : ''}
+        ${isHost() ? '<p class="muted" style="font-size:.88rem">You pick the missions; your friend presses Ready at their terminal.</p>' : ''}`
       : `<div class="coop-form">
         <label class="set-row" for="coop-name"><span>Your name</span><input id="coop-name" class="text" maxlength="16" value="${esc(getCoopPrefs().name || (state.char ? state.char.name.split(' ')[0] : ''))}"></label>
-        ${location.hostname.endsWith('.workers.dev') ? '' : `<label class="set-row" for="coop-relay"><span>Relay URL <span class="muted">(from the Cloudflare Worker; leave empty to test in two tabs of this browser)</span></span><input id="coop-relay" class="text" placeholder="https://cinder-cell-coop.yourname.workers.dev" value="${esc(getCoopPrefs().relay)}"></label>`}
+        ${location.hostname.endsWith('.workers.dev') ? '' : `<label class="set-row" for="coop-relay"><span>Relay URL <span class="muted">(blank: two tabs here)</span></span><input id="coop-relay" class="text" placeholder="https://cinder-cell-coop.yourname.workers.dev" value="${esc(getCoopPrefs().relay)}"></label>`}
         <div class="set-row"><span>Host a game${state.char ? '' : ' (build an operative first)'}</span><button class="btn primary" data-a="coophost" ${state.char ? '' : 'disabled'}>Host</button></div>
         <label class="set-row" for="coop-code"><span>Join with a code</span><span class="btnrow"><input id="coop-code" class="text" maxlength="8" placeholder="CODE" style="width:7ch;text-transform:uppercase"><button class="btn" data-a="coopjoin">Join</button></span></label>
       </div>`}
-      <h3>Cloud save <span class="num muted" style="font-size:.85rem">your cell, on any device</span></h3>
+      <h3>Cloud save</h3>
       ${cloudSection()}
       <h3>Dev mode</h3>
       ${devOn ? '<div class="set-row"><span>Dev mode is on.</span><button class="btn" data-a="modal" data-v="dev">Open</button></div>' : '<div class="set-row"><span class="btnrow" style="flex:1"><input id="dev-code" class="text" inputmode="numeric" maxlength="8" placeholder="Dev code" style="flex:1;min-width:100px"><button class="btn" data-a="devunlock">Enter</button></span></div>'}
-      <h3>Save <span class="num muted" style="font-size:.85rem">move your cell between devices by hand</span></h3>
-      <div class="set-row"><span>Copy a save code (also shown below) and paste it on the other device</span><button class="btn" data-a="savecode">Copy save code</button></div>
+      <h3>Save by hand</h3>
+      <div class="set-row"><span>Save code</span><button class="btn" data-a="savecode">Copy save code</button></div>
       <div class="set-row"><span class="btnrow" style="flex:1"><input id="load-code" class="text" placeholder="Paste a save code" style="flex:1;min-width:120px"><button class="btn" data-a="loadcode">Load</button></span></div>
-      <div class="set-row"><span>Run report: everything that happened, as text to paste into a chat for feedback (copied to the clipboard and shown below)</span><button class="btn" data-a="report">Copy run report</button></div>
+      <div class="set-row"><span>Run report, for feedback</span><button class="btn" data-a="report">Copy run report</button></div>
       ${state.report ? `<textarea class="report" readonly aria-label="Run report">${esc(state.report)}</textarea>` : ''}
-      <div class="set-row"><span>Erase all progress, including Resolve and training</span><button class="btn danger" data-a="reset">${confirmReset ? 'Click again to confirm' : 'Reset save'}</button></div>
+      <div class="set-row"><span>Erase all progress</span><button class="btn danger" data-a="reset">${confirmReset ? 'Click again to confirm' : 'Reset save'}</button></div>
     </div>`;
   return `<div class="modal-wrap" data-a="closemodal"><div class="modal" role="dialog" aria-modal="true" aria-label="${modal === 'manual' ? 'Field manual' : 'Settings'}">
     <button class="tool close" data-a="closemodal" aria-label="Close">Close</button>${body}</div></div>`;
@@ -1992,7 +2070,7 @@ function boardView() {
     <button class="tool close" data-a="closemodal" aria-label="Close">Close</button>
     <h2>Leaderboard <span class="num muted" style="font-size:.9rem">${online ? `top ${board.length} of ${globalBoard.total.toLocaleString()} operatives, everyone\u2019s` : `this device\u2019s best ${board.length} operatives`}</span></h2>
     ${!online && BOARD_ON ? `<p class="muted" style="font-size:.9rem">${globalBoard && globalBoard.loading ? 'Fetching the global board\u2026' : 'Can\u2019t reach the global board right now, so these are your own operatives. Yours will be sent when the connection is back.'}</p>` : ''}
-    <p class="muted" style="font-size:.9rem">One row per operative, for their whole life: how far they got, and nothing else. On each district, ${E.SECTOR_POINTS} per sector cleared, ${E.BOSS_POINTS} more per boss, ${E.LIBERATE_POINTS.toLocaleString()} more for freeing it. Going back over the same ground adds nothing. Threat levels count on top, each worth ${Math.round(E.THREAT_POINTS * 100)}% more than the last. Your operatives are highlighted.</p>
+    <p class="muted" style="font-size:.9rem">How far each operative got: ${E.SECTOR_POINTS} per sector, ${E.BOSS_POINTS} per boss, ${E.LIBERATE_POINTS.toLocaleString()} per district freed. Repeat clears add nothing; threat levels add ${Math.round(E.THREAT_POINTS * 100)}% each.</p>
     ${board.length ? `<table class="board-table"><thead><tr><th>#</th><th>Operative</th><th>Got to</th><th>Status</th><th class="num">Score</th></tr></thead><tbody>${rows}</tbody></table>` : '<p class="muted">No operatives on the board yet.</p>'}
   </div></div>`;
 }
@@ -2145,14 +2223,14 @@ function sectorClearScreen() {
   const r = state.run, o = state.outcome, c = state.char, st = E.stats(state), next = r.sector + 1;
   return popupView(`
     <span class="label">Sector ${r.sector} cleared \u00B7 ${esc(E.mapById(r.map).name)}</span><h2>${esc(E.sectorName(r.sector, r.map))}</h2>
-    <dl class="kv"><dt>Sector haul</dt><dd style="color:var(--sodium)">+${cr(o.credits)}</dd><dt>Carrying</dt><dd>${cr(c.credits)}</dd><dt>Condition</dt><dd class="${c.hp < st.maxHp * 0.4 ? 'danger-text' : ''}">${c.hp} / ${st.maxHp} HP \u00B7 ${c.items.stim} stims</dd><dt>${esc(S.meta)}</dt><dd style="color:var(--sodium)">${o.resolve ? `+${o.resolve} (banked)` : '<span class="muted">none this time: repeat clears pay every other time</span>'}</dd></dl>
-    ${E.isBossSector(next) ? `<div class="notice" style="border-color:var(--danger);background:var(--danger-dim)">Sector ${next} is a boss sector. Something worse than troopers is waiting.</div>` : ''}
+    <dl class="kv"><dt>Sector haul</dt><dd style="color:var(--sodium)">+${cr(o.credits)}</dd><dt>Carrying</dt><dd>${cr(c.credits)}</dd><dt>Condition</dt><dd class="${c.hp < st.maxHp * 0.4 ? 'danger-text' : ''}">${c.hp} / ${st.maxHp} HP \u00B7 ${c.items.stim} stims</dd>${o.resolve ? `<dt>${esc(S.meta)}</dt><dd style="color:var(--sodium)">+${o.resolve}</dd>` : ''}</dl>
+    ${E.isBossSector(next) ? `<div class="notice" style="border-color:var(--danger);background:var(--danger-dim)">Boss in sector ${next}.</div>` : ''}
     <div class="btnrow">
       <button class="btn primary big" data-a="deeper">Push to sector ${next}<span class="k">1</span></button>
       <button class="btn big" data-a="extract">Extract with ${cr(c.credits - E.extractLoss(state))}<span class="k">2</span></button>
     </div>
     ${exitVoteLine()}
-    <p class="muted" style="font-size:.88rem">${E.extractRate(r.sector) ? `Leaving now costs bribes at the gate: <b>${Math.round(E.extractRate(r.sector) * 100)}%</b> of what you\u2019ve picked up since the last boss (${cr(E.extractLoss(state))} and ${E.extractXpLoss(state)} XP). The nearer the next boss, the less it costs. Beating the boss secures everything.` : 'The boss is down, so everything is secure. Leave free, or push on and start the next stretch at risk.'} Credits you walked in with are never touched.</p>
+    <p class="muted" style="font-size:.88rem">${E.extractRate(r.sector) ? `Leaving now costs <b>${Math.round(E.extractRate(r.sector) * 100)}%</b> of your unsecured haul: ${cr(E.extractLoss(state))} and ${E.extractXpLoss(state)} XP. Less each sector; nothing after a boss.` : 'Boss down: everything is secure, and leaving is free.'}</p>
   `);
 }
 
@@ -2178,7 +2256,7 @@ function deathScreen() {
     <p class="story">Operative ${o.number} ${o.orbit ? `was lost in orbit when a ${esc(o.killer)} broke the shuttle apart` : `went down in the ${esc(E.sectorName(o.sector, o.map))}${o.killerId ? `, killed by a ${esc(o.killer)}` : `, taken by ${esc(o.killer)}`}`}. The ${o.credits.toLocaleString()} ${S.currency}, the gear, ${o.perks ? `${o.perks} piece${o.perks > 1 ? 's' : ''} of contraband, ` : ''}the implants and level ${o.level} went with them.</p>
     ${o.wipe ? '<p class="notice lose">A wipe. Both of you fell on this raid, and everything you carried went with you.</p>' : ''}<dl class="kv"><dt>${esc(S.meta)} to spend</dt><dd style="color:var(--sodium)">${state.meta.resolve}</dd><dt>Deepest ever</dt><dd>Sector ${state.meta.bestSector}</dd>${o.score ? `<dt>Final score</dt><dd>${o.score.toLocaleString()} points${o.boardRank ? `, <b style="color:var(--sodium)">#${o.boardRank.toLocaleString()} of ${o.boardTotal.toLocaleString()}</b> worldwide` : ''} <button class="btn" data-a="modal" data-v="board" style="margin-left:8px">View</button></dd>` : ''}</dl>
     ${heirloomPick()}
-    <p class="muted">Spend the Resolve at the safehouse (Character & Resolve) once your next operative is in town. Training and cell upgrades carry over.</p>
+    <p class="muted" style="font-size:.88rem">Spend Resolve at the safehouse once your next operative is in town.</p>
     <div><button class="btn primary big" data-a="recruit">Build the next operative</button></div>
   </section>`;
 }
@@ -2229,6 +2307,8 @@ function render() {
   if (state.contractDone) { toast = `Contract complete: ${state.contractDone}`; state.contractDone = null; A.play('perk'); if (isHost()) guestToast = toast; }
   if (state.featUnlocks && state.featUnlocks.length) { const u = state.featUnlocks; toast = `Achievement: ${u.slice(0, 2).map((x) => `${x.name} ${E.ROMAN[x.tier - 1]} (${x.text}${x.resolve ? `, +${x.resolve} ${S.meta}` : ''})`).join(' \u00B7 ')}${u.length > 2 ? ` and ${u.length - 2} more` : ''}`; state.featUnlocks = null; A.play('perk'); if (isHost()) guestToast = toast; }
   // Keep the page where it was: scroll positions of menus and the page, and the focused button, survive the rebuild.
+  // Inside a shop or menu, a message floats instead of joining the page: anything inline pushes the buttons out from under the cursor.
+  if ((state.popup || modal) && state.notice) { toast = state.notice; state.notice = null; }
   const app = document.getElementById('app');
   const kept = [...app.querySelectorAll('.modal, .log')].map((el) => ({ cls: el.className, top: el.scrollTop })).filter((k) => k.top > 0);
   const pageY = window.scrollY, fo = document.activeElement, foKey = fo && fo.dataset && fo.dataset.a ? [fo.dataset.a, fo.dataset.v || '', fo.dataset.k || ''].join('|') : null;
@@ -2479,14 +2559,12 @@ function applyAct(a, v, k) {
       break;
     }
     case 'orbitclose': ok = E.orbitClose(state); if (ok) { if (state.screen === 'death') { modal = null; sfx('death'); } else sfx('door'); } break;
-    case 'sound': A.setPref('sfx', !A.getPrefs().sfx); sfx('click'); break;
+    case 'sound': A.setPref('muted', !A.getPrefs().muted); sfx('click'); break;
     case 'setpref': A.setPref(v, !A.getPrefs()[v]); sfx('click'); break;
     case 'tip': state.meta.tips[v] = true; sfx('click'); break;
     case 'threat': state.meta.threat = +v; sfx('click'); break;
     case 'perk':
-      if (v && state.char.perks.length >= E.CONTRABAND_SLOTS && !state.char.perks.includes(v)) { state.perkPick = state.perkPick === v ? null : v; sfx('click'); break; }
-      E.choosePerk(state, v, rng, null, actingAs); state.perkPick = null; if (v) sfx('perk'); break;
-    case 'perkdrop': if (E.choosePerk(state, state.perkPick, rng, v, actingAs)) { state.perkPick = null; sfx('perk'); } break;
+      E.choosePerk(state, v, rng, actingAs); if (v) sfx('perk'); break;
     case 'ending': state.meta.endingSeen = true; state.screen = 'town'; break;
     case 'begin': state.screen = 'create'; if (!state.draft) state.draft = E.newDraft(state.meta, rng); break;
     case 'bg': state.draft.background = v; { for (const key of Object.keys(D.ATTRS)) while (E.draftAttr(state.draft, key) > D.ATTR_CREATE_MAX) E.draftAdjust(state.draft, key, -1); } break;
