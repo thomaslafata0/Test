@@ -46,7 +46,7 @@ function townBot(s) {
   G.shopGear(s, STYLE, 60);
   while (c.items.stim < 3 && E.buyItem(s, 'stim'));
   for (const id of ['dermal', 'reflex', 'pain', 'adrenal']) if (c.credits > 150) E.installImplant(s, id);
-  for (const u of D.UPGRADES) if (c.credits > u.cost + 60) E.buyUpgrade(s, u.id);
+  for (const u of D.UPGRADES) if (c.credits > E.modCost(c, u) + 60) E.buyUpgrade(s, u.id);
   if (c.credits > 120 && c.items.thermal < 1) E.buyItem(s, 'thermal');
   G.upgradeGear(s, STYLE, 150);
 }

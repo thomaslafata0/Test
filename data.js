@@ -239,7 +239,17 @@ export const UPGRADES = [
   { id: 'drill',  name: 'Close-Quarters Drill', cost: 180, desc: '+2 ATK.' },
   { id: 'forger', name: 'Forged Papers',        cost: 200, desc: 'The first enemy in each sector is caught off guard (stunned 1 turn).' },
   { id: 'fence',  name: 'Fence Network',        cost: 220, desc: '+25% credits from enemies.' },
+  { id: 'corpsman', name: 'Black-Bag Corpsman', cost: 130, desc: 'Stims heal 25% more.' },
+  { id: 'driver', name: 'Getaway Driver',       cost: 140, desc: '+15% chance to escape a fight.' },
+  { id: 'lining', name: 'Reinforced Lining',    cost: 160, desc: '+2 DEF.' },
+  { id: 'quarter', name: 'Quartermaster',       cost: 200, desc: 'One free stim at the start of every raid.' },
+  { id: 'route',  name: 'Smuggler\u2019s Route', cost: 240, desc: 'Leaving a raid early costs 15% less.' },
+  { id: 'broker', name: 'Contraband Broker',    cost: 260, desc: 'Contraband offers show four pieces instead of three.' },
+  { id: 'informant', name: 'Street Informant',  cost: 280, desc: 'Shows the enemy\u2019s next two moves.' },
+  { id: 'favour', name: 'Marrow\u2019s Favour', cost: 300, desc: 'Everything at the market costs 10% less.' },
+  { id: 'ripper', name: 'Back-Alley Ripper',    cost: 320, desc: 'One more implant slot.' },
 ];
+export const MOD_STEP = 1.25; // each mod an operative buys makes the next one this much dearer
 
 // ---------- permanent progression (Resolve; survives death) ----------
 export const TRAINING = {

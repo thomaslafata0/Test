@@ -52,7 +52,7 @@ function shop(s, b, st, o = {}) {
   for (const [it, n] of Object.entries(b.items || {})) while (c.items[it] < n && c.credits > 60 && E.buyItem(s, it));
   while (c.items.smoke < (st.smoke || 0) && E.buyItem(s, 'smoke'));
   if (!o.noBuy) {
-    for (const id of ['medic', 'drill', 'belt', 'fence', 'forger']) { const u = D.UPGRADES.find((x) => x.id === id); if (c.credits >= E.price(s, u.cost) + 60) E.buyUpgrade(s, id); }
+    for (const id of ['medic', 'drill', 'belt', 'lining', 'corpsman', 'quarter', 'fence', 'route', 'favour', 'broker', 'driver', 'ripper', 'informant', 'forger']) { const u = D.UPGRADES.find((x) => x.id === id); if (c.credits >= E.price(s, E.modCost(c, u)) + 60) E.buyUpgrade(s, id); }
     for (const id of b.implants) if (c.credits > 80) E.installImplant(s, id);
     if (c.credits > 60 && !o.noDrink) E.buyDrink(s, b.drink);
   }

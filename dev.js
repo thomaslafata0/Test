@@ -21,7 +21,7 @@ function draftFor(s, rng, b) {
   return d;
 }
 // Spends everything a sensible player would before leaving town: Resolve, attribute points, gear, stims, mods, implants, upgrades, a drink.
-const MODS = ['medic', 'drill', 'belt', 'fence', 'forger'];
+const MODS = ['medic', 'drill', 'belt', 'lining', 'corpsman', 'quarter', 'fence', 'route', 'favour', 'broker', 'driver', 'ripper', 'informant', 'forger'];
 const IMPLANTS = { str: ['pain', 'dermal', 'myomer', 'adrenal'], agi: ['reflex', 'optic', 'dermal', 'adrenal'], int: ['neural', 'synapse', 'dermal', 'pain'], cha: ['dermal', 'voice', 'pain', 'adrenal'] };
 const DRINK = { str: 'gin', agi: 'sour', int: 'tonic', cha: 'rum' };
 function shop(s, rng, b) {
@@ -34,7 +34,7 @@ function shop(s, rng, b) {
   while (c.items.stim < 2 && E.buyItem(s, 'stim'));
   G.shopGear(s, b.style, 25);
   while (c.items.stim < 3 && E.buyItem(s, 'stim'));
-  for (const id of MODS) { const u = D.UPGRADES.find((x) => x.id === id); if (c.credits >= E.price(s, u.cost) + 25) E.buyUpgrade(s, id); }
+  for (const id of MODS) { const u = D.UPGRADES.find((x) => x.id === id); if (c.credits >= E.price(s, E.modCost(c, u)) + 25) E.buyUpgrade(s, id); }
   for (const id of IMPLANTS[b.attrs[0]] || IMPLANTS.str) E.installImplant(s, id);
   G.upgradeGear(s, b.style, 25);
   // Whatever is left goes on the lowest-level gear, even where the bot's score barely moves.

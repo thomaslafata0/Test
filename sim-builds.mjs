@@ -49,7 +49,7 @@ function shop(s, b, st) {
   for (const [it, n] of Object.entries(b.items || {})) while (c.items[it] < n && c.credits > 80 && E.buyItem(s, it));
   while (c.items.smoke < st.smoke && E.buyItem(s, 'smoke'));
   for (const id of b.implants) if (c.credits > 120) E.installImplant(s, id);
-  for (const u of D.UPGRADES) if (c.credits > u.cost + 80) E.buyUpgrade(s, u.id);
+  for (const u of D.UPGRADES) if (c.credits > E.modCost(c, u) + 80) E.buyUpgrade(s, u.id);
   G.upgradeGear(s, b.style, 150, b.noArmor ? ARMOR_SLOTS : [], b.w || {});
 }
 

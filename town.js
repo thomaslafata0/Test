@@ -122,12 +122,15 @@ export class Town {
 
   // Pick a native size so the canvas scales by a whole number (crisp pixels): about 2x on desktop, 1x on phones.
   fit() {
-    const cw = this.el.clientWidth, inside = this.scene.startsWith('interior:'), key = `${cw}:${inside}`;
+    // A phone held sideways: fill the height of the screen rather than keeping a fixed shape, so nothing has to scroll.
+    const sideways = window.innerHeight <= 500 && window.innerWidth > window.innerHeight;
+    const roomH = sideways ? Math.max(120, Math.floor(window.innerHeight - this.el.getBoundingClientRect().top - 10)) : 0;
+    const cw = this.el.clientWidth, inside = this.scene.startsWith('interior:'), key = `${cw}:${inside}:${roomH}`;
     if (!cw || key === this.fitKey) return;
     this.fitKey = key;
     // Interiors are small rooms: zoom one step further on wider screens.
     const scale = Math.max(1, Math.round(cw / 480)) + (inside && cw >= 600 ? 1 : 0);
-    VIEW_W = Math.round(cw / scale); VIEW_H = Math.round(VIEW_W * (cw < 600 ? 0.78 : 0.56));
+    VIEW_W = Math.round(cw / scale); VIEW_H = Math.round(VIEW_W * (roomH ? roomH / cw : cw < 600 ? 0.78 : 0.56));
     this.cv.width = VIEW_W; this.cv.height = VIEW_H;
     this.cv.style.aspectRatio = `${VIEW_W} / ${VIEW_H}`;
     this.g.imageSmoothingEnabled = false;

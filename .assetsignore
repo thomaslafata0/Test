@@ -16,3 +16,4 @@ sim-builds.mjs
 sim-coop.mjs
 sim-balance.mjs
 *.md
+ios

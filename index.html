@@ -1,5 +1,6 @@
 <title>Cinder Cell</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#121518">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -597,7 +598,7 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .toast { pointer-events: none; }
 .town-spend { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 10px; font-size: .88rem; }
 .town-spend .btn { padding: 3px 9px; font-size: .82rem; }
-body { padding-block: 10px 24px; }
+body { padding-top: max(10px, env(safe-area-inset-top, 0px)); padding-bottom: max(24px, env(safe-area-inset-bottom, 0px)); }
 .wrap { max-width: 1120px; gap: 10px; }
 h2 { font-size: 1.6rem; }
 h3 { font-size: 1.05rem; }
@@ -620,7 +621,7 @@ h3 { font-size: 1.05rem; }
 .notice { padding: 5px 10px; font-size: .88rem; }
 .town-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 14px; }
 .town-help { font-size: .84rem; }
-#town-slot { width: min(100%, 110vh); margin-inline: auto; }
+#town-slot, .town-panel > .town { width: min(100%, 110vh); margin-inline: auto; }
 .shortcuts { display: flex; flex-wrap: wrap; gap: 5px; }
 .shortcuts .btn { padding: 6px 10px; font-size: .88rem; }
 .btn.quiet { background: none; }
@@ -681,9 +682,124 @@ h3 { font-size: 1.05rem; }
 .item .cmp { gap: 3px; }
 .chip { font-size: .62rem; padding: 1px 5px; }
 @media (max-width: 820px) { .columns { grid-template-columns: minmax(0, 1fr); } }
-@media (max-width: 620px) { .actions { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 620px) {
+  .actions { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .actions .btn { grid-column: span 2; }
+  .actions .btn.atk { grid-column: span 3; }
+  .head-stats { gap: 4px 14px; }
+  .popup .btnrow .btn.big { flex: 1 1 100%; justify-content: center; }
+}
+.touch-only { display: none; }
+.menu-tool { display: none; }
+.c-left, .c-right { display: contents; }
+.rotate-note { display: none; }
+.menu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.menu-grid .btn { padding: 12px; }
+@media (orientation: portrait) and (pointer: coarse) and (max-width: 600px) {
+  .rotate-note { position: fixed; inset: 0; z-index: 100; display: grid; place-content: center; gap: 14px; padding: 24px; text-align: center; background: var(--bg, #0b0d10); }
+  .rotate-note b { font-family: var(--display); font-size: 2rem; text-transform: uppercase; color: var(--sodium); }
+}
+/* Phones, sideways: the game fills the screen and play screens don't scroll. Long lists scroll inside their own panel. */
+@media (max-height: 500px) and (orientation: landscape) {
+  html { font-size: 13px; }
+  html, body { height: 100dvh; overflow: hidden; overscroll-behavior: none; }
+  body { box-sizing: border-box; margin: 0; }
+  body { padding: max(4px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px)) max(3px, env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); }
+  #app { display: flex; flex-direction: column; gap: 4px; height: 100%; max-width: none; }
+  #app > section, #app > .columns { flex: 1 1 auto; min-height: 0; }
+  #app > section { overflow-y: auto; }
+  .tipbox, .columns > aside, .aa-feats, .brand, .tools .tool:not(.menu-tool) { display: none; }
+  .tools .menu-tool { display: block; padding: 5px 12px; }
+  .status { display: flex; align-items: center; flex-wrap: nowrap; padding: 0 0 3px; gap: 8px; }
+  .head-top { order: 2; margin-left: auto; flex: none; }
+  .head-stats { flex-wrap: nowrap; gap: 0 12px; min-width: 0; align-items: center; }
+  .head-stats .stat { flex: none; }
+  .head-stats .stat:first-of-type .label { display: none; }
+  .stat .label { font-size: .5rem; letter-spacing: .06em; }
+  .stat .v { font-size: .78rem; white-space: nowrap; }
+  .hp { width: 76px; }
+  .num-stat { min-width: 0; }
+  .columns { display: block; height: 100%; }
+  .columns > section { height: 100%; overflow-y: auto; }
+  .panel { padding: 5px 8px; gap: 4px; }
+  h2 { font-size: 1.25rem; }
+  .big-title { font-size: 2rem; }
+  .combat { display: grid; grid-template-columns: minmax(0, 44%) minmax(0, 1fr); gap: 8px; align-items: start; }
+  .c-left, .c-right { display: grid; gap: 4px; align-content: start; min-width: 0; }
+  .combat { align-items: stretch; }
+  .c-right { grid-auto-rows: auto; align-content: stretch; }
+  .combat .stage, #stage-slot { width: 100%; }
+  .stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1px; background: var(--line); }
+  .stage canvas { grid-column: 1 / -1; }
+  .hud { position: static; width: auto; max-width: none; border: 0; background: var(--panel-2); padding: 2px 6px; gap: 1px; }
+  .hud-player { order: 2; }
+  .hud-enemy { order: 3; }
+  .hud-tag { display: none; }
+  .hud-name, .hud-name.long { font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+  .hud-hp { font-size: .62rem; }
+  .speed button { font-size: .52rem; padding: 2px 4px; }
+  .door { min-height: 34vh; align-content: center; }
+  .combat-head .label { font-size: .55rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .combat-head { flex-wrap: nowrap; }
+  .auto-note { display: none; }
+  .intent { padding: 2px 8px; }
+  .quirk-line { font-size: .68rem; }
+  .actions { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+  .actions .btn { grid-column: span 2; min-height: 54px; padding: 3px; font-size: 1rem; }
+  .actions .btn.atk { grid-column: span 3; }
+  .skills { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+  .skills .btn { min-height: 44px; padding: 3px 6px; }
+  .items { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+  .items .btn { min-height: 34px; padding: 2px 4px; }
+  .party .pm { padding: 2px 6px; }
+  .town-panel { display: grid; height: 100%; grid-template-columns: minmax(0, 1fr) 168px; grid-auto-rows: min-content; align-content: start; gap: 0 6px; }
+  .town-panel > :not(#town-slot):not(.town) { margin-bottom: 4px; }
+  .town-panel > .town-head { display: none; }
+  .town-panel > .town, .town-panel > #town-slot { grid-column: 1; grid-row: 1 / span 20; width: 100%; margin: 0; }
+  .town-panel > :not(#town-slot):not(.town) { grid-column: 2; min-width: 0; }
+  .town-panel .shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+  .town-panel .shortcuts .btn { padding: 5px 2px; font-size: .78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 30px; }
+  .town-panel .shortcuts .btn .muted { display: none; }
+  .town-spend { font-size: .74rem; gap: 3px; }
+  .town-spend b { flex: 1 1 100%; }
+  .town-spend .btn { padding: 3px 5px; font-size: .72rem; }
+  .town-panel .notice { font-size: .68rem; padding: 3px 6px; max-height: 58px; overflow: hidden; }
+  .doors { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .door { padding: 6px 10px; }
+  .door .ico { width: 28px; height: 28px; }
+  .bulletin { padding: 2px 8px; font-size: .74rem; }
+  .bulletin .label { display: none; }
+  .aa { padding: 2px 8px; }
+  .popup-wrap, .modal-wrap { padding: 3px max(8px, env(safe-area-inset-right, 0px)) 3px max(8px, env(safe-area-inset-left, 0px)); }
+  .modal, .modal.popup, .modal.popup.wide { width: 100%; max-height: calc(100dvh - 6px); padding: 7px 10px; gap: 5px; }
+  .modal.popup h2 { font-size: 1.2rem; }
+  .loot { grid-template-columns: minmax(0, 1fr); }
+  .loot > div:last-child { display: none !important; }
+  .loot > div > .label, .loot .item .desc, .loot .cmp .label, .popup > .label + h2 { display: none; }
+  .loot .item ul { display: flex; flex-wrap: wrap; gap: 0 16px; margin: 0; padding-left: 1em; }
+  .popup .btnrow { flex-wrap: nowrap; }
+  .popup .btnrow .btn.big { flex: 1 1 0; white-space: normal; }
+  .btnrow { gap: 4px; }
+  .btn.big { padding: 7px 10px; font-size: .92rem; }
+  .perks { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+  .perk .ico { width: 30px; height: 30px; }
+  .perk b { font-size: 1rem; }
+  .perk { padding: 6px 8px; }
+  .title { min-height: 0; height: 100%; align-items: center; }
+  .title-body { padding: 8px 14px; gap: 6px; max-width: none; }
+  .title-menu { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: none; gap: 4px; }
+  .title-menu .btn { padding: 6px 10px; font-size: .9rem; }
+  .title-stats { display: none; }
+  .killer { display: none; }
+  .story { font-size: .84rem; gap: 4px; max-width: none; }
+  #app > section[style] { padding: 6px 10px !important; }
+  .kv { font-size: .78rem; }
+  .payout .payout-row { gap: 8px; }
+}
+@media (pointer: coarse) { body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; } .touch-only { display: inline; } .keys-only { display: none; } .k { display: none; } }
 </style>
 
+<div class="rotate-note"><b>Turn your phone sideways</b><span class="muted">Cinder Cell plays in landscape.</span><div><button class="btn" onclick="this.closest('.rotate-note').remove()">Play upright anyway</button></div></div>
 <div class="wrap" id="app" aria-live="polite"></div>
 
 <script type="module">
@@ -1187,7 +1303,7 @@ const ico = (key, size = 'md') => { const src = iconURL(key); return src ? `<img
 
 function headerTools() {
   const p = A.getPrefs();
-  return `<div class="tools"><button class="tool" data-a="modal" data-v="manual" aria-label="Field manual">Manual</button>
+  return `<div class="tools"><button class="tool menu-tool" data-a="modal" data-v="menu" aria-label="Menu">Menu</button><button class="tool" data-a="modal" data-v="manual" aria-label="Field manual">Manual</button>
     <button class="tool" data-a="sound" aria-pressed="${!p.muted}" aria-label="Toggle all sound">${p.muted ? 'Sound off' : 'Sound on'}</button>
     <button class="tool" data-a="modal" data-v="board" aria-label="Leaderboard">Board</button>
     <button class="tool" data-a="modal" data-v="feats" aria-label="Achievements">Achievements</button>
@@ -1222,7 +1338,7 @@ const TIPS = {
   route: 'Pick a door. Three rooms per sector, and a boss every fifth sector.',
   combat: 'Watch the enemy\u2019s next move. Defend against heavy hits; it also lines up your next shot.',
   perk: 'Lasts until this operative dies. No limit, and copies stack: each adds a bit less than the last.',
-  loot: 'Take it or leave it. Nobody buys old gear.',
+  loot: 'Take it, send it to your Lockup, or leave it. Nobody buys old gear.',
   gear: 'Tap a slot to see or upgrade it. Shoot uses the ranged weapon, Strike the melee one.',
 };
 function tip(id) {
@@ -1347,7 +1463,7 @@ const popupBadge = (id) => {
 };
 function townScreen() {
   return `<section class="panel town-panel">
-    <div class="town-head"><h2>${esc(S.town)}</h2><p class="muted town-help">WASD or tap to walk \u00B7 <b>E</b> to talk${state.char.fed ? ' <span class="chip good">Fed: +5% XP</span>' : ''}</p></div>
+    <div class="town-head"><h2>${esc(S.town)}</h2><p class="muted town-help"><span class="keys-only">WASD or tap to walk \u00B7 <b>E</b> to talk</span><span class="touch-only">Tap to walk \u00B7 tap someone to talk</span>${state.char.fed ? ' <span class="chip good">Fed: +5% XP</span>' : ''}</p></div>
     ${tip('town')}${state.popup ? '' : notice()}
     ${townSpend()}
     ${coopBar()}
@@ -1624,13 +1740,14 @@ function market() {
     ${buyBtn('item', id, '', E.itemCost(state, id), c.items[id] >= st.carry)}</div>`).join('');
   const ups = D.UPGRADES.map((u) => {
     const owned = c.upgrades.includes(u.id);
-    return `<div class="row i ${owned ? 'owned' : ''}">${ico(`upgrade:${u.id}`)}<div><div class="name">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div></div>${owned ? '<span></span>' : buyBtn('upgrade', u.id, '', u.cost)}</div>`;
+    const modIco = ico(`upgrade:${u.id}`);
+    return `<div class="row ${modIco ? 'i' : ''} ${owned ? 'owned' : ''}">${modIco}<div><div class="name">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div></div>${owned ? '<span></span>' : buyBtn('upgrade', u.id, '', E.modCost(c, u))}</div>`;
   }).join('');
   const disc = 1 - E.price(state, 100) / 100;
   return `<p class="muted">New gear replaces the old for good. Restocks after every raid.${disc > 0 ? ` Charisma: ${pct(disc)} off.` : ''}</p>
     ${marketGear()}
     <h3>Supplies</h3><div class="rows">${items}</div>
-    <h3>Contacts &amp; mods</h3><div class="rows">${ups}</div>`;
+    <h3>Contacts &amp; mods <span class="num muted" style="font-size:.85rem">${c.upgrades.length} / ${D.UPGRADES.length} \u00B7 each one raises the price of the rest</span></h3><div class="rows">${ups}</div>`;
 }
 
 function clinic() {
@@ -1774,7 +1891,7 @@ function combatScreen() {
   const meta = [...e.tags.filter((t) => t !== 'boss').map((t) => `<span class="tag ${t}">${t}</span>`),
     `<span>ATK <b>${e.atk}</b></span>`, `<span>DEF <b>${e.def}</b></span>`, `<span>SPD <b>${e.spd}</b></span>`,
     `<span>Dodge <b>${pct(E.dodgeChance(st, e))}</b></span>`, `<span>Run <b>${pct(E.runChance(state))}</b></span>`].join('');
-  return `<div class="columns"><section class="panel combat">
+  return `<div class="columns"><section class="panel combat"><div class="c-left">
     <div class="combat-head"><span class="label">${esc(E.mapById(r.map).name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${stage.auto ? '<span class="auto-note">Auto battle \u00B7 tap Manual to take over</span>' : ''}${roomPips(r)}</div>
     <div id="stage-slot"></div>
     <div class="intent ${intent.tone}"><span class="dot"></span><b>${esc(intent.label)}</b><span class="tip">${esc(intent.tip)}${st.scan && e.next ? ` <span class="next-intent">Scanner: then ${esc(intentLabel(e, e.next))}</span>` : ''}</span><span class="intent-side">${mechanicChip(r)}${r.ready ? `<span class="chip good">Aim +${E.hasPerk(c, 'steady') ? 100 : 50}%</span>` : ''}${r.momentum ? `<span class="chip good">Momentum +${Math.round(E.TUNE.momentum * 100)}%</span>` : ''}</span></div>
@@ -1782,6 +1899,7 @@ function combatScreen() {
     ${e.quirk ? `<div class="quirk-line"><span class="chip quirk">${esc(E.quirkById(e.quirk).name)}</span><span>${esc(E.quirkById(e.quirk).desc)}</span></div>` : ''}
     ${D.MELEE_COUNTER[e.id] ? `<div class="quirk-line"><span class="chip bad">${esc(D.MELEE_COUNTER[e.id].name)}</span><span>${esc(D.MELEE_COUNTER[e.id].desc)}</span></div>` : ''}
     ${e.affix ? `<div class="quirk-line"><span class="chip bad">${esc(D.AFFIXES[e.affix].name)}</span><span>${esc(D.AFFIXES[e.affix].desc)}</span></div>` : ''}
+    </div><div class="c-right">
     ${tip('combat')}
     ${party}${waiting}${reviveBtn}
     <div class="actions ${mine ? '' : 'locked'}">
@@ -1789,11 +1907,11 @@ function combatScreen() {
       <button class="btn twoline atk ${D.MELEE_COUNTER[e.id] ? 'warn' : ''}" data-a="act" data-v="strike" title="${esc(E.meleeOf(c).name)}: ${st.atkM} ATK, ${pct(E.critChance(st, e, true))} crit. Swingy damage, ignores cover, and your next attack hits ${Math.round(E.TUNE.momentum * 100)}% harder."><span class="bt">Strike<span class="k">F</span></span><span class="wpn">${esc(E.meleeOf(c).name)}</span><span class="bs"><b class="rng">${mr[0]}\u2013${mr[1]}</b> dmg${D.MELEE_COUNTER[e.id] ? ' \u00B7 hits back!' : ''}</span></button>
       <button class="btn twoline" data-a="act" data-v="defend"><span class="bt">Defend<span class="k">D</span></span><span class="bs">Half damage, aim up</span></button>
       <button class="btn twoline" data-a="act" data-v="stim" ${c.items.stim ? '' : 'disabled'}><span class="bt">${ico('item:stim', 'sm')}Stim <span class="num">\u00D7${c.items.stim}</span><span class="k">S</span></span><span class="bs">${esc(D.ITEMS.stim.short)}</span></button>
-      <button class="btn twoline" data-a="act" data-v="run"><span class="bt">Run<span class="k">R</span></span><span class="bs" title="Getting away drops ${Math.round(E.escapeRate(state.run.sector) * 100)}% of unsecured credits and XP">${pct(E.runChance(state))}, lose ${Math.round(E.escapeRate(state.run.sector) * 100)}%</span></button>
+      <button class="btn twoline" data-a="act" data-v="run"><span class="bt">Run<span class="k">R</span></span><span class="bs" title="Getting away drops ${Math.round(E.runShare(state) * 100)}% of unsecured credits and XP">${pct(E.runChance(state))}, lose ${Math.round(E.runShare(state) * 100)}%</span></button>
     </div>
     ${skills ? `<div class="skills ${mine ? '' : 'locked'}">${skills}</div>` : ''}
     ${items.trim() ? `<div class="items">${items}</div>` : ''}
-  </section>${logPanel()}</div>`;
+  </div></section>${logPanel()}</div>`;
 }
 
 const ROOM_LABEL = { fight: 'Fight', elite: 'Elite fight', event: 'Event', supply: 'Supplies', rest: 'Rest', cells: 'Prisoners', cargo: 'Cargo', boss: 'Boss', bounty: 'Bounty fight', vault: 'Strongroom', medbay: 'Medic', locker: 'Gear', bench: 'Upgrade', fence: 'Contraband' };
@@ -1906,7 +2024,7 @@ function popupView(inner) {
 }
 
 function lootScreen() {
-  const r = state.run, c = state.char, it = r.lootOffer, b = E.baseOf(it), old = c.gear[b.slot], ok = E.canEquip(c, it);
+  const r = state.run, c = state.char, it = r.lootOffer, b = E.baseOf(it), old = c.gear[b.slot], ok = E.canEquip(c, it), free = E.lockupFree(state), oldKept = old && E.baseOf(old).tier > 0;
   return popupView(`
     <span class="label">Dropped \u00B7 ${esc(D.RARITY[it.rarity].name)} ${esc(SLOTS[b.slot].name.toLowerCase())}</span><h2>${b.unique ? 'Something with a name on it' : 'Something worth taking'}</h2>
     ${tip('loot')}
@@ -1915,9 +2033,12 @@ function lootScreen() {
       <div style="display:grid;gap:6px;align-content:start"><span class="label">What you\u2019re using</span>${old ? itemCard(old, { compare: false }) : '<p class="muted">Nothing in that slot.</p>'}</div>
     </div>
     <div class="btnrow">
-      <button class="btn primary big" data-a="loottake" ${ok ? '' : 'disabled'}>${ok ? `Take it${old && E.baseOf(old).tier > 0 ? ' \u00B7 leave the old one' : ''}` : `Needs ${E.reqText(b.req)}`}<span class="k">1</span></button>
+      <button class="btn primary big" data-a="loottake" ${ok ? '' : 'disabled'}>${ok ? `Take it${oldKept ? ' \u00B7 leave the old one' : ''}` : `Needs ${E.reqText(b.req)}`}<span class="k">1</span></button>
+      ${ok && oldKept ? `<button class="btn big" data-a="loottakekeep" ${free > 0 ? '' : 'disabled'}>Take it \u00B7 stash the old one</button>` : ''}
+      <button class="btn big" data-a="lootstash" ${free > 0 ? '' : 'disabled'}>Send to Lockup<span class="k">3</span></button>
       <button class="btn big" data-a="lootsell">Leave it<span class="k">2 \u00B7 Esc</span></button>
     </div>
+    <p class="muted" style="font-size:.86rem">Lockup: ${free} free of ${E.lockupCap(state.meta)}. It waits at the safehouse and dies with this operative.</p>
   `);
 }
 
@@ -1961,6 +2082,9 @@ function modalView() {
   if (!modal) return '';
   if (['bar', 'wheel', 'orbit', 'ventures'].includes(modal)) return downtimeView();
   const p = A.getPrefs();
+  if (modal === 'menu') return `<div class="modal-wrap" data-a="closemodal"><div class="modal menu-modal" role="dialog" aria-modal="true" aria-label="Menu">
+    <button class="tool close" data-a="closemodal" aria-label="Close">Close</button><h2>Menu</h2>
+    <div class="menu-grid"><button class="btn" data-a="modal" data-v="manual">Manual</button><button class="btn" data-a="sound">${p.muted ? 'Sound off' : 'Sound on'}</button><button class="btn" data-a="modal" data-v="board">Leaderboard</button><button class="btn" data-a="modal" data-v="feats">Achievements</button><button class="btn" data-a="modal" data-v="settings">Settings</button>${devOn && !isGuest() ? '<button class="btn" data-a="modal" data-v="dev">Dev</button>' : ''}</div></div></div>`;
   if (modal === 'board') return boardView();
   if (modal === 'feats') return featsView();
   if (modal === 'dev') return devOn && !isGuest() ? devView() : '';
@@ -2230,7 +2354,7 @@ function sectorClearScreen() {
       <button class="btn big" data-a="extract">Extract with ${cr(c.credits - E.extractLoss(state))}<span class="k">2</span></button>
     </div>
     ${exitVoteLine()}
-    <p class="muted" style="font-size:.88rem">${E.extractRate(r.sector) ? `Leaving now costs <b>${Math.round(E.extractRate(r.sector) * 100)}%</b> of your unsecured haul: ${cr(E.extractLoss(state))} and ${E.extractXpLoss(state)} XP. Less each sector; nothing after a boss.` : 'Boss down: everything is secure, and leaving is free.'}</p>
+    <p class="muted" style="font-size:.88rem">${E.extractRate(r.sector) ? `Leaving now costs <b>${Math.round(E.leaveShare(state) * 100)}%</b> of your unsecured haul: ${cr(E.extractLoss(state))} and ${E.extractXpLoss(state)} XP. Less each sector; nothing after a boss.` : 'Boss down: everything is secure, and leaving is free.'}</p>
   `);
 }
 
@@ -2243,8 +2367,8 @@ function heirloomPick() {
   const h = state.meta.heirloom;
   const same = (it) => h && h.base === it.base && h.rarity === it.rarity;
   return `<div class="spend-inline"><span class="label">Heirloom \u00B7 one piece goes to the next operative, back at base level</span>
-    <div class="btnrow">${pieces.map(([sl, it]) => `<button class="btn ${same(it) ? 'primary' : ''}" data-a="heirloom" data-v="${sl}"><span class="rname r-${it.rarity}">${esc(E.itemName(it))}</span></button>`).join('')}</div>
-    ${h ? `<p class="muted" style="font-size:.88rem">In the locker: <span class="rname r-${h.rarity}">${esc(E.itemName(h))}</span> (picked the best piece for you; tap another to swap).${cache && ['ranged', 'melee'].includes(E.baseOf(h).slot) ? ` The next operative carries it instead of the cache's ${E.baseOf(h).slot === 'ranged' ? 'carbine' : 'baton'}.` : ''}</p>` : ''}</div>`;
+    <div class="btnrow">${pieces.map(([sl, it]) => `<button class="btn ${same(it) ? 'primary' : ''}" data-a="heirloom" data-v="${sl}"><span class="rname r-${it.rarity}">${esc(E.itemName(it))}</span>${E.baseOf(it).req ? ` <span class="muted small">needs ${esc(E.reqText(E.baseOf(it).req))}</span>` : ''}</button>`).join('')}</div>
+    ${h ? `<p class="muted" style="font-size:.88rem">In the locker: <span class="rname r-${h.rarity}">${esc(E.itemName(h))}</span> (picked the best piece for you; tap another to swap).${E.baseOf(h).req ? ` The next operative needs ${esc(E.reqText(E.baseOf(h).req))} to use it.` : ''}${cache && ['ranged', 'melee'].includes(E.baseOf(h).slot) ? ` The next operative carries it instead of the cache's ${E.baseOf(h).slot === 'ranged' ? 'carbine' : 'baton'}.` : ''}</p>` : ''}</div>`;
 }
 
 function deathScreen() {
@@ -2594,6 +2718,8 @@ function applyAct(a, v, k) {
     case 'equipheirloom': ok = E.equipHeirloom(state); break;
     case 'heirloom': E.setHeirloom(state, v); sfx('click'); break;
     case 'loottake': if (E.takeLoot(state, rng, actingAs)) sfx('buy'); break;
+    case 'loottakekeep': if (E.takeLoot(state, rng, actingAs, true)) sfx('buy'); break;
+    case 'lootstash': if (E.stashLoot(state, rng, actingAs)) sfx('buy'); break;
     case 'lootsell': if (E.leaveLoot(state, rng)) sfx('click'); break;
     case 'item': ok = E.buyItem(state, v); break;
     case 'upgrade': ok = E.buyUpgrade(state, v); break;
@@ -2667,9 +2793,9 @@ document.addEventListener('keydown', (ev) => {
     ev.preventDefault(); act('room', String(+key - 1));
   } else if (state.screen === 'sectorClear' && (key === '1' || key === '2')) {
     ev.preventDefault(); act(key === '1' ? 'deeper' : 'extract');
-  } else if (rewardView() === 'loot' && (key === '1' || key === '2')) {
-    ev.preventDefault(); act(key === '1' ? 'loottake' : 'lootsell');
-  } else if (rewardView() === 'perk' && ['1', '2', '3'].includes(key) && state.run.perkOffer[+key - 1]) {
+  } else if (rewardView() === 'loot' && ['1', '2', '3'].includes(key)) {
+    ev.preventDefault(); act({ 1: 'loottake', 2: 'lootsell', 3: 'lootstash' }[key]);
+  } else if (rewardView() === 'perk' && ['1', '2', '3', '4'].includes(key) && state.run.perkOffer[+key - 1]) {
     ev.preventDefault(); act('perk', state.run.perkOffer[+key - 1]);
   } else if (key === 'enter') {
     if (state.screen === 'victory') { ev.preventDefault(); act('continue'); }

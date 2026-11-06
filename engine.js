@@ -448,15 +448,16 @@ export function rerollBonus(s, slot, idx, rng) {
   return true;
 }
 // Loot drop after a fight: take it (the old piece is left behind) or leave it.
-export function takeLoot(s, rng, who = actorIdx(s)) {
-  return withActor(s, who, () => takeLootInner(s, rng));
+export function takeLoot(s, rng, who = actorIdx(s), stashOld = false) {
+  return withActor(s, who, () => takeLootInner(s, rng, stashOld));
 }
-function takeLootInner(s, rng) {
+function takeLootInner(s, rng, stashOld) {
   const r = s.run, c = s.char, it = r && r.lootOffer;
   if (!it || !canEquip(c, it)) return false;
-  const old = equip(s, it);
+  const old = equip(s, it), keep = stashOld && old && baseOf(old).tier > 0 && lockupFree(s) > 0;
+  if (keep) (c.lockup = c.lockup || []).push(old);
   r.lootOffer = null;
-  log(s, `You take the ${itemName(it)}.${old && baseOf(old).tier > 0 ? ` The ${itemName(old)} stays on the floor.` : ''}`, 'reward');
+  log(s, `You take the ${itemName(it)}.${keep ? ` The ${itemName(old)} goes to your Lockup.` : old && baseOf(old).tier > 0 ? ` The ${itemName(old)} stays on the floor.` : ''}`, 'reward');
   afterLoot(s, rng);
   return true;
 }
@@ -469,10 +470,22 @@ export function leaveLoot(s, rng) {
   return true;
 }
 export const sellLoot = leaveLoot;
+// Send a drop to the Lockup, to use later or once you meet its requirements. It's there when you get home, and it dies with you.
+export function stashLoot(s, rng, who = actorIdx(s)) {
+  return withActor(s, who, () => {
+    const r = s.run, c = s.char, it = r && r.lootOffer;
+    if (!it || lockupFree(s) <= 0) return false;
+    (c.lockup = c.lockup || []).push(it);
+    r.lootOffer = null;
+    log(s, `The ${itemName(it)} goes to your Lockup.`, 'reward');
+    afterLoot(s, rng);
+    return true;
+  });
+}
 
 // ---------- the Lockup and trading ----------
 // The Lockup: an operative's spare gear under the safehouse floor. It dies with them: only the one heirloom passes on.
-// Whatever is in it isn't helping on a raid, and it's town only: no couriers out of a raid.
+// Whatever is in it isn't helping on a raid. Drops can be sent to it from the field; taking things out is town only.
 const LOCKUP_BASE = 4, LOCKUP_STEP = 2;
 export const lockupCap = (m) => LOCKUP_BASE + (hasCell(m, 'lockup1') ? LOCKUP_STEP : 0) + (hasCell(m, 'lockup2') ? LOCKUP_STEP : 0);
 export const lockupFree = (s, c = s.char) => lockupCap(s.meta) - ((c && c.lockup) || []).length;
@@ -719,16 +732,16 @@ export function statsOf(meta, c) {
     maxHp: Math.round(hp * (hasTrait(c, 'stalwart') ? 1.12 : 1) * (1 + pv(c, 'ironlung') / 100) * (1 + mk.hp + fb.hp) * (1 + (drink.hp || 0))),
     atk: common + rMain + dAtk + (w.type === 'heavy' ? Math.floor(str * TUNE.strAtk) : Math.floor(agi * TUNE.agiAtk)),
     atkM: common + mMain + dAtk + Math.floor(str * TUNE.strAtk),
-    def: B.def + (c.background === 'foundry' ? 1 : 0) + t.def * D.TRAINING.def.per + Math.floor((c.level - 1) / 2) + def + gearBonus(c, 'def') + (hasImp(c, 'dermal') ? 3 : 0) + mk.def + pv(c, 'padding') + (drink.def || 0),
+    def: B.def + (c.background === 'foundry' ? 1 : 0) + t.def * D.TRAINING.def.per + Math.floor((c.level - 1) / 2) + def + gearBonus(c, 'def') + (hasImp(c, 'dermal') ? 3 : 0) + (has(c, 'lining') ? 2 : 0) + mk.def + pv(c, 'padding') + (drink.def || 0),
     spd: B.spd + (c.background === 'runner' ? 1 : 0) + t.spd * D.TRAINING.spd.per + Math.floor((c.level - 1) / 3) + agi + (hasImp(c, 'reflex') ? 3 : 0) + spd + gearBonus(c, 'spd') + mk.spd + (drink.spd || 0),
     dodge: (agi - 1) * TUNE.agiDodge + (c.background === 'runner' ? 0.05 : 0) + fb.dodge + pv(c, 'ghost') / 100,
     crit: 0.05 + (w.crit || 0) + critAll + optic + (agi - 1) * TUNE.agiCrit + gearBonus(c, 'crit', 'ranged') / 100 + mk.crit + dCrit + fb.crit,
     critM: 0.05 + (mw.crit || 0) + critAll + optic + gearBonus(c, 'crit', 'melee') / 100 + mk.crit + dCrit + fb.crit,
     carry: 4 + (has(c, 'belt') ? 3 : 0) + carry,
-    slots: 2 + (attr(c, 'int') >= 4 ? 1 : 0) + (attr(c, 'int') >= 8 ? 1 : 0) + (c.background === 'clerk' ? 1 : 0),
+    slots: 2 + (has(c, 'ripper') ? 1 : 0) + (attr(c, 'int') >= 4 ? 1 : 0) + (attr(c, 'int') >= 8 ? 1 : 0) + (c.background === 'clerk' ? 1 : 0),
     tech: (1 + 0.1 * attr(c, 'int')) * (hasTrait(c, 'overcharge') ? 1.2 : 1) * (1 + (gadget.techBoost || 0)) * (1 + (drink.tech || 0)),
-    stimBoost: (gadget.stimBoost || 0) + fb.stim,
-    scan: !!gadget.scan,
+    stimBoost: (gadget.stimBoost || 0) + fb.stim + (has(c, 'corpsman') ? 0.25 : 0),
+    scan: !!gadget.scan || has(c, 'informant'),
   };
 }
 export const stats = (s) => statsOf(s.meta, s.char);
@@ -740,7 +753,7 @@ export function markSum(c) {
   for (const id of c.marks || []) { const m = D.MARKS[id]; if (m) for (const k of Object.keys(t)) t[k] += m[k] || 0; }
   return t;
 }
-export const price = (s, cost) => Math.round(cost * hard(s).price * Math.max(0.6, 1 - 0.04 * (attr(s.char, 'cha') - 1)) * (s.char.background === 'preacher' ? 0.9 : 1));
+export const price = (s, cost) => Math.round(cost * hard(s).price * Math.max(0.6, 1 - 0.04 * (attr(s.char, 'cha') - 1)) * (s.char.background === 'preacher' ? 0.9 : 1) * (has(s.char, 'favour') ? 0.9 : 1));
 export const meetsReq = (c, req) => !req || Object.entries(req).every(([k, v]) => attr(c, k) >= v);
 export const reqText = (req) => req ? Object.entries(req).map(([k, v]) => `${D.ATTRS[k].short} ${v}`).join(', ') : '';
 
@@ -894,10 +907,14 @@ export function buyItem(s, id) {
   return true;
 }
 
+// Each mod this operative buys makes the next one dearer, so the full set takes a long career.
+export const modCost = (c, u) => Math.round(u.cost * Math.pow(D.MOD_STEP, c.upgrades.length));
 export function buyUpgrade(s, id) {
   const u = D.UPGRADES.find((x) => x.id === id), c = s.char;
-  if (!u || has(c, id) || c.credits < price(s, u.cost)) return false;
-  c.credits -= price(s, u.cost); c.upgrades.push(id); ledger(s, 'spend:contacts', price(s, u.cost));
+  if (!u || has(c, id)) return false;
+  const cost = price(s, modCost(c, u));
+  if (c.credits < cost) return false;
+  c.credits -= cost; c.upgrades.push(id); ledger(s, 'spend:contacts', cost);
   s.notice = `${u.name} acquired.`;
   return true;
 }
@@ -992,6 +1009,7 @@ export function deploy(s, mapId, startSector, rng) {
     c.startCredits = c.credits; c.safeCredits = c.credits; c.xpBank = 0; c.payout = null;
     if (D.BACKGROUNDS.find((b) => b.id === c.background).follower) { s.run.allies = Math.min(2, s.run.allies + 1); s.run.follower = true; }
     if (hasTrait(c, 'surplus') && c.items.stim < stats(s).carry) c.items.stim += 1;
+    if (has(c, 'quarter') && c.items.stim < stats(s).carry) c.items.stim += 1;
   });
   s.run.bulletin = pickWeighted(rng, D.BULLETINS.map((b) => [b.id, b.weight]));
   refreshContracts(s, rng);
@@ -1318,7 +1336,7 @@ export function autoAction(s) {
 }
 export function runChance(s) {
   const st = stats(s), e = s.run.enemy;
-  const ch = clamp(0.45 + (st.spd - e.spd) * 0.06 + (s.char.background === 'runner' ? 0.25 : 0) + markSum(s.char).escape + featBuffs(s.meta).escape, 0.1, 0.95);
+  const ch = clamp(0.45 + (st.spd - e.spd) * 0.06 + (s.char.background === 'runner' ? 0.25 : 0) + markSum(s.char).escape + featBuffs(s.meta).escape + (has(s.char, 'driver') ? 0.15 : 0), 0.1, 0.95);
   return e.boss ? ch * 0.5 : ch;
 }
 export function dodgeChance(st, e) { return clamp(0.05 + (st.spd - e.spd) * 0.03 + (st.dodge || 0), 0, 0.45); }
@@ -1758,7 +1776,7 @@ function enemyTurn(s, rng) {
     if (r.allies > 0 && rng() < 0.25) {
       // A freed prisoner soaks the shot. It takes a few to put one down.
       r.allyHits = (r.allyHits || 0) + 1;
-      fx(s, { who: 'enemy', type: e.intent, ally: true, dmg: 0 });
+      fx(s, { who: 'enemy', type: e.intent, ally: true, allyDown: r.allyHits >= TUNE.allyGrit, dmg: 0 });
       if (r.allyHits >= TUNE.allyGrit) { r.allyHits = 0; r.allies -= 1; log(s, `${e.name} guns down one of the freed prisoners.`, 'bad'); }
       else log(s, `${e.name} hits a freed prisoner. They stay up (${TUNE.allyGrit - r.allyHits} more would do it).`, 'hurt');
     } else if (q && q.miss && rng() < q.miss) {
@@ -1816,13 +1834,14 @@ function gainXp(s, amount) {
 }
 // Beating a boss or leaving: what's unsecured is paid out, less rate. Credits an operative walked in with are never touched.
 // Leaves c.payout for the screen that shows it. Returns credits lost by the current actor.
+const ROUTE_CUT = 0.85; // Smuggler's Route
 function settle(s, kind, rate) {
   const r = s.run, me = actorIdx(s);
   let mine = 0;
   forEachActor(s, (a, i) => {
     const safe = a.safeCredits ?? a.startCredits ?? r.startCredits ?? 0, haul = Math.max(0, a.credits - safe), bank = a.xpBank || 0;
     if (!haul && !bank) return;
-    const lostCredits = Math.round(haul * rate), lostXp = Math.round(bank * rate), gain = bank - lostXp;
+    const cut = has(a, 'route') ? rate * ROUTE_CUT : rate, lostCredits = Math.round(haul * cut), lostXp = Math.round(bank * cut), gain = bank - lostXp;
     a.credits -= lostCredits; ledger(s, 'escape loss', -lostCredits);
     if (i === me) mine = lostCredits;
     const fromLevel = a.level, fromXp = a.xp, fromNext = xpToNext(a.level);
@@ -1835,7 +1854,7 @@ function settle(s, kind, rate) {
     }
     a.xpBank = 0; a.safeCredits = a.credits;
     s.meta.payouts = (s.meta.payouts || 0) + 1;
-    a.payout = { id: s.meta.payouts, kind, rate, credits: haul - lostCredits, lostCredits, xp: gain, lostXp, fromLevel, toLevel: a.level, fromPct: fromXp / fromNext, toPct: a.xp / xpToNext(a.level), points };
+    a.payout = { id: s.meta.payouts, kind, rate: cut, credits: haul - lostCredits, lostCredits, xp: gain, lostXp, fromLevel, toLevel: a.level, fromPct: fromXp / fromNext, toPct: a.xp / xpToNext(a.level), points };
   });
   return mine;
 }
@@ -1932,7 +1951,7 @@ function offerPerks(s, rng, boss) {
   const weight = (p) => (p.rare ? (boss ? 2 : 1) : 3) * (hasPerk(c, p.id) ? 3 : 1);
   const take = (list) => { const it = pickWeighted(rng, list.map((p) => [p, weight(p)])); out.push(it.id); pool.splice(pool.indexOf(it), 1); };
   if (boss) take(pool.filter((p) => p.rare));
-  while (out.length < 3 && pool.length) take(pool);
+  while (out.length < (has(c, 'broker') ? 4 : 3) && pool.length) take(pool);
   return out;
 }
 export function choosePerk(s, id, rng, who = actorIdx(s)) {
@@ -2122,8 +2141,11 @@ export function endRun(s, how, rngForRestock = Math.random) {
 
 // What extracting right now would cost.
 export const unsecured = (s) => { const c = s.char; return Math.max(0, c.credits - (c.safeCredits ?? c.startCredits ?? 0)); };
-export const extractLoss = (s) => (s.run ? Math.round(unsecured(s) * extractRate(s.run.sector)) : 0);
-export const extractXpLoss = (s) => (s.run ? Math.round((s.char.xpBank || 0) * extractRate(s.run.sector)) : 0);
+// The share this operative would lose right now, counting Smuggler's Route.
+export const leaveShare = (s) => (s.run ? extractRate(s.run.sector) * (has(s.char, 'route') ? ROUTE_CUT : 1) : 0);
+export const runShare = (s) => (s.run ? escapeRate(s.run.sector) * (has(s.char, 'route') ? ROUTE_CUT : 1) : 0);
+export const extractLoss = (s) => Math.round(unsecured(s) * leaveShare(s));
+export const extractXpLoss = (s) => Math.round((s.char.xpBank || 0) * leaveShare(s));
 export const allLiberated = (s) => D.MAPS.every((m) => s.meta.liberated[m.id]);
 export const maxThreat = (s) => Math.min(D.THREAT.length - 1, Object.keys(s.meta.liberated).length);
 

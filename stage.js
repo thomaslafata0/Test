@@ -555,10 +555,13 @@ export class Stage {
         }
         this.heavyBoost = false;
         if (ev.ally) {
-          this.popup('player', 'Ally down', 'heavy');
-          this.burst(30, 160, 14, C.red, 2, 400);
-          this.allies = Math.max(0, this.allies - 1);
-          if (this.allyActors && this.allyActors.length) this.allyActors.pop();
+          // It takes a few hits to put a prisoner down: only the last one removes them.
+          this.popup('player', ev.allyDown ? 'Ally down' : 'Ally hit', ev.allyDown ? 'heavy' : 'info');
+          this.burst(30, 160, ev.allyDown ? 14 : 6, C.red, 2, 400);
+          if (ev.allyDown) {
+            this.allies = Math.max(0, this.allies - 1);
+            if (this.allyActors && this.allyActors.length) this.allyActors.pop();
+          }
         } else if (ev.dodged) {
           const x0 = P.ox;
           this.popup(ev.missed ? 'enemy' : 'player', ev.missed ? 'Missed!' : 'Dodged', ev.missed ? 'quirk' : 'info'); play('dodge');

@@ -1,0 +1,40 @@
+// A phone held sideways: every play screen fits with no scrolling, at a big iPhone's size and at the smallest.
+const { chromium } = require('playwright');
+const URL = process.env.U || 'http://localhost:8765/index.html';
+const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OUT, { recursive: true });
+const toFight = `for (let i = 0; i < 30 && s.screen !== 'combat'; i++) { if (s.run.choices && s.run.choices.length) { const k = s.run.choices.findIndex((x) => x === 'fight' || x === 'elite'); E.enterRoom(s, Math.max(0, k), rng); } else E.offerRoute(s, rng); if (['event', 'room'].includes(s.screen)) { s.screen = 'route'; s.run.choices = null; } }`;
+const SCREENS = {
+  town: ``,
+  route: `E.deploy(s, 'garrison', 6, rng); E.offerRoute(s, rng); s.lastResult = { kind: 'fight', enemy: 'Patrol Trooper', credits: 20, xp: 9, feats: [] };`,
+  combat: `c.attrs.int = 5; c.attrs.agi = 5; c.attrs.cha = 5; c.items.thermal = 2; c.items.ion = 2; c.items.smoke = 2; E.deploy(s, 'garrison', 1, rng); ${toFight}`,
+  perk: `c.upgrades.push('broker'); E.deploy(s, 'garrison', 1, rng); s.run.perkOffer = ['ironlung', 'chit', 'ambush', 'grudge']; s.screen = 'perk';`,
+  loot: `E.deploy(s, 'garrison', 1, rng); s.run.lootOffer = E.makeItem('cannon', 'elite', rng); s.screen = 'loot';`,
+  sectorClear: `E.deploy(s, 'garrison', 1, rng); s.run.room = 99; s.run.enemy = null; E.offerRoute(s, rng);`,
+  event: `E.deploy(s, 'garrison', 1, rng); s.event = D.EVENTS[0].id; s.screen = 'event';`,
+  payout: `E.deploy(s, 'garrison', 1, rng); c.xpBank = 500; c.credits += 300; E.endRun(s, 'extracted', rng);`,
+  death: `E.deploy(s, 'garrison', 1, rng); ${toFight} s.run.enemy.atk = 1e6; s.run.enemy.intent = 'attack'; for (let i = 0; i < 12 && s.screen === 'combat'; i++) { c.hp = 1; s.run.enemy.intent = 'attack'; s.run.enemy.stun = 0; E.playerAct(s, 'defend', rng); }`,
+};
+(async () => {
+  const b = await chromium.launch(); let failed = 0; const errs = [];
+  const check = (name, ok, extra = '') => { console.log(`${ok ? 'PASS' : 'FAIL'} ${name} ${extra}`); if (!ok) failed++; };
+  for (const [w, h] of [[844, 390], [667, 375]]) {
+    const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }); const p = await ctx.newPage();
+    p.on('pageerror', (e) => errs.push(`${w}: ${e.message}`));
+    await p.goto(URL); await p.waitForTimeout(500);
+    const fits = () => p.evaluate(() => { const bad = []; const de = document.documentElement; if (de.scrollHeight > innerHeight + 1 || de.scrollWidth > innerWidth + 1) bad.push(`page ${de.scrollWidth}x${de.scrollHeight}`); for (const el of document.querySelectorAll('.panel, .modal')) { const r = el.getBoundingClientRect(); if (!r.width) continue; if (el.scrollHeight > el.clientHeight + 1) bad.push(`${el.className.split(' ').slice(0, 2).join('.')} needs ${el.scrollHeight - el.clientHeight}px more`); if (r.bottom > innerHeight + 1) bad.push(`${el.className.split(' ')[0]} runs ${Math.round(r.bottom - innerHeight)}px off`); } return bad; });
+    let bad = await fits(); check(`${w}x${h} title`, !bad.length, bad.join('; ')); if (w === 844) await p.screenshot({ path: `${OUT}/ph-title.png` });
+    for (const [name, setup] of Object.entries(SCREENS)) {
+      await p.evaluate(async (src) => { const E = await import('./engine.js'), D = await import('./data.js'), rng = E.seededRng(7), s = E.newGame(rng); E.createChar(s, rng); s.screen = 'town'; const c = s.char; c.name = 'Tamsin Rook'; c.credits = 900; c.level = 6; c.attrPoints = 3; s.meta.resolve = 12; E.mapProgress(c, 'garrison').insertions.push(6); eval(src); localStorage.setItem('cinder-cell-save-v1', JSON.stringify(s)); }, setup);
+      await p.reload(); await p.waitForTimeout(350); await p.tap('button[data-a="continue-title"]', { timeout: 2000 }).catch(() => {}); await p.waitForTimeout(650);
+      bad = await fits(); check(`${w}x${h} ${name}`, !bad.length, bad.join('; '));
+      await p.screenshot({ path: `${OUT}/ph-${name}-${w}.png` });
+    }
+    // Upright on a phone asks you to turn it.
+    await ctx.close();
+  }
+  const up = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true }); const q = await up.newPage(); await q.goto(URL); await q.waitForTimeout(300);
+  check('upright phone is asked to turn sideways', await q.isVisible('.rotate-note'));
+  await q.tap('.rotate-note button'); check('and can dismiss it', !(await q.isVisible('.rotate-note')));
+  await b.close();
+  console.log(errs.length ? errs : 'no errors'); console.log(failed ? `${failed} FAILED` : 'ALL FIT'); process.exit(failed || errs.length ? 1 : 0);
+})().catch((e) => { console.error(e.message.slice(0, 400)); process.exit(1); });

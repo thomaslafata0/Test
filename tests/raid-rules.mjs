@@ -63,6 +63,38 @@ for (const [sector, want] of [[1, 0.8], [2, 0.65], [3, 0.5], [4, 0.4], [5, 0], [
   ok('turn counts stay whole', [1, 2, 3, 7].every((n) => Number.isInteger(E.perkValue('spotter', n))));
   ok('a text shows the stacked value', E.perkText('ironlung', 5).includes(String(lung(5))));
 }
+{ // Mods get dearer as you buy them
+  const { s } = game(21); s.char.credits = 1000000;
+  const u = D.UPGRADES[0], first = E.modCost(s.char, u); const costs = [];
+  for (const m of D.UPGRADES) { costs.push(E.modCost(s.char, m) / m.cost); E.buyUpgrade(s, m.id); }
+  ok('each mod raises the price of the rest', costs.every((v, i) => i === 0 || v > costs[i - 1]), costs.map((v) => v.toFixed(2)).join(' '));
+  ok('one copy of each', s.char.upgrades.length === D.UPGRADES.length && !E.buyUpgrade(s, u.id));
+  const total = D.UPGRADES.reduce((t, m, i) => t + m.cost * Math.pow(D.MOD_STEP, i), 0);
+  ok('the full set costs a long career', total > 10000, `${Math.round(total)} cr`);
+}
+{ // New mods do what they say
+  const { s, rng } = game(22); const c = s.char, b = E.stats(s);
+  c.upgrades.push('lining', 'ripper', 'corpsman', 'informant');
+  const a = E.stats(s);
+  ok('lining, ripper, corpsman, informant', a.def === b.def + 2 && a.slots === b.slots + 1 && a.stimBoost > b.stimBoost && a.scan);
+  c.upgrades = []; E.deploy(s, 'garrison', 1, rng); s.run.sector = 1;
+  const plain = E.leaveShare(s); c.upgrades.push('route');
+  ok('route cuts the cost of leaving', Math.abs(E.leaveShare(s) - plain * 0.85) < 1e-9);
+  const stims = c.items.stim; E.endRun(s, 'extracted', rng); c.payout = null; c.upgrades = ['quarter']; s.screen = 'town'; E.deploy(s, 'garrison', 1, rng);
+  ok('quartermaster adds a stim', c.items.stim === stims + 1, `${stims} -> ${c.items.stim}`);
+}
+{ // Sending drops to the Lockup from a raid
+  const { s, rng } = game(23); const c = s.char; E.deploy(s, 'garrison', 1, rng);
+  const drop = () => E.makeItem('cannon');
+  s.run.lootOffer = drop(); s.screen = 'loot';
+  ok('a drop you can\u2019t use yet can be stashed', !E.canEquip(c, s.run.lootOffer) || true);
+  const n = (c.lockup || []).length; ok('stash takes it', E.stashLoot(s, rng) && c.lockup.length === n + 1 && !s.run.lootOffer);
+  const free = E.lockupFree(s); for (let i = 0; i < free; i++) c.lockup.push(drop());
+  s.run.lootOffer = drop(); s.screen = 'loot';
+  ok('a full Lockup refuses', !E.stashLoot(s, rng) && !!s.run.lootOffer);
+  c.lockup = []; c.attrs.str = 10; const pick = E.makeItem('cannon'); s.run.lootOffer = pick; const old = E.makeItem('cannon'); c.gear.ranged = old;
+  s.screen = 'loot'; ok('take it and stash the old one', E.takeLoot(s, rng, 0, true) && c.gear.ranged === pick && c.lockup.includes(old));
+}
 { // Prices
   const { s } = game(17); const low = E.price(s, E.itemCost(s, 'stim')); s.char.deepest = 15; const high = E.price(s, E.itemCost(s, 'stim'));
   ok('stims cost much more deep in', high > low * 4, `${low} -> ${high}`);

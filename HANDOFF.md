@@ -79,6 +79,10 @@ Median to the sector-15 boss on the Garrison (operatives / raids): strength 22/6
 - **Menus:** messages raised inside a popup or modal float as toasts (`render`). Inline notices there pushed buttons away mid-click.
 - **Sound:** the header button sets `prefs.muted`, which silences effects, ambience and music together.
 
+- **Mods:** 14 in `D.UPGRADES`; each one bought multiplies the price of the rest by `D.MOD_STEP` (`E.modCost`).
+- **Loot:** drops can go straight to the Lockup, or the replaced piece can (`E.stashLoot`, `E.takeLoot(..., stashOld)`).
+- **iPhone:** `ios/` is a small WKWebView app loading the live site; see `ios/README.md`. Not compiled yet: it needs Xcode.
+
 ## Testing
 Start the server, then from the repo root:
 ```bash
