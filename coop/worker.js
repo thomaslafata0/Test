@@ -158,6 +158,10 @@ export class Board {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    // Lets iOS open invite links (?join=CODE) in the Cinder Cell app when it's installed; Safari otherwise.
+    if (url.pathname === '/.well-known/apple-app-site-association' || url.pathname === '/apple-app-site-association') {
+      return new Response(JSON.stringify({ applinks: { details: [{ appIDs: ['39BW6948KL.com.thomaslafata.cindercell'], components: [{ '/': '/', '?': { join: '?*' }, comment: 'co-op invites' }] }] } }), { headers: { 'content-type': 'application/json', 'cache-control': 'max-age=3600' } });
+    }
     if (url.pathname === '/board') return env.BOARD.get(env.BOARD.idFromName('global')).fetch(request);
     const sv = url.pathname.match(/^\/save\/([A-Z0-9]{12})(\/versions)?$/);
     if (sv) return env.VAULT.get(env.VAULT.idFromName(sv[1])).fetch(request);

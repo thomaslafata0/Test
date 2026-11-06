@@ -26,7 +26,7 @@ const URL = process.env.U || 'http://localhost:8765/index.html';
   await p.evaluate(() => { window.__sent = []; });
   await p.tap('[data-a="coophost"]'); await p.waitForTimeout(600);
   const share = (await sent()).find(([n]) => n === 'share');
-  check('hosting opens the share sheet with the invite link', share && /^https?:\/\/.*[?&#]/.test(share[1]), share && share[1]);
+  check('hosting opens the share sheet with the invite link', share && /^Join my Cinder Cell raid \(room [A-Z0-9]{4}\): https?:\/\/\S+[?&]join=[A-Z0-9]{4}$/.test(share[1]), share && share[1]);
   check('the invite button says Share', /Share/.test(await p.textContent('[data-a="coopinvite"]').catch(() => '')));
   await b.close();
   console.log(errs.length ? errs : 'no errors'); console.log(failed ? `${failed} FAILED` : 'ALL PASS'); process.exit(failed || errs.length ? 1 : 0);

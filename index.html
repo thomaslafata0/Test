@@ -461,6 +461,7 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .coop-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 6px 10px; border: 1px solid var(--line); background: var(--panel-2); font-size: .88rem; }
 .coop-bar .emotes { display: flex; flex-wrap: wrap; gap: 4px; margin-left: auto; }
 .coop-bar .emotes .btn { padding: 3px 8px; font-size: .78rem; min-height: 0; }
+.coop-bar > .btn { padding: 3px 8px; font-size: .78rem; min-height: 0; }
 .town-prompt { position: absolute; left: 50%; bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transform: translateX(-50%); max-width: calc(100% - 16px); padding: 4px 10px; background: #121518e0; border: 1px solid var(--line); font-family: var(--mono); font-size: .68rem; letter-spacing: .06em; color: var(--fg); pointer-events: none; text-align: center; }
 .town-fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
 .town-fade.on { animation: tfade .45s ease-out; }
@@ -769,6 +770,16 @@ h3 { font-size: 1.05rem; }
 .h2-note { font-size: .9rem; }
 .title-menu .sub { font-family: var(--body); font-size: .85rem; font-weight: 600; text-transform: none; letter-spacing: 0; opacity: .75; }
 .ins-hint { font-size: .82rem; }
+.gate-heal { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid var(--sodium); border-left-width: 4px; background: var(--sodium-dim); }
+.gate-heal.bad { border-color: var(--danger); background: var(--danger-dim); }
+.gate-heal-text { display: grid; gap: 4px; flex: 1 1 180px; min-width: 0; }
+.gate-heal-text b { font-size: 1.05rem; }
+.gate-heal-text span { font-size: .9rem; color: var(--muted); }
+.gate-heal .bar { height: 6px; }
+.gate-heal .btn { flex: none; }
+.deploy-go.hurt .ins .btn.primary { background: var(--panel-2); color: var(--fg); border-color: var(--sodium); }
+.badge.bad { background: var(--danger); color: #fff; }
+.cc-short { display: none; }
 .btn.primary .rname, .btn.primary .muted { color: inherit; }
 .btn.primary .muted { opacity: .8; }
 .gate-brief > .label { display: none; }
@@ -986,14 +997,14 @@ h3 { font-size: 1.05rem; }
   .aa-spend .btn { padding: 2px 12px; font-size: 1rem; min-width: 76px; }
 
   /* A fight: the scene on the left, the console on the right. Both use the full height. */
-  .combat { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 46%); gap: 6px; align-items: stretch; padding: 5px 6px; overflow: hidden !important; }
+  .combat { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 42%); gap: 6px; align-items: stretch; align-content: stretch; grid-template-rows: minmax(0, 1fr); padding: 5px 6px; overflow: hidden !important; }
   .combat-head, .auto-note, .hud-tag { display: none; }
   .c-left { display: flex; flex-direction: column; gap: 3px; min-width: 0; min-height: 0; }
   .c-left > * { flex: none; }
   .c-left > .stage-box { flex: 1 1 0; min-height: 0; container-type: size; display: grid; place-items: center; }
-  .combat .stage, #stage-slot { width: min(100cqw, calc((100cqh - 40px) * 1.7778)); margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1px; background: var(--line); }
+  .combat .stage, #stage-slot { width: min(100cqw, calc((100cqh - 32px) * 1.7778)); margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1px; background: var(--line); }
   .stage canvas { grid-column: 1 / -1; }
-  .hud { position: static; width: auto; max-width: none; height: 38px; border: 0; background: var(--panel-2); padding: 3px 8px; gap: 1px 6px; grid-template-columns: minmax(0, 1fr) auto; align-items: center; align-content: center; }
+  .hud { position: static; width: auto; max-width: none; height: 30px; border: 0; background: var(--panel-2); padding: 2px 8px; gap: 1px 6px; grid-template-columns: minmax(0, 1fr) auto; align-items: center; align-content: center; }
   .hud-player { order: 2; }
   .hud-enemy { order: 3; }
   .hud-row { min-width: 0; }
@@ -1003,7 +1014,7 @@ h3 { font-size: 1.05rem; }
   .hud-st { display: none; }
   .speed { right: 4px; top: 4px; gap: 3px; }
   .speed button { font-size: 11px; padding: 0 9px; min-height: 38px; }
-  .intent, .combat .intent { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; padding: 2px 8px; grid-template-columns: none; min-height: 30px; }
+  .intent, .combat .intent { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; padding: 2px 8px; grid-template-columns: none; min-height: 28px; }
   .intent b { font-size: 1.05rem; white-space: nowrap; }
   .intent .tip { font-size: max(12px, .84rem); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
   .intent .dot { margin: 0; flex: none; width: 8px; height: 8px; }
@@ -1015,20 +1026,20 @@ h3 { font-size: 1.05rem; }
   .c-right > * { flex: none; }
   .party .pm { padding: 2px 6px; }
   .actions, .skills, .items { gap: 4px; }
-  .c-right > .actions { flex: 2.3 1 auto; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: minmax(50px, 1.25fr) minmax(42px, 1fr); }
+  .c-right > .actions { flex: 2.3 1 auto; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: minmax(44px, 1.25fr) minmax(38px, 1fr); }
   .actions .btn { grid-column: span 2; min-height: 0; padding: 2px 4px; font-size: 1.15rem; }
   .actions .btn.atk { grid-column: span 3; font-size: 1.4rem; }
   .actions .btn .wpn { display: none; }
   .actions .btn .bs { font-size: max(11px, .8rem); }
   .actions .btn.atk .bs { font-size: max(12px, .88rem); }
   .actions .btn[data-v="defend"] .bs, .actions .btn[data-v="stim"] .bs { display: none; }
-  .c-right > .skills { flex: 2 1 auto; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(42px, 1fr); }
+  .c-right > .skills { flex: 2 1 auto; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(38px, 1fr); }
   .skills .btn { min-height: 0; padding: 2px 8px; gap: 0; align-content: center; }
   .sk-name { font-size: max(13px, .95rem); gap: 5px; white-space: nowrap; overflow: hidden; }
   .sk-name .ico { width: 16px; height: 16px; }
   .sk-note { display: flex; gap: 6px; font-size: max(11px, .78rem); white-space: nowrap; overflow: hidden; }
   .sk-note .sk-status { order: -1; flex: none; text-transform: uppercase; letter-spacing: .04em; }
-  .c-right > .items { flex: 1 1 auto; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(40px, 1fr); }
+  .c-right > .items { flex: 1 1 auto; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(38px, 1fr); }
   .items .btn { min-height: 0; padding: 2px 4px; font-size: max(12px, .86rem); }
   .items .bs { display: none; }
   .items .btn.confirm .bs { display: block; font-size: 11px; }
@@ -1081,6 +1092,28 @@ h3 { font-size: 1.05rem; }
   .dt-wheel-right > .muted.small { display: none; }
   .dt-wheel-right .btnrow .btn { flex: 1 1 0; }
   .tools .menu-tool, .aa .tool { min-height: 38px; }
+  .gate-heal { padding: 6px 10px; gap: 6px 10px; }
+  .gate-heal-text span { font-size: max(12px, .86rem); }
+  .gate-heal .btn { min-height: 44px; padding: 2px 14px; font-size: 1.05rem; }
+  .town-panel .shortcuts .btn:has(.badge.bad) { border-color: var(--danger); }
+  /* Two players. */
+  .cc-long { display: none; }
+  .cc-short { display: inline; }
+  .town-tag { font-size: 11px; }
+  .town-info > * { min-width: 0; }
+  .coop-bar { padding: 4px 6px; gap: 4px 8px; font-size: max(12px, .86rem); min-width: 0; overflow: hidden; }
+  .coop-bar > b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+  .coop-bar > .chip { margin-left: auto; }
+  .coop-bar > .btn { min-height: 38px; padding: 2px 12px; font-size: 1rem; margin-left: auto; }
+  .coop-bar .emotes { flex: 1 1 100%; min-width: 0; max-width: 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0; gap: 4px; touch-action: pan-x; }
+  .coop-bar .emotes::-webkit-scrollbar { display: none; }
+  .coop-bar .emotes .btn { flex: none; min-height: 38px; padding: 2px 10px; font-size: max(13px, .9rem); }
+  .party { gap: 4px; }
+  .party .pm { padding: 2px 8px; grid-template-columns: minmax(0, 1fr) auto; gap: 0 6px; align-items: center; font-size: max(12px, .84rem); }
+  .party .pm .label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .party .pm .bar { grid-column: 1 / -1; height: 4px; }
+  .c-right > .notice { padding: 3px 8px; }
+  .c-right > .btn.big { min-height: 42px; padding: 2px 10px; font-size: 1.05rem; }
   /* The other menus. */
   .modal.menu-modal { grid-template-rows: auto minmax(0, 1fr); }
   .menu-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(60px, 1fr); gap: 8px; }
@@ -1395,7 +1428,7 @@ const LOCAL = new Set(['randomize', 'missiontab', 'markettab', 'chartab', 'conti
 function coopChip() {
   if (!net) return '';
   const who = net.peerName || (isHost() ? 'friend' : 'host');
-  return `<span class="chip ${net.peer ? 'good' : ''}" title="Co-op room ${net.code}">${isHost() ? 'Hosting' : 'Joined'} ${net.code} \u00B7 ${net.peer ? `with ${esc(who)}` : 'waiting'}</span>`;
+  return `<span class="chip coop-chip ${net.peer ? 'good' : ''}" title="Co-op room ${net.code}"><span class="cc-long">${isHost() ? 'Hosting' : 'Joined'} </span>${net.code}<span class="cc-long"> \u00B7 ${net.peer ? `with ${esc(who)}` : 'waiting'}</span><span class="cc-short">${net.peer ? ' \u00B7 2P' : ' \u00B7 \u2026'}</span></span>`;
 }
 // One screen's own view of the game. The friend keeps these across host updates, and the host keeps a copy of what
 // the friend's actions set, so neither player's menus or messages land on the other's screen.
@@ -1597,6 +1630,8 @@ function leaveCoop(why) {
   render();
 }
 const inviteLink = () => (net ? `${location.origin}${location.pathname}?join=${net.code}` : '');
+// What the share sheet sends: a line and the link. The link opens the app if it's installed, or the game in the browser.
+const inviteText = () => (appBridge('share') ? `Join my Cinder Cell raid (room ${net.code}): ${inviteLink()}` : inviteLink());
 // A plain statement of the connection whenever it isn't healthy, with what the host can do about it.
 function coopBanner() {
   if (saveFailed) return '<div class="coop-banner bad" role="status">This browser refused the last save (private window or full storage?). Your progress may not be kept.</div>';
@@ -1782,6 +1817,7 @@ const POPUPS = {
 };
 const popupBadge = (id) => {
   const c = state.char;
+  if (id === 'clinic') { const mx = E.stats(state).maxHp; return c.hp < mx * 0.8 ? ` <span class="badge bad" title="You\u2019re hurt: ${c.hp} / ${mx} HP">${Math.round(c.hp / mx * 100)}%</span>` : ''; }
   if (id !== 'character') return '';
   return c.attrPoints ? ` <span class="badge" title="Attribute points to spend">${c.attrPoints}</span>` : canSpendResolve() ? ' <span class="badge" title="You can spend Resolve here">R</span>' : '';
 };
@@ -1917,7 +1953,7 @@ function coopBar() {
   const pc = E.charAt(state, 1 - myIdx()), name = pc ? pc.name.split(' ')[0] : (net.peerName || 'Your partner');
   const iReady = !!state.guestReady;
   const ready = isGuest()
-    ? `<button class="btn ${iReady ? 'primary' : ''}" data-a="coopready" aria-pressed="${iReady}" style="padding:3px 8px;min-height:0;font-size:.78rem">${iReady ? 'Ready' : 'Mark ready'}</button>`
+    ? `<button class="btn ${iReady ? 'primary' : ''}" data-a="coopready" aria-pressed="${iReady}">${iReady ? 'Ready' : 'Mark ready'}</button>`
     : `<span class="chip ${iReady ? 'good' : ''}">${iReady ? 'Ready' : 'Not ready'}</span>`;
   return `<div class="coop-bar"><b>${esc(name)}</b> <span class="muted" id="coop-where">${esc(partnerWhere())}</span> ${ready}
     <span class="emotes" aria-label="Say something">${EMOTES.map((t, i) => `<button class="btn" data-a="emote" data-v="${i}">${esc(t)}</button>`).join('')}</span></div>`;
@@ -2161,13 +2197,15 @@ function gate() {
   }).join('');
   const traits = [sel.credits !== 1 ? `${sel.credits > 1 ? '+' : ''}${pct(sel.credits - 1)} credits` : null, sel.level ? `enemies +${sel.level} lv` : null, (c.maps[sel.id] || {}).deepest ? `this operative: sector ${c.maps[sel.id].deepest}` : null].filter(Boolean);
   const ins = [...E.insertionsAt(c, sel.id, m.threat || 0)].sort((a, b) => a - b);
-  const warn = c.hp < st.maxHp * 0.6 ? `<p class="danger-text gate-warn">Going in at ${c.hp}/${st.maxHp} HP. The clinic is right there.</p>` : '';
+  // Under 80% health the dispatcher says so, with the clinic one tap away. Deploying hurt is still allowed.
+  const hurt = c.hp < st.maxHp * 0.8, hc = E.healCost(state), canHeal = c.credits >= hc;
+  const warn = hurt ? `<div class="gate-heal ${c.hp < st.maxHp * 0.5 ? 'bad' : ''}"><div class="gate-heal-text"><b>You\u2019re hurt: ${c.hp} / ${st.maxHp} HP</b>${bar(c.hp, st.maxHp)}<span>${canHeal ? 'Patch up before you go in.' : `Doc wants ${cr(hc)} and you have ${cr(c.credits)}. Going in like this is a risk.`}</span></div><button class="btn primary" data-a="heal" ${canHeal ? '' : 'disabled'}>Patch up \u00B7 ${cr(hc)}</button></div>` : '';
   const mt = E.maxThreat(state);
   const threat = mt > 0 ? `<div class="threat"><span class="label">Threat level</span><div class="btnrow">${D.THREAT.slice(0, mt + 1).map((t, i) => `<button class="btn ${m.threat === i ? 'primary' : ''}" data-a="threat" data-v="${i}" title="${esc(t.desc)}">${esc(t.name)}</button>`).join('')}</div><p class="muted" style="font-size:.84rem">${esc(D.THREAT[m.threat].desc)}${m.threat ? ' Starts again from sector 1.' : ''}</p></div>` : '';
   const contracts = (m.contracts || []).map((k) => `<div class="contract ${k.done ? 'done' : ''}"><div><b>${esc(k.text)}</b><span class="muted"> ${k.done ? 'Complete' : `${Math.min(k.progress, k.n)} / ${k.n}`}</span></div><span class="chip ${k.done ? 'good' : ''}">+${k.resolve} ${esc(S.meta)} \u00B7 +${k.credits} ${S.cur}</span></div>`).join('');
   const tabBtn = (k, label) => `<button class="tab" aria-selected="${tab === k}" data-a="missiontab" data-v="${k}">${label}</button>`;
-  const go = isGuest() ? `<div class="deploy-go"><span class="muted">The host picks the target.</span><button class="btn big ${state.guestReady ? 'primary' : ''}" data-a="coopready" aria-pressed="${!!state.guestReady}">${state.guestReady ? 'Ready \u00B7 waiting for the host' : 'Ready for the raid'}</button></div>`
-    : `<div class="deploy-go">${E.isCoop(state) ? `<span class="muted" style="font-size:.84rem">${state.guestReady ? `${esc(state.guestName || 'Your friend')} is ready.` : `Waiting for ${esc(state.guestName || 'your friend')} to press Ready.`}</span>` : ''}<span class="label">${ins.length > 1 ? 'Deploy \u00B7 pick where to start' : 'Deploy'}</span><div class="ins">${ins.map((n) => `<button class="btn big ${n === ins[ins.length - 1] ? 'primary' : ''}" data-a="deploy" data-v="${n}" ${E.isCoop(state) && !state.guestReady ? 'disabled' : ''}><span class="ins-n">Sector ${n}</span> <span class="ins-name">${esc(E.sectorName(n, sel.id))}</span></button>`).join('')}</div>${ins.length === 1 ? '<span class="muted ins-hint">Beat a boss to start deeper next time.</span>' : ''}${warn}</div>`;
+  const go = isGuest() ? `<div class="deploy-go">${warn}<span class="muted">The host picks the target.</span><button class="btn big ${state.guestReady ? 'primary' : ''}" data-a="coopready" aria-pressed="${!!state.guestReady}">${state.guestReady ? 'Ready \u00B7 waiting for the host' : 'Ready for the raid'}</button></div>`
+    : `<div class="deploy-go ${hurt && canHeal ? 'hurt' : ''}">${warn}${E.isCoop(state) ? `<span class="muted" style="font-size:.84rem">${state.guestReady ? `${esc(state.guestName || 'Your friend')} is ready.` : `Waiting for ${esc(state.guestName || 'your friend')} to press Ready.`}</span>` : ''}<span class="label">${ins.length > 1 ? 'Deploy \u00B7 pick where to start' : 'Deploy'}</span><div class="ins">${ins.map((n) => `<button class="btn big ${n === ins[ins.length - 1] ? 'primary' : ''}" data-a="deploy" data-v="${n}" ${E.isCoop(state) && !state.guestReady ? 'disabled' : ''}><span class="ins-n">Sector ${n}</span> <span class="ins-name">${esc(E.sectorName(n, sel.id))}</span></button>`).join('')}</div>${ins.length === 1 ? '<span class="muted ins-hint">Beat a boss to start deeper next time.</span>' : ''}</div>`;
   return `<nav class="tabs pop-tabs">${tabBtn('deploy', 'Deploy')}${tabBtn('contracts', `Contracts ${(m.contracts || []).length}`)}</nav>
     ${tab === 'contracts' ? `<div class="contracts">${contracts || '<p class="muted">No jobs right now.</p>'}</div>` : `<div class="gate">
       <div class="gate-maps"><div class="maps">${cards}</div>${locked.length ? `<p class="muted maps-locked">Locked: ${locked.map((mp) => `${esc(mp.name)} (reach sector ${mp.unlock})`).join(', ')}</p>` : ''}</div>
@@ -2942,7 +2980,7 @@ function applyAct(a, v, k) {
       const pre = getCoopPrefs(), code = pre.hostCode || makeCode(); // the same room each time, so an old invite link keeps working
       setCoopPrefs({ name: (document.getElementById('coop-name') || {}).value || '', relay: ((document.getElementById('coop-relay') || {}).value || '').trim(), hostCode: code });
       startCoop('host', code, !getCoopPrefs().relay);
-      shareOrCopy(inviteLink(), 'Invite link copied. Send it to your friend.');
+      shareOrCopy(inviteText(), 'Invite link copied. Send it to your friend.');
       break;
     }
     case 'coopresume': { const r = getLastRoom(); if (r && (r.role === 'guest' || state.char)) { titleOpen = false; startCoop(r.role, r.code, false); } break; }
@@ -2965,7 +3003,7 @@ function applyAct(a, v, k) {
     case 'devoff': devOn = false; try { localStorage.removeItem(DEV_KEY); } catch (e) {} modal = null; sfx('click'); break;
     case 'dev': if (devOn && !isGuest()) { applyDev(v, k); sfx('buy'); } break;
     case 'autostart': if (devOn && !isGuest()) startAuto(v); return;
-    case 'coopinvite': shareOrCopy(inviteLink(), 'Invite link copied.'); sfx('click'); break;
+    case 'coopinvite': shareOrCopy(inviteText(), 'Invite link copied.'); sfx('click'); break;
     case 'coopauto': if (isHost() && state.run && state.screen === 'combat' && state.run.actor === 1 && !net.peer) { fight(E.withActor(state, 1, () => E.autoAction(state)), 1); } return;
     case 'coopskip': if (isHost()) E.skipPartnerReward(state, rng); break;
     case 'coopdrop': if (isHost()) { E.partnerGone(state); state.coop = false; state.char2 = null; pendingGuest = null; toast = 'You carry on alone. They keep their operative as it was, and can join again after this raid.'; if (['loot', 'perk'].includes(state.screen) && !E.rewardsPending(state)) E.continueAfterVictory(state, rng); } break;

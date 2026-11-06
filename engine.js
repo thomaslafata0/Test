@@ -48,7 +48,7 @@ export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.01, bos
   earlyCurve: [1, 0.95, 0.85, 0.8, 0.8, 0.88, 0.88, 0.88, 0.88, 0.88],
   // Rewards shrink once an operative is more than overFree levels above the sector. reinforce: enemy strength by districts already freed.
   overFree: 2, overStep: 0.2, overMin: 0.25, coopCr: 1, repeatPay: 2, reinforce: [0, 0.5, 0.5, 0.35], bossRepeatXp: 0.5, bossRepeatResolve: 1,
-  rangedSpread: 0.15, meleeSpread: 0.3, shootGuard: 0.15, momentum: 0.15, coopHp: 2.1, coopAtk: 1.2, coopExtra: 3, reviveHp: 0.2, reviveAfter: 0.15, downsPerRaid: 2, bleedRounds: 3,
+  rangedSpread: 0.15, meleeSpread: 0.3, shootGuard: 0.15, momentum: 0.15, coopHp: 2.1, coopAtk: 1.3, coopExtra: 3, reviveHp: 0.2, reviveAfter: 0.15, downsPerRaid: 2, bleedRounds: 3,
   // Share of unsecured credits and XP lost, by position in the five-sector run to the next boss. Beating the boss secures everything.
   extractRates: [0.8, 0.65, 0.5, 0.4, 0], escapeRates: [0.9, 0.85, 0.75, 0.65, 0.6],
   itemScale: 0.3, allyGrit: 3 };

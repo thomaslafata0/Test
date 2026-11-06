@@ -23,6 +23,7 @@ final class GameViewController: UIViewController, WKNavigationDelegate, WKUIDele
     private var pageReady = false
     private var showingOffline = false
     private var readyFallback: DispatchWorkItem?
+    var pendingURL: URL?
 
     private let impacts: [String: UIImpactFeedbackGenerator] = [
         "light": UIImpactFeedbackGenerator(style: .light), "medium": UIImpactFeedbackGenerator(style: .medium),
@@ -182,7 +183,9 @@ final class GameViewController: UIViewController, WKNavigationDelegate, WKUIDele
         setOffline(false)
         pageReady = false
         spinner.startAnimating()
-        webView.load(URLRequest(url: Self.gameURL, cachePolicy: .useProtocolCachePolicy, timeoutInterval: 20))
+        let url = pendingURL ?? Self.gameURL
+        pendingURL = nil
+        webView.load(URLRequest(url: url, cachePolicy: .useProtocolCachePolicy, timeoutInterval: 20))
     }
 
     @objc private func cameBack() {
@@ -301,6 +304,15 @@ final class GameViewController: UIViewController, WKNavigationDelegate, WKUIDele
             g.impactOccurred()
             g.prepare()
         }
+    }
+
+    /// An invite link tapped in Messages: load it, so the page joins that room.
+    func open(_ url: URL) {
+        guard url.host == Self.gameURL.host else { return }
+        pendingURL = nil
+        guard isViewLoaded else { pendingURL = url; return }
+        setOffline(false)
+        webView.load(URLRequest(url: url))
     }
 
     private func share(_ text: String) {

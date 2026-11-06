@@ -4,7 +4,7 @@ compatibility_date = "2025-01-01"
 
 [assets]
 directory = "."
-run_worker_first = ["/room/*", "/save/*", "/board"]
+run_worker_first = ["/room/*", "/save/*", "/board", "/.well-known/*", "/apple-app-site-association"]
 
 [[durable_objects.bindings]]
 name = "ROOMS"
