@@ -154,6 +154,12 @@ function row(label, bots, stName, map, offset = 0) {
   console.log(`${label.padEnd(26)} ${cell(5)} | ${cell(10)} | ${cell(15)} | ${String(share(15)).padStart(3)}%  raid death ${Math.round(avg(res.map((r) => r.deaths / Math.max(1, r.raids))) * 100)}%${bots.length > 1 ? `, wipes ${Math.round(avg(res.map((r) => r.wipes / Math.max(1, r.raids))) * 100)}%` : ''}`);
 }
 const header = () => console.log(`${''.padEnd(26)} ops raids ${'  '}| ops raids | ops raids | finish`);
+// A short difficulty check: careful and standard play, solo and co-op. Careful play is closest to how people actually play.
+if (SECTIONS.includes('check')) {
+  header();
+  for (const b of ['strength', 'strAgi', 'agility', 'intellect', 'charisma']) for (const st of ['cautious', 'standard']) row(`${b} / ${st}`, [BUILDS[b]], st);
+  for (const [x, y] of [['strength', 'agility'], ['intellect', 'charisma']]) for (const st of ['cautious', 'standard']) row(`${x} + ${y} / ${st}`, [BUILDS[x], BUILDS[y]], st);
+}
 if (SECTIONS.includes('builds')) {
   console.log(`\n=== Solo builds, standard play: ${CAMP} campaigns, median operatives and raids to beat boss 5 | 10 | 15 (up to ${LIVES} operatives) ===`); header();
   for (const b of Object.keys(BUILDS)) row(b, [BUILDS[b]], 'standard');

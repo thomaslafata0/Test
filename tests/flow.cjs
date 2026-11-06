@@ -6,7 +6,7 @@ const W = +process.argv[2] || 390;
 (async () => {
   const b = await chromium.launch(); const page = await b.newPage({ viewport: { width: W, height: 844 } });
   const errors = []; page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto('http://localhost:8765/index.html'); await page.evaluate(() => { localStorage.clear(); localStorage.setItem('cinder-cell-speed', JSON.stringify('auto2')); }); await page.reload(); await page.waitForTimeout(700);
+  await page.goto('http://localhost:8765/index.html'); await page.evaluate(() => { localStorage.clear(); localStorage.setItem('cinder-cell-speed', JSON.stringify('auto2')); localStorage.setItem('cinder-cell-ui', JSON.stringify({ autoStop: false })); }); await page.reload(); await page.waitForTimeout(700);
   const seen = new Set(); let n = 0;
   const shot = async (tag) => { if (seen.has(tag)) return; seen.add(tag); n++; await page.screenshot({ path: `${OUT}/${W}-${String(n).padStart(2, '0')}-${tag}.png`, fullPage: true }); };
   const st = () => page.evaluate(() => { const s = JSON.parse(localStorage.getItem('cinder-cell-save-v1') || '{}'); return { screen: s.screen, popup: s.popup, modal: !!document.querySelector('.modal-wrap'), title: !!document.querySelector('.title'), result: !!document.querySelector('.aa'), busy: document.getElementById('app').classList.contains('busy'), h2: (document.querySelector('h2') || {}).textContent }; });

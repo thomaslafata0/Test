@@ -3,7 +3,7 @@
 
 let ctx = null, master = null, sfxBus = null, ambBus = null, noiseBuf = null;
 let ambNodes = null;
-const prefs = { muted: false, haptics: true, sfx: true, ambience: false, rain: false, music: true, musicVolume: 0.2, volume: 0.7 };
+const prefs = { muted: false, muteHidden: false, haptics: true, sfx: true, ambience: false, rain: false, music: true, musicVolume: 0.2, volume: 0.7 };
 try { Object.assign(prefs, JSON.parse(localStorage.getItem('cinder-cell-audio')) || {}); } catch (e) {}
 
 function save() { try { localStorage.setItem('cinder-cell-audio', JSON.stringify(prefs)); } catch (e) {} }
@@ -185,14 +185,16 @@ export function setAmbience(theme) {
   };
 }
 
-// On a phone, going to the background silences the game; coming back picks up where it was.
-if (typeof document !== 'undefined' && typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches) {
+// On a phone, going to the background silences the game; coming back picks up where it was. Elsewhere that's a setting.
+if (typeof document !== 'undefined' && typeof matchMedia === 'function') {
+  const phone = matchMedia('(pointer: coarse)').matches;
   document.addEventListener('visibilitychange', () => {
+    if (!phone && !prefs.muteHidden) return;
     if (document.visibilityState === 'hidden') {
       for (const a of Object.values(music)) a.pause();
       if (ctx && ctx.state === 'running') ctx.suspend();
     } else {
-      if (ctx && ctx.state === 'suspended') ctx.resume();
+      if (ctx && ctx.state !== 'running') ctx.resume(); // iOS can leave it 'interrupted' after a call
       startMusic();
     }
   });

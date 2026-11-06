@@ -590,6 +590,16 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .board-table .bad { color: var(--danger); }
 @media (max-width: 520px) { .board-table { font-size: .8rem; } .board-table td, .board-table th { padding: 5px 3px; } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+html.calm * { animation: none !important; transition: none !important; }
+button { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.boot { padding: 40px 16px; text-align: center; color: var(--muted); }
+.st[data-st] { cursor: help; }
+.chip.lethal { background: #d4483a; color: #fff; border-color: #d4483a; font-weight: 700; }
+.up-flag { margin-left: 4px; font-size: .72rem; padding: 0 5px; }
+#hint { position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 90; width: max-content; max-width: min(520px, calc(100vw - 32px)); padding: 9px 13px; transform: translate(-50%, 8px); background: #15191df5; color: var(--paper, #e9e3d4); border: 1px solid var(--sodium); font-size: .92rem; line-height: 1.3; opacity: 0; visibility: hidden; transition: opacity .15s, transform .15s; }
+#hint.on { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+#crash { position: fixed; left: 50%; top: calc(10px + env(safe-area-inset-top)); z-index: 95; width: min(520px, calc(100vw - 32px)); display: grid; gap: 8px; padding: 12px 14px; transform: translateX(-50%); background: #2a1512; color: #f3ead8; border: 1px solid #d4483a; }
+#crash p { margin: 0; }
 
 /* compact pass: tighter spacing and type everywhere. Later rules win. */
 .create-panel { padding: 16px 18px; }
@@ -997,6 +1007,9 @@ h3 { font-size: 1.05rem; }
   .aa-spend .btn { padding: 2px 12px; font-size: 1rem; min-width: 76px; }
 
   /* A fight: the scene on the left, the console on the right. Both use the full height. */
+  html.lefty .combat { grid-template-columns: minmax(0, 42%) minmax(0, 1fr); }
+  html.lefty .c-left { order: 2; }
+  html.lefty .c-right { order: 1; }
   .combat { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 42%); gap: 6px; align-items: stretch; align-content: stretch; grid-template-rows: minmax(0, 1fr); padding: 5px 6px; overflow: hidden !important; }
   .combat-head, .auto-note, .hud-tag { display: none; }
   .c-left { display: flex; flex-direction: column; gap: 3px; min-width: 0; min-height: 0; }
@@ -1032,7 +1045,7 @@ h3 { font-size: 1.05rem; }
   .actions .btn .wpn { display: none; }
   .actions .btn .bs { font-size: max(11px, .8rem); }
   .actions .btn.atk .bs { font-size: max(12px, .88rem); }
-  .actions .btn[data-v="defend"] .bs, .actions .btn[data-v="stim"] .bs { display: none; }
+  .actions .btn[data-v="stim"] .bs { display: none; }
   .c-right > .skills { flex: 2 1 auto; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(38px, 1fr); }
   .skills .btn { min-height: 0; padding: 2px 8px; gap: 0; align-content: center; }
   .sk-name { font-size: max(13px, .95rem); gap: 5px; white-space: nowrap; overflow: hidden; }
@@ -1143,16 +1156,16 @@ h3 { font-size: 1.05rem; }
 </style>
 
 <div class="rotate-note"><b>Turn your phone sideways</b><span class="muted">Cinder Cell plays in landscape.</span><div><button class="btn" onclick="this.closest('.rotate-note').remove()">Play upright anyway</button></div></div>
-<div class="wrap" id="app" aria-live="polite"></div>
+<div class="wrap" id="app" aria-live="polite"><p class="boot">Loading...</p></div>
 
 <script type="module">
 import * as D from './data.js';
 import * as E from './engine.js';
 import { portraitURL } from './portraits.js';
-import { Stage, loadSheets, sheetStill, setLookSheets } from './stage.js';
+import { Stage, loadSheets, sheetStill, setLookSheets, setCalm as setStageCalm } from './stage.js';
 import * as A from './audio.js';
 import { iconURL, gearIconKey } from './icons.js';
-import { Town, SHOPS } from './town.js';
+import { Town, SHOPS, setCalm as setTownCalm } from './town.js';
 import { autoStep, autoFinish, loadDev, BUILDS } from './dev.js';
 import { Wheel, OrbitScene, loadDowntimeArt, artFor } from './downtime.js';
 import { Net, getCoopPrefs, setCoopPrefs, makeCode, getRoom, setRoom, getLastRoom, setLastRoom } from './net.js';
@@ -1177,8 +1190,69 @@ let confirmReset = false;
 let modal = null; // 'manual' | 'settings' | null
 let toast = null;
 
+// An error shouldn't leave anyone staring at a dead screen: say so, and keep the save reachable.
+function crashBanner() {
+  if (document.getElementById('crash')) return;
+  const el = document.createElement('div');
+  el.id = 'crash'; el.setAttribute('role', 'alert');
+  el.innerHTML = '<p><b>Something went wrong.</b> Your save is still on this device.</p><div class="btnrow"><button class="btn primary" data-c="reload">Reload</button><button class="btn" data-c="copy">Copy save</button><button class="btn" data-c="close">Keep playing</button></div>';
+  el.addEventListener('click', (ev) => {
+    const c = ev.target.dataset.c;
+    if (c === 'reload') location.reload();
+    if (c === 'close') el.remove();
+    if (c === 'copy') { try { navigator.clipboard.writeText(localStorage.getItem(SAVE_KEY) || '').then(() => { ev.target.textContent = 'Copied'; }).catch(() => {}); } catch (e) {} }
+  });
+  document.body.appendChild(el);
+}
+window.addEventListener('error', (ev) => { if (ev.error) crashBanner(); });
+window.addEventListener('unhandledrejection', () => { if (!state) crashBanner(); });
+
+// A short note over everything, for explanations that shouldn't disturb the screen behind them.
+let hintTimer = null;
+function hint(text) {
+  let el = document.getElementById('hint');
+  if (!el) { el = document.createElement('div'); el.id = 'hint'; el.setAttribute('role', 'status'); el.addEventListener('click', () => el.classList.remove('on')); document.body.appendChild(el); }
+  el.textContent = text; el.classList.add('on');
+  clearTimeout(hintTimer); hintTimer = setTimeout(() => el.classList.remove('on'), 4000);
+}
+// Touch screens have no hover: holding a button shows what its tooltip says, and doesn't press it.
+let holdTimer = null, holdFrom = null, holdFired = false;
+const endHold = () => { clearTimeout(holdTimer); holdTimer = null; holdFrom = null; };
+document.addEventListener('pointerdown', (ev) => {
+  holdFired = false; endHold();
+  if (ev.pointerType === 'mouse') return;
+  const el = ev.target.closest && ev.target.closest('[title]');
+  if (!el || !el.title) return;
+  holdFrom = [ev.clientX, ev.clientY];
+  holdTimer = setTimeout(() => { holdFired = true; hint(el.title); endHold(); }, 450);
+}, true);
+document.addEventListener('pointermove', (ev) => { if (holdFrom && Math.hypot(ev.clientX - holdFrom[0], ev.clientY - holdFrom[1]) > 10) endHold(); }, true);
+document.addEventListener('pointerup', endHold, true);
+document.addEventListener('pointercancel', endHold, true);
+document.addEventListener('click', (ev) => {
+  if (holdFired) { holdFired = false; ev.stopPropagation(); ev.preventDefault(); return; }
+  // Status chips on the battle stage explain themselves when tapped.
+  const chip = ev.target.closest && ev.target.closest('[data-st]');
+  if (!chip || !state || !state.run || !state.run.enemy) return;
+  const e = state.run.enemy, k = chip.dataset.st;
+  const info = k === 'quirk' ? e.quirk && E.quirkById(e.quirk) : k === 'affix' ? e.affix && D.AFFIXES[e.affix] : D.STATUSES[k];
+  if (info) hint(`${info.name}: ${info.desc}`);
+}, true);
+
+// This device's own choices. They don't travel with the save or to a co-op partner.
+const UI_KEY = 'cinder-cell-ui';
+const uiPrefs = { autoStop: true, fastAnim: false, calm: false, lefty: false };
+try { Object.assign(uiPrefs, JSON.parse(localStorage.getItem(UI_KEY)) || {}); } catch (e) {}
+function applyUi() {
+  document.documentElement.classList.toggle('calm', uiPrefs.calm);
+  document.documentElement.classList.toggle('lefty', uiPrefs.lefty);
+  setStageCalm(uiPrefs.calm); setTownCalm(uiPrefs.calm); stage.setFast(uiPrefs.fastAnim);
+}
+
 function load() {
-  try { const raw = localStorage.getItem(SAVE_KEY); if (raw) return JSON.parse(raw); } catch (e) {}
+  let raw = null;
+  try { raw = localStorage.getItem(SAVE_KEY); if (raw) return JSON.parse(raw); }
+  catch (e) { try { if (raw) { localStorage.setItem(`${SAVE_KEY}-broken`, raw); toast = 'Your save couldn\u2019t be read, so a copy was kept and a new game started.'; } } catch (e2) {} }
   return null;
 }
 // Writes only when something changed, stamping the save and the operative with when, so copies of them can be compared.
@@ -1636,7 +1710,7 @@ const inviteText = () => (appBridge('share') ? `Join my Cinder Cell raid (room $
 function coopBanner() {
   if (saveFailed) return '<div class="coop-banner bad" role="status">This browser refused the last save (private window or full storage?). Your progress may not be kept.</div>';
   if (!net) return '';
-  if (!net.online && net.status !== 'connecting') return '<div class="coop-banner bad" role="status">Connection lost. Reconnecting\u2026</div>';
+  if (!net.online && net.status !== 'connecting') return '<div class="coop-banner bad" role="status"><span>Connection lost. Reconnecting\u2026</span><button class="btn" data-a="coopleave">Leave</button></div>';
   if (net.peer || !net.online) return '';
   if (isGuest()) return hostSynced ? '<div class="coop-banner" role="status"><span>The host dropped out. Waiting for them to come back\u2026</span><button class="btn" data-a="coopleave">Leave</button></div>' : '';
   if (state.run && state.coop && state.char2) {
@@ -1818,6 +1892,7 @@ const POPUPS = {
 const popupBadge = (id) => {
   const c = state.char;
   if (id === 'clinic') { const mx = E.stats(state).maxHp; return c.hp < mx * 0.8 ? ` <span class="badge bad" title="You\u2019re hurt: ${c.hp} / ${mx} HP">${Math.round(c.hp / mx * 100)}%</span>` : ''; }
+  if (id === 'market') return (c.market || []).some((it) => E.canEquip(c, it) && c.credits >= E.netPrice(state, it) && gearGain(it) > 0) ? ' <span class="badge" title="You can afford an upgrade here">\u2191</span>' : '';
   if (id !== 'character') return '';
   return c.attrPoints ? ` <span class="badge" title="Attribute points to spend">${c.attrPoints}</span>` : canSpendResolve() ? ' <span class="badge" title="You can spend Resolve here">R</span>' : '';
 };
@@ -1992,8 +2067,9 @@ function townPopup() {
   </div></div>${compareView()}`;
 }
 
-function buyBtn(a, v, k, cost, extraDisabled = false) {
+function buyBtn(a, v, k, cost, extraDisabled = false, label = '') {
   const p = E.price(state, cost);
+  if (label) return `<button class="btn" disabled>${esc(label)}</button>`;
   return `<button class="btn" data-a="${a}" data-v="${v}" ${k ? `data-k="${k}"` : ''} ${state.char.credits < p || extraDisabled ? 'disabled' : ''}>${cr(p)}</button>`;
 }
 
@@ -2016,6 +2092,16 @@ function itemStatsLine(it) {
   if (sk) out.push(`<span>skill <b>${esc(D.SKILLS[sk].name)}</b></span>`);
   return out.join('');
 }
+// A rough overall gain if this piece replaced what's in its slot, for marking upgrades.
+function gearGain(it) {
+  const c = state.char, slot = E.baseOf(it).slot, old = c.gear[slot];
+  if (old === it) return 0;
+  const a = E.stats(state);
+  c.gear[slot] = it;
+  const b = E.stats(state);
+  c.gear[slot] = old;
+  return (b.atk - a.atk) + (b.atkM - a.atkM) + 2 * (b.def - a.def) + (b.spd - a.spd) + (b.maxHp - a.maxHp) / 5 + 25 * ((b.crit - a.crit) + (b.critM - a.critM));
+}
 // What would change if this piece replaced what's in its slot.
 function compareChips(it) {
   const c = state.char, slot = E.baseOf(it).slot, old = c.gear[slot];
@@ -2035,14 +2121,14 @@ function compareChips(it) {
   const list = chips.join('');
   return `<div class="cmp"><span class="label" style="width:100%">vs your ${old ? esc(E.itemName(old)) : 'empty slot'}</span>${list || '<span class="chip">no stat change</span>'}</div>`;
 }
-function itemCard(it, { compare = true, actions = '', cls = '' } = {}) {
+function itemCard(it, { compare = true, actions = '', cls = '', flag = '' } = {}) {
   if (!it) return '';
   const b = E.baseOf(it), R = D.RARITY[it.rarity];
   const bonuses = it.bonuses.map((x) => `<li>${esc(E.bonusText(x))}</li>`).join('');
   const trait = it.trait ? `<li class="trait"><b>${esc(D.TRAITS[it.trait].name)}</b>: ${esc(D.TRAITS[it.trait].desc)}</li>` : '';
   const uq = b.unique ? `<li class="uq">${esc(b.desc)}</li>` : '';
   return `<div class="item r-${it.rarity} ${cls}">
-    <div class="item-head">${gearIco(it)}<div style="display:grid;gap:2px;min-width:0"><span class="label">${esc(R.name)} \u00B7 ${esc(SLOTS[b.slot].name)}</span><b>${esc(E.itemName(it))}</b></div></div>
+    <div class="item-head">${gearIco(it)}<div style="display:grid;gap:2px;min-width:0"><span class="label">${esc(R.name)} \u00B7 ${esc(SLOTS[b.slot].name)}${flag ? ` <span class="chip good up-flag">${esc(flag)}</span>` : ''}</span><b>${esc(E.itemName(it))}</b></div></div>
     <div class="stats">${itemStatsLine(it)}</div>
     ${b.unique ? '' : `<p class="desc">${esc(b.desc)}</p>`}
     ${bonuses || trait || uq ? `<ul>${uq}${bonuses}${trait}</ul>` : ''}
@@ -2085,11 +2171,13 @@ function gearTab() {
 
 function marketGear() {
   const c = state.char, o = E.shopOdds(state.meta);
-  const cards = (c.market || []).map((it, i) => {
-    const net = E.netPrice(state, it), ok = E.canEquip(c, it), old = c.gear[E.baseOf(it).slot];
-    const btn = `<button class="btn primary" data-a="buygear" data-v="${i}" ${!ok || c.credits < net ? 'disabled' : ''}>${ok ? `Buy \u00B7 ${cr(net)}` : 'Requirements not met'}</button>`;
+  // Upgrades you can use come first. Each button keeps the piece's place in the stock.
+  const order = (c.market || []).map((it, i) => ({ it, i, up: E.canEquip(c, it) && gearGain(it) > 0 })).sort((a, b) => b.up - a.up || a.i - b.i);
+  const cards = order.map(({ it, i, up }) => {
+    const net = E.netPrice(state, it), ok = E.canEquip(c, it), short = net - c.credits;
+    const btn = `<button class="btn primary" data-a="buygear" data-v="${i}" ${!ok || short > 0 ? 'disabled' : ''}>${!ok ? `Needs ${esc(E.reqText(E.baseOf(it).req))}` : short > 0 ? `${cr(short)} short` : `Buy \u00B7 ${cr(net)}`}</button>`;
     const cmp = `<button class="btn" data-a="compare" data-v="${i}" title="See this piece next to what you have in that slot">Compare</button>`;
-    return itemCard(it, { actions: `${btn}${cmp}` });
+    return itemCard(it, { actions: `${btn}${cmp}`, flag: up ? 'Upgrade' : '' });
   }).join('');
   return `<div class="odds"><span>Odds:</span>${['common', 'rare', 'elite', 'legendary'].map((k) => `<span class="rname r-${k}">${D.RARITY[k].name} ${Math.round(o[k] * 1000) / 10}%</span>`).join('')}</div>
     ${cards ? `<div class="item-grid">${cards}</div>` : '<p class="muted">Sold out. Marrow restocks after your next raid.</p>'}`;
@@ -2098,7 +2186,9 @@ function marketGear() {
 function market() {
   const c = state.char, st = E.stats(state);
   const items = Object.entries(D.ITEMS).map(([id, it]) => `<div class="row i">${ico(`item:${id}`)}<div><div class="name">${esc(it.name)} <span class="num muted" style="font-size:.8rem">${c.items[id]}/${st.carry}</span></div><div class="desc">${esc(it.desc)}</div></div>
-    ${buyBtn('item', id, '', E.itemCost(state, id), c.items[id] >= st.carry)}</div>`).join('');
+    ${buyBtn('item', id, '', E.itemCost(state, id), false, c.items[id] >= st.carry ? 'Full' : '')}</div>`).join('');
+  const stimEach = E.price(state, E.itemCost(state, 'stim')), stimN = Math.min(st.carry - c.items.stim, Math.floor(c.credits / stimEach));
+  const restock = c.items.stim < st.carry ? `<div class="row i restock">${ico('item:stim')}<div><div class="name">Restock Med Stims</div><div class="desc">Fill up in one tap.</div></div><button class="btn primary" data-a="restock" ${stimN ? '' : 'disabled'}>${stimN ? `Buy ${stimN} \u00B7 ${cr(stimN * stimEach)}` : 'Can\u2019t afford'}</button></div>` : '';
   const ups = D.UPGRADES.map((u) => {
     const owned = c.upgrades.includes(u.id);
     const modIco = ico(`upgrade:${u.id}`);
@@ -2108,7 +2198,7 @@ function market() {
   const tab = state.marketTab || 'gear', tabBtn = (k, label) => `<button class="tab" aria-selected="${tab === k}" data-a="markettab" data-v="${k}">${label}</button>`;
   return `<nav class="tabs pop-tabs">${tabBtn('gear', 'Gear')}${tabBtn('supplies', 'Supplies')}${tabBtn('mods', `Mods ${c.upgrades.length}/${D.UPGRADES.length}`)}</nav>
     ${tab === 'gear' ? `<p class="muted pop-intro">New gear replaces the old for good. Restocks after every raid.${disc > 0 ? ` Charisma: ${pct(disc)} off.` : ''}</p>${marketGear()}` : ''}
-    ${tab === 'supplies' ? `<div class="rows">${items}</div>` : ''}
+    ${tab === 'supplies' ? `<div class="rows">${restock}${items}</div>` : ''}
     ${tab === 'mods' ? `<p class="muted">Each one you buy raises the price of the rest.</p><div class="rows">${ups}</div>` : ''}`;
 }
 
@@ -2199,7 +2289,9 @@ function gate() {
   const ins = [...E.insertionsAt(c, sel.id, m.threat || 0)].sort((a, b) => a - b);
   // Under 80% health the dispatcher says so, with the clinic one tap away. Deploying hurt is still allowed.
   const hurt = c.hp < st.maxHp * 0.8, hc = E.healCost(state), canHeal = c.credits >= hc;
-  const warn = hurt ? `<div class="gate-heal ${c.hp < st.maxHp * 0.5 ? 'bad' : ''}"><div class="gate-heal-text"><b>You\u2019re hurt: ${c.hp} / ${st.maxHp} HP</b>${bar(c.hp, st.maxHp)}<span>${canHeal ? 'Patch up before you go in.' : `Doc wants ${cr(hc)} and you have ${cr(c.credits)}. Going in like this is a risk.`}</span></div><button class="btn primary" data-a="heal" ${canHeal ? '' : 'disabled'}>Patch up \u00B7 ${cr(hc)}</button></div>` : '';
+  const stimEach = E.price(state, E.itemCost(state, 'stim')), stimN = Math.min(st.carry, Math.floor(c.credits / stimEach));
+  const noStim = c.items.stim ? '' : `<div class="gate-heal"><div class="gate-heal-text"><b>No stims packed</b><span>${stimN ? 'They heal you mid-fight, and stop bleeding.' : `A stim costs ${cr(stimEach)} and you have ${cr(c.credits)}.`}</span></div><button class="btn" data-a="restock" ${stimN ? '' : 'disabled'}>Restock${stimN ? ` ${stimN} \u00B7 ${cr(stimN * stimEach)}` : ''}</button></div>`;
+  const warn = noStim + (hurt ? `<div class="gate-heal ${c.hp < st.maxHp * 0.5 ? 'bad' : ''}"><div class="gate-heal-text"><b>You\u2019re hurt: ${c.hp} / ${st.maxHp} HP</b>${bar(c.hp, st.maxHp)}<span>${canHeal ? 'Patch up before you go in.' : `Doc wants ${cr(hc)} and you have ${cr(c.credits)}. Going in like this is a risk.`}</span></div><button class="btn primary" data-a="heal" ${canHeal ? '' : 'disabled'}>Patch up \u00B7 ${cr(hc)}</button></div>` : '');
   const mt = E.maxThreat(state);
   const threat = mt > 0 ? `<div class="threat"><span class="label">Threat level</span><div class="btnrow">${D.THREAT.slice(0, mt + 1).map((t, i) => `<button class="btn ${m.threat === i ? 'primary' : ''}" data-a="threat" data-v="${i}" title="${esc(t.desc)}">${esc(t.name)}</button>`).join('')}</div><p class="muted" style="font-size:.84rem">${esc(D.THREAT[m.threat].desc)}${m.threat ? ' Starts again from sector 1.' : ''}</p></div>` : '';
   const contracts = (m.contracts || []).map((k) => `<div class="contract ${k.done ? 'done' : ''}"><div><b>${esc(k.text)}</b><span class="muted"> ${k.done ? 'Complete' : `${Math.min(k.progress, k.n)} / ${k.n}`}</span></div><span class="chip ${k.done ? 'good' : ''}">+${k.resolve} ${esc(S.meta)} \u00B7 +${k.credits} ${S.cur}</span></div>`).join('');
@@ -2229,6 +2321,8 @@ function combatScreen() {
   const r = state.run, e = r.enemy, c = state.char, st = E.stats(state);
   const intent = intentInfo(e);
   const sr = E.attackRange(state, false), mr = E.attackRange(state, true);
+  const inc = E.incomingRange(state);
+  const incChip = inc ? `<span class="chip ${inc.lethal ? 'lethal' : 'bad'}" title="If it connects. Defend to take ${inc.defMin}-${inc.defMax}.">${inc.lethal ? 'Lethal ' : 'Hits '}${inc.min}-${inc.max}</span>` : '';
   const coop = E.isCoop(state), mine = !coop || r.actor === myIdx();
   const party = coop ? `<div class="party">${[0, 1].map((i) => { const pc = E.charAt(state, i); if (!pc) return ''; const pst = E.statsOf(state.meta, pc); return `<div class="pm ${r.actor === i ? 'turn' : ''} ${i === myIdx() ? 'me' : ''}"><span class="label">${i === myIdx() ? 'You' : esc(pc.name)}${r.actor === i ? ' \u00B7 acting' : ''}${pc.downed ? ` \u00B7 <span class="danger-text">down, ${pc.downed} round${pc.downed > 1 ? 's' : ''} left</span>` : ''}</span><b>${Math.max(0, pc.hp)} / ${pst.maxHp}</b>${bar(pc.hp, pst.maxHp)}</div>`; }).join('')}</div>` : '';
   const waiting = coop && !mine ? `<div class="notice ${c.downed || c.dead ? 'lose' : ''}">${c.dead ? `You\u2019re dead. ${esc(E.charAt(state, 1 - myIdx()).name)} is trying to get out alive.` : c.downed ? `You\u2019re down, bleeding out: ${c.downed} round${c.downed > 1 ? 's' : ''} left. ${esc(E.charAt(state, 1 - myIdx()).name)} can get you up.` : `Waiting for ${esc(E.charAt(state, 1 - myIdx()).name)} to act\u2026`}</div>` : '';
@@ -2237,7 +2331,7 @@ function combatScreen() {
   const confirmSmoke = state.confirmSmoke && c.items.smoke;
   const items = ['thermal', 'ion', 'smoke'].map((id, i) => !c.items[id] ? '' : `<button class="btn twoline ${id === 'smoke' && confirmSmoke ? 'confirm' : ''}" data-a="act" data-v="${id}" title="${esc(D.ITEMS[id].desc)}" ${c.items[id] ? '' : 'disabled'}>
       <span class="bt">${ico(`item:${id}`, 'sm')}${esc(D.ITEMS[id].name)} <span class="num">\u00D7${c.items[id]}</span><span class="k">${i + 2}</span></span>
-      <span class="bs">${id === 'smoke' && confirmSmoke ? 'Tap again to leave the raid' : esc(D.ITEMS[id].short)}</span></button>`).join('');
+      <span class="bs">${id === 'smoke' && confirmSmoke ? 'Tap again to try to escape' : esc(D.ITEMS[id].short)}</span></button>`).join('');
   const skills = E.skillsOf(c).slice(0, 4).map((k, i) => {
     const cd = r.cooldowns[k] || 0, sk = D.SKILLS[k];
     const status = k === 'intimidate' ? (cd ? 'used this sector' : e.tags.includes('human') ? `${pct(E.intimidateChance(state))} chance` : 'humans only') : cd ? `ready in ${cd}` : 'ready';
@@ -2251,7 +2345,7 @@ function combatScreen() {
   return `<div class="columns"><section class="panel combat"><div class="c-left">
     <div class="combat-head"><span class="label">${esc(E.mapById(r.map).name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${stage.auto ? '<span class="auto-note">Auto battle \u00B7 tap Manual to take over</span>' : ''}${roomPips(r)}</div>
     <div class="stage-box"><div id="stage-slot"></div></div>
-    <div class="intent ${intent.tone}"><span class="dot"></span><b>${esc(intent.label)}</b><span class="tip">${esc(intent.tip)}${st.scan && e.next ? ` <span class="next-intent">Scanner: then ${esc(intentLabel(e, e.next))}</span>` : ''}</span><span class="intent-side">${mechanicChip(r)}${r.ready ? `<span class="chip good">Aim +${E.hasPerk(c, 'steady') ? 100 : 50}%</span>` : ''}${r.momentum ? `<span class="chip good">Momentum +${Math.round(E.TUNE.momentum * 100)}%</span>` : ''}</span></div>
+    <div class="intent ${intent.tone}"><span class="dot"></span><b>${esc(intent.label)}</b><span class="tip">${esc(intent.tip)}${st.scan && e.next ? ` <span class="next-intent">Scanner: then ${esc(intentLabel(e, e.next))}</span>` : ''}</span><span class="intent-side">${incChip}${mechanicChip(r)}${r.ready ? `<span class="chip good">Aim +${E.hasPerk(c, 'steady') ? 100 : 50}%</span>` : ''}${r.momentum ? `<span class="chip good">Momentum +${Math.round(E.TUNE.momentum * 100)}%</span>` : ''}</span></div>
     <div class="statline">${meta}</div>
     ${e.quirk ? `<div class="quirk-line"><span class="chip quirk">${esc(E.quirkById(e.quirk).name)}</span><span>${esc(E.quirkById(e.quirk).desc)}</span></div>` : ''}
     ${D.MELEE_COUNTER[e.id] ? `<div class="quirk-line"><span class="chip bad">${esc(D.MELEE_COUNTER[e.id].name)}</span><span>${esc(D.MELEE_COUNTER[e.id].desc)}</span></div>` : ''}
@@ -2262,9 +2356,9 @@ function combatScreen() {
     <div class="actions ${mine ? '' : 'locked'}">
       <button class="btn primary twoline atk" data-a="act" data-v="shoot" title="${esc(E.weaponOf(c).name)}: ${st.atk} ATK, ${pct(E.critChance(st, e))} crit. Steady damage; cover halves it. You keep your distance, so you take ${Math.round(E.TUNE.shootGuard * 100)}% less damage this turn."><span class="bt">Shoot<span class="k">A</span></span><span class="wpn">${esc(E.weaponOf(c).name)}</span><span class="bs"><b class="rng">${sr[0]}\u2013${sr[1]}</b> dmg${e.intent === 'guard' && !e.stun ? ' (cover)' : ''}</span></button>
       <button class="btn twoline atk ${D.MELEE_COUNTER[e.id] ? 'warn' : ''}" data-a="act" data-v="strike" title="${esc(E.meleeOf(c).name)}: ${st.atkM} ATK, ${pct(E.critChance(st, e, true))} crit. Swingy damage, ignores cover, and your next attack hits ${Math.round(E.TUNE.momentum * 100)}% harder."><span class="bt">Strike<span class="k">F</span></span><span class="wpn">${esc(E.meleeOf(c).name)}</span><span class="bs"><b class="rng">${mr[0]}\u2013${mr[1]}</b> dmg${D.MELEE_COUNTER[e.id] ? ' \u00B7 hits back!' : ''}</span></button>
-      <button class="btn twoline" data-a="act" data-v="defend"><span class="bt">Defend<span class="k">D</span></span><span class="bs">Half damage, aim up</span></button>
-      <button class="btn twoline" data-a="act" data-v="stim" ${c.items.stim ? '' : 'disabled'}><span class="bt">${ico('item:stim', 'sm')}Stim <span class="num">\u00D7${c.items.stim}</span><span class="k">S</span></span><span class="bs">${esc(D.ITEMS.stim.short)}</span></button>
-      <button class="btn twoline" data-a="act" data-v="run"><span class="bt">Run<span class="k">R</span></span><span class="bs" title="Getting away drops ${Math.round(E.runShare(state) * 100)}% of unsecured credits and XP">${pct(E.runChance(state))}, lose ${Math.round(E.runShare(state) * 100)}%</span></button>
+      <button class="btn twoline" data-a="act" data-v="defend" title="Take half damage, about a third from a heavy strike, and steady your next shot."><span class="bt">Defend<span class="k">D</span></span><span class="bs">${inc ? `Take ${inc.defMin}-${inc.defMax}` : 'Half damage'}</span></button>
+      <button class="btn twoline" data-a="act" data-v="stim" title="${esc(D.ITEMS.stim.desc)}" ${c.items.stim ? '' : 'disabled'}><span class="bt">${ico('item:stim', 'sm')}Stim <span class="num">\u00D7${c.items.stim}</span><span class="k">S</span></span><span class="bs">${esc(D.ITEMS.stim.short)}</span></button>
+      <button class="btn twoline" data-a="act" data-v="run" title="Getting away drops ${Math.round(E.runShare(state) * 100)}% of unsecured credits and XP. Failing gives the enemy a free turn."><span class="bt">Run<span class="k">R</span></span><span class="bs" title="Getting away drops ${Math.round(E.runShare(state) * 100)}% of unsecured credits and XP">${pct(E.runChance(state))}, lose ${Math.round(E.runShare(state) * 100)}%</span></button>
     </div>
     ${skills ? `<div class="skills ${mine ? '' : 'locked'}">${skills}</div>` : ''}
     ${items.trim() ? `<div class="items">${items}</div>` : ''}
@@ -2456,7 +2550,7 @@ function modalView() {
         <li><b>Defend</b>: half damage, next shot +50%.</li>
         <li><b>Skills</b>: cooldowns last across a sector.</li></ul></section>
       <section><h3>Enemy moves</h3><ul>
-        <li><b>Heavy strike</b>: x2.2. Defend takes a quarter.</li>
+        <li><b>Heavy strike</b>: x2.2. Defend takes about a third.</li>
         <li><b>Signature move</b>: Defend halves it and blocks the status.</li>
         <li><b>Cover</b>: your shots deal half.</li>
         <li><b>Repair</b>: hit it before it heals.</li></ul></section>
@@ -2468,9 +2562,14 @@ function modalView() {
       <section><h3>Threat and rewards</h3><p>Freeing a district opens Threat levels and reinforces the others. Sectors far below your level pay less, and a boss you\u2019ve beaten pays half XP.</p></section>
       <section><h3>Co-op</h3><p>Host from <b>Settings</b> and share the link. You keep your own operative. Vote on doors, pick your own loot, and press <b>E</b> by your partner to trade. At 0 HP you go down and can be revived. If one of you dies, the other must win or run; if both fall, it\u2019s a wipe.</p></section>
       <section><h3>Saves</h3><p>Your cell backs up to the cloud. Enter its code from <b>Settings</b> on any device. Anyone with the code can load it, so keep it private.</p></section>
-      <section><h3>Controls</h3><p class="keys"><span><b>WASD</b> walk</span><span><b>E</b> talk</span><span><b>A</b> shoot</span><span><b>F</b> strike</span><span><b>D</b> defend</span><span><b>S</b> stim</span><span><b>R</b> run</span><span><b>Q W E T</b> skills</span><span><b>2 3 4</b> items</span><span><b>1 2</b> doors</span><span><b>Enter</b> continue</span><span><b>Esc</b> close</span></p></section>
+      <section><h3>Controls</h3><p class="keys"><span><b>WASD</b> walk</span><span><b>E</b> talk</span><span><b>M B C G</b> town menus</span><span><b>Tab</b> battle mode</span><span><b>O</b> settings</span><span><b>A</b> shoot</span><span><b>F</b> strike</span><span><b>D</b> defend</span><span><b>S</b> stim</span><span><b>R</b> run</span><span><b>Q W E T</b> skills</span><span><b>2 3 4</b> items</span><span><b>1 2</b> doors</span><span><b>Enter</b> continue</span><span><b>Esc</b> close</span></p></section>
     </div>` : `
     <div class="settings">
+      <h3>Gameplay</h3>
+      <div class="set-grid">
+      ${[['autoStop', 'Stop auto battle at low HP with no stims'], ['fastAnim', 'Faster fight animations'], ['calm', 'Reduce motion'], ...(matchMedia('(pointer: coarse)').matches ? [['lefty', 'Left-handed fights']] : [])].map(([k, l]) => `<label class="set-row"><span>${l}</span><button class="btn" data-a="uipref" data-v="${k}" aria-pressed="${uiPrefs[k]}">${uiPrefs[k] ? 'On' : 'Off'}</button></label>`).join('')}
+      ${isGuest() ? '' : '<div class="set-row"><span>Tips you dismissed</span><button class="btn" data-a="tipsreset">Show again</button></div>'}
+      </div>
       <h3>Sound</h3>
       <div class="set-grid">
       <label class="set-row" for="vol"><span>Volume</span><input id="vol" type="range" min="0" max="1" step="0.05" value="${p.volume}"></label>
@@ -2479,6 +2578,7 @@ function modalView() {
       <label class="set-row"><span>Music</span><button class="btn" data-a="setpref" data-v="music" aria-pressed="${p.music}">${p.music ? 'On' : 'Off'}</button></label>
       <label class="set-row"><span>Ambience</span><button class="btn" data-a="setpref" data-v="ambience" aria-pressed="${p.ambience}">${p.ambience ? 'On' : 'Off'}</button></label>
       <label class="set-row"><span>Rain</span><button class="btn" data-a="setpref" data-v="rain" aria-pressed="${p.rain}">${p.rain ? 'On' : 'Off'}</button></label>
+      ${matchMedia('(pointer: coarse)').matches ? '' : `<label class="set-row"><span>Mute in the background</span><button class="btn" data-a="setpref" data-v="muteHidden" aria-pressed="${p.muteHidden}">${p.muteHidden ? 'On' : 'Off'}</button></label>`}
       ${A.hasHaptics() ? `<label class="set-row"><span>Vibration</span><button class="btn" data-a="setpref" data-v="haptics" aria-pressed="${p.haptics}">${p.haptics ? 'On' : 'Off'}</button></label>` : ''}
       </div>
       <h3>Co-op</h3>
@@ -2847,12 +2947,20 @@ function render() {
 }
 
 // Auto battle: when the stage is in Auto mode, play the engine's fixed routine one move at a time.
-let autoTimer = null;
+// It hands back once per scare: choosing Auto again in the same spot means carry on.
+let autoTimer = null, autoStopped = false;
+function autoSafetyStop() {
+  const c = state.char, danger = uiPrefs.autoStop && !c.items.stim && c.hp < E.stats(state).maxHp * 0.3;
+  if (!danger) { autoStopped = false; return false; }
+  if (autoStopped) return false;
+  autoStopped = true; stage.setMode('manual'); hint('Auto battle stopped: low HP and no stims left.');
+  return true;
+}
 function scheduleAuto() {
-  if (autoTimer || !stage.auto || busy || modal || !state || state.screen !== 'combat' || !state.run || !state.run.enemy) return;
+  if (autoTimer || !stage.auto || busy || modal || titleOpen || !state || state.screen !== 'combat' || !state.run || !state.run.enemy) return;
   autoTimer = setTimeout(() => {
     autoTimer = null;
-    if (stage.auto && !busy && !modal && state.screen === 'combat' && state.run && state.run.enemy && (!E.isCoop(state) || state.run.actor === myIdx())) fight(E.autoAction(state), isGuest() ? 1 : 0);
+    if (stage.auto && !busy && !modal && !titleOpen && state.screen === 'combat' && state.run && state.run.enemy && (!E.isCoop(state) || state.run.actor === myIdx()) && !autoSafetyStop()) fight(E.autoAction(state), isGuest() ? 1 : 0);
   }, 350);
 }
 document.addEventListener('automode', () => { A.play('click'); if (state.screen === 'combat') render(); });
@@ -2891,7 +2999,7 @@ let busy = false;
 async function fight(v, who = 0) {
   if (busy || awaitingHost || !state.run || !state.run.enemy) return;
   if (isGuest()) {
-    if (!net.online || !net.peer) return;
+    if (!net.online || !net.peer) { hint('Not connected to the host right now.'); A.play('denied'); return; }
     if (E.isCoop(state) && state.run.actor !== 1) return;
     if (!E.canUse(state, v)) return;
     if (v === 'smoke' && !state.confirmSmoke) { state.confirmSmoke = true; A.play('click'); render(); return; }
@@ -2923,12 +3031,13 @@ async function fight(v, who = 0) {
   }
 }
 
-const BUY = new Set(['respec', 'buygear', 'upgradegear', 'reroll', 'item', 'upgrade', 'implant', 'heal', 'train', 'cell', 'spend', 'equipheirloom']);
+const BUY = new Set(['restock', 'respec', 'buygear', 'upgradegear', 'reroll', 'item', 'upgrade', 'implant', 'heal', 'train', 'cell', 'spend', 'equipheirloom']);
 function act(a, v, k) {
   A.unlock();
   if (a === 'autostop') { stopAuto(); return; }
   if (auto) return;
   if (a === 'closemodal') { modal = null; confirmReset = false; state.report = null; render(); return; }
+  if (a === 'uipref') { uiPrefs[v] = !uiPrefs[v]; try { localStorage.setItem(UI_KEY, JSON.stringify(uiPrefs)); } catch (e) {} applyUi(); A.play('click'); render(); return; }
   if (busy && !modal) return;
   if (a === 'act') return fight(v);
   if (DOWNTIME.has(a) && (isGuest() || wheelBusy || orbitBusy)) { A.play('denied'); return; }
@@ -3039,6 +3148,7 @@ function applyAct(a, v, k) {
     case 'orbitclose': ok = E.orbitClose(state); if (ok) { if (state.screen === 'death') { modal = null; sfx('death'); } else sfx('door'); } break;
     case 'sound': A.setPref('muted', !A.getPrefs().muted); sfx('click'); break;
     case 'setpref': A.setPref(v, !A.getPrefs()[v]); sfx('click'); break;
+    case 'tipsreset': state.meta.tips = {}; sfx('click'); toast = 'Tips will show again.'; break;
     case 'tip': state.meta.tips[v] = true; sfx('click'); break;
     case 'threat': state.meta.threat = +v; sfx('click'); break;
     case 'perk':
@@ -3084,6 +3194,7 @@ function applyAct(a, v, k) {
     case 'lootstash': if (E.stashLoot(state, rng, actingAs)) sfx('buy'); break;
     case 'lootsell': if (E.leaveLoot(state, rng)) sfx('click'); break;
     case 'item': ok = E.buyItem(state, v); break;
+    case 'restock': ok = E.restockStims(state); break;
     case 'upgrade': ok = E.buyUpgrade(state, v); break;
     case 'implant': ok = E.installImplant(state, v); break;
     case 'unimplant': E.removeImplant(state, v); break;
@@ -3152,6 +3263,10 @@ document.addEventListener('keydown', (ev) => {
   if (ev.metaKey || ev.ctrlKey || ev.altKey || busy || modal || ev.target.tagName === 'INPUT') return;
   A.unlock();
   const key = ev.key.toLowerCase();
+  if (key === 'o' && !titleOpen) { ev.preventDefault(); act('modal', 'settings'); return; }
+  if (key === 'tab' && state.screen === 'combat' && !titleOpen) { ev.preventDefault(); stage.cycleMode(); return; }
+  const townMenu = { m: 'missions', b: 'market', c: 'character', g: 'gear' }[key];
+  if (townMenu && state.screen === 'town' && state.char && !state.popup && !state.trade && !titleOpen) { ev.preventDefault(); act('popup', townMenu); return; }
   if (state.screen === 'combat') {
     const map = { a: 'shoot', f: 'strike', d: 'defend', r: 'run', s: 'stim', v: 'revive', 2: 'thermal', 3: 'ion', 4: 'smoke' };
     E.skillsOf(state.char).slice(0, 4).forEach((sk, i) => { map[SKILL_KEYS[i]] = sk; });
@@ -3198,6 +3313,7 @@ async function start(data) {
       else if (o) { cloud.rev = o.rev; storeCloud(); }
     } catch (e) {}
   }
+  applyUi();
   state = E.migrate(saved, rng);
   delete state.events;
   lastBody = bodyOf(state);

@@ -10,7 +10,9 @@ const MAP_COLS = 22, MAP_ROWS = 16, MAP_W = MAP_COLS * T, MAP_H = MAP_ROWS * T;
 const CELL = 8;                    // collision grid
 const SPEED = 84;                  // px per second
 const FEET = { x: 32, y: 59 };     // feet position inside a 64x64 frame
-const reduceMotion = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const osCalm = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+let reduceMotion = osCalm;
+export const setCalm = (on) => { reduceMotion = osCalm || on; };
 
 // ---------- layout (top-left of each image, world pixels). A tight yard: the four shops ring one plaza. ----------
 const BUILDINGS = [
@@ -108,7 +110,7 @@ export class Town {
     this.onAction = null;   // (id) => { text, ok?, sfx? } from the game
     this.stepT = 0;
     this.ready = false;
-    this.rain = Array.from({ length: reduceMotion ? 0 : 60 }, (_, i) => ({ x: (i * 67) % VIEW_W, y: (i * 41) % VIEW_H, v: 120 + (i % 5) * 30 }));
+    this.rain = Array.from({ length: 60 }, (_, i) => ({ x: (i * 67) % VIEW_W, y: (i * 41) % VIEW_H, v: 120 + (i % 5) * 30 }));
     this.load();
     this.bindInput();
     let last = performance.now();
@@ -466,7 +468,7 @@ export class Town {
     const ty = H <= VIEW_H ? (H - VIEW_H) / 2 : clamp(p.y - 20 - VIEW_H / 2, 0, H - VIEW_H);
     this.cam.x += (tx - this.cam.x) * Math.min(1, dt * 8);
     this.cam.y += (ty - this.cam.y) * Math.min(1, dt * 8);
-    for (const r of this.rain) { r.y += r.v * dt; r.x -= r.v * 0.25 * dt; if (r.y > VIEW_H) { r.y = -6; r.x = Math.random() * (VIEW_W + 40); } }
+    for (const r of reduceMotion ? [] : this.rain) { r.y += r.v * dt; r.x -= r.v * 0.25 * dt; if (r.y > VIEW_H) { r.y = -6; r.x = Math.random() * (VIEW_W + 40); } }
   }
   snapCamera() {
     const p = this.player, W = this.grid.w, H = this.grid.h;
@@ -553,7 +555,7 @@ export class Town {
       const pool = this.img['p:lamp_light_pool'];
       if (pool) { g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.55 + (reduceMotion ? 0 : 0.05 * Math.sin(t * 3)); for (const l of this.lamps) g.drawImage(pool, l.x - cx, l.y - cy); g.restore(); }
       g.strokeStyle = 'rgba(170,190,220,.25)'; g.lineWidth = 1; g.beginPath();
-      for (const r of this.rain) { g.moveTo(Math.round(r.x), Math.round(r.y)); g.lineTo(Math.round(r.x - 2), Math.round(r.y + 6)); }
+      for (const r of reduceMotion ? [] : this.rain) { g.moveTo(Math.round(r.x), Math.round(r.y)); g.lineTo(Math.round(r.x - 2), Math.round(r.y + 6)); }
       g.stroke();
     }
     this.drawOverlay(now);

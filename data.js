@@ -220,7 +220,7 @@ export const ITEMS = {
   stim:    { name: 'Med Stim',       short: 'Heal 40%, stop bleeding', cost: 20, desc: 'Restore 40% max HP (+10% per INT).' },
   thermal: { name: 'Thermal Charge', short: 'Big blast, ignores armour', cost: 35, desc: 'Heavy damage that ignores armour.' },
   ion:     { name: 'Ion Pulse',      short: 'Stun 1 turn (droids 3)', cost: 30, desc: 'Stun 1 turn. Droids: stun 3 turns and damage.' },
-  smoke:   { name: 'Smoke Canister', short: 'Escape; drop most of this raid\u2019s loot', cost: 25, desc: 'Guaranteed escape back to town, but you drop most of the credits picked up this raid (65% to 75%, by sector).' },
+  smoke:   { name: 'Smoke Canister', short: '70% escape; drop most of this raid\u2019s loot', cost: 25, desc: '70% chance to escape back to town. If it fails, the fight goes on and the canister is spent. Escaping drops most of the credits picked up this raid (65% to 75%, by sector).' },
 };
 
 // Implants: installed at the clinic, lost on death. Slots: 2, +1 at INT 4 and INT 8.
@@ -330,7 +330,7 @@ export const ENEMIES = {
 
 export const INTENTS = {
   attack: { label: 'Taking aim',              tone: 'warn',   tip: 'Normal attack.' },
-  heavy:  { label: 'Charging a heavy strike', tone: 'danger', tip: 'x2.2 damage. Defend to cut it to a quarter.' },
+  heavy:  { label: 'Charging a heavy strike', tone: 'danger', tip: 'x2.2 damage. Defend to cut it to about a third.' },
   guard:  { label: 'Bracing behind cover',    tone: 'calm',   tip: 'Your attacks deal half. A free turn to heal or set up.' },
   repair: { label: 'Running self-repair',     tone: 'calm',   tip: 'Will restore 15% HP. Hit it hard now.' },
 };

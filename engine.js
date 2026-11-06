@@ -24,8 +24,8 @@ export function seededRng(seed) {
 
 export const VERSION = 4;
 export const FIGHTS_PER_SECTOR = 3;
-export const FIGHT_DROP = 0.12;  // chance an ordinary fight carries contraband
-export const ELITE_DROP = 0.3;   // chance an elite carries contraband (bosses always do)
+export const FIGHT_DROP = 0.1;  // chance an ordinary fight carries contraband
+export const ELITE_DROP = 0.25;   // chance an elite carries contraband (bosses always do)
 export const CARRY_CD = 2;       // minimum cooldown a skill used last fight starts the next fight with
 export const MIN_FIGHTS = 2; // fights required per sector; the rest of the rooms can be anything
 // Enemy growth per sector past their first appearance: linear plus a quadratic tail.
@@ -42,13 +42,13 @@ export const hardTier = (sector) => (sector > 10 ? 2 : sector > 5 ? 1 : 0);
 export const hardAt = (sector) => HARD[hardTier(sector)];
 // In a raid the current sector sets the tier; in the yard, the deepest sector the cell has reached.
 export const hard = (s) => hardAt(s.run ? s.run.sector : (s.meta && s.meta.bestSector) || 0);
-export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.01, bossHp: 2.1, bossAtk: 1.4, enemyAtk: 1.74, enemyHp: 1.78, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 1.5, strAtk: 0.6, agiCrit: 0.05, agiDodge: 0.035, intOverload: 5, chaHesitate: 0.055, chaCredits: 0.05, wanted: 0.025, ambush: 1.5,
+export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.012, bossHp: 2.1, bossAtk: 1.4, enemyAtk: 1.74, enemyHp: 1.78, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 1.5, strAtk: 0.6, agiCrit: 0.05, agiDodge: 0.035, intOverload: 5, chaHesitate: 0.055, chaCredits: 0.05, wanted: 0.025, ambush: 1.5,
   upgradeCost: 60, eliteGear: 0.3, shopLegendary: 0.06, cover: 0.5, agiAtk: 1.2,
   // Enemy strength in sectors 1-5. Nobody levels up during a raid, so a first raid has to be winnable on level-1 stats.
-  earlyCurve: [1, 0.95, 0.85, 0.8, 0.8, 0.88, 0.88, 0.88, 0.88, 0.88],
+  earlyCurve: [1, 0.95, 0.88, 0.84, 0.85, 0.95, 0.95, 0.95, 0.95, 0.95],
   // Rewards shrink once an operative is more than overFree levels above the sector. reinforce: enemy strength by districts already freed.
-  overFree: 2, overStep: 0.2, overMin: 0.25, coopCr: 1, repeatPay: 2, reinforce: [0, 0.5, 0.5, 0.35], bossRepeatXp: 0.5, bossRepeatResolve: 1,
-  rangedSpread: 0.15, meleeSpread: 0.3, shootGuard: 0.15, momentum: 0.15, coopHp: 2.1, coopAtk: 1.3, coopExtra: 3, reviveHp: 0.2, reviveAfter: 0.15, downsPerRaid: 2, bleedRounds: 3,
+  overFree: 2, overStep: 0.2, overMin: 0.25, defendHeavy: 0.35, smokeEscape: 0.7, priceAll: 1.15, trainBase: 3, trainStep: 1, fightDrop: FIGHT_DROP, eliteDrop: ELITE_DROP, coopCr: 1, repeatPay: 2, reinforce: [0, 0.5, 0.5, 0.35], bossRepeatXp: 0.5, bossRepeatResolve: 1,
+  rangedSpread: 0.15, meleeSpread: 0.3, shootGuard: 0.15, momentum: 0.15, coopHp: 2.1, coopAtk: 1.4, coopExtra: 3, reviveHp: 0.2, reviveAfter: 0.15, downsPerRaid: 1, bleedRounds: 3,
   // Share of unsecured credits and XP lost, by position in the five-sector run to the next boss. Beating the boss secures everything.
   extractRates: [0.8, 0.65, 0.5, 0.4, 0], escapeRates: [0.9, 0.85, 0.75, 0.65, 0.6],
   itemScale: 0.3, allyGrit: 3 };
@@ -63,7 +63,7 @@ export const sectorName = (n, mapId = 'garrison') => {
   const base = list[(n - 1) % len];
   return n > len ? `Sublevel ${Math.ceil(n / len) - 1}: ${base}` : base;
 };
-export const trainingCost = (level) => 2 + level;
+export const trainingCost = (level) => TUNE.trainBase + Math.round(TUNE.trainStep * level);
 export const xpToNext = (level) => Math.round(20 * Math.pow(1.35, level - 1));
 // Armour scales damage down proportionally, so it never makes anyone immune.
 export const mitigate = (raw, def) => Math.max(1, Math.round((raw * raw) / (raw + def)));
@@ -753,7 +753,7 @@ export function markSum(c) {
   for (const id of c.marks || []) { const m = D.MARKS[id]; if (m) for (const k of Object.keys(t)) t[k] += m[k] || 0; }
   return t;
 }
-export const price = (s, cost) => Math.round(cost * hard(s).price * Math.max(0.6, 1 - 0.04 * (attr(s.char, 'cha') - 1)) * (s.char.background === 'preacher' ? 0.9 : 1) * (has(s.char, 'favour') ? 0.9 : 1));
+export const price = (s, cost) => Math.round(cost * hard(s).price * TUNE.priceAll * Math.max(0.6, 1 - 0.04 * (attr(s.char, 'cha') - 1)) * (s.char.background === 'preacher' ? 0.9 : 1) * (has(s.char, 'favour') ? 0.9 : 1));
 export const meetsReq = (c, req) => !req || Object.entries(req).every(([k, v]) => attr(c, k) >= v);
 export const reqText = (req) => req ? Object.entries(req).map(([k, v]) => `${D.ATTRS[k].short} ${v}`).join(', ') : '';
 
@@ -886,7 +886,7 @@ export function tenementGift(s) {
 // ---------- town ----------
 export function healCost(s) {
   const st = stats(s);
-  return Math.ceil((st.maxHp - s.char.hp) * 0.5 * hard(s).price * (hasCell(s.meta, 'ledger') ? 0.5 : 1));
+  return Math.ceil((st.maxHp - s.char.hp) * 0.5 * hard(s).price * TUNE.priceAll * (hasCell(s.meta, 'ledger') ? 0.5 : 1));
 }
 export function heal(s) {
   const cost = healCost(s);
@@ -899,6 +899,12 @@ export function heal(s) {
 // Consumables cost more the deeper this operative has been: a stim has to stay a decision at sector 15.
 const consumableScale = (c) => 1 + TUNE.itemScale * Math.max(0, ((c && c.deepest) || 0) - 1);
 export const itemCost = (s, id) => Math.round(D.ITEMS[id].cost * consumableScale(s.char));
+export function restockStims(s) {
+  let n = 0;
+  while (buyItem(s, 'stim')) n++;
+  if (n) s.notice = `Bought ${n} Med Stim${n > 1 ? 's' : ''}.`;
+  return n > 0;
+}
 export function buyItem(s, id) {
   const item = D.ITEMS[id], c = s.char, due = item ? price(s, itemCost(s, id)) : 0;
   if (!item || c.credits < due || c.items[id] >= stats(s).carry) return false;
@@ -1315,6 +1321,16 @@ export function bestAttack(s) {
   const m = st.atkM * (1 + critChance(st, e, true) * 0.6) * (counter ? 0.65 : 1) * (1 + TUNE.momentum * 0.5);
   return m > r ? 'strike' : 'shoot';
 }
+// What the enemy's telegraphed attack can do, by the same sums as the attack itself. Null when the next move isn't a plain attack.
+export function incomingRange(s) {
+  const r = s.run, e = r.enemy, c = s.char;
+  if (!e || e.stun > 0 || (e.intent !== 'attack' && e.intent !== 'heavy')) return null;
+  const st = stats(s), heavy = e.intent === 'heavy', q = e.quirk ? quirkById(e.quirk) : null;
+  const base = e.atk * (heavy ? 2.2 : 1) * outMult(e.st, r.pst);
+  const min = mitigate(base * 0.85 * (q && q.gamble ? 0.5 : 1), st.def), max = mitigate(base * 1.15 * (q && q.gamble ? 1.8 : 1), st.def);
+  const guarded = (n) => Math.max(1, Math.round(n * (heavy ? TUNE.defendHeavy : 0.5) * (hasTrait(c, 'bulwark') ? 0.7 : 1)));
+  return { min, max, defMin: guarded(min), defMax: guarded(max), lethal: max >= c.hp };
+}
 // Auto battle: a fixed, sensible routine. Never runs or uses smoke.
 export function autoAction(s) {
   const r = s.run, e = r.enemy, c = s.char, st = stats(s), free = e.stun > 0;
@@ -1585,6 +1601,7 @@ function playerActInner(s, act, rng, who) {
     case 'smoke':
       c.items.smoke -= 1;
       fx(s, { who: 'player', type: 'smoke' });
+      if (rng() >= TUNE.smokeEscape) { log(s, 'The smoke thins too fast. They still have you in sight.', 'bad'); break; }
       log(s, 'Smoke fills the corridor. You\u2019re gone before it clears.', 'sys');
       return endRun(s, 'escaped', rng);
     case 'run': {
@@ -1789,7 +1806,7 @@ function enemyTurn(s, rng) {
     } else {
       const luck = q && q.gamble ? (rng() < 0.5 ? 0.5 : 1.8) : 1;
       let dmg = mitigate(e.atk * (0.85 + rng() * 0.3) * (heavy ? 2.2 : 1) * luck * outMult(e.st, r.pst) * (r.keepDistance ? 1 - TUNE.shootGuard : 1), st.def);
-      if (r.defending) dmg = Math.max(1, Math.round(dmg * (heavy ? 0.25 : 0.5) * (hasTrait(c, 'bulwark') ? 0.7 : 1)));
+      if (r.defending) dmg = Math.max(1, Math.round(dmg * (heavy ? TUNE.defendHeavy : 0.5) * (hasTrait(c, 'bulwark') ? 0.7 : 1)));
       c.hp -= dmg; vamp(dmg); reflect(dmg);
       if (q && q.bleedOnHit && !r.defending) addPlayerStatus(s, { bleed: 2 }, rng);
       if (luck !== 1) log(s, luck > 1 ? 'The gamble pays off for them.' : 'Their gamble doesn\u2019t pay off.', 'info');
@@ -1932,7 +1949,7 @@ function winFight(s, rng, fled = false) {
       log(s, `The ${out.liberated} is liberated.`, 'reward');
     }
   }
-  const contraband = !fled && (e.boss || rng() < (e.elite ? ELITE_DROP : FIGHT_DROP));
+  const contraband = !fled && (e.boss || rng() < (e.elite ? TUNE.eliteDrop : TUNE.fightDrop));
   // In co-op each player gets their own roll and makes their own choice.
   forEachActor(s, () => {
     if (contraband) r.perkOffer = offerPerks(s, rng, e.boss);
@@ -2203,7 +2220,7 @@ function contractEvent(s, kind, data) {
   }
 }
 
-// Co-op: going down isn't dying, the first two times in a raid (TUNE.downsPerRaid). Your partner has a few rounds to reach you. If they fall
+// Co-op: going down isn't dying, the first time in a raid (TUNE.downsPerRaid). Your partner has a few rounds to reach you. If they fall
 // while you're down, you die and they stumble out with what they can carry, so one raid never kills both.
 function die(s, foe) {
   const r = s.run;

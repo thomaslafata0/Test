@@ -8,7 +8,9 @@ import { play } from './audio.js';
 export const W = 384, H = 216;
 const MELEE = new Set(['hound', 'riot', 'loader', 'brask', 'foreman', 'slagger', 'jailer', 'sedation']);
 const HOVER = new Set(['probe']);
-const reduceMotion = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const osCalm = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+let reduceMotion = osCalm;
+export const setCalm = (on) => { reduceMotion = osCalm || on; };
 const C = { amber: '#ffb35a', crit: '#fff1c9', red: '#ff5a44', ion: '#8fdcff', heal: '#9be08a', smoke: '#8b949c', spark: '#ffd27a' };
 
 // ---------- sprite sheets ----------
@@ -104,7 +106,7 @@ export class Stage {
     this.particles = []; this.bolts = []; this.rings = []; this.projectiles = []; this.tweens = [];
     this.shakeUntil = 0; this.shakeMag = 0;
     this.bgCache = {};
-    this.rain = Array.from({ length: reduceMotion ? 0 : 70 }, (_, i) => ({ x: (i * 53) % W, y: (i * 97) % H, v: 3 + (i % 4) }));
+    this.rain = Array.from({ length: 70 }, (_, i) => ({ x: (i * 53) % W, y: (i * 97) % H, v: 3 + (i % 4) }));
     this.enemy = null; this.player = null; this.enemyRef = null; this.runRef = null;
     this.intent = 'attack'; this.stun = 0; this.sector = 1; this.boss = false;
     this.playerShield = false; this.heavyBoost = false;
@@ -115,16 +117,22 @@ export class Stage {
     this.el.addEventListener('click', (ev) => {
       const b = ev.target.closest('[data-speed]');
       if (!b) return;
-      this.mode = b.dataset.speed; this.auto = this.mode !== 'manual'; this.speed = this.mode === 'auto2' ? 2 : 1;
-      try { localStorage.setItem('cinder-cell-speed', JSON.stringify(this.mode)); } catch (e) {}
-      this.syncSpeed();
-      this.el.dispatchEvent(new CustomEvent('automode', { bubbles: true, detail: this.auto }));
+      this.setMode(b.dataset.speed);
     });
     this.syncSpeed();
     const loop = (t) => { try { this.draw(performance.now()); } catch (e) { console.warn('stage draw', e); } requestAnimationFrame(loop); };
     requestAnimationFrame(loop);
   }
 
+  setMode(m) {
+    this.mode = m; this.auto = m !== 'manual'; this.applySpeed();
+    try { localStorage.setItem('cinder-cell-speed', JSON.stringify(m)); } catch (e) {}
+    this.syncSpeed();
+    this.el.dispatchEvent(new CustomEvent('automode', { bubbles: true, detail: this.auto }));
+  }
+  cycleMode() { this.setMode({ manual: 'auto1', auto1: 'auto2', auto2: 'manual' }[this.mode]); }
+  setFast(on) { this.fast = on; this.applySpeed(); }
+  applySpeed() { this.speed = this.mode === 'auto2' ? 2 : this.fast ? 1.6 : 1; }
   syncSpeed() { this.el.querySelectorAll('[data-speed]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.speed === this.mode))); }
   get skip() { return false; }
   wait(ms) { return this.skip ? Promise.resolve() : new Promise((r) => setTimeout(r, ms / this.speed)); }
@@ -208,8 +216,8 @@ export class Stage {
   setStatuses(side, st = {}, affix = null, quirk = null) {
     const el = this.hud[side].querySelector('.hud-st');
     const names = { bleed: 'BLEED', burn: 'BURN', shaken: 'SHAKEN', exposed: 'EXPOSED' };
-    el.innerHTML = (quirk ? `<i class="st quirk">${quirk.toUpperCase()}</i>` : '') + (affix ? `<i class="st affix">${affix.toUpperCase()}</i>` : '') +
-      Object.entries(st).filter(([, n]) => n > 0).map(([k, n]) => `<i class="st st-${k}">${names[k] || k} ${n}</i>`).join('');
+    el.innerHTML = (quirk ? `<i class="st quirk" data-st="quirk">${quirk.toUpperCase()}</i>` : '') + (affix ? `<i class="st affix" data-st="affix">${affix.toUpperCase()}</i>` : '') +
+      Object.entries(st).filter(([, n]) => n > 0).map(([k, n]) => `<i class="st st-${k}" data-st="${k}">${names[k] || k} ${n}</i>`).join('');
   }
 
   // Cinematic boss entrance: letterbox, silhouette, reveal, name card. Click skips.
@@ -818,7 +826,7 @@ export class Stage {
     if (this.boss && !reduceMotion) { g.fillStyle = `rgba(212,72,58,${0.06 + 0.06 * Math.sin(t / 300)})`; g.fillRect(0, 0, W, H); }
     g.fillStyle = this.theme === 'foundry' ? 'rgba(255,150,70,0.35)' : 'rgba(160,180,200,0.22)';
     // Rain outdoors; in the foundry, sparks. Under a roof, neither.
-    if (!backdrop.indoor || this.theme === 'foundry') for (const d of this.rain) { d.y += d.v; d.x -= d.v * 0.25; if (d.y > H) { d.y = -6; d.x = Math.random() * (W + 40); } g.fillRect(Math.round(d.x), Math.round(d.y), 1, 4); }
+    if (!backdrop.indoor || this.theme === 'foundry') for (const d of reduceMotion ? [] : this.rain) { d.y += d.v; d.x -= d.v * 0.25; if (d.y > H) { d.y = -6; d.x = Math.random() * (W + 40); } g.fillRect(Math.round(d.x), Math.round(d.y), 1, 4); }
 
     const ea = this.anchor('enemy');
     this.pad(ea.x, ea.y + 1, 58, 11);
