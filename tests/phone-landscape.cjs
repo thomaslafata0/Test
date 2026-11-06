@@ -24,20 +24,22 @@ const SCREENS = {
 (async () => {
   const b = await chromium.launch(); let failed = 0; const errs = [];
   const check = (name, ok, extra = '') => { console.log(`${ok ? 'PASS' : 'FAIL'} ${name} ${extra}`); if (!ok) failed++; };
-  for (const [w, h] of [[844, 390], [667, 375]]) {
-    const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }); const p = await ctx.newPage();
+  // The first size is an iPhone with a notch: the page keeps clear of 47px each side and 21px at the bottom.
+  for (const [w, h, notch] of [[844, 390, true], [844, 390], [667, 375]]) {
+    const ctx = await b.newContext({ viewport: { width: notch ? w : w, height: h }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }); const p = await ctx.newPage();
+    if (notch && !(await (await ctx.newCDPSession(p)).send('Emulation.setSafeAreaInsetsOverride', { insets: { top: 0, left: 47, right: 47, bottom: 21 } }).then(() => true, () => false))) await p.setViewportSize({ width: w - 94, height: h - 8 });
     p.on('pageerror', (e) => errs.push(`${w}: ${e.message}`));
     await p.goto(URL); await p.waitForTimeout(500);
     const fits = () => p.evaluate(() => { const bad = []; const de = document.documentElement; if (de.scrollHeight > innerHeight + 1 || de.scrollWidth > innerWidth + 1) bad.push(`page ${de.scrollWidth}x${de.scrollHeight}`); for (const el of document.querySelectorAll('.panel, .modal')) { const r = el.getBoundingClientRect(); if (!r.width) continue; if (el.scrollHeight > el.clientHeight + 1) bad.push(`${el.className.split(' ').slice(0, 2).join('.')} needs ${el.scrollHeight - el.clientHeight}px more`); if (r.bottom > innerHeight + 1) bad.push(`${el.className.split(' ')[0]} runs ${Math.round(r.bottom - innerHeight)}px off`); } return bad; });
-    let bad = await fits(); check(`${w}x${h} title`, !bad.length, bad.join('; ')); if (w === 844) await p.screenshot({ path: `${OUT}/ph-title.png` });
+    let bad = await fits(); check(`${w}x${h}${notch ? ' notch' : ''} title`, !bad.length, bad.join('; ')); if (w === 844) await p.screenshot({ path: `${OUT}/ph-title.png` });
     for (const [name, setup] of Object.entries(SCREENS)) {
       await p.evaluate(async (src) => { const E = await import('./engine.js'), D = await import('./data.js'), rng = E.seededRng(7), s = E.newGame(rng); E.createChar(s, rng); s.screen = 'town'; const c = s.char; c.name = 'Tamsin Rook'; c.credits = 900; c.level = 6; c.attrPoints = 3; s.meta.resolve = 12; E.mapProgress(c, 'garrison').insertions.push(6); eval(src); localStorage.setItem('cinder-cell-save-v1', JSON.stringify(s)); }, setup);
       await p.reload(); await p.waitForTimeout(350); await p.tap('button[data-a="continue-title"]', { timeout: 2000 }).catch(() => {}); await p.waitForTimeout(650);
-      bad = await fits(); check(`${w}x${h} ${name}`, !bad.length, bad.join('; '));
+      bad = await fits(); check(`${w}x${h}${notch ? ' notch' : ''} ${name}`, !bad.length, bad.join('; '));
       // The way forward has to be on screen without scrolling.
       const hidden = await p.evaluate(() => [...document.querySelectorAll('.btn.big, .btn.primary')].filter((e) => { const r = e.getBoundingClientRect(); if (!r.width || e.closest('.rows')) return false; const x = r.x + r.width / 2, y = r.y + r.height / 2; if (y > innerHeight || y < 0) return true; const hit = document.elementFromPoint(x, y); return !hit || !(hit === e || e.contains(hit)); }).map((e) => e.textContent.trim().slice(0, 24)));
-      check(`${w}x${h} ${name} buttons on screen`, !hidden.length, hidden.join(', '));
-      await p.screenshot({ path: `${OUT}/ph-${name}-${w}.png` });
+      check(`${w}x${h}${notch ? ' notch' : ''} ${name} buttons on screen`, !hidden.length, hidden.join(', '));
+      await p.screenshot({ path: `${OUT}/ph-${name}-${w}${notch ? 'n' : ''}.png` });
     }
     // Upright on a phone asks you to turn it.
     await ctx.close();

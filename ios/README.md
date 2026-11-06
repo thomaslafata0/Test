@@ -2,6 +2,8 @@
 
 A small app that shows the live game full screen. It loads https://cinder-cell.thomaslafata0.workers.dev, so game updates need no new build, and cloud saves, co-op and the leaderboard work as they do on the site. It plays in landscape only and needs an internet connection.
 
+What the app adds over Safari: a launch screen and splash that fade into the game, a "no signal" screen that reconnects by itself, vibration on hits, kills and level-ups (Settings, Vibration), the share sheet for co-op invites, no zooming, and edge swipes that go to the game before Control Center or the home bar. The game plays alongside your own music and follows the silent switch.
+
 ## Put it on your iPhone
 The project is set up for the paid Apple Developer team `39BW6948KL` with automatic signing, so Xcode registers the app and your iPhone itself.
 

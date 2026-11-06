@@ -1,0 +1,33 @@
+// The iPhone app's side of the page: it says when the first screen is drawn, buzzes on taps, and shares invites through the share sheet.
+const { chromium } = require('playwright');
+const URL = process.env.U || 'http://localhost:8765/index.html';
+(async () => {
+  const b = await chromium.launch(); let failed = 0; const errs = [];
+  const check = (name, ok, extra = '') => { console.log(`${ok ? 'PASS' : 'FAIL'} ${name} ${extra}`); if (!ok) failed++; };
+  const ctx = await b.newContext({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 CinderCellApp/1.1' });
+  await ctx.addInitScript(() => { window.__sent = []; const h = (n) => ({ postMessage: (m) => window.__sent.push([n, m]) }); window.webkit = { messageHandlers: { ready: h('ready'), haptic: h('haptic'), share: h('share') } }; });
+  const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(e.message));
+  await p.goto(URL); await p.waitForTimeout(700);
+  const sent = () => p.evaluate(() => window.__sent);
+  check('tells the app the first screen is drawn', (await sent()).some(([n]) => n === 'ready'));
+  check('marks the page as in the app', await p.evaluate(() => document.documentElement.classList.contains('in-app')));
+  await p.evaluate(async () => { const E = await import('./engine.js'), rng = E.seededRng(3), s = E.newGame(rng); E.createChar(s, rng); s.screen = 'town'; s.meta.tips = { town: true, combat: true, route: true, perk: true, loot: true, gear: true }; localStorage.setItem('cinder-cell-save-v1', JSON.stringify(s)); });
+  await p.reload(); await p.waitForTimeout(400); await p.tap('button[data-a="continue-title"]').catch(() => {}); await p.waitForTimeout(400);
+  await p.evaluate(() => { window.__sent = []; });
+  await p.tap('[data-a="modal"][data-v="menu"]'); await p.waitForTimeout(150); await p.tap('.menu-grid [data-v="settings"]'); await p.waitForTimeout(250);
+  check('a tap buzzes', (await sent()).some(([n, m]) => n === 'haptic' && m === 'selection'), JSON.stringify(await sent()));
+  check('settings has a Vibration switch', await p.isVisible('[data-a="setpref"][data-v="haptics"]'));
+  await p.tap('[data-a="setpref"][data-v="haptics"]'); await p.waitForTimeout(150); await p.evaluate(() => { window.__sent = []; });
+  await p.tap('[data-a="setpref"][data-v="haptics"]'); await p.waitForTimeout(150);
+  const afterOn = await sent(); await p.tap('[data-a="setpref"][data-v="haptics"]'); await p.waitForTimeout(150); await p.evaluate(() => { window.__sent = []; });
+  await p.tap('[data-a="setpref"][data-v="sfx"]'); await p.waitForTimeout(150);
+  check('switching Vibration off stops the buzzing', !(await sent()).some(([n]) => n === 'haptic'), JSON.stringify(afterOn));
+  await p.tap('[data-a="setpref"][data-v="haptics"]'); await p.waitForTimeout(100); await p.tap('[data-a="setpref"][data-v="sfx"]'); await p.waitForTimeout(100);
+  await p.evaluate(() => { window.__sent = []; });
+  await p.tap('[data-a="coophost"]'); await p.waitForTimeout(600);
+  const share = (await sent()).find(([n]) => n === 'share');
+  check('hosting opens the share sheet with the invite link', share && /^https?:\/\/.*[?&#]/.test(share[1]), share && share[1]);
+  check('the invite button says Share', /Share/.test(await p.textContent('[data-a="coopinvite"]').catch(() => '')));
+  await b.close();
+  console.log(errs.length ? errs : 'no errors'); console.log(failed ? `${failed} FAILED` : 'ALL PASS'); process.exit(failed || errs.length ? 1 : 0);
+})().catch((e) => { console.error(e.message.slice(0, 400)); process.exit(1); });

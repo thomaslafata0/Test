@@ -702,155 +702,6 @@ h3 { font-size: 1.05rem; }
   .rotate-note { position: fixed; inset: 0; z-index: 100; display: grid; place-content: center; gap: 14px; padding: 24px; text-align: center; background: var(--bg, #0b0d10); }
   .rotate-note b { font-family: var(--display); font-size: 2rem; text-transform: uppercase; color: var(--sodium); }
 }
-/* Phones, sideways: the game fills the screen and play screens don't scroll. Long lists scroll inside their own panel. */
-@media (max-height: 500px) and (orientation: landscape) {
-  html { font-size: 13px; }
-  html, body { height: 100dvh; overflow: hidden; overscroll-behavior: none; }
-  body { box-sizing: border-box; margin: 0; }
-  body { padding: max(4px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px)) max(3px, env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); }
-  #app { display: flex; flex-direction: column; gap: 4px; height: 100%; max-width: none; }
-  #app > section, #app > .columns { flex: 1 1 auto; min-height: 0; }
-  #app > section { overflow-y: auto; }
-  .tipbox, .columns > aside, .aa-feats, .brand, .tools .tool:not(.menu-tool) { display: none; }
-  .tools .menu-tool { display: block; padding: 4px 14px; min-height: 32px; }
-  .status { display: flex; align-items: center; flex-wrap: nowrap; padding: 0 0 3px; gap: 8px; }
-  .head-top { order: 2; margin-left: auto; flex: none; }
-  .head-stats { flex-wrap: nowrap; gap: 0 12px; min-width: 0; align-items: center; }
-  .head-stats .stat { flex: none; }
-  .head-stats .stat:first-of-type .label { display: none; }
-  .stat .label { font-size: .5rem; letter-spacing: .06em; }
-  .stat .v { font-size: .78rem; white-space: nowrap; }
-  .hp { width: 76px; }
-  .num-stat { min-width: 0; }
-  .columns { display: block; height: 100%; }
-  .columns > section { height: 100%; overflow-y: auto; }
-  .panel { padding: 5px 8px; gap: 4px; }
-  h2 { font-size: 1.25rem; }
-  .big-title { font-size: 2rem; }
-  .combat { display: grid; grid-template-columns: minmax(0, 44%) minmax(0, 1fr); gap: 8px; align-items: start; }
-  .c-left, .c-right { display: grid; gap: 4px; align-content: start; min-width: 0; }
-  .combat { align-items: stretch; }
-  .c-right { grid-auto-rows: auto; align-content: stretch; }
-  .combat .stage, #stage-slot { width: 100%; }
-  .stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1px; background: var(--line); }
-  .stage canvas { grid-column: 1 / -1; }
-  .hud { position: static; width: auto; max-width: none; border: 0; background: var(--panel-2); padding: 2px 6px; gap: 1px; }
-  .hud-player { order: 2; }
-  .hud-enemy { order: 3; }
-  .hud-tag { display: none; }
-  .hud-name, .hud-name.long { font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
-  .hud-hp { font-size: .62rem; }
-  .speed button { font-size: .52rem; padding: 2px 4px; }
-  .door { min-height: 34vh; align-content: center; }
-  .combat-head .label { font-size: .55rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-  .combat-head { flex-wrap: nowrap; }
-  .auto-note { display: none; }
-  .intent { padding: 2px 8px; }
-  .quirk-line { font-size: .68rem; }
-  .actions { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
-  .actions .btn { grid-column: span 2; min-height: 54px; padding: 3px; font-size: 1rem; }
-  .actions .btn.atk { grid-column: span 3; }
-  .skills { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
-  .skills .btn { min-height: 44px; padding: 3px 6px; }
-  .items { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
-  .items .btn { min-height: 34px; padding: 2px 4px; }
-  .party .pm { padding: 2px 6px; }
-  .town-panel { display: grid; height: 100%; grid-template-columns: minmax(0, 1fr) 168px; grid-auto-rows: min-content; align-content: start; gap: 0 6px; }
-  .town-panel > :not(#town-slot):not(.town) { margin-bottom: 4px; }
-  .town-panel > .town-head { display: none; }
-  .town-panel > .town, .town-panel > #town-slot { grid-column: 1; grid-row: 1 / span 20; width: 100%; margin: 0; }
-  .town-panel > :not(#town-slot):not(.town) { grid-column: 2; min-width: 0; }
-  .town-panel .shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
-  .town-panel .shortcuts .btn { padding: 5px 2px; font-size: .78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 30px; }
-  .town-panel .shortcuts .btn .muted { display: none; }
-  .town-spend { font-size: .74rem; gap: 3px; }
-  .town-spend b { flex: 1 1 100%; }
-  .town-spend .btn { padding: 3px 5px; font-size: .72rem; }
-  .town-panel .notice { font-size: .68rem; padding: 3px 6px; max-height: 42px; overflow: hidden; }
-  .town-panel:has(.town-spend) .notice { display: none; }
-  .town-panel .shortcuts .btn { min-height: 28px; }
-  .doors { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .door { padding: 6px 10px; }
-  .door .ico { width: 28px; height: 28px; }
-  .bulletin { padding: 2px 8px; font-size: .74rem; }
-  .bulletin .label { display: none; }
-  .aa { padding: 2px 8px; }
-  .popup-wrap, .modal-wrap { padding: 3px max(8px, env(safe-area-inset-right, 0px)) 3px max(8px, env(safe-area-inset-left, 0px)); }
-  .modal, .modal.popup, .modal.popup.wide { width: 100%; max-height: calc(100dvh - 6px); padding: 7px 10px; gap: 5px; }
-  .modal.popup h2 { font-size: 1.2rem; }
-  .loot { grid-template-columns: minmax(0, 1fr); }
-  .loot > div:last-child { display: none !important; }
-  .loot > div > .label, .loot .item .desc, .loot .cmp .label, .popup > .label + h2 { display: none; }
-  .loot .item ul { display: flex; flex-wrap: wrap; gap: 0 16px; margin: 0; padding-left: 1em; }
-  .popup .btnrow { flex-wrap: nowrap; }
-  .popup .btnrow .btn.big { flex: 1 1 0; white-space: normal; }
-  .btnrow { gap: 4px; }
-  .btn.big { padding: 7px 10px; font-size: .92rem; }
-  .perks { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
-  .perk .ico { width: 30px; height: 30px; }
-  .perk b { font-size: 1rem; }
-  .perk { padding: 6px 8px; }
-  .title { min-height: 0; height: 100%; align-items: center; }
-  .title-body { padding: 8px 14px; gap: 6px; max-width: none; }
-  .title-menu { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: none; gap: 4px; }
-  .title-menu .btn { padding: 6px 10px; font-size: .9rem; }
-  .title-stats { display: none; }
-  .killer { display: none; }
-  .story { font-size: .84rem; gap: 4px; max-width: none; }
-  #app > section[style] { padding: 6px 10px !important; }
-  .kv { font-size: .78rem; }
-  .payout .payout-row { gap: 8px; }
-}
-@media (pointer: coarse) {
-  input, select, textarea, .settings .text { font-size: 16px; } /* iOS zooms the page when a smaller field gets focus */
-  .modal .close, .pop-head .tool { min-height: 38px; min-width: 56px; }
-  .tool { min-height: 34px; }
-  .town-spend .btn, .set-row .btn, .stepper .btn, .rows .btn { min-height: 38px; min-width: 42px; }
-  input[type="range"] { min-height: 34px; }
-  .resolve-link { min-height: 34px; }
-  .tabs .tab { min-height: 38px; }
-}
-@media (max-height: 500px) and (orientation: landscape) {
-  .modal .close { position: sticky; top: 0; float: right; z-index: 3; }
-  /* The way forward is never below the fold. */
-  .panel .btnrow:has(.btn.big), .modal .btnrow:has(.btn.big), .panel > div:has(> .btn.big), .modal > div:has(> .btn.big) { position: sticky; bottom: -5px; z-index: 2; background: var(--panel); padding-block: 3px; }
-  /* Character creation: every step on one screen. */
-  .create-panel { display: grid; grid-template-rows: auto minmax(0, 1fr); padding: 4px 8px; gap: 3px; position: relative; }
-  .create-head { position: absolute; top: 4px; right: 8px; z-index: 1; }
-  .create-head > div:first-child, .create-summary { display: none; }
-  .preview, .preview img { width: 46px; height: 46px; }
-  .preview { padding: 0; }
-  .create-panel .tabs { padding-right: 56px; }
-  .create-panel > .notice { display: none; }
-  .choices.four { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; align-content: start; }
-  .choice { padding: 6px 7px; gap: 3px; justify-items: start; }
-  .choice b { font-size: .92rem; line-height: 1.05; }
-  .choice .face { width: 76px; height: 76px; }
-  .bg-stats { font-size: .74rem; padding-left: 1em; margin: 0; color: var(--sodium); display: grid; gap: 2px; }
-  .create-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
-  .create-grid > div { gap: 3px !important; }
-  .create-grid .label { font-size: .55rem; }
-  .create-grid .btnrow { gap: 3px; }
-  .create-grid .btnrow .btn { padding: 3px 7px; font-size: .74rem; min-height: 30px; }
-  .create-grid .btn.big { padding: 5px 10px; font-size: .84rem; flex: 1 1 auto; }
-  .create-grid .text { padding: 3px 8px; min-height: 30px; flex: 1; min-width: 0; }
-  .swatches { gap: 3px; flex-wrap: wrap; display: flex; }
-  .swatch { width: 28px; height: 28px; min-width: 0; min-height: 0; }
-  .points { display: flex; justify-content: space-between; align-items: center; padding: 0; }
-  .points .big-num, .create-grid .big-num { font-size: 1rem; }
-  .attr-row { padding: 1px 6px; gap: 6px; }
-  .attr-row .desc, .create-unlocks { display: none; }
-  .attr-row .name { font-size: .82rem; }
-  .stepper { gap: 4px; }
-  .create-grid .stepper .btn { width: 32px; min-width: 32px; min-height: 28px; padding: 0; }
-  .create-grid .rows .row, .create-grid .attr-row { min-height: 0; }
-  .create-grid .kv { font-size: .68rem; gap: 0 8px; }
-  .pop-head { position: sticky; top: -7px; z-index: 2; background: var(--panel); padding-block: 2px; }
-  .pop-head h2 { font-size: 1.05rem; }
-  .pop-head .label { font-size: .55rem; }
-  .two-col { gap: 8px; }
-  .create-grid, .choices { gap: 4px; }
-}
 @media (pointer: coarse) { body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; } .touch-only { display: inline; } .keys-only { display: none; } .k { display: none; } }
 
 /* Town layout: side column keeps its own place on every size. */
@@ -894,87 +745,367 @@ h3 { font-size: 1.05rem; }
 .sk-status { color: #9fd3ea; }
 .items .btn { --acc: #b77be8; }
 .intent { background: #12171b; }
+/* Menu headers: title, tabs and Close on one line. */
+.pop-title { display: grid; gap: 2px; flex: none; }
+.pop-head { align-items: flex-end; }
+.pop-head .tool { align-self: center; }
+.pop-head .head-tabs { flex: 1 1 auto; min-width: 0; border-bottom: 0; margin: 0 0 -9px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.pop-head .head-tabs .tab { white-space: nowrap; margin-bottom: 0; }
+@media (max-width: 760px) and (orientation: portrait), (max-width: 560px) {
+  .pop-head { flex-wrap: wrap; }
+  .pop-head .tool { order: 2; margin-left: auto; }
+  .pop-head .head-tabs { order: 3; flex-basis: 100%; }
+}
+.pips.long { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 2px; width: min(100%, 240px); }
+.pips.long i { width: auto; height: 6px; }
+/* Touch: a pressed look instead of the grey flash. */
+@media (pointer: coarse) {
+  * { -webkit-tap-highlight-color: transparent; }
+  .btn:active:not(:disabled), .tab:active, .tool:active, .door:active, .choice:active { filter: brightness(1.3); transform: translateY(1px); }
+}
+/* Shared bits used by every size. */
+.pop-head .close { position: static; }
+.pop-head h2 { min-width: 0; }
+.h2-note { font-size: .9rem; }
+.title-menu .sub { font-family: var(--body); font-size: .85rem; font-weight: 600; text-transform: none; letter-spacing: 0; opacity: .75; }
+.ins-hint { font-size: .82rem; }
+.btn.primary .rname, .btn.primary .muted { color: inherit; }
+.btn.primary .muted { opacity: .8; }
+.gate-brief > .label { display: none; }
+.deploy-go > .label { display: none; }
+
+/* ============ Phones held sideways ============
+   One screen, no page scroll. Text is never under 11px, anything you tap is at least 38px, and each screen uses the whole display.
+   The usable area on an iPhone with a notch is about 750 x 370, so sizes are worked out for that. */
 @media (max-height: 500px) and (orientation: landscape) {
-  /* Town: the side column never moves or scrolls while you walk. */
-  #app > .town-panel { display: grid; grid-template-columns: minmax(0, 1fr) 168px; grid-template-rows: minmax(0, 1fr); gap: 6px; overflow: hidden; }
+  html { font-size: clamp(14px, calc((100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)) * .02), 16px); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  html, body { height: 100dvh; overflow: hidden; overscroll-behavior: none; }
+  body { box-sizing: border-box; margin: 0; padding: max(4px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px)) max(4px, calc(env(safe-area-inset-bottom, 0px) * .4)) max(8px, env(safe-area-inset-left, 0px)); }
+  #app { display: flex; flex-direction: column; gap: 4px; height: 100%; max-width: none; }
+  #app > section, #app > .columns { flex: 1 1 auto; min-height: 0; }
+  #app > section { overflow-y: auto; }
+  #app > section[style] { padding: 10px 16px !important; }
+  .columns { display: block; height: 100%; }
+  .columns > section { height: 100%; overflow-y: auto; }
+  .tipbox, .columns > aside, .aa-feats, .brand, .tools .tool:not(.menu-tool) { display: none; }
+
+  /* Type: nothing small. */
+  .label, .chip, .tool, .badge, .hud-tag, .mech, .mech b, .statline, .statline .tag, .odds, .board-table th, .row.owned .name::after { font-size: max(11px, .74rem); }
+  .label { letter-spacing: .08em; }
+  .chip { padding: 2px 6px; }
+  .row .desc, .rows .desc, .item .desc, .attr-row .desc, .choice .desc, .small, .feat .small, .board-table .small, .kv, .item ul, .item .stats, .slot .ms, .mech-line, .notice, .payout-line, .item .act .note, .door.tier .odds, .aa-feat, .perk-mini, .respec, .maps-locked, .ins-hint, .gate-warn, .route-status, .bulletin, .quirk-line, .town-help, .h2-note, .doll .me .kv { font-size: max(12px, .86rem); }
+  p.muted[style], span.muted[style] { font-size: max(12px, .86rem) !important; }
+  .rows .name, .row .name, .slot b, .contract, .set-row, .aa-main, .board-table { font-size: 1rem; }
+  h2 { font-size: 1.5rem; }
+  h3 { font-size: 1.15rem; }
+  .big-title { font-size: 2.6rem; }
+  .story { font-size: 1rem; gap: 6px; max-width: none; }
+  .howto { font-size: .95rem; gap: 3px; max-width: none; }
+  .panel { padding: 8px 10px; gap: 6px; }
+
+  /* Taps. */
+  .btn { min-height: 40px; }
+  .btn.big { padding: 8px 16px; font-size: 1.15rem; min-height: 46px; }
+  .btnrow { gap: 6px; }
+  .tool { min-height: 38px; min-width: 44px; }
+  .tabs .tab, .tab { min-height: 42px; padding: 4px 12px; font-size: 1.05rem; white-space: nowrap; }
+  input, select, textarea, .text, .settings .text { font-size: 16px; min-height: 40px; }
+  input[type="range"] { min-height: 40px; }
+  /* The way forward is never below the fold. */
+  .panel .btnrow:has(.btn.big), .modal .btnrow:has(.btn.big), .panel > div:has(> .btn.big), .modal > div:has(> .btn.big) { position: sticky; bottom: -8px; z-index: 2; background: var(--panel); padding-block: 4px; }
+
+  /* Header: one line. */
+  .status { display: flex; align-items: center; flex-wrap: nowrap; padding: 0 0 2px; gap: 10px; container-type: inline-size; }
+  .head-top { order: 2; margin-left: auto; flex: none; }
+  .tools .menu-tool { display: block; padding: 0 16px; min-height: 36px; font-size: max(12px, .8rem); color: var(--fg); border-color: var(--muted); }
+  .head-stats { flex-wrap: nowrap; gap: 0 16px; min-width: 0; align-items: center; overflow: hidden; }
+  .head-stats .stat { flex: none; }
+  .stat .label { font-family: var(--body); font-weight: 600; font-size: 11px; letter-spacing: .07em; line-height: 1.15; }
+  .stat .v { font-size: max(14px, .95rem); white-space: nowrap; line-height: 1.2; }
+  .name-stat .label { display: none; }
+  .name-stat .v { font-family: var(--body); font-weight: 700; font-size: 1.1rem; max-width: 10em; overflow: hidden; text-overflow: ellipsis; display: block; }
+  .hp { width: 96px; }
+  .num-stat { min-width: 0; }
+  .resolve-link { min-height: 36px; margin: 0; padding: 0 6px; }
+  @container (max-width: 800px) { .head-stats:has(.unsec-stat) .name-stat { display: none; } }
+  @container (max-width: 680px) { .head-stats:has(.unsec-stat) .num-stat.minor { display: none; } }
+  @container (max-width: 580px) { .head-stats .num-stat { display: none; } }
+
+  /* Title. */
+  .title { min-height: 0; height: 100%; align-items: center; }
+  .title-body { padding: 10px 20px; gap: 8px; max-width: 62%; }
+  .tagline { font-size: 1.05rem; }
+  .title-menu { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: none; gap: 6px; }
+  .title-menu > :first-child { grid-column: 1 / -1; min-height: 56px; font-size: 1.5rem; }
+  .title-menu .btn { justify-content: center; text-align: center; min-height: 46px; padding: 4px 12px; font-size: 1.15rem; white-space: normal; }
+  .title-stats, .title-me { display: none; }
+
+  /* Town: the yard on the left, a column of big buttons on the right that never moves while you walk. */
+  #app > .town-panel { display: grid; grid-template-columns: minmax(0, 1fr) clamp(196px, 28%, 250px); grid-template-rows: minmax(0, 1fr); gap: 6px; overflow: hidden; padding: 5px 6px; }
+  .town-panel > .town-head { display: none; }
   .town-panel > .town, .town-panel > #town-slot { grid-column: 1; grid-row: 1; width: 100%; height: 100%; margin: 0; min-height: 0; }
-  .town-side { display: flex; flex-direction: column; gap: 4px; grid-column: 2; grid-row: 1; overflow: hidden; min-height: 0; margin: 0 !important; touch-action: none; }
+  .town-side { display: flex; flex-direction: column; gap: 5px; grid-column: 2; grid-row: 1; overflow: hidden; min-height: 0; margin: 0; touch-action: none; }
   .town-info { gap: 4px; overflow: hidden; flex: 0 1 auto; min-height: 0; margin: 0; }
-  .town-side > .shortcuts { margin-top: auto; flex: none; }
+  .town-side > .shortcuts { flex: 1 1 0; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: minmax(38px, 1fr); gap: 5px; margin: 0; }
+  .town-panel .shortcuts .btn { display: flex; align-items: center; justify-content: center; gap: 5px; padding: 2px 4px; min-height: 0; font-size: 1.05rem; white-space: nowrap; overflow: hidden; background: var(--panel-2); }
+  .town-panel .shortcuts .btn .muted { display: none; }
+  .town-panel .shortcuts .btn:first-child { border-color: var(--sodium); color: var(--sodium); }
+  .town-spend { font-size: max(12px, .86rem); gap: 4px; }
+  .town-spend b { flex: 1 1 100%; }
+  .town-spend .btn { flex: 1 1 40%; padding: 2px 6px; font-size: max(13px, .9rem); min-height: 38px; }
+  .town-panel .notice { padding: 4px 8px; max-height: 58px; overflow: hidden; }
+  .town-panel:has(.town-spend) .notice { display: none; }
   .town { touch-action: none; overscroll-behavior: none; }
-  /* Creation */
-  .create-panel { display: flex; flex-direction: column; gap: 4px; padding: 3px 8px; position: relative; overflow: hidden; height: 100%; }
-  #app > .create-panel { overflow: hidden; }
-  .create-head { position: absolute; top: 3px; right: 8px; }
-  .create-head > div:first-child, .create-summary { display: none !important; }
-  .create-tabs { padding-right: 58px; flex: none; }
-  .create-tabs .tab { padding: 3px 7px; font-size: .86rem; min-height: 36px; }
-  .create-random { padding: 3px 8px; font-size: .78rem; min-height: 32px; margin-bottom: 2px; }
-  .create-panel > .choices, .create-panel > .create-grid, .create-panel > .look-step { flex: 1 1 auto; min-height: 0; overflow: hidden; }
-  .create-panel > .create-nav { flex: none; position: static; background: none; padding: 0; margin-top: auto; justify-content: flex-end; }
-  .create-panel .create-nav .btn { min-height: 38px; padding: 4px 16px; font-size: .9rem; }
-  .look-step { gap: 10px; align-items: stretch; }
-  .look-big { padding: 2px; display: grid; place-items: center; }
-  .look-big img { width: 150px; height: 150px; }
-  .look-opts { gap: 3px; align-content: start; }
-  .look-opts .btnrow { gap: 3px; }
-  .look-opts .btnrow .btn { padding: 3px 7px; min-height: 34px; font-size: .78rem; }
-  .look-opts .label { font-size: .55rem; }
-  .look-opts .swatch { width: 34px; height: 34px; }
-  /* Missions: pick a map on the left; the way in is always on screen. */
-  .gate { grid-template-columns: minmax(0, 46%) minmax(0, 1fr); grid-template-areas: 'maps go' 'brief go'; gap: 6px 10px; align-items: start; }
+
+  /* Building an operative: every step fills the screen, with Next always in the same corner. */
+  #app > .create-panel { display: flex; flex-direction: column; gap: 6px; padding: 4px 10px 6px; position: relative; overflow: hidden; height: 100%; }
+  .create-head { position: absolute; top: 4px; right: 10px; z-index: 1; }
+  .create-head > div:first-child, .create-summary, .create-panel > .notice, .preview .label, .create-unlocks { display: none !important; }
+  .preview { padding: 0; }
+  .preview, .preview img { width: 42px; height: 42px; }
+  .create-tabs { padding-right: 52px; flex: none; align-items: center; }
+  .create-tabs .tab { min-height: 42px; padding: 4px 12px; font-size: 1.1rem; }
+  .create-random { padding: 2px 14px; font-size: 1rem; min-height: 38px; margin: 0; }
+  .create-panel > .choices, .create-panel > .look-step, .create-panel > .create-grid { flex: 1 1 0; min-height: 0; }
+  .create-panel > .create-nav { position: static; flex: none; justify-content: flex-end; padding: 0; }
+  .create-nav .btn { min-height: 46px; padding: 4px 22px; font-size: 1.05rem; }
+  .create-nav .btn.big { min-width: 36%; justify-content: center; font-size: 1.25rem; }
+  .choices.four { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr); gap: 6px; }
+  .choice { min-height: 0; overflow: hidden; padding: 8px 10px; gap: 4px; }
+  .choice b { font-size: 1.4rem; line-height: 1.05; }
+  .choices.bodies .choice { grid-template-rows: minmax(0, 1fr) auto auto; justify-items: center; text-align: center; align-content: stretch; }
+  .choices.bodies .face { height: 100%; width: auto; max-width: 100%; aspect-ratio: 1; object-fit: contain; justify-self: center; }
+  .choices.classes .choice { grid-template-rows: auto auto minmax(0, 1fr); justify-items: start; text-align: left; align-content: start; padding: 10px 12px; gap: 6px; }
+  .bg-stats { font-size: max(13px, .95rem); line-height: 1.25; padding-left: 1.1em; margin: 0; color: var(--sodium); display: grid; gap: 6px; align-content: start; }
+  .look-step { grid-template-columns: auto minmax(0, 1fr); gap: 16px; align-items: stretch; }
+  .look-big { padding: 4px; display: grid; place-items: center; height: 100%; aspect-ratio: 1; min-height: 0; }
+  .look-big img { width: 100%; height: 100%; object-fit: contain; }
+  .look-opts { gap: 6px; align-content: center; }
+  .look-opts .btnrow { gap: 6px; }
+  .look-opts .btnrow .btn { padding: 2px 14px; min-height: 42px; font-size: 1.05rem; }
+  .swatches { gap: 8px; }
+  .swatch { width: 44px; height: 44px; }
+  .create-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 16px; align-items: stretch; }
+  .create-grid > div { gap: 8px !important; align-content: center !important; }
+  .create-grid .btnrow { flex-wrap: nowrap; }
+  .create-grid .text { min-height: 44px; padding: 4px 10px; flex: 1; min-width: 0; }
+  .create-grid .kv { gap: 5px 14px; }
+  .points { padding: 2px 10px; }
+  .attr-row { padding: 3px 10px; gap: 8px; }
+  .attr-row .name { font-size: 1.05rem; }
+  .attr-row .desc { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+  .stepper { gap: 6px; }
+  .stepper .btn { width: 46px; min-width: 46px; min-height: 40px; padding: 0; font-size: 1.3rem; }
+
+  /* Menus are full-screen sheets: title, tabs and Close on one line, the list underneath. */
+  .popup-wrap, .modal-wrap { padding: max(4px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px)) max(4px, calc(env(safe-area-inset-bottom, 0px) * .4)) max(8px, env(safe-area-inset-left, 0px)); }
+  .modal, .modal.popup, .modal.popup.wide { width: 100%; max-height: 100%; padding: 8px 12px; gap: 8px; }
+  .town-pop .modal, .modal.dt, .modal.board, .modal.sheet, .modal.menu-modal { height: 100%; align-content: start; }
+  .modal.popup h2 { font-size: 1.4rem; }
+  .pop-head { position: sticky; top: -8px; z-index: 3; margin: -8px -12px 0; padding: 6px 12px 0; display: flex; align-items: center; gap: 12px; background: var(--panel); border-bottom: 1px solid var(--line); min-height: 50px; }
+  .pop-head h2 { font-size: 1.35rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pop-head .label, .pop-intro, .resolve-box > .resolve-head { display: none; }
+  .pop-head .tool { flex: none; margin-left: auto; min-height: 40px; min-width: 76px; color: var(--fg); border-color: var(--muted); }
+  .pop-head .head-tabs { flex: 1 1 auto; min-width: 0; margin: 0 0 -1px; align-self: flex-end; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .pop-head:has(.head-tabs [data-a="popup"]) .pop-title, .pop-head:has(.head-tabs [data-a="modal"]) .pop-title { display: none; }
+  .pop-tabs { margin-top: 0; }
+  .rows .row { padding: 6px 10px; gap: 4px 10px; min-height: 54px; }
+  .row.i > .ico { width: 36px; height: 36px; padding: 3px; }
+  .rows .btn, .row .btn { min-width: 84px; font-size: 1rem; }
+  .two-col { gap: 10px; }
+  .resolve-box { padding: 8px; gap: 6px; }
+  .item-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .item { padding: 8px 10px; gap: 5px; }
+  .item-head b { font-size: 1.2rem; }
+  .item .act .btn { min-width: 88px; }
+  .kv { gap: 4px 14px; }
+
+  /* Missions: districts and what to expect on the left, where to start on the right. */
+  .gate { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: 'maps go' 'brief go'; grid-template-rows: auto minmax(0, 1fr); gap: 8px 14px; align-items: start; }
   .gate-maps { grid-area: maps; }
-  .gate-brief { grid-area: brief; font-size: .74rem; }
-  .gate-brief .threat .btn { padding: 3px 6px; font-size: .72rem; min-height: 32px; }
-  .deploy-go { grid-area: go; align-content: start; }
-  .maps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .map-card { padding: 5px 7px; gap: 1px; }
-  .map-card b { font-size: .86rem; }
-  .map-card .label { font-size: .5rem; }
-  .maps-locked { font-size: .66rem; margin-top: 3px; }
-  .ins { display: grid; gap: 4px; }
-  .ins .btn.big { padding: 6px 10px; font-size: .9rem; min-height: 40px; text-align: left; }
-  .gate-warn { font-size: .72rem; }
-  .contract { font-size: .74rem; }
-  /* Combat: the scene gets the room, the console stays tight. */
-  .combat { grid-template-columns: minmax(0, 1fr) minmax(0, 236px); gap: 6px; }
-  .combat-head { display: none; }
-  .combat .stage, #stage-slot { width: min(100%, calc((100dvh - 120px) * 1.778)); margin-inline: auto; }
-  .hud { grid-template-columns: minmax(0, 1fr) auto; padding: 1px 5px; align-items: center; column-gap: 6px; }
-  .hud .bar { grid-column: 1 / -1; height: 4px; order: 3; }
+  .gate-brief { grid-area: brief; gap: 4px; padding: 8px 10px; border: 1px solid var(--line); background: var(--panel-2); }
+  .gate-brief > .label, .deploy-go > .label { display: block; }
+  .gate-brief .mech-title { font-size: 1.15rem; }
+  .gate-brief .mech-line { border: 0; padding: 0; font-size: max(13px, .92rem); }
+  .gate-brief .threat .btn { padding: 2px 10px; font-size: .95rem; }
+  .deploy-go { grid-area: go; align-content: start; gap: 6px; }
+  .maps { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .map-card { padding: 9px 12px; gap: 3px; min-height: 62px; }
+  .map-card b { font-size: 1.2rem; }
+  .map-card .label { letter-spacing: .03em; white-space: nowrap; }
+  .ins { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .ins:has(> :only-child) { grid-template-columns: minmax(0, 1fr); }
+  .ins .btn.big { display: grid; justify-items: start; align-content: center; gap: 1px; padding: 6px 14px; min-height: 60px; text-align: left; white-space: normal; font-size: 1.3rem; }
+  .ins .ins-name { font-size: max(12px, .86rem); opacity: .85; }
+  .contracts { gap: 6px; }
+  .contract { padding: 8px 12px; min-height: 50px; }
+
+  /* A raid: the two doors fill the screen. */
+  .screen-route, .screen-mid { display: flex; flex-direction: column; }
+  .screen-route > *, .screen-mid > * { flex: none; }
+  .screen-route h2 { font-size: 1.35rem; }
+  .screen-route .doors { flex: 1 1 0; min-height: 96px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: 8px; }
+  .door { min-height: 0; padding: 12px 16px; gap: 6px; align-content: center; }
+  .door b { font-size: 1.9rem; }
+  .door .desc { font-size: 1.05rem; }
+  .door > .ico { width: 44px; height: 44px; right: 14px; top: 12px; }
+  .door b, .door .desc { padding-right: 0; }
+  .door .label { padding-right: 56px; }
+  .aa { padding: 2px 4px 2px 10px; align-items: center; }
+  .aa .tool { font-size: 1.2rem; }
+  .bulletin { padding: 3px 10px; }
+  .bulletin .label { display: none; }
+  .mech-row { gap: 4px 12px; }
+  /* Short screens sit in the middle instead of leaving the bottom half empty. */
+  .screen-mid > :first-child { margin-top: auto; }
+  .screen-mid > :last-child { margin-bottom: auto; }
+  .screen-mid { padding-inline: 18px !important; }
+  .screen-mid p[style] { font-size: 1.25rem !important; max-width: none !important; }
+  .options { max-width: none; gap: 8px; }
+  .option { min-height: 54px; padding: 6px 16px; font-size: 1.2rem; }
+  .screen-death .big-title { font-size: 2.4rem; }
+  .killer { gap: 10px; }
+  .killer img { width: 64px; height: 64px; }
+  .spend-inline { padding: 8px 10px; gap: 6px; }
+
+  /* What you found, between fights. */
+  .perks { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+  .perk { min-height: 150px; padding: 12px 14px; gap: 5px; align-content: center; }
+  .perk .ico { width: 40px; height: 40px; }
+  .perk b { font-size: 1.4rem; }
+  .perk .desc { font-size: 1.05rem; }
+  .perk .stack-up { font-size: max(12px, .86rem); }
+  .loot { grid-template-columns: minmax(0, 1fr); }
+  .loot > div:last-child { display: none !important; }
+  .loot > div > .label, .loot .item .desc, .loot .cmp .label, .popup > .label + h2 { display: none; }
+  .loot .item ul { display: flex; flex-wrap: wrap; gap: 0 18px; margin: 0; padding-left: 1em; }
+  .popup .btnrow { flex-wrap: nowrap; }
+  .popup .btnrow .btn.big { flex: 1 1 0; white-space: normal; padding-inline: 8px; }
+  .payout .payout-row { gap: 8px; }
+  .payout-row b { font-size: 1.7rem; }
+  .aa-spend .btn { padding: 2px 12px; font-size: 1rem; min-width: 76px; }
+
+  /* A fight: the scene on the left, the console on the right. Both use the full height. */
+  .combat { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 46%); gap: 6px; align-items: stretch; padding: 5px 6px; overflow: hidden !important; }
+  .combat-head, .auto-note, .hud-tag { display: none; }
+  .c-left { display: flex; flex-direction: column; gap: 3px; min-width: 0; min-height: 0; }
+  .c-left > * { flex: none; }
+  .c-left > .stage-box { flex: 1 1 0; min-height: 0; container-type: size; display: grid; place-items: center; }
+  .combat .stage, #stage-slot { width: min(100cqw, calc((100cqh - 40px) * 1.7778)); margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1px; background: var(--line); }
+  .stage canvas { grid-column: 1 / -1; }
+  .hud { position: static; width: auto; max-width: none; height: 38px; border: 0; background: var(--panel-2); padding: 3px 8px; gap: 1px 6px; grid-template-columns: minmax(0, 1fr) auto; align-items: center; align-content: center; }
+  .hud-player { order: 2; }
+  .hud-enemy { order: 3; }
   .hud-row { min-width: 0; }
-  .c-left { gap: 3px; }
-  .intent { padding: 1px 6px; display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
-  .combat .intent { grid-template-columns: none; }
-  .intent b { font-size: .86rem; white-space: nowrap; }
-  .intent .tip { font-size: .66rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
-  .intent .dot { margin: 0; flex: none; width: 7px; height: 7px; }
-  .intent-side { flex: none; gap: 3px; }
-  .mech { font-size: .6rem; padding: 1px 4px; }
-  .mech b { font-size: .68rem; }
-  .statline { font-size: .58rem; gap: 2px 8px; flex-wrap: nowrap; overflow: hidden; white-space: nowrap; }
-  .statline .tag { font-size: .5rem; padding: 0 3px; }
-  .quirk-line { flex-wrap: nowrap; overflow: hidden; white-space: nowrap; font-size: .6rem; gap: 4px; }
-  .c-right { padding: 7px 4px 4px; gap: 3px; height: 100%; align-content: stretch; grid-template-rows: auto auto auto; }
-  .actions, .skills, .items { gap: 3px; }
-  .actions .btn { min-height: 44px; padding: 2px; font-size: .86rem; }
-  .actions .btn.twoline { padding: 2px; }
-  .actions .btn.atk { min-height: 50px; }
+  .hud-name, .hud-name.long { font-size: max(13px, .9rem); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+  .hud-hp { font-size: max(11px, .78rem); color: var(--fg); }
+  .hud .bar { grid-column: 1 / -1; height: 5px; order: 3; }
+  .hud-st { display: none; }
+  .speed { right: 4px; top: 4px; gap: 3px; }
+  .speed button { font-size: 11px; padding: 0 9px; min-height: 38px; }
+  .intent, .combat .intent { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; padding: 2px 8px; grid-template-columns: none; min-height: 30px; }
+  .intent b { font-size: 1.05rem; white-space: nowrap; }
+  .intent .tip { font-size: max(12px, .84rem); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
+  .intent .dot { margin: 0; flex: none; width: 8px; height: 8px; }
+  .intent-side { flex: none; gap: 4px; }
+  .mech { padding: 2px 6px; }
+  .statline { gap: 2px 10px; flex-wrap: nowrap; overflow: hidden; white-space: nowrap; }
+  .quirk-line { flex-wrap: nowrap; overflow: hidden; white-space: nowrap; gap: 6px; font-size: max(11px, .78rem); }
+  .c-right { display: flex; flex-direction: column; gap: 4px; padding: 9px 5px 5px; min-height: 0; overflow: hidden; }
+  .c-right > * { flex: none; }
+  .party .pm { padding: 2px 6px; }
+  .actions, .skills, .items { gap: 4px; }
+  .c-right > .actions { flex: 2.3 1 auto; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: minmax(50px, 1.25fr) minmax(42px, 1fr); }
+  .actions .btn { grid-column: span 2; min-height: 0; padding: 2px 4px; font-size: 1.15rem; }
+  .actions .btn.atk { grid-column: span 3; font-size: 1.4rem; }
   .actions .btn .wpn { display: none; }
-  .actions .btn .bs { font-size: .6rem; }
+  .actions .btn .bs { font-size: max(11px, .8rem); }
+  .actions .btn.atk .bs { font-size: max(12px, .88rem); }
   .actions .btn[data-v="defend"] .bs, .actions .btn[data-v="stim"] .bs { display: none; }
-  .skills { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .skills .btn { min-height: 38px; padding: 2px 4px; gap: 0; }
-  .sk-name { font-size: .72rem; gap: 3px; white-space: nowrap; overflow: hidden; }
-  .sk-name .ico { width: 14px; height: 14px; }
-  .sk-note { font-size: 0; }
-  .sk-note .sk-status { font-size: .54rem; }
-  .items { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .items .btn { min-height: 32px; padding: 1px 2px; font-size: .6rem; }
+  .c-right > .skills { flex: 2 1 auto; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(42px, 1fr); }
+  .skills .btn { min-height: 0; padding: 2px 8px; gap: 0; align-content: center; }
+  .sk-name { font-size: max(13px, .95rem); gap: 5px; white-space: nowrap; overflow: hidden; }
+  .sk-name .ico { width: 16px; height: 16px; }
+  .sk-note { display: flex; gap: 6px; font-size: max(11px, .78rem); white-space: nowrap; overflow: hidden; }
+  .sk-note .sk-status { order: -1; flex: none; text-transform: uppercase; letter-spacing: .04em; }
+  .c-right > .items { flex: 1 1 auto; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(40px, 1fr); }
+  .items .btn { min-height: 0; padding: 2px 4px; font-size: max(12px, .86rem); }
   .items .bs { display: none; }
-  .items .btn.confirm .bs { display: block; font-size: .52rem; }
-  .items .bt { gap: 2px; line-height: 1; }
-  .items .ico { width: 14px; height: 14px; }
+  .items .btn.confirm .bs { display: block; font-size: 11px; }
+  .items .bt { gap: 3px; line-height: 1.05; }
+  .items .ico { width: 18px; height: 18px; }
+
+  /* Fixes after looking at every screen. */
+  .town-spend { display: none; }
+  .town-panel .shortcuts .btn:has(.badge) { border-color: var(--sodium); }
+  .town-prompt { font-size: max(12px, .82rem); padding: 5px 12px; }
+  .town-bubble { font-size: max(13px, .9rem); }
+  .create-grid .attr-row .desc { display: none; }
+  .create-grid .attr-row { padding: 2px 10px; }
+  .create-grid .stepper .btn { min-height: 38px; }
+  .create-grid .points { padding: 0 10px; border: 0; }
+  .attr-row .desc { -webkit-line-clamp: 2; }
+  .op-sub { display: block; margin-top: 2px; font-size: max(11px, .76rem) !important; }
+  .skill-row { grid-template-columns: auto minmax(0, 1fr) !important; }
+  .skill-row > .label { grid-column: 2; }
+  .row .name .num { font-size: max(11px, .78rem) !important; }
+  .resolve-box .two-col > div:first-child .row .desc { display: none; }
+  .resolve-box .two-col > div:first-child .row .name .num { display: block; color: var(--sodium); }
+  .doll { grid-template-columns: minmax(0, 1fr) minmax(0, 210px) minmax(0, 1fr); gap: 8px; }
+  .doll .me { padding: 6px; gap: 6px; }
+  .doll .me img { width: 96px; height: 96px; }
+  .doll .me .kv { font-size: 12px; gap: 2px 8px; }
+  .slot { padding: 6px 8px; min-height: 56px; }
+  .screen-death { position: relative; }
+  .screen-death .killer { position: absolute; right: 16px; top: 10px; }
+  .screen-death .killer > .label:not(.vs) { display: none; }
+  .screen-death .big-title { padding-right: 190px; }
+  .screen-death .kv { grid-template-columns: auto auto auto 1fr; gap: 3px 14px; }
+  .screen-death > p.muted, .screen-death .spend-inline > p { display: none; }
+  .screen-death { gap: 5px; padding-block: 6px !important; }
+  .screen-death .big-title { font-size: 2.1rem; }
+  .screen-death .story { font-size: max(13px, .92rem); line-height: 1.35; }
+  .screen-death .spend-inline { padding: 6px 10px; gap: 4px; }
+  .sk-note, .skill .sk-note { display: flex; flex-wrap: nowrap; gap: 6px; font-size: max(11px, .78rem); white-space: nowrap; overflow: hidden; }
+  .skill .sk-status { order: -1; flex: none; font-size: 11px; }
+  .items .num, .btn .bt .num { font-size: max(11px, .8rem) !important; }
+  .resolve-link { min-height: 38px; }
+  .speed { right: auto; left: 4px; top: 4px; }
+  .speed button { min-height: 38px; padding: 0 8px; background: #121518b0; }
+  .dt-wheel { grid-template-columns: auto minmax(0, 1fr); gap: 12px; }
+  .dt-wheel-left .muted.small:first-of-type { display: none; }
+  .dt-wheel-left canvas { width: min(250px, 30vw); height: auto; }
+  .dt-wheel-right { gap: 6px; }
+  .dt-bets { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+  .dt-bets .btn { padding: 2px 4px; white-space: normal; line-height: 1.1; }
+  .dt-wheel-right > .muted.small { display: none; }
+  .dt-wheel-right .btnrow .btn { flex: 1 1 0; }
+  .tools .menu-tool, .aa .tool { min-height: 38px; }
+  /* The other menus. */
+  .modal.menu-modal { grid-template-rows: auto minmax(0, 1fr); }
+  .menu-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(60px, 1fr); gap: 8px; }
+  .menu-grid .btn { font-family: var(--display); font-size: 1.5rem; text-transform: uppercase; letter-spacing: .04em; }
+  .manual { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 22px; }
+  .manual h3 { font-size: 1.1rem; }
+  .manual p, .manual li { font-size: max(13px, .95rem); }
+  .settings h3 { font-size: 1.1rem; }
+  .set-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 22px; }
+  .set-row { min-height: 50px; padding-block: 2px; }
+  .set-row .btn { min-width: 70px; padding: 2px 12px; font-size: 1rem; }
+  .feat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .feat b { font-size: 1.05rem; }
+  .board-table td { padding: 8px 6px; }
+  .dt .muted, .dt .label { font-size: max(12px, .86rem); }
+  .doors.tiers { gap: 6px; }
+  .door.tier b { font-size: 1.2rem; }
+}
+/* Fingers, on any size. */
+@media (pointer: coarse) {
+  input, select, textarea, .settings .text { font-size: 16px; } /* iOS zooms the page when a smaller field gets focus */
+  .town-spend .btn, .set-row .btn, .stepper .btn, .rows .btn { min-height: 40px; min-width: 44px; }
+  input[type="range"] { min-height: 40px; }
+  .tabs .tab { min-height: 40px; }
+  .tool { min-height: 36px; }
 }
 </style>
 
@@ -992,6 +1123,17 @@ import { Town, SHOPS } from './town.js';
 import { autoStep, autoFinish, loadDev, BUILDS } from './dev.js';
 import { Wheel, OrbitScene, loadDowntimeArt, artFor } from './downtime.js';
 import { Net, getCoopPrefs, setCoopPrefs, makeCode, getRoom, setRoom, getLastRoom, setLastRoom } from './net.js';
+// Inside the iPhone app the share sheet and vibration come from the app itself.
+const IN_APP = /CinderCellApp/.test(navigator.userAgent), appBridge = (n) => (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers[n]) || null;
+if (IN_APP) document.documentElement.classList.add('in-app');
+let appReadySent = false; // the app keeps its splash up until the first screen is drawn
+document.addEventListener('touchstart', () => {}, { passive: true }); // iOS only shows :active with a touch listener
+try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch (e) {} // plays alongside your music and follows the silent switch
+function shareOrCopy(text, done) {
+  const sh = appBridge('share');
+  if (sh) { try { sh.postMessage(text); return; } catch (e) {} }
+  try { navigator.clipboard.writeText(text).then(() => { toast = done; render(); }).catch(() => {}); } catch (e) {}
+}
 import { BODIES, HAIR, HAIR_NAMES, SKINS, HAIRS, defaultLook, loadLayers, hasLayers, lookStill, lookBattleStill, lookPortrait, townSheets, battleSheet, weaponLayer } from './look.js';
 
 const SAVE_KEY = 'cinder-cell-save-v1';
@@ -1497,12 +1639,12 @@ function statusStrip() {
   return `<header class="status">
     <div class="head-top"><div class="brand">${esc(S.title)}</div>${headerTools()}</div>
     <div class="head-stats">${coopChip()}
-    <div class="stat"><span class="label">Operative ${c.number} \u00B7 Lv ${c.level}</span><span class="v">${esc(c.name)}</span></div>
+    <div class="stat name-stat"><span class="label">Operative ${c.number} \u00B7 Lv ${c.level}</span><span class="v">${esc(c.name)}</span></div>
     <div class="stat hp"><span class="label">HP</span><span class="v">${Math.max(0, c.hp)} / ${st.maxHp}</span>${bar(c.hp, st.maxHp)}</div>
-    ${[['Shoot', st.atk], ['Strike', st.atkM], ['DEF', st.def], ['SPD', st.spd]].map(([k, v]) => `<div class="stat num-stat"><span class="label">${k}</span><span class="v">${v}</span></div>`).join('')}
+    ${[['Shoot', st.atk], ['Strike', st.atkM], ['DEF', st.def, 'minor'], ['SPD', st.spd, 'minor']].map(([k, v, cls]) => `<div class="stat num-stat ${cls || ''}"><span class="label">${k}</span><span class="v">${v}</span></div>`).join('')}
     <div class="stat"><span class="label">${esc(S.currency)}</span><span class="v">${c.credits.toLocaleString()}</span></div>
-    ${state.run ? `<div class="stat" title="Earned this stretch. It becomes levels when you beat the boss or get out, and leaving early costs a share."><span class="label">Unsecured</span><span class="v" style="color:var(--sodium)">${E.unsecured(state).toLocaleString()} ${esc(S.cur)} \u00B7 ${(c.xpBank || 0).toLocaleString()} XP</span></div>` : ''}
-    ${state.screen === 'town' ? `<button class="stat resolve-link" data-a="tab" data-v="character" title="Spend Resolve on the Character tab"><span class="label">${esc(S.meta)} \u00B7 spend</span><span class="v" style="color:var(--sodium)">${state.meta.resolve}</span></button>` : `<div class="stat"><span class="label">${esc(S.meta)}</span><span class="v" style="color:var(--sodium)">${state.meta.resolve}</span></div>`}
+    ${state.run ? `<div class="stat unsec-stat" title="Earned this stretch. It becomes levels when you beat the boss or get out, and leaving early costs a share."><span class="label">Unsecured</span><span class="v" style="color:var(--sodium)">${E.unsecured(state).toLocaleString()} ${esc(S.cur)} \u00B7 ${(c.xpBank || 0).toLocaleString()} XP</span></div>` : ''}
+    ${state.screen === 'town' ? `<button class="stat resolve-link" data-a="tab" data-v="character" data-k="resolve" title="Spend Resolve on the Character tab"><span class="label">${esc(S.meta)} \u00B7 spend</span><span class="v" style="color:var(--sodium)">${state.meta.resolve}</span></button>` : `<div class="stat"><span class="label">${esc(S.meta)}</span><span class="v" style="color:var(--sodium)">${state.meta.resolve}</span></div>`}
     </div>
   </header>`;
 }
@@ -1544,7 +1686,7 @@ function titleScreen() {
       <h1 class="big-title">${esc(S.title)}</h1>
       <p class="tagline">A resistance cell. One operative at a time.</p>
       <div class="title-menu">
-        ${hasRun ? `<button class="btn primary big" data-a="continue-title">${state.char && lookStill(state.char.look, state.char.background) ? `<img class="title-me" src="${lookStill(state.char.look, state.char.background)}" alt="" width="48" height="48">` : ''}Continue <span class="muted" style="font-size:.8rem;text-transform:none;letter-spacing:0">${state.char ? `${esc(state.char.name)}, operative ${state.char.number}` : `${m.operatives} operative${m.operatives === 1 ? '' : 's'} so far`}</span></button>` : `<button class="btn primary big" data-a="continue-title">Begin</button>`}
+        ${hasRun ? `<button class="btn primary big" data-a="continue-title">${state.char && lookStill(state.char.look, state.char.background) ? `<img class="title-me" src="${lookStill(state.char.look, state.char.background)}" alt="" width="48" height="48">` : ''}Continue <span class="sub">${state.char ? `${esc(state.char.name)}, operative ${state.char.number}` : `${m.operatives} operative${m.operatives === 1 ? '' : 's'} so far`}</span></button>` : `<button class="btn primary big" data-a="continue-title">Begin</button>`}
         ${hasRun ? `<button class="btn big" data-a="newcell">${confirmReset ? 'Click again: this erases everything' : 'New cell'}</button>` : ''}
         ${getLastRoom() && !net ? `<button class="btn big" data-a="coopresume">${getLastRoom().role === 'host' ? 'Host room' : 'Rejoin room'} ${esc(getLastRoom().code)}</button>` : ''}
         <button class="btn big" data-a="modal" data-v="board">Leaderboard</button>
@@ -1557,7 +1699,7 @@ function titleScreen() {
   </section>`;
 }
 function introScreen() {
-  return `<section class="panel intro" style="padding:32px">
+  return `<section class="panel intro screen-mid" style="padding:32px">
     <span class="label">${esc(S.town)} \u00B7 after curfew</span>
     <h1 class="big-title">${esc(S.title)}</h1>
     <div class="story">${S.intro.map((p) => `<p>${esc(p)}</p>`).join('')}</div>
@@ -1586,7 +1728,7 @@ function createScreen() {
   const nav = (back, next) => `<div class="btnrow create-nav">${back ? `<button class="btn" data-a="step" data-v="${back}">Back</button>` : ''}<button class="btn primary big" data-a="step" data-v="${next[0]}">Next: ${next[1]}</button></div>`;
   let body = '';
   if (d.step === 1) {
-    body = `<div class="choices four">${BODIES.map((b) => { const pt = lookPortrait({ ...d.look, body: b.id }); return `<button class="choice ${b.id === d.look.body ? 'on' : ''}" data-a="look" data-v="body" data-k="${b.id}" aria-pressed="${b.id === d.look.body}">${pt ? `<img class="face" src="${pt}" alt="" width="64" height="64">` : ''}<b>${esc(b.name)}</b><span class="chip">${b.sex === 'm' ? 'man' : 'woman'}</span></button>`; }).join('')}</div>${nav(0, [2, 'class'])}`;
+    body = `<div class="choices four bodies">${BODIES.map((b) => { const pt = lookPortrait({ ...d.look, body: b.id }); return `<button class="choice ${b.id === d.look.body ? 'on' : ''}" data-a="look" data-v="body" data-k="${b.id}" aria-pressed="${b.id === d.look.body}">${pt ? `<img class="face" src="${pt}" alt="" width="64" height="64">` : ''}<b>${esc(b.name)}</b><span class="chip">${b.sex === 'm' ? 'man' : 'woman'}</span></button>`; }).join('')}</div>${nav(0, [2, 'class'])}`;
   } else if (d.step === 2) {
     body = `<div class="choices four classes">${D.BACKGROUNDS.map((b) => `<button class="choice ${b.id === d.background ? 'on' : ''}" data-a="bg" data-v="${b.id}" aria-pressed="${b.id === d.background}">
       <b>${esc(b.name)}</b><span class="chip">${Object.entries(b.attrs).map(([k, v]) => `+${v} ${D.ATTRS[k].short}`).join(', ')}</span>
@@ -1803,10 +1945,14 @@ function compareView() {
 function townPopup() {
   const id = state.popup, p = POPUPS[id];
   if (!p) return '';
-  const pair = id === 'character' || id === 'gear' || id === 'lockup' ? `<nav class="tabs pop-tabs">${['character', 'gear', 'lockup'].map((k) => `<button class="tab" aria-selected="${id === k}" data-a="popup" data-v="${k}">${esc(POPUPS[k].label)}${popupBadge(k)}</button>`).join('')}</nav>` : '';
+  // The safehouse is one menu: Resolve, the operative, their record, gear and the Lockup, all on one row of tabs.
+  const ct = state.charTab || 'resolve', c = state.char, safeTab = (pop, k, label) => `<button class="tab" aria-selected="${id === pop && (!k || ct === k)}" data-a="popup" data-v="${pop}" ${k ? `data-k="${k}"` : ''}>${label}</button>`;
+  let body = p.body(), pair = id === 'character' || id === 'gear' || id === 'lockup' ? `<nav class="tabs pop-tabs">${safeTab('character', 'resolve', `${esc(S.meta)} ${state.meta.resolve}${canSpendResolve() ? ' <span class="badge" title="You can spend Resolve here">+</span>' : ''}`)}${safeTab('character', 'operative', `Operative${c.attrPoints ? ` <span class="badge" title="Attribute points to spend">${c.attrPoints}</span>` : ''}`)}${safeTab('character', 'record', 'Record')}${safeTab('gear', '', 'Gear')}${safeTab('lockup', '', 'Lockup')}</nav>` : '';
+  // A menu's own tabs sit in its header when it has no other tabs there, so the list starts higher up.
+  if (!pair) { const m = body.match(/^\s*(<nav class="tabs pop-tabs">[\s\S]*?<\/nav>)/); if (m) { pair = m[1]; body = body.slice(m[0].length); } }
   return `<div class="popup-wrap town-pop"><div class="modal popup wide" role="dialog" aria-modal="true" aria-label="${esc(p.label)}">
-    <div class="pop-head"><div style="display:grid;gap:2px"><span class="label">${esc(p.where)}</span><h2>${esc(p.label)}</h2></div><button class="tool" data-a="closepopup" aria-label="Close">Close</button></div>
-    ${notice()}${pair}${p.body()}
+    <div class="pop-head"><div class="pop-title"><span class="label">${esc(p.where)}</span><h2>${esc(p.label)}</h2></div>${pair.replace('pop-tabs', 'pop-tabs head-tabs')}<button class="tool" data-a="closepopup" aria-label="Close">Close</button></div>
+    ${notice()}${body}
   </div></div>${compareView()}`;
 }
 
@@ -1909,8 +2055,7 @@ function marketGear() {
     const cmp = `<button class="btn" data-a="compare" data-v="${i}" title="See this piece next to what you have in that slot">Compare</button>`;
     return itemCard(it, { actions: `${btn}${cmp}` });
   }).join('');
-  return `<h3>Gear</h3>
-    <div class="odds"><span>Odds:</span>${['common', 'rare', 'elite', 'legendary'].map((k) => `<span class="rname r-${k}">${D.RARITY[k].name} ${Math.round(o[k] * 1000) / 10}%</span>`).join('')}</div>
+  return `<div class="odds"><span>Odds:</span>${['common', 'rare', 'elite', 'legendary'].map((k) => `<span class="rname r-${k}">${D.RARITY[k].name} ${Math.round(o[k] * 1000) / 10}%</span>`).join('')}</div>
     ${cards ? `<div class="item-grid">${cards}</div>` : '<p class="muted">Sold out. Marrow restocks after your next raid.</p>'}`;
 }
 
@@ -1926,7 +2071,7 @@ function market() {
   const disc = 1 - E.price(state, 100) / 100;
   const tab = state.marketTab || 'gear', tabBtn = (k, label) => `<button class="tab" aria-selected="${tab === k}" data-a="markettab" data-v="${k}">${label}</button>`;
   return `<nav class="tabs pop-tabs">${tabBtn('gear', 'Gear')}${tabBtn('supplies', 'Supplies')}${tabBtn('mods', `Mods ${c.upgrades.length}/${D.UPGRADES.length}`)}</nav>
-    ${tab === 'gear' ? `<p class="muted">New gear replaces the old for good. Restocks after every raid.${disc > 0 ? ` Charisma: ${pct(disc)} off.` : ''}</p>${marketGear()}` : ''}
+    ${tab === 'gear' ? `<p class="muted pop-intro">New gear replaces the old for good. Restocks after every raid.${disc > 0 ? ` Charisma: ${pct(disc)} off.` : ''}</p>${marketGear()}` : ''}
     ${tab === 'supplies' ? `<div class="rows">${items}</div>` : ''}
     ${tab === 'mods' ? `<p class="muted">Each one you buy raises the price of the rest.</p><div class="rows">${ups}</div>` : ''}`;
 }
@@ -1938,7 +2083,7 @@ function clinic() {
     return `<div class="row i ${owned ? 'owned' : ''}">${ico(`implant:${u.id}`)}<div><div class="name">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div></div>
       ${owned ? `<button class="btn" data-a="unimplant" data-v="${u.id}">Remove</button>` : buyBtn('implant', u.id, '', u.cost, c.implants.length >= st.slots)}</div>`;
   }).join('');
-  return `<p class="muted">Doc Ilse works out of a laundry back room. Stitches, and for the right price, hardware under the skin.</p>
+  return `<p class="muted pop-intro">Doc Ilse works out of a laundry back room. Stitches, and for the right price, hardware under the skin.</p>
     <h3>Treatment</h3>
     <div class="kv"><dt>Condition</dt><dd>${c.hp} / ${st.maxHp} HP</dd><dt>Cost</dt><dd>${cost > 0 ? cr(cost) : 'Not needed'}</dd></div>
     <div><button class="btn primary" data-a="heal" ${cost <= 0 || c.credits < cost ? 'disabled' : ''}>${cost > 0 ? `Patch me up \u00B7 ${cr(cost)}` : 'Fully healed'}</button></div>
@@ -1954,12 +2099,12 @@ function character() {
   const m = state.meta, c = state.char, st = E.stats(state);
   const attrRows = Object.entries(D.ATTRS).map(([k, a]) => `<div class="attr-row"><div><div class="name">${esc(a.label)} <span class="num muted">${a.short}</span></div><div class="desc">${esc(a.desc)}</div></div>
     <div class="stepper"><span class="num big-num">${E.attr(c, k)}</span>${c.attrPoints ? `<button class="btn" data-a="spend" data-v="${k}" aria-label="Raise ${a.label}" ${c.attrs[k] >= D.ATTR_MAX ? 'disabled' : ''}>+</button>` : ''}</div></div>`).join('');
-  const skills = E.skillsOf(c).map((k) => `<div class="row i">${ico(`skill:${k}`)}<div><div class="name">${esc(D.SKILLS[k].name)} <span class="num muted" style="font-size:.8rem">cooldown ${E.skillCd(c, k)}</span></div><div class="desc">${esc(D.SKILLS[k].desc)}</div></div><span class="label">${esc(D.SKILLS[k].from)}</span></div>`).join('');
+  const skills = E.skillsOf(c).map((k) => `<div class="row i skill-row">${ico(`skill:${k}`)}<div><div class="name">${esc(D.SKILLS[k].name)} <span class="num muted" style="font-size:.8rem">cooldown ${E.skillCd(c, k)}</span></div><div class="desc">${esc(D.SKILLS[k].desc)}</div></div><span class="label">${esc(D.SKILLS[k].from)}</span></div>`).join('');
   const history = c.history.length ? c.history.map((h) => `<div><span>${esc(h.text)}</span></div>`).join('') : '<p class="muted">Nothing yet. Your choices in the field will show up here.</p>';
   const rows = Object.entries(D.TRAINING).map(([k, t]) => {
     const lvl = m.training[k], cost = E.trainingCost(lvl), maxed = lvl >= t.max;
     return `<div class="row i">${ico(`train:${k}`)}<div><div class="name">${esc(t.label)} <span class="num muted" style="font-size:.8rem">+${t.per} ${t.stat} per rank</span></div>
-      <div class="desc">${esc(t.note)}</div><div class="pips" aria-label="rank ${lvl} of ${t.max}">${Array.from({ length: t.max }, (_, i) => `<i class="${i < lvl ? 'on' : ''}"></i>`).join('')}</div></div>
+      <div class="desc">${esc(t.note)}</div><div class="pips ${t.max > 10 ? 'long' : ''}" style="--n:${t.max}" aria-label="rank ${lvl} of ${t.max}" title="Rank ${lvl} of ${t.max}">${Array.from({ length: t.max }, (_, i) => `<i class="${i < lvl ? 'on' : ''}"></i>`).join('')}</div></div>
       ${maxed ? '<span class="label">mastered</span>' : `<button class="btn ${m.resolve >= cost ? 'primary' : ''}" data-a="train" data-v="${k}" ${m.resolve < cost ? 'disabled' : ''}>${cost} ${esc(S.meta)}</button>`}</div>`;
   }).join('');
   const cell = D.CELL.map((u) => {
@@ -1970,9 +2115,8 @@ function character() {
   const wall = m.fallen.length ? m.fallen.map((f) => `<div><span>${esc(f.name)} <span class="muted">\u00B7 Lv ${f.level}</span></span><span class="muted">${esc(E.sectorName(f.sector, f.map))}, ${esc(f.killer)}</span></div>`).join('') : '<p class="muted">No names yet. Keep it that way.</p>';
   const bg = D.BACKGROUNDS.find((b) => b.id === c.background);
   const n = E.respecPoints(c), rcost = E.price(state, E.respecCost(c));
-  const charTab = state.charTab || 'resolve', charBtn = (k, label) => `<button class="tab" aria-selected="${charTab === k}" data-a="chartab" data-v="${k}">${label}</button>`;
-  const charNav = `<nav class="tabs pop-tabs">${charBtn('resolve', `${esc(S.meta)} ${m.resolve}`)}${charBtn('operative', `Operative${c.attrPoints ? ` <span class="badge">${c.attrPoints}</span>` : ''}`)}${charBtn('record', 'Record')}</nav>`;
-  return `${charNav}${charTab === 'resolve' ? `<section class="resolve-box">
+  const charTab = state.charTab || 'resolve';
+  return `${charTab === 'resolve' ? `<section class="resolve-box">
       <div class="resolve-head"><div><span class="label">${esc(S.meta)} \u00B7 survives death</span><div class="resolve-num">${m.resolve} <span>banked</span></div></div>
         <p class="muted">Helps every future operative. Earned from new sectors, bosses and contracts.</p></div>
       <div class="two-col">
@@ -1982,7 +2126,7 @@ function character() {
     </section>` : ''}
     ${charTab === 'operative' ? `<div class="two-col">
       <div style="display:grid;gap:14px;align-content:start;min-width:0">
-        <h3>${esc(c.name)} <span class="num muted" style="font-size:.85rem">${esc(bg.name)} \u00B7 Lv ${c.level} \u00B7 lost on death</span></h3>
+        <h3>${esc(c.name)} <span class="num muted op-sub" style="font-size:.85rem">${esc(bg.name)} \u00B7 Lv ${c.level} \u00B7 lost on death</span></h3>
         <p class="muted" style="font-size:.9rem">${esc(bg.perk)}</p>
         ${c.attrPoints ? `<p style="color:var(--sodium)"><b>${c.attrPoints} attribute point${c.attrPoints > 1 ? 's' : ''} to spend.</b></p>` : ''}
         <div class="rows">${attrRows}</div>
@@ -2023,11 +2167,11 @@ function gate() {
   const contracts = (m.contracts || []).map((k) => `<div class="contract ${k.done ? 'done' : ''}"><div><b>${esc(k.text)}</b><span class="muted"> ${k.done ? 'Complete' : `${Math.min(k.progress, k.n)} / ${k.n}`}</span></div><span class="chip ${k.done ? 'good' : ''}">+${k.resolve} ${esc(S.meta)} \u00B7 +${k.credits} ${S.cur}</span></div>`).join('');
   const tabBtn = (k, label) => `<button class="tab" aria-selected="${tab === k}" data-a="missiontab" data-v="${k}">${label}</button>`;
   const go = isGuest() ? `<div class="deploy-go"><span class="muted">The host picks the target.</span><button class="btn big ${state.guestReady ? 'primary' : ''}" data-a="coopready" aria-pressed="${!!state.guestReady}">${state.guestReady ? 'Ready \u00B7 waiting for the host' : 'Ready for the raid'}</button></div>`
-    : `<div class="deploy-go">${E.isCoop(state) ? `<span class="muted" style="font-size:.84rem">${state.guestReady ? `${esc(state.guestName || 'Your friend')} is ready.` : `Waiting for ${esc(state.guestName || 'your friend')} to press Ready.`}</span>` : ''}<div class="ins">${ins.map((n) => `<button class="btn big ${n === ins[ins.length - 1] ? 'primary' : ''}" data-a="deploy" data-v="${n}" ${E.isCoop(state) && !state.guestReady ? 'disabled' : ''}><span class="ins-n">Sector ${n}</span> <span class="ins-name">${esc(E.sectorName(n, sel.id))}</span></button>`).join('')}</div>${ins.length === 1 ? '<span class="muted" style="font-size:.82rem">Beat a boss to start deeper next time.</span>' : ''}${warn}</div>`;
+    : `<div class="deploy-go">${E.isCoop(state) ? `<span class="muted" style="font-size:.84rem">${state.guestReady ? `${esc(state.guestName || 'Your friend')} is ready.` : `Waiting for ${esc(state.guestName || 'your friend')} to press Ready.`}</span>` : ''}<span class="label">${ins.length > 1 ? 'Deploy \u00B7 pick where to start' : 'Deploy'}</span><div class="ins">${ins.map((n) => `<button class="btn big ${n === ins[ins.length - 1] ? 'primary' : ''}" data-a="deploy" data-v="${n}" ${E.isCoop(state) && !state.guestReady ? 'disabled' : ''}><span class="ins-n">Sector ${n}</span> <span class="ins-name">${esc(E.sectorName(n, sel.id))}</span></button>`).join('')}</div>${ins.length === 1 ? '<span class="muted ins-hint">Beat a boss to start deeper next time.</span>' : ''}${warn}</div>`;
   return `<nav class="tabs pop-tabs">${tabBtn('deploy', 'Deploy')}${tabBtn('contracts', `Contracts ${(m.contracts || []).length}`)}</nav>
     ${tab === 'contracts' ? `<div class="contracts">${contracts || '<p class="muted">No jobs right now.</p>'}</div>` : `<div class="gate">
       <div class="gate-maps"><div class="maps">${cards}</div>${locked.length ? `<p class="muted maps-locked">Locked: ${locked.map((mp) => `${esc(mp.name)} (reach sector ${mp.unlock})`).join(', ')}</p>` : ''}</div>
-      <div class="gate-brief"><b class="mech-title">${esc(sel.mechanic.name)}</b> <span class="mech-line">${esc(sel.mechanic.desc)}</span>${traits.length ? `<div class="chips">${traits.map((x) => `<span class="chip">${esc(x)}</span>`).join('')}</div>` : ''}${threat}</div>
+      <div class="gate-brief"><span class="label">${esc(sel.name)} \u00B7 what to expect</span><b class="mech-title">${esc(sel.mechanic.name)}</b> <span class="mech-line">${esc(sel.mechanic.desc)}</span>${traits.length ? `<div class="chips">${traits.map((x) => `<span class="chip">${esc(x)}</span>`).join('')}</div>` : ''}${threat}</div>
       ${go}
     </div>`}`;
 }
@@ -2068,7 +2212,7 @@ function combatScreen() {
     `<span>Dodge <b>${pct(E.dodgeChance(st, e))}</b></span>`, `<span>Run <b>${pct(E.runChance(state))}</b></span>`].join('');
   return `<div class="columns"><section class="panel combat"><div class="c-left">
     <div class="combat-head"><span class="label">${esc(E.mapById(r.map).name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${stage.auto ? '<span class="auto-note">Auto battle \u00B7 tap Manual to take over</span>' : ''}${roomPips(r)}</div>
-    <div id="stage-slot"></div>
+    <div class="stage-box"><div id="stage-slot"></div></div>
     <div class="intent ${intent.tone}"><span class="dot"></span><b>${esc(intent.label)}</b><span class="tip">${esc(intent.tip)}${st.scan && e.next ? ` <span class="next-intent">Scanner: then ${esc(intentLabel(e, e.next))}</span>` : ''}</span><span class="intent-side">${mechanicChip(r)}${r.ready ? `<span class="chip good">Aim +${E.hasPerk(c, 'steady') ? 100 : 50}%</span>` : ''}${r.momentum ? `<span class="chip good">Momentum +${Math.round(E.TUNE.momentum * 100)}%</span>` : ''}</span></div>
     <div class="statline">${meta}</div>
     ${e.quirk ? `<div class="quirk-line"><span class="chip quirk">${esc(E.quirkById(e.quirk).name)}</span><span>${esc(E.quirkById(e.quirk).desc)}</span></div>` : ''}
@@ -2123,8 +2267,8 @@ function routeScreen() {
       <span class="label">${ROOM_LABEL[k]} <span class="k">${i + 1}</span></span>${voteChips(i) ? `<span class="chips">${voteChips(i)}</span>` : ''}
       <b>${esc(E.roomName(r.map, k))}</b><span class="desc">${esc(D.ROOMS[k].desc)}</span></button>`).join('');
   const cds = Object.entries(r.cooldowns).filter(([, v]) => v > 0).map(([k, v]) => `${D.SKILLS[k].name} ${v >= 50 ? 'used' : `ready in ${v}`}`);
-  return `<div class="columns"><section class="panel">
-    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center"><span class="label">${esc(map.name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${roomPips(r)}</div>
+  return `<div class="columns"><section class="panel screen-route">
+    <div class="raid-where" style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center"><span class="label">${esc(map.name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${roomPips(r)}</div>
     ${afterAction()}
     <h2>${r.choices[0] === 'boss' ? 'No way around it' : r.room === 0 ? 'Which way in?' : 'Two doors'}</h2>
     ${tip('route')}
@@ -2138,7 +2282,7 @@ function routeScreen() {
 
 function roomScreen() {
   const r = state.run, res = state.roomResult;
-  return `<div class="columns"><section class="panel">
+  return `<div class="columns"><section class="panel screen-mid">
     <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center"><span class="label">${ROOM_LABEL[res.kind]} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${roomPips(r)}</div>
     <h2>${esc(res.name)}</h2>
     <p style="font-size:1.1rem;max-width:58ch">${esc(res.text)}</p>
@@ -2149,7 +2293,7 @@ function roomScreen() {
 
 function victoryScreen() {
   const o = state.outcome, c = state.char, r = state.run;
-  return `<div class="columns"><section class="panel">
+  return `<div class="columns"><section class="panel screen-mid">
     ${o.liberated ? `<div class="liberated"><span class="label">District liberated</span><b>${esc(o.liberated)}</b><span>The Directorate has lost its grip here. Threat levels are now available under Missions.</span></div>` : ''}
     <div class="killer">${o.id ? portraitImg({ id: o.id, name: o.enemy, portrait: o.portrait }, 'down') : ''}<div style="display:grid;gap:4px"><span class="label">${o.fled ? 'Target fled' : 'Target down'}</span><h2>${esc(o.enemy)}</h2></div></div>
     <dl class="kv"><dt>Credits</dt><dd style="color:var(--sodium)">+${o.credits}</dd><dt>XP</dt><dd>+${o.xp}</dd>
@@ -2190,7 +2334,7 @@ function afterAction() {
 // The view behind loot, contraband and sector-clear popups.
 function popupView(inner) {
   const r = state.run;
-  return `<div class="columns"><section class="panel">
+  return `<div class="columns"><section class="panel screen-behind">
     <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center"><span class="label">${esc(E.mapById(r.map).name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${roomPips(r)}</div>
     ${afterAction()}
     <p class="muted">The corridor goes quiet for a moment.</p>
@@ -2242,7 +2386,7 @@ function perkScreen() {
 
 function endingScreen() {
   const m = state.meta;
-  return `<section class="panel ending" style="padding:36px">
+  return `<section class="panel ending screen-mid" style="padding:36px">
     <span class="label">${esc(S.town)} \u00B7 dawn</span>
     <h1 class="big-title">The yard rises</h1>
     <div class="story"><p>The garrison gate stands open. The furnaces are cold, the cells are empty, and the lift to orbit has stopped running. For the first time in three years, nobody in ${esc(S.town)} is working a Directorate shift.</p>
@@ -2258,13 +2402,12 @@ function modalView() {
   if (['bar', 'wheel', 'orbit', 'ventures'].includes(modal)) return downtimeView();
   const p = A.getPrefs();
   if (modal === 'menu') return `<div class="modal-wrap" data-a="closemodal"><div class="modal menu-modal" role="dialog" aria-modal="true" aria-label="Menu">
-    <button class="tool close" data-a="closemodal" aria-label="Close">Close</button><h2>Menu</h2>
+    <div class="pop-head"><h2>Menu</h2><button class="tool close" data-a="closemodal" aria-label="Close">Close</button></div>
     <div class="menu-grid"><button class="btn" data-a="modal" data-v="manual">Manual</button><button class="btn" data-a="sound">${p.muted ? 'Sound off' : 'Sound on'}</button><button class="btn" data-a="modal" data-v="board">Leaderboard</button><button class="btn" data-a="modal" data-v="feats">Achievements</button><button class="btn" data-a="modal" data-v="settings">Settings</button>${devOn && !isGuest() ? '<button class="btn" data-a="modal" data-v="dev">Dev</button>' : ''}</div></div></div>`;
   if (modal === 'board') return boardView();
   if (modal === 'feats') return featsView();
   if (modal === 'dev') return devOn && !isGuest() ? devView() : '';
   const body = modal === 'manual' ? `
-    <h2>Field manual</h2>
     <div class="manual">
       <section><h3>The goal</h3><p>Beat the sector 15 boss in all four districts. Operatives die; the cell remembers.</p></section>
       <section><h3>A raid</h3><p>Three rooms per sector, choosing one of two doors each time. A boss every fifth sector. After each sector, push deeper or extract.</p></section>
@@ -2289,7 +2432,6 @@ function modalView() {
       <section><h3>Saves</h3><p>Your cell backs up to the cloud. Enter its code from <b>Settings</b> on any device. Anyone with the code can load it, so keep it private.</p></section>
       <section><h3>Controls</h3><p class="keys"><span><b>WASD</b> walk</span><span><b>E</b> talk</span><span><b>A</b> shoot</span><span><b>F</b> strike</span><span><b>D</b> defend</span><span><b>S</b> stim</span><span><b>R</b> run</span><span><b>Q W E T</b> skills</span><span><b>2 3 4</b> items</span><span><b>1 2</b> doors</span><span><b>Enter</b> continue</span><span><b>Esc</b> close</span></p></section>
     </div>` : `
-    <h2>Settings</h2>
     <div class="settings">
       <h3>Sound</h3>
       <div class="set-grid">
@@ -2299,10 +2441,11 @@ function modalView() {
       <label class="set-row"><span>Music</span><button class="btn" data-a="setpref" data-v="music" aria-pressed="${p.music}">${p.music ? 'On' : 'Off'}</button></label>
       <label class="set-row"><span>Ambience</span><button class="btn" data-a="setpref" data-v="ambience" aria-pressed="${p.ambience}">${p.ambience ? 'On' : 'Off'}</button></label>
       <label class="set-row"><span>Rain</span><button class="btn" data-a="setpref" data-v="rain" aria-pressed="${p.rain}">${p.rain ? 'On' : 'Off'}</button></label>
+      ${A.hasHaptics() ? `<label class="set-row"><span>Vibration</span><button class="btn" data-a="setpref" data-v="haptics" aria-pressed="${p.haptics}">${p.haptics ? 'On' : 'Off'}</button></label>` : ''}
       </div>
       <h3>Co-op</h3>
       ${net ? `<div class="set-row"><span>${isHost() ? 'Hosting' : 'Joined'} room <b class="num">${net.code}</b> \u00B7 ${net.peer ? `connected to ${esc(net.peerName || (isHost() ? 'your friend' : 'the host'))}` : coopStatus === 'error' || coopStatus === 'closed' ? 'connection failed' : 'waiting for the other player\u2026'}</span><button class="btn" data-a="coopleave">Leave</button></div>
-        ${isHost() ? `<div class="set-row"><span>Invite link</span><span class="btnrow" style="flex:1;justify-content:flex-end"><input class="text" readonly value="${esc(inviteLink())}" aria-label="Invite link" style="flex:1;min-width:140px"><button class="btn primary" data-a="coopinvite">Copy</button></span></div>` : ''}
+        ${isHost() ? `<div class="set-row"><span>Invite link</span><span class="btnrow" style="flex:1;justify-content:flex-end"><input class="text" readonly value="${esc(inviteLink())}" aria-label="Invite link" style="flex:1;min-width:140px"><button class="btn primary" data-a="coopinvite">${appBridge('share') ? 'Share' : 'Copy'}</button></span></div>` : ''}
         ${isGuest() ? '<p class="muted" style="font-size:.88rem">Your operative stays yours, and leaving takes them back to your solo game.</p>' : ''}
         ${isHost() ? '<p class="muted" style="font-size:.88rem">You pick the missions; your friend presses Ready at their terminal.</p>' : ''}`
       : `<div class="coop-form">
@@ -2322,8 +2465,8 @@ function modalView() {
       ${state.report ? `<textarea class="report" readonly aria-label="Run report">${esc(state.report)}</textarea>` : ''}
       <div class="set-row"><span>Erase all progress</span><button class="btn danger" data-a="reset">${confirmReset ? 'Click again to confirm' : 'Reset save'}</button></div>
     </div>`;
-  return `<div class="modal-wrap" data-a="closemodal"><div class="modal" role="dialog" aria-modal="true" aria-label="${modal === 'manual' ? 'Field manual' : 'Settings'}">
-    <button class="tool close" data-a="closemodal" aria-label="Close">Close</button>${body}</div></div>`;
+  return `<div class="modal-wrap" data-a="closemodal"><div class="modal sheet" role="dialog" aria-modal="true" aria-label="${modal === 'manual' ? 'Field manual' : 'Settings'}">
+    <div class="pop-head"><h2>${modal === 'manual' ? 'Field manual' : 'Settings'}</h2><button class="tool close" data-a="closemodal" aria-label="Close">Close</button></div>${body}</div></div>`;
 }
 
 // Feats: progress bars for every achievement and the buffs they add up to.
@@ -2348,8 +2491,7 @@ function featsView() {
   };
   const order = ['Combat', 'Raids', 'The cell', 'After curfew', 'Enemies', 'Bosses'];
   return `<div class="modal-wrap" data-a="closemodal"><div class="modal board feats" role="dialog" aria-modal="true" aria-label="Achievements">
-    <button class="tool close" data-a="closemodal" aria-label="Close">Close</button>
-    <h2>Achievements <span class="num muted" style="font-size:.9rem">the cell\u2019s record</span></h2>
+    <div class="pop-head"><h2>Achievements <span class="num muted h2-note">the cell\u2019s record</span></h2><button class="tool close" data-a="closemodal" aria-label="Close">Close</button></div>
     <p class="muted" style="font-size:.9rem">Everything the cell does counts, across every operative. Each achievement has six tiers; every tier adds a small permanent edge, and each tier adds a little less than the last. The top tiers of the big ones also pay ${esc(S.meta)}.</p>
     ${totals.length ? `<div class="chips">${totals.join('')}</div>` : '<p class="muted small">No tiers yet. Go and do something.</p>'}
     ${order.filter((g) => groups[g]).map((g) => `<h3>${esc(g)}</h3><div class="feat-grid">${groups[g].map(row).join('')}</div>`).join('')}
@@ -2366,8 +2508,7 @@ function boardView() {
     return `<tr class="${own ? 'mine' : ''}"><td class="num">${i + 1}</td><td><b>${esc(e.name)}</b><span class="muted"> #${+e.number || 0}</span><div class="muted small">${esc((D.BACKGROUNDS.find((b) => b.id === e.background) || {}).name || e.background)}, lv ${+e.level || 1}</div></td><td>${esc(E.mapById(e.map).name)}, sector ${+e.deepest || 0}${reached ? `<div class="muted small">${esc(reached)}</div>` : ''}</td><td class="${died ? 'bad' : 'good'}">${died ? 'Died' : 'Alive'}<div class="muted small">${died && e.killer ? `to ${esc(e.killer)}, ` : ''}${+e.raids || 0} raids, ${+e.kills || 0} kills</div></td><td class="num score">${(+e.score || 0).toLocaleString()}</td></tr>`;
   }).join('');
   return `<div class="modal-wrap" data-a="closemodal"><div class="modal board" role="dialog" aria-modal="true" aria-label="Leaderboard">
-    <button class="tool close" data-a="closemodal" aria-label="Close">Close</button>
-    <h2>Leaderboard <span class="num muted" style="font-size:.9rem">${online ? `top ${board.length} of ${globalBoard.total.toLocaleString()} operatives, everyone\u2019s` : `this device\u2019s best ${board.length} operatives`}</span></h2>
+    <div class="pop-head"><h2>Leaderboard <span class="num muted h2-note">${online ? `top ${board.length} of ${globalBoard.total.toLocaleString()} operatives, everyone\u2019s` : `this device\u2019s best ${board.length} operatives`}</span></h2><button class="tool close" data-a="closemodal" aria-label="Close">Close</button></div>
     ${!online && BOARD_ON ? `<p class="muted" style="font-size:.9rem">${globalBoard && globalBoard.loading ? 'Fetching the global board\u2026' : 'Can\u2019t reach the global board right now, so these are your own operatives. Yours will be sent when the connection is back.'}</p>` : ''}
     <p class="muted" style="font-size:.9rem">How far each operative got: ${E.SECTOR_POINTS} per sector, ${E.BOSS_POINTS} per boss, ${E.LIBERATE_POINTS.toLocaleString()} per district freed. Repeat clears add nothing; threat levels add ${Math.round(E.THREAT_POINTS * 100)}% each.${state.meta.dev ? ' <b>This cell has used dev mode, so it isn\u2019t on the board.</b>' : ''}</p>
     ${board.length ? `<table class="board-table"><thead><tr><th>#</th><th>Operative</th><th>Got to</th><th>Status</th><th class="num">Score</th></tr></thead><tbody>${rows}</tbody></table>` : '<p class="muted">No operatives on the board yet.</p>'}
@@ -2379,9 +2520,8 @@ const DT_TITLES = { bar: ['The Lantern', 'Tenement basement \u00b7 after curfew'
 function downtimeView() {
   const [title, where] = DT_TITLES[modal];
   const body = { bar: barView, wheel: wheelView, orbit: orbitView, ventures: venturesView }[modal]();
-  return `<div class="modal-wrap" data-a="closemodal"><div class="modal popup wide dt dt-${modal}" role="dialog" aria-modal="true" aria-label="${esc(title)}">
-    <div class="pop-head"><div style="display:grid;gap:2px"><span class="label">${esc(where)}</span><h2>${esc(title)}</h2></div><button class="tool" data-a="closemodal" aria-label="Close">Close</button></div>
-    <nav class="tabs pop-tabs">${['bar', 'wheel', 'orbit', 'ventures'].map((k) => `<button class="tab" aria-selected="${modal === k}" data-a="modal" data-v="${k}">${esc(DT_TITLES[k][0])}</button>`).join('')}</nav>
+  return `<div class="modal-wrap" data-a="closemodal"><div class="modal popup wide dt dtm-${modal}" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+    <div class="pop-head"><div class="pop-title"><span class="label">${esc(where)}</span><h2>${esc(title)}</h2></div><nav class="tabs pop-tabs head-tabs">${['bar', 'wheel', 'orbit', 'ventures'].map((k) => `<button class="tab" aria-selected="${modal === k}" data-a="modal" data-v="${k}">${esc(DT_TITLES[k][0])}</button>`).join('')}</nav><button class="tool" data-a="closemodal" aria-label="Close">Close</button></div>
     ${!E.inTown(state) ? '<p class="muted">Only between raids, and only in the yard.</p>' : body}
   </div></div>`;
 }
@@ -2469,7 +2609,7 @@ function orbitView() {
     ${shake ? '<div class="orbit-stakes safe">Practice run \u00b7 can\u2019t kill you</div>' : '<div class="orbit-stakes">Permadeath \u00b7 lose the shuttle, lose the pilot</div>'}
     <div class="chips"><span class="chip">hull ${f.hull} \u00b7 guns ${f.atk}</span><span class="chip">${f.credits[0]}\u2013${f.credits[1]} ${esc(S.cur)}</span><span class="chip ${t.mark ? 'good' : ''}">${t.mark ? `${Math.round(t.mark * 100)}% Mark` : 'no Mark'}</span></div>
     ${odds}${go}</div>`; }).join('');
-  return `<p class="muted">The cell keeps a shuttle in a collapsed lift shaft. It flies badly, which is why the Directorate has not found it. Runs past the blockade pay in credits and, if you live, in <b>Marks</b>: permanent edges only orbit gives.</p>
+  return `<p class="muted pop-intro">The cell keeps a shuttle in a collapsed lift shaft. It flies badly, which is why the Directorate has not found it. Runs past the blockade pay in credits and, if you live, in <b>Marks</b>: permanent edges only orbit gives.</p>
     ${c.orbitFlown ? '<div class="notice">The shuttle is refuelling. One run per stay in town: go on a raid, come home, and it\u2019s ready again.</div>' : ''}
     <div class="orbit-stakes big">Orbit is permadeath. If the shuttle is destroyed, ${esc(c.name)} dies: the run ends exactly like dying on a raid.${m.orbitWins ? '' : ' Your first flight is a shakedown with a tug on standby.'}</div>
     <div class="kv-strip"><div class="stat"><span class="label">Shuttle</span><span class="v">hull ${me.hull} \u00b7 guns ${me.atk} \u00b7 deflector ${me.shield} \u00b7 evade ${Math.round(me.evade * 100)}%</span></div><div class="stat"><span class="label">Marks</span><span class="v">${(c.marks || []).length} / 5</span></div></div>
@@ -2489,7 +2629,7 @@ function venturesView() {
     return `<div class="row i venture ${open ? '' : 'locked'}">${ico('venture:' + v.id)}<div><div class="name">${esc(v.name)} ${amt ? `<span class="num good">${amt.toLocaleString()} ${esc(S.cur)}</span>` : ''} <span class="num muted small">/ ${v.cap.toLocaleString()}</span></div><div class="desc">${esc(v.desc)}</div>
     ${open ? `<div class="feat-bar" style="margin-top:6px"><i style="width:${Math.min(100, amt / v.cap * 100)}%"></i></div>` : ''}${full ? '<div class="small" style="color:var(--sodium)">Full: it stops growing until you withdraw.</div>' : ''}
     <div class="btnrow" style="margin-top:6px">${ctl}</div></div></div>`; }).join('');
-  return `<p class="muted">Sable keeps your money moving between raids. Ventures belong to this operative: if they die, the money dies with them, so withdraw before you take a risk you can\u2019t afford. They tick once per raid, up or down. Safer than the Wheel. Less fun than the Wheel.</p>
+  return `<p class="muted pop-intro">Sable keeps your money moving between raids. Ventures belong to this operative: if they die, the money dies with them, so withdraw before you take a risk you can\u2019t afford. They tick once per raid, up or down. Safer than the Wheel. Less fun than the Wheel.</p>
     <div class="kv-strip"><div class="stat"><span class="label">Invested</span><span class="v">${total.toLocaleString()} ${esc(S.cur)}</span></div><div class="stat"><span class="label">On you</span><span class="v">${c.credits.toLocaleString()} ${esc(S.cur)}</span></div></div>
     ${rows}`;
 }
@@ -2504,7 +2644,7 @@ function eventScreen() {
   }).join('');
   const result = res ? `<div class="notice ${res.check ? (res.success ? 'win' : 'lose') : ''}">${res.check ? `<b>${res.success ? 'Success.' : 'Failed.'}</b> ` : ''}${esc(res.text)}</div>
     ${res.notes.length ? `<div class="chips">${res.notes.map((n) => `<span class="chip ${/\u2212|alerted/.test(n) ? 'bad' : 'good'}">${esc(n)}</span>`).join('')}</div>` : ''}` : '';
-  return `<div class="columns"><section class="panel">
+  return `<div class="columns"><section class="panel screen-mid screen-event">
     <span class="label">Something in the corridor \u00B7 ${esc(E.sectorName(state.run.sector, state.run.map))}</span>
     <p style="font-size:1.15rem;max-width:58ch">${esc(ev.text)}</p>
     ${res ? `${result}<div><button class="btn primary big" data-a="eventDone">Move on<span class="k">\u21B5</span></button></div>` : `<div class="options">${opts}</div>`}
@@ -2548,7 +2688,7 @@ function heirloomPick() {
 
 function deathScreen() {
   const o = state.outcome;
-  return `<section class="panel" style="padding:32px">
+  return `<section class="panel screen-mid screen-death" style="padding:32px">
     <span class="label">Signal lost \u00B7 ${o.orbit ? 'the lift corridor' : `${esc(E.mapById(o.map).name)} \u00B7 Sector ${o.sector}`}</span>
     <h1 class="big-title" style="color:var(--danger)">${esc(o.name)}</h1>
     ${o.killerId ? `<div class="killer">${(() => { const me = o.look ? lookStill(o.look, o.background) : null; return me ? `<img class="portrait" src="${me}" alt="" width="160" height="160"><span class="label vs">vs</span>` : ''; })()}${portraitImg({ id: o.killerId, name: o.killer, portrait: o.killerPortrait })}<span class="label">Last seen<br>engaging a ${esc(o.killer)}</span></div>` : ''}
@@ -2561,6 +2701,7 @@ function deathScreen() {
 }
 
 function render() {
+  if (!appReadySent) { appReadySent = true; const r = appBridge('ready'); if (r) requestAnimationFrame(() => setTimeout(() => { try { r.postMessage(1); } catch (e) {} }, 80)); }
   if (isGuest() && (!hostSynced || (!state.char && home && home.char))) {
     document.getElementById('app').innerHTML = coopBanner() + joiningScreen() + modalView() + (toast ? `<div class="toast" role="status">${esc(toast)}</div>` : '');
     toast = null;
@@ -2801,7 +2942,7 @@ function applyAct(a, v, k) {
       const pre = getCoopPrefs(), code = pre.hostCode || makeCode(); // the same room each time, so an old invite link keeps working
       setCoopPrefs({ name: (document.getElementById('coop-name') || {}).value || '', relay: ((document.getElementById('coop-relay') || {}).value || '').trim(), hostCode: code });
       startCoop('host', code, !getCoopPrefs().relay);
-      try { navigator.clipboard.writeText(inviteLink()).then(() => { toast = 'Invite link copied. Send it to your friend.'; render(); }).catch(() => {}); } catch (e) {}
+      shareOrCopy(inviteLink(), 'Invite link copied. Send it to your friend.');
       break;
     }
     case 'coopresume': { const r = getLastRoom(); if (r && (r.role === 'guest' || state.char)) { titleOpen = false; startCoop(r.role, r.code, false); } break; }
@@ -2824,7 +2965,7 @@ function applyAct(a, v, k) {
     case 'devoff': devOn = false; try { localStorage.removeItem(DEV_KEY); } catch (e) {} modal = null; sfx('click'); break;
     case 'dev': if (devOn && !isGuest()) { applyDev(v, k); sfx('buy'); } break;
     case 'autostart': if (devOn && !isGuest()) startAuto(v); return;
-    case 'coopinvite': try { navigator.clipboard.writeText(inviteLink()).then(() => { toast = 'Invite link copied.'; render(); }).catch(() => {}); } catch (e) {} sfx('click'); break;
+    case 'coopinvite': shareOrCopy(inviteLink(), 'Invite link copied.'); sfx('click'); break;
     case 'coopauto': if (isHost() && state.run && state.screen === 'combat' && state.run.actor === 1 && !net.peer) { fight(E.withActor(state, 1, () => E.autoAction(state)), 1); } return;
     case 'coopskip': if (isHost()) E.skipPartnerReward(state, rng); break;
     case 'coopdrop': if (isHost()) { E.partnerGone(state); state.coop = false; state.char2 = null; pendingGuest = null; toast = 'You carry on alone. They keep their operative as it was, and can join again after this raid.'; if (['loot', 'perk'].includes(state.screen) && !E.rewardsPending(state)) E.continueAfterVictory(state, rng); } break;
@@ -2878,7 +3019,7 @@ function applyAct(a, v, k) {
     }
     case 'randname': state.draft.name = D.OPERATIVE_NAMES[Math.floor(rng() * D.OPERATIVE_NAMES.length)]; break;
     case 'create': E.createChar(state, rng); state.gateMap = 'garrison'; state.popup = null; break;
-    case 'tab': case 'popup': state.popup = v === 'gate' ? 'missions' : v === 'safehouse' ? 'character' : v; state.notice = null; break;
+    case 'tab': case 'popup': state.popup = v === 'gate' ? 'missions' : v === 'safehouse' ? 'character' : v; if (k && state.popup === 'character') state.charTab = k; state.notice = null; break;
     case 'closepopup': state.popup = null; state.notice = null; state.compare = null; break;
     case 'compare': state.compare = +v; sfx('click'); break;
     case 'closecompare': state.compare = null; sfx('click'); break;

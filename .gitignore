@@ -1,2 +1,4 @@
 dist/
 .wrangler/
+ios/build/
+xcuserdata/

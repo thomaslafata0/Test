@@ -81,11 +81,15 @@ Median to the sector-15 boss on the Garrison (operatives / raids): strength 22/6
 
 - **Mods:** 14 in `D.UPGRADES`; each one bought multiplies the price of the rest by `D.MOD_STEP` (`E.modCost`).
 - **Loot:** drops can go straight to the Lockup, or the replaced piece can (`E.stashLoot`, `E.takeLoot(..., stashOld)`).
-- **iPhone:** `ios/` is a small WKWebView app loading the live site; see `ios/README.md`. Not compiled yet: it needs Xcode.
+- **iPhone:** `ios/` is a small WKWebView app loading the live site; see `ios/README.md`.
 
 - **Phones:** landscape only (`@media (max-height: 500px) and (orientation: landscape)` in `index.html`). `tests/phone-landscape.cjs` fails if a play screen scrolls or its way forward is off screen; `tests/phone-audit.cjs` lists small tap targets and long menus. Creation has four steps (Body, Class, Look, Stats) and Randomize; Missions, Market and Character have sub-tabs.
 - **Battle scenes:** `Stage.background` draws three scenes per map (sectors 1-5, 6-10, 11+); indoor scenes have no rain.
 - **iPhone app:** `ios/` builds with Xcode for team `39BW6948KL` (`xcodebuild -scheme CinderCell -destination id=<udid> -allowProvisioningUpdates`, then `xcrun devicectl device install app`).
+- **App bridge:** the app adds `CinderCellApp/<version>` to the user agent and three message handlers. The page posts `ready` after its first render (the app's splash fades then), `haptic` from `audio.js` `play()` via the `BUZZ` map (Settings, Vibration turns it off), and `share` from `shareOrCopy()` for co-op invites. Off the app all three fall back quietly. `tests/app-bridge.cjs` fakes the handlers.
+- **Phone layout:** one `@media (max-height: 500px) and (orientation: landscape)` block at the end of the stylesheet in `index.html` holds every phone rule. Rules of thumb it keeps: no text under 11px, nothing you tap under 38px, play screens fill the display and never scroll, menus are full-screen sheets that scroll inside. The root font size scales with the usable width (14 to 16px), and an iPhone's notch and home bar leave about 750 x 370, so test with insets. `tests/phone-read.cjs` checks text size, tap size and empty screens (`SHEET=dir` writes contact sheets of every screen); `tests/phone-landscape.cjs` checks nothing scrolls. Both emulate the notch.
+- **Safehouse tabs:** Resolve, Operative, Record, Gear and Lockup are one row of tabs in the popup header (`townPopup`); a `popup` action with `data-k` picks the Character sub-tab.
+- **Menu headers:** a town menu's first tab row is lifted into its header (`townPopup`); on narrow screens the tabs drop below the title. The downtime window's class is `dtm-<id>`, not `dt-<id>`, which is the inner layout.
 
 ## Testing
 Start the server, then from the repo root:

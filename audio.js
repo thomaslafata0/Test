@@ -3,7 +3,7 @@
 
 let ctx = null, master = null, sfxBus = null, ambBus = null, noiseBuf = null;
 let ambNodes = null;
-const prefs = { muted: false, sfx: true, ambience: false, rain: false, music: true, musicVolume: 0.2, volume: 0.7 };
+const prefs = { muted: false, haptics: true, sfx: true, ambience: false, rain: false, music: true, musicVolume: 0.2, volume: 0.7 };
 try { Object.assign(prefs, JSON.parse(localStorage.getItem('cinder-cell-audio')) || {}); } catch (e) {}
 
 function save() { try { localStorage.setItem('cinder-cell-audio', JSON.stringify(prefs)); } catch (e) {} }
@@ -138,7 +138,20 @@ const SFX = {
   liberate: () => [262, 330, 392, 523, 659, 784].forEach((f, i) => tone({ type: 'triangle', f0: f, d: 0.6, vol: 0.08, delay: i * 0.12 })),
 };
 
+// In the iPhone app, the big moments buzz too. Works with the sound off; throttled so autoplay doesn't rattle.
+const BUZZ = { click: 'selection', buy: 'light', coin: 'light', hit: 'light', block: 'soft', dodge: 'soft', hurt: 'medium', blast: 'medium', crit: 'rigid', heavy: 'heavy', smash: 'heavy', explosion: 'heavy', enrage: 'heavy', denied: 'warning', alarm: 'warning', death: 'error', levelup: 'success', perk: 'success', victory: 'success', liberate: 'success' };
+const buzzer = () => (typeof window !== 'undefined' && window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.haptic) || null;
+let lastBuzz = 0;
+export const hasHaptics = () => !!buzzer();
+export function haptic(kind) {
+  const b = buzzer(), now = Date.now();
+  if (!b || !prefs.haptics || now - lastBuzz < 70) return;
+  lastBuzz = now;
+  try { b.postMessage(kind); } catch (e) {}
+}
+
 export function play(name) {
+  if (BUZZ[name]) haptic(BUZZ[name]);
   if (prefs.muted || !prefs.sfx || !ensure() || !SFX[name]) return;
   try { SFX[name](); } catch (e) {}
 }
