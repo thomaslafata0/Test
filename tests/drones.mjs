@@ -142,4 +142,23 @@ const turns = ({ s, rng }, n, act = 'defend') => { for (let i = 0; i < n && s.sc
   assert(share > 0.05 && share < 0.16, `wear ${share}`);
   console.log(`PASS wear ${Math.round(share * 100)}% over ${clears} sector clears`);
 }
+// Cell upgrades have levels, and older saves keep what they bought.
+{
+  const rng = E.seededRng(30), s = E.newGame(rng);
+  s.meta.resolve = 100;
+  E.createChar(s, rng, E.newDraft(s.meta, rng)); const base = s.char.credits;
+  assert.strictEqual(E.buyCell(s, 'stash'), true);
+  E.createChar(s, rng, Object.assign(E.newDraft(s.meta, rng), { background: 'foundry' }));
+  const c1 = s.char.credits;
+  assert.strictEqual(E.cellLevel(s.meta, 'stash'), 1);
+  for (let i = 0; i < 3; i++) assert.strictEqual(E.buyCell(s, 'stash'), true);
+  assert.strictEqual(E.buyCell(s, 'stash'), false, 'level 4 is the top');
+  E.createChar(s, rng, Object.assign(E.newDraft(s.meta, rng), { background: 'foundry' }));
+  assert.strictEqual(s.char.credits - c1, 210, 'level 4 gives 240, not 30');
+  assert(base > 0);
+  const old = E.newGame(rng); old.meta.cell = ['stash', 'ledger', 'heirloom'];
+  assert.strictEqual(E.cellLevel(old.meta, 'stash'), 2); assert.strictEqual(E.cellLevel(old.meta, 'ledger'), 3); assert.strictEqual(E.cellLevel(old.meta, 'heirloom'), 1);
+  old.meta.resolve = 9; assert.strictEqual(E.buyCell(old, 'stash'), true, 'an old save can level up'); assert.strictEqual(E.cellLevel(old.meta, 'stash'), 3);
+  console.log('PASS cell upgrades have levels');
+}
 assert.strictEqual(D.DRONE_ORDER.length, 4);

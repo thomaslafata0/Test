@@ -37,7 +37,7 @@ const DESK = { viewport: { width: 1280, height: 800 } };
   await t.ctx.close();
 
   // The safety stop.
-  t = await open(browser, DESK, `${fightSetup} c.items.stim = 0; c.hp = 3; s.run.enemy.atk = 1;`, { 'cinder-cell-speed': 'auto1' });
+  t = await open(browser, DESK, `${fightSetup} c.stimsAtDeploy = 0; c.items.stim = 0; c.hp = 3; s.run.enemy.atk = 1;`, { 'cinder-cell-speed': 'auto1' });
   await enter(t.page); await t.page.waitForTimeout(700);
   assert.strictEqual(await speed(t.page), 'manual', 'auto should drop to manual');
   assert(/stopped/i.test(await t.page.textContent('#hint')), 'should say why');
@@ -45,6 +45,24 @@ const DESK = { viewport: { width: 1280, height: 800 } };
   await t.page.keyboard.press('Tab');
   assert.strictEqual(await speed(t.page), 'auto1', 'Tab cycles the battle mode');
   await t.page.keyboard.press('Tab'); await t.page.keyboard.press('Tab');
+  await t.ctx.close();
+
+  // Auto battle pauses when the last stim is gone, and carries on if told to.
+  t = await open(browser, DESK, `${fightSetup} c.stimsAtDeploy = 2; c.items.stim = 0; c.hp = 50; s.run.enemy.hp = s.run.enemy.maxHp = 500; s.run.enemy.atk = 1;`, { 'cinder-cell-speed': 'auto2' });
+  await enter(t.page); await t.page.waitForSelector('.stim-prompt', { timeout: 4000 });
+  const held = (await saved(t.page)).run.round; await t.page.waitForTimeout(900);
+  assert.strictEqual((await saved(t.page)).run.round, held, 'auto battle should wait for an answer');
+  await t.page.click('[data-a="stimprompt"][data-v="continue"]');
+  await t.page.waitForTimeout(1600);
+  assert((await saved(t.page)).run.round > held, 'Continue should resume auto battle');
+  assert.strictEqual(await t.page.locator('.stim-prompt').count(), 0, 'and not ask again');
+  console.log('PASS out-of-stims pause and continue');
+  await t.ctx.close();
+  // A raid that started with no stims stays quiet.
+  t = await open(browser, DESK, `${fightSetup} c.stimsAtDeploy = 0; c.items.stim = 0; c.hp = 50; s.run.enemy.hp = s.run.enemy.maxHp = 500; s.run.enemy.atk = 1;`, { 'cinder-cell-speed': 'auto2' });
+  await enter(t.page); await t.page.waitForTimeout(1200);
+  assert.strictEqual(await t.page.locator('.stim-prompt').count(), 0, 'no pause when you brought none');
+  console.log('PASS no pause when the raid started without stims');
   await t.ctx.close();
 
   // The preview.

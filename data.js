@@ -278,16 +278,27 @@ export const TRAINING = {
   def: { label: 'Grit',         stat: 'DEF',    per: 1, max: 20, note: 'Knowing which cover holds.' },
   spd: { label: 'Reflexes',     stat: 'SPD',    per: 1, max: 20, note: 'Dodge, crit and escape odds.' },
 };
+// Upgrades for the whole cell. Each level costs its own Resolve and lifts the benefit; `v` is what the rules read.
 export const CELL = [
-  { id: 'stash',  name: 'Hidden Stash',   cost: 6,  desc: 'New operatives start with +60 credits.' },
-  { id: 'kit',    name: 'Field Kit',      cost: 6,  desc: 'New operatives start with +1 Med Stim and +1 Thermal Charge.' },
-  { id: 'cache',  name: 'Weapons Cache',  cost: 8,  desc: 'New operatives start with a Salvaged Carbine and a Shock Baton.' },
-  { id: 'ledger', name: 'Doc\u2019s Ledger', cost: 8, desc: 'Clinic treatment costs half.' },
-  { id: 'mentor', name: 'Old Hand',       cost: 12, desc: 'New operatives get +1 attribute point at creation.' },
-  { id: 'heirloom', name: 'Heirloom',     cost: 10, desc: 'When an operative dies, choose one piece of their gear to pass on to the next.' },
-  { id: 'lockup1', name: 'Lockup Shelving', cost: 6, desc: 'The Lockup holds 2 more pieces.' },
-  { id: 'lockup2', name: 'False Floor',   cost: 12, desc: 'The Lockup holds 2 more pieces again.' },
+  { id: 'stash', name: 'Hidden Stash', levels: [
+    { cost: 3, v: 30, desc: 'New operatives start with +30 credits.' }, { cost: 5, v: 60, desc: 'New operatives start with +60 credits.' },
+    { cost: 9, v: 120, desc: 'New operatives start with +120 credits.' }, { cost: 14, v: 240, desc: 'New operatives start with +240 credits.' }] },
+  { id: 'kit', name: 'Field Kit', levels: [
+    { cost: 3, v: [1, 0], desc: 'New operatives start with +1 Med Stim.' }, { cost: 5, v: [1, 1], desc: 'New operatives start with +1 Med Stim and +1 Thermal Charge.' },
+    { cost: 8, v: [2, 1], desc: 'New operatives start with +2 Med Stims and +1 Thermal Charge.' }, { cost: 12, v: [2, 2], desc: 'New operatives start with +2 Med Stims and +2 Thermal Charges.' }] },
+  { id: 'cache', name: 'Weapons Cache', levels: [
+    { cost: 4, v: 1, desc: 'New operatives start with a Shock Baton.' }, { cost: 6, v: 2, desc: 'New operatives start with a Shock Baton and a Salvaged Carbine.' }] },
+  { id: 'ledger', name: 'Doc\u2019s Ledger', levels: [
+    { cost: 3, v: 0.15, desc: 'Clinic treatment costs 15% less.' }, { cost: 5, v: 0.3, desc: 'Clinic treatment costs 30% less.' },
+    { cost: 8, v: 0.5, desc: 'Clinic treatment costs half.' }, { cost: 12, v: 0.65, desc: 'Clinic treatment costs 65% less.' }] },
+  { id: 'mentor', name: 'Old Hand', levels: [
+    { cost: 6, v: 1, desc: 'New operatives get +1 attribute point at creation.' }, { cost: 12, v: 2, desc: 'New operatives get +2 attribute points at creation.' }, { cost: 20, v: 3, desc: 'New operatives get +3 attribute points at creation.' }] },
+  { id: 'heirloom', name: 'Heirloom', levels: [{ cost: 10, v: 1, desc: 'When an operative dies, choose one piece of their gear to pass on to the next.' }] },
+  { id: 'lockup1', name: 'Lockup Shelving', levels: [{ cost: 6, v: 1, desc: 'The Lockup holds 2 more pieces.' }] },
+  { id: 'lockup2', name: 'False Floor', levels: [{ cost: 12, v: 1, desc: 'The Lockup holds 2 more pieces again.' }] },
 ];
+// What an upgrade bought before levels existed is worth this level.
+export const CELL_LEGACY = { stash: 2, kit: 2, cache: 2, ledger: 3, mentor: 1 };
 
 // ---------- enemies ----------
 // tags: human / beast / droid / armored / boss. intents: weights for the enemy's next move.

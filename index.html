@@ -498,8 +498,17 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .actions .btn .rng { font-family: var(--mono); font-weight: 500; }
 /* title and creation */
 .title { position: relative; min-height: min(78vh, 720px); display: grid; align-items: end; border: 1px solid var(--line); overflow: hidden; background: #0b0d10; }
-.title-art { position: absolute; inset: 0; background: url('town/buildings/terminal.png') no-repeat right 40px top 20px, url('town/buildings/market.png') no-repeat left 30px bottom 10px, radial-gradient(ellipse at 50% 100%, #e8973a22, transparent 60%); background-size: 320px auto, 240px auto, auto; image-rendering: pixelated; opacity: .55; filter: saturate(.7); }
-.title-art::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, #0b0d1000 20%, #0b0d10 85%), repeating-linear-gradient(0deg, #ffffff04 0 1px, transparent 1px 3px); }
+.title-art { position: absolute; inset: 0; background: #0b0d10; }
+.title-art::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, #ffffff03 0 1px, transparent 1px 3px); }
+.title-canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 70% 60%; image-rendering: pixelated; display: block; }
+.title-logo { position: relative; text-shadow: 0 0 22px #e8973a66, 0 2px 0 #000; animation: logoGlow 4.8s infinite; }
+.title-logo::after { content: attr(data-text); position: absolute; left: 0; top: 0; color: #fff1c9; opacity: 0; mix-blend-mode: screen; animation: logoFlick 9s infinite; pointer-events: none; }
+@keyframes logoGlow { 0%, 100% { text-shadow: 0 0 18px #e8973a55, 0 2px 0 #000; } 50% { text-shadow: 0 0 34px #e8973aaa, 0 0 6px #ffd27a66, 0 2px 0 #000; } }
+@keyframes logoFlick { 0%, 91%, 100% { opacity: 0; transform: none; } 92% { opacity: .75; transform: translateX(2px); } 93% { opacity: 0; } 94.5% { opacity: .55; transform: translateX(-2px); } 95.5% { opacity: 0; transform: none; } }
+.title-body.first > * { animation: titleIn .7s both cubic-bezier(.2, .7, .2, 1); }
+.title-body.first > :nth-child(2) { animation-delay: .12s; } .title-body.first > :nth-child(3) { animation-delay: .24s; } .title-body.first > :nth-child(4) { animation-delay: .36s; } .title-body.first > :nth-child(5) { animation-delay: .48s; }
+.title-body.first .title-logo { animation: titleIn .7s .12s both cubic-bezier(.2, .7, .2, 1), logoGlow 4.8s .8s infinite; }
+@keyframes titleIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 .title-body { position: relative; display: grid; gap: 14px; padding: 36px 28px 32px; max-width: 640px; }
 .tagline { font-size: 1.1rem; color: var(--muted); }
 .title-menu { display: grid; gap: 8px; max-width: 420px; }
@@ -612,6 +621,7 @@ html.calm * { animation: none !important; transition: none !important; }
 .mate-stat .bar { max-width: 110px; }
 .extract-note { font-size: .88rem; }
 .route-notes { display: grid; gap: 6px; }
+.cell-next { color: var(--fg); }
 /* Menus move up and down only. Rows meant to swipe sideways (tabs, emotes) set their own overflow. */
 .modal, .panel, .log, #app > section, .columns > section { overflow-x: hidden; overscroll-behavior: contain; }
 .drone-card { display: grid; justify-items: center; gap: 6px; text-align: center; align-content: start; }
@@ -1231,7 +1241,8 @@ import { Stage, loadSheets, sheetOf, sheetStill, setLookSheets, setCalm as setSt
 import * as A from './audio.js';
 import { iconURL, gearIconKey } from './icons.js';
 import { Town, SHOPS, setCalm as setTownCalm } from './town.js';
-import { droneIcon, setDroneArt } from './drones.js';
+import { droneIcon, setDroneArt, droneHiFrame } from './drones.js';
+import { TitleScene } from './titlefx.js';
 import { autoStep, autoFinish, loadDev, BUILDS } from './dev.js';
 import { Wheel, OrbitScene, loadDowntimeArt, artFor } from './downtime.js';
 import { Net, getCoopPrefs, setCoopPrefs, makeCode, getRoom, setRoom, getLastRoom, setLastRoom } from './net.js';
@@ -1309,7 +1320,7 @@ document.addEventListener('click', (ev) => {
 
 // This device's own choices. They don't travel with the save or to a co-op partner.
 const UI_KEY = 'cinder-cell-ui';
-const uiPrefs = { autoStop: true, fastAnim: false, calm: false, lefty: false };
+const uiPrefs = { autoStims: true, autoStop: true, fastAnim: false, calm: false, lefty: false };
 try { Object.assign(uiPrefs, JSON.parse(localStorage.getItem(UI_KEY)) || {}); } catch (e) {}
 function applyUi() {
   document.documentElement.classList.toggle('calm', uiPrefs.calm);
@@ -1553,7 +1564,7 @@ function applyDev(v, k) {
     case 'kill': if (state.run && state.run.enemy) state.run.enemy.hp = 1; break;
     case 'resolve': state.meta.resolve += n; state.meta.totalResolve += n; break;
     case 'alltrain': for (const key of Object.keys(D.TRAINING)) state.meta.training[key] = D.TRAINING[key].max; if (c) c.hp = E.stats(state).maxHp; break;
-    case 'allcell': for (const u of D.CELL) if (!state.meta.cell.includes(u.id)) state.meta.cell.push(u.id); break;
+    case 'allcell': for (const u of D.CELL) { if (!state.meta.cell.includes(u.id)) state.meta.cell.push(u.id); state.meta.cellLv = { ...(state.meta.cellLv || {}), [u.id]: u.levels.length }; } break;
   }
 }
 
@@ -1566,7 +1577,7 @@ const isHost = () => !!net && net.role === 'host';
 const myIdx = () => (isGuest() ? 1 : 0);
 // Actions that only touch this screen, never the game.
 const DOWNTIME = new Set(['drink', 'bet', 'stake', 'spin', 'invest', 'withdraw', 'shippart', 'shipcell', 'orbitgo', 'orbitact', 'orbitclose']);
-const LOCAL = new Set(['draftdrone', 'randomize', 'missiontab', 'markettab', 'chartab', 'continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm', 'cloudcopy', 'cloudload', 'cloudversions', 'cloudrestore', 'cloudkeep', 'devunlock', 'devoff', 'dev', 'autostart']);
+const LOCAL = new Set(['stimprompt', 'draftdrone', 'randomize', 'missiontab', 'markettab', 'chartab', 'continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm', 'cloudcopy', 'cloudload', 'cloudversions', 'cloudrestore', 'cloudkeep', 'devunlock', 'devoff', 'dev', 'autostart']);
 function coopChip() {
   if (!net) return '';
   const who = net.peerName || (isHost() ? 'friend' : 'host');
@@ -1577,12 +1588,12 @@ function coopChip() {
 let home = null, lastHostResolve = null, pendingGuest = null;
 // Local test runs only: gives a friend's home cell some Resolve.
 if (location.hostname === 'localhost') globalThis.cinderTestHome = (n) => { if (home) { home.meta.resolve += n; mirrorHome(); render(); } };
-const homeInfo = () => (home ? { training: home.meta.training, cell: home.meta.cell } : null);
+const homeInfo = () => (home ? { training: home.meta.training, cell: home.meta.cell, cellLv: home.meta.cellLv } : null);
 const travelCopy = (c) => { if (!c) return null; const o = JSON.parse(JSON.stringify(c)); delete o.home; delete o.coopName; delete o.payout; return o; };
 // The friend's screen shows their own cell's Resolve, training and upgrades, not the host's.
 function mirrorHome() {
   if (!home || !state || !state.meta) return;
-  for (const k of ['resolve', 'totalResolve', 'training', 'cell', 'operatives']) state.meta[k] = home.meta[k];
+  for (const k of ['resolve', 'totalResolve', 'training', 'cell', 'cellLv', 'operatives']) state.meta[k] = home.meta[k];
 }
 // What the friend earned while on someone else's game comes home with them.
 function syncHome(hostMeta) {
@@ -1858,13 +1869,29 @@ const notice = () => state.notice ? `<div class="notice">${esc(state.notice)}</d
 // ---------- screens ----------
 // Title: shown on every load until the player presses Continue. Also the old intro for a brand-new cell.
 let titleOpen = true;
+// The animated title backdrop lives outside the render cycle, so it never restarts when the menu redraws.
+const titleScene = new TitleScene();
+let titleSeen = false;
+function mountTitle() {
+  const slot = document.getElementById('title-slot');
+  if (!slot) return;
+  const c = state.char, sexNow = c && c.look ? sexOf(c.look) : (titleSeen ? titleScene.sexNow : 'f') || 'f';
+  const main = sheetOf(sexNow === 'f' ? 'op_f' : 'op_m'), other = sheetOf(sexNow === 'f' ? 'op_m' : 'op_f');
+  const front = c && c.look ? battleSheet(c.look, c.background, weaponLayer(E.baseOf(c.gear.ranged)), null) || main : main;
+  const type = (c && c.drone && c.drone.type) || 'aegis';
+  titleScene.sexNow = sexNow;
+  titleScene.setCast([front, other].filter((x) => x && x.hd), (t) => droneHiFrame(type, t));
+  slot.appendChild(titleScene.el);
+  titleScene.start();
+  titleSeen = true;
+}
 function titleScreen() {
   const m = state.meta, hasRun = state.char || m.operatives > 0;
   return `<section class="title">
-    <div class="title-art"></div>
-    <div class="title-body">
+    <div class="title-art" id="title-slot"></div>
+    <div class="title-body ${titleSeen ? '' : 'first'}">
       <span class="label">${esc(S.town)} \u00B7 after curfew</span>
-      <h1 class="big-title">${esc(S.title)}</h1>
+      <h1 class="big-title title-logo" data-text="${esc(S.title)}">${esc(S.title)}</h1>
       <p class="tagline">A resistance cell. One operative at a time.</p>
       <div class="title-menu">
         ${hasRun ? `<button class="btn primary big" data-a="continue-title">${state.char && lookStill(state.char.look, state.char.background) ? `<img class="title-me" src="${lookStill(state.char.look, state.char.background)}" alt="" width="48" height="48">` : ''}Continue <span class="sub">${state.char ? `${esc(state.char.name)}, operative ${state.char.number}` : `${m.operatives} operative${m.operatives === 1 ? '' : 's'} so far`}</span></button>` : `<button class="btn primary big" data-a="continue-title">Begin</button>`}
@@ -2295,7 +2322,7 @@ function clinic() {
 }
 
 // Cheapest thing Resolve can buy right now (training rank or cell upgrade), for the tab badge.
-const canSpendResolve = () => { const m = state.meta; return Object.entries(D.TRAINING).some(([k, t]) => m.training[k] < t.max && m.resolve >= E.trainingCost(m.training[k])) || D.CELL.some((u) => !m.cell.includes(u.id) && m.resolve >= u.cost); };
+const canSpendResolve = () => { const m = state.meta; return Object.entries(D.TRAINING).some(([k, t]) => m.training[k] < t.max && m.resolve >= E.trainingCost(m.training[k])) || D.CELL.some((u) => { const n = u.levels[E.cellLevel(m, u.id)]; return n && m.resolve >= n.cost; }); };
 
 function droneTab() {
   const c = state.char, m = state.meta, d = c.drone;
@@ -2326,9 +2353,11 @@ function character() {
       ${maxed ? '<span class="label">mastered</span>' : `<button class="btn ${m.resolve >= cost ? 'primary' : ''}" data-a="train" data-v="${k}" ${m.resolve < cost ? 'disabled' : ''}>${cost} ${esc(S.meta)}</button>`}</div>`;
   }).join('');
   const cell = D.CELL.map((u) => {
-    const owned = m.cell.includes(u.id);
+    const lv = E.cellLevel(m, u.id), now = lv ? u.levels[Math.min(lv, u.levels.length) - 1] : null, next = u.levels[lv];
     const cellIco = ico(`cell:${u.id}`);
-    return `<div class="row ${cellIco ? 'i' : ''} ${owned ? 'owned' : ''}">${cellIco}<div><div class="name">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div></div>${owned ? '<span></span>' : `<button class="btn ${m.resolve >= u.cost ? 'primary' : ''}" data-a="cell" data-v="${u.id}" ${m.resolve < u.cost ? 'disabled' : ''}>${u.cost} ${esc(S.meta)}</button>`}</div>`;
+    const pips = u.levels.length > 1 ? `<div class="pips" style="--n:${u.levels.length}" aria-label="level ${lv} of ${u.levels.length}" title="Level ${lv} of ${u.levels.length}">${u.levels.map((_, i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('')}</div>` : '';
+    const text = next ? `${now ? `Now: ${now.desc} ` : ''}<span class="cell-next">${now ? 'Next: ' : ''}${esc(next.desc)}</span>` : esc(now.desc);
+    return `<div class="row ${cellIco ? 'i' : ''} ${next ? '' : 'owned'}">${cellIco}<div><div class="name">${esc(u.name)}</div><div class="desc">${text}</div>${pips}</div>${next ? `<button class="btn ${m.resolve >= next.cost ? 'primary' : ''}" data-a="cell" data-v="${u.id}" ${m.resolve < next.cost ? 'disabled' : ''}>${next.cost} ${esc(S.meta)}</button>` : '<span class="label">maxed</span>'}</div>`;
   }).join('');
   const wall = m.fallen.length ? m.fallen.map((f) => `<div><span>${esc(f.name)} <span class="muted">\u00B7 Lv ${f.level}</span></span><span class="muted">${esc(E.sectorName(f.sector, f.map))}, ${esc(f.killer)}</span></div>`).join('') : '<p class="muted">No names yet. Keep it that way.</p>';
   const bg = D.BACKGROUNDS.find((b) => b.id === c.background);
@@ -2660,7 +2689,7 @@ function modalView() {
     <div class="settings">
       <h3>Gameplay</h3>
       <div class="set-grid">
-      ${[['autoStop', 'Stop auto battle at low HP with no stims'], ['fastAnim', 'Faster fight animations'], ['calm', 'Reduce motion'], ...(matchMedia('(pointer: coarse)').matches ? [['lefty', 'Left-handed fights']] : [])].map(([k, l]) => `<label class="set-row"><span>${l}</span><button class="btn" data-a="uipref" data-v="${k}" aria-pressed="${uiPrefs[k]}">${uiPrefs[k] ? 'On' : 'Off'}</button></label>`).join('')}
+      ${[['autoStims', 'Pause auto battle when out of stims'], ['autoStop', 'Stop auto battle at low HP with no stims'], ['fastAnim', 'Faster fight animations'], ['calm', 'Reduce motion'], ...(matchMedia('(pointer: coarse)').matches ? [['lefty', 'Left-handed fights']] : [])].map(([k, l]) => `<label class="set-row"><span>${l}</span><button class="btn" data-a="uipref" data-v="${k}" aria-pressed="${uiPrefs[k]}">${uiPrefs[k] ? 'On' : 'Off'}</button></label>`).join('')}
       ${isGuest() ? '' : '<div class="set-row"><span>Tips you dismissed</span><button class="btn" data-a="tipsreset">Show again</button></div>'}
       </div>
       <h3>Sound</h3>
@@ -2986,9 +3015,10 @@ function render() {
   const kept = [...app.querySelectorAll('.modal, .log')].map((el) => ({ cls: el.className, top: el.scrollTop })).filter((k) => k.top > 0);
   const pageY = window.scrollY, fo = document.activeElement, foKey = fo && fo.dataset && fo.dataset.a ? [fo.dataset.a, fo.dataset.v || '', fo.dataset.k || ''].join('|') : null;
   const sameView = lastView === [state.screen, state.popup || '', modal || '', state.compare == null ? '' : state.compare].join('|');
-  app.innerHTML = autoBar() + coopBanner() + (titleOpen && !isGuest() ? titleScreen() : (showStatus ? statusStrip() : '') + screens[state.screen]()) + modalView() + payoutView() +
+  app.innerHTML = stimPromptView() + autoBar() + coopBanner() + (titleOpen && !isGuest() ? titleScreen() : (showStatus ? statusStrip() : '') + screens[state.screen]()) + modalView() + payoutView() +
     (toast ? `<div class="toast" role="status">${esc(toast)}</div>` : '');
   toast = null;
+  mountTitle();
   animatePayout();
   lastView = [state.screen, state.popup || '', modal || '', state.compare == null ? '' : state.compare].join('|');
   if (sameView) {
@@ -3045,6 +3075,22 @@ function render() {
 // Auto battle: when the stage is in Auto mode, play the engine's fixed routine one move at a time.
 // It hands back once per scare: choosing Auto again in the same spot means carry on.
 let autoTimer = null, autoStopped = false;
+// Out of stims mid-raid: ask once, unless the raid started without any. Getting more stims re-arms it.
+let stimPrompt = false, stimPromptDone = false;
+function autoStimPause() {
+  const c = state.char;
+  if (c.items.stim > 0) { stimPromptDone = false; return false; }
+  if (!uiPrefs.autoStims || stimPromptDone || !c.stimsAtDeploy) return false;
+  stimPrompt = true; A.play('denied'); render();
+  return true;
+}
+function stimPromptView() {
+  if (!stimPrompt || !state.run || !state.run.enemy || state.screen !== 'combat') return '';
+  const c = state.char, st = E.stats(state);
+  return `<div class="modal-wrap stim-prompt"><div class="modal" role="alertdialog" aria-label="Out of stims"><div class="pop-head"><h2>Out of stims</h2></div>
+    <p>Auto battle has paused. <b>${Math.max(0, c.hp)} / ${st.maxHp} HP</b> against ${esc(state.run.enemy.name)}.</p>
+    <div class="btnrow"><button class="btn primary big" data-a="stimprompt" data-v="continue">Continue auto</button><button class="btn big" data-a="stimprompt" data-v="manual">Take over</button><button class="btn big" data-a="stimprompt" data-v="run">Run \u00B7 ${Math.round(E.runChance(state) * 100)}%, lose ${Math.round(E.runShare(state) * 100)}%</button></div></div></div>`;
+}
 function autoSafetyStop() {
   const c = state.char, danger = uiPrefs.autoStop && !c.items.stim && c.hp < E.stats(state).maxHp * 0.3;
   if (!danger) { autoStopped = false; return false; }
@@ -3053,10 +3099,10 @@ function autoSafetyStop() {
   return true;
 }
 function scheduleAuto() {
-  if (autoTimer || !stage.auto || busy || modal || titleOpen || !state || state.screen !== 'combat' || !state.run || !state.run.enemy) return;
+  if (autoTimer || stimPrompt || !stage.auto || busy || modal || titleOpen || !state || state.screen !== 'combat' || !state.run || !state.run.enemy) return;
   autoTimer = setTimeout(() => {
     autoTimer = null;
-    if (stage.auto && !busy && !modal && !titleOpen && state.screen === 'combat' && state.run && state.run.enemy && (!E.isCoop(state) || state.run.actor === myIdx()) && !autoSafetyStop()) fight(E.autoAction(state), isGuest() ? 1 : 0);
+    if (stage.auto && !busy && !modal && !titleOpen && state.screen === 'combat' && state.run && state.run.enemy && (!E.isCoop(state) || state.run.actor === myIdx()) && !autoStimPause() && !autoSafetyStop()) fight(E.autoAction(state), isGuest() ? 1 : 0);
   }, 350);
 }
 document.addEventListener('automode', () => { A.play('click'); if (state.screen === 'combat') render(); });
@@ -3133,6 +3179,13 @@ function act(a, v, k) {
   if (a === 'autostop') { stopAuto(); return; }
   if (auto) return;
   if (a === 'closemodal') { modal = null; confirmReset = false; state.report = null; render(); return; }
+  if (a === 'stimprompt') {
+    stimPrompt = false; stimPromptDone = true; A.play('click');
+    if (v === 'manual') stage.setMode('manual');
+    render();
+    if (v === 'run') return fight('run', isGuest() ? 1 : 0);
+    return;
+  }
   if (a === 'uipref') { uiPrefs[v] = !uiPrefs[v]; try { localStorage.setItem(UI_KEY, JSON.stringify(uiPrefs)); } catch (e) {} applyUi(); A.play('click'); render(); return; }
   if (busy && !modal) return;
   if (a === 'act') return fight(v);

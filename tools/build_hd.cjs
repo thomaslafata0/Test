@@ -5,7 +5,7 @@ const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
 const [SRC, OUT] = process.argv.slice(2);
-const FPS = { idle: 6, attack: 11, attackM: 12, charge: 8, hit: 14, defend: 10, death: 10, repair: 8 };
+const FPS = { idle: 6, attack: 11, attackM: 12, charge: 8, hit: 14, defend: 10, death: 10, repair: 8, special: 11 };
 const LOOP = new Set(['idle', 'charge', 'repair']);
 const uri = (f) => `data:image/png;base64,${fs.readFileSync(f).toString('base64')}`;
 (async () => {

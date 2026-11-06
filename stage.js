@@ -197,6 +197,13 @@ export class Stage {
     return actor.side === 'player' ? { x: a.x + actor.ox + s * 0.35, y: a.y + actor.oy - s * 0.6 } : { x: a.x + actor.ox - s * 0.3, y: a.y + actor.oy - s * 0.5 };
   }
 
+  // High-resolution attacks take a moment to raise the weapon. Start part way in, and let the shot wait for the firing frame.
+  async aim(actor) {
+    const a = actor.sheet && actor.sheet.hd && (actor.sheet.anims[actor.anim] || actor.sheet.anims.attack);
+    if (!a) return;
+    actor.animStart -= 2000 / a.fps;
+    await this.wait(2600 / a.fps);
+  }
   // Called after every render of the combat screen.
   sync({ run, enemy, player, drone = null, partnerDrone = null, partner = null, sector, boss, theme = 'garrison', allies = 0, pst = {}, est = {}, affix = null, quirk = null, label = '' }) {
     const now = performance.now();
@@ -376,6 +383,7 @@ export class Stage {
     switch (`${ev.who}:${ev.type}`) {
       case 'player:shoot': {
         P.setAnim('attack', now());
+        await this.aim(P);
         await this.move(P, 6, -4, 70);
         const m = this.muzzle(P);
         this.burst(m.x, m.y, 6, C.amber, 1.5, 120, 0);
@@ -387,6 +395,7 @@ export class Stage {
       }
       case 'player:burst': {
         P.setAnim('attack', now());
+        await this.aim(P);
         await this.move(P, 5, -3, 60);
         for (const h of ev.hits) {
           const m = this.muzzle(P), c = this.center(E);
@@ -403,6 +412,7 @@ export class Stage {
       }
       case 'player:blast': {
         P.setAnim('attack', now());
+        await this.aim(P);
         await this.move(P, 6, -4, 70);
         const m = this.muzzle(P), c = this.center(E);
         this.burst(m.x, m.y, 10, C.amber, 2, 140, 0);
@@ -625,6 +635,7 @@ export class Stage {
         if (MELEE.has(E.id)) {
           await this.move(E, -80, 50, heavy ? 140 : 180);
         } else {
+          await this.aim(E);
           const m = this.muzzle(E), target = ev.ally ? { x: 30, y: 160 } : this.center(P);
           this.burst(m.x, m.y, 6, C.red, 1.5, 120, 0);
           if (heavy) { this.bolt(m, target, C.red, 4, 200); await this.wait(70); this.bolt(m, { x: target.x + 8, y: target.y - 6 }, C.red, 2, 200); await this.wait(130); }
@@ -678,7 +689,8 @@ export class Stage {
         this.popup('enemy', ev.name, 'info');
         play('heavyCharge');
         await this.wait(380);
-        E.setAnim('attack', now());
+        E.setAnim(E.sheet && E.sheet.anims.special ? 'special' : 'attack', now());
+        await this.aim(E);
         if (MELEE.has(E.id)) { play('whoosh'); await this.move(E, -80, 50, 170); }
         else { const m = this.muzzle(E); play('enemyShot'); this.burst(m.x, m.y, 8, col, 1.5, 150, 0); await this.bolt(m, this.center(P), col, 3, 200); }
         if (ev.blocked) { const c = this.center(P); this.ring(c.x + 18, c.y - 10, 30, C.ion, 260, 2); play('block'); this.popup('player', 'Blocked', 'info'); }

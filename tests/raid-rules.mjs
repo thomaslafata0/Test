@@ -7,7 +7,7 @@ function game(seed = 7) { const rng = E.seededRng(seed), s = E.newGame(rng); E.c
 function fight(s, rng) { s.run.room = 0; s.run.choices = ['fight', 'fight']; E.enterRoom(s, 0, rng); return s.run.enemy; }
 function win(s, rng) { const e = s.run.enemy; for (let i = 0; i < 40 && s.screen === 'combat'; i++) { e.hp = 1; e.def = 0; s.char.hp = 500; E.playerAct(s, 'shoot', rng, 0); } }
 { // XP banks in a raid; extract rates by position; walking-in money kept
-  const { s, rng } = game(); s.char.credits = 1000; s.char.xp = 0;
+  const { s, rng } = game(); s.meta.contracts = []; s.char.credits = 1000; s.char.xp = 0;
   E.deploy(s, 'garrison', 1, rng); fight(s, rng);
   const lv = s.char.level; win(s, rng);
   ok('no level or XP during a raid', s.char.level === lv && s.char.xp === 0 && s.char.xpBank > 0, `bank ${s.char.xpBank}`);

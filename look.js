@@ -289,7 +289,37 @@ const ops = { m: null, f: null };
 export function setOpSheets(m, f) { ops.m = m; ops.f = f; for (const k of Object.keys(sheetCache)) if (k.startsWith('hd:')) delete sheetCache[k]; for (const k of Object.keys(stillCache)) if (k.startsWith('hd')) delete stillCache[k]; }
 const NATURAL_HAIR = 3; // the colour they were drawn with
 const NATURAL_SKIN = 1;
-const AIM = { idle: [20], charge: [20], attack: [20, 20, 8, -3, -5, -8, -5, -4, 0] };
+// Finds the drawn-in pistol in one frame: the thin run of steel-coloured pixels furthest forward in the upper body.
+// Returns its pixels, its angle, and the end nearest the hand, or null if no pistol shows in this frame.
+function findPistol(p, W, ox, fw, fh) {
+  let top = -1, bottom = -1;
+  for (let y = 0; y < fh; y++) for (let x = 0; x < fw; x++) if (p[(y * W + ox + x) * 4 + 3] > 40) { if (top < 0) top = y; bottom = y; break; }
+  if (top < 0) return null;
+  const at = (x, y) => (y * W + ox + x) * 4;
+  const steel = (x, y) => { const o = at(x, y); if (p[o + 3] < 60) return false; const [h, s, v] = hsv(p[o], p[o + 1], p[o + 2]); return h > 165 && h < 240 && s < 0.62 && v < 0.85 && v > 0.12; };
+  const yTo = Math.min(fh - 1, top + (bottom - top) * 0.62), tried = new Uint8Array(fw * fh);
+  for (let sx = fw - 1; sx > fw * 0.45; sx--) for (let sy = top; sy <= yTo; sy++) {
+    if (tried[sy * fw + sx] || !steel(sx, sy)) continue;
+    const list = [], stack = [[sx, sy]]; tried[sy * fw + sx] = 1;
+    while (stack.length) {
+      const [x, y] = stack.pop(); list.push([x, y]);
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= fw || ny >= fh || tried[ny * fw + nx] || Math.hypot(nx - sx, ny - sy) > 58 || !steel(nx, ny)) continue;
+        tried[ny * fw + nx] = 1; stack.push([nx, ny]);
+      }
+    }
+    if (list.length < 30) continue;
+    if (list.length > 700) return null; // a leg or the jacket, not a gun: no pistol showing
+    let cx = 0, cy = 0; for (const q of list) { cx += q[0]; cy += q[1]; } cx /= list.length; cy /= list.length;
+    let xx = 0, yy = 0, xy = 0; for (const q of list) { const a = q[0] - cx, b = q[1] - cy; xx += a * a; yy += b * b; xy += a * b; }
+    const ang = 0.5 * Math.atan2(2 * xy, xx - yy), ux = Math.cos(ang), uy = Math.sin(ang);
+    let lo = 1e9, hi = -1e9, wide = 0; for (const q of list) { const a = q[0] - cx, b = q[1] - cy, d = a * ux + b * uy; lo = Math.min(lo, d); hi = Math.max(hi, d); wide = Math.max(wide, Math.abs(-a * uy + b * ux)); }
+    if (hi - lo < 16 || hi - lo > 66 || wide > 16) return null;
+    return { list, ang, hx: cx + ux * lo, hy: cy + uy * lo, tx: cx + ux * hi, ty: cy + uy * hi };
+  }
+  return null;
+}
 const hsv = (r, g, b) => { const mx = Math.max(r, g, b), mn = Math.min(r, g, b), c = mx - mn; let h = 0; if (c) h = mx === r ? ((g - b) / c) % 6 : mx === g ? (b - r) / c + 2 : (r - g) / c + 4; return [(h * 60 + 360) % 360, mx ? c / mx : 0, mx / 255]; };
 const rgb = (hex) => [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
 function hdSheet(look, ranged) {
@@ -301,7 +331,7 @@ function hdSheet(look, ranged) {
   const skin = look.skin !== NATURAL_SKIN && SKINS[look.skin] ? rgb(SKINS[look.skin][2]) : null;
   const art = gun ? gunSprite(gun) : null, grip = gun ? GUN_GRIP[gun] : null, anims = {};
   for (const [name, a] of Object.entries(op.anims)) {
-    if (!hair && !skin && !(art && AIM[name])) { anims[name] = a; continue; }
+    if (!hair && !skin && !art) { anims[name] = a; continue; }
     const fw = a.img.width / a.frames, fh = a.img.height, c = document.createElement('canvas'); c.width = a.img.width; c.height = fh;
     const g = c.getContext('2d', { willReadFrequently: true }); g.imageSmoothingEnabled = false; g.drawImage(a.img, 0, 0);
     const id = g.getImageData(0, 0, c.width, fh), p = id.data;
@@ -316,19 +346,27 @@ function hdSheet(look, ranged) {
         else if (skin && h > 8 && h < 36 && s > 0.2 && s < 0.56 && v > 0.55) { const k = Math.min(1.15, v * 1.12); for (let n = 0; n < 3; n++) p[o + n] = Math.min(255, skin[n] * k); }
       }
     }
+    const swaps = [];
+    if (art) for (let f = 0; f < a.frames; f++) {
+      const ox = Math.round(f * fw), hit = findPistol(p, c.width, ox, fw, fh);
+      if (!hit) continue;
+      // Clear the pistol, its dark outline, and any muzzle flash, leaving the hand.
+      for (const [qx, qy] of hit.list) for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+        const nx = qx + dx, ny = qy + dy; if (nx < 0 || ny < 0 || nx >= fw || ny >= fh) continue;
+        const o = (ny * c.width + ox + nx) * 4; if (p[o + 3] < 40) continue;
+        const [hh, ss, vv] = hsv(p[o], p[o + 1], p[o + 2]);
+        if (vv < 0.24 || (hh > 165 && hh < 240 && ss < 0.62)) p[o + 3] = 0;
+      }
+      for (let y = Math.max(0, Math.round(hit.ty) - 26); y < Math.min(fh, hit.ty + 26); y++) for (let x = Math.max(0, Math.round(hit.tx) - 6); x < Math.min(fw, hit.tx + 40); x++) {
+        const o = (y * c.width + ox + x) * 4; if (p[o + 3] > 0 && Math.max(p[o], p[o + 1], p[o + 2]) > 190) p[o + 3] = 0;
+      }
+      swaps.push({ ox, hit });
+    }
     g.putImageData(id, 0, 0);
-    if (art && AIM[name]) for (let f = 0; f < a.frames; f++) {
-      const ox = Math.round(f * fw), yFrom = Math.round(fh * 0.22), yTo = Math.round(fh * 0.55);
-      let tipX = -1, tipY = 0;
-      for (let y = yFrom; y < yTo; y++) for (let x = fw - 1; x > tipX; x--) { const o = (y * c.width + ox + x) * 4; if (p[o + 3] > 60 && !(p[o] > 200 && p[o + 1] > 180)) { tipX = x; tipY = y; break; } }
-      if (tipX < 0) continue;
-      // The drawn-in pistol is about this long; the hand holding it sits at its near end.
-      const list = AIM[name], ang = (list[f] === undefined ? list[0] : list[f]) * Math.PI / 180, reach = 36;
-      const hx = ox + tipX - Math.cos(ang) * reach, hy = tipY - Math.sin(ang) * reach;
+    for (const { ox, hit } of swaps) {
       g.save(); g.beginPath(); g.rect(ox, 0, fw, fh); g.clip();
-      g.translate(hx, hy); g.rotate(ang);
-      g.clearRect(6, -16, 64, 30);
-      g.drawImage(art, -grip[0], -grip[1]);
+      g.translate(ox + hit.hx, hit.hy); g.rotate(hit.ang);
+      g.drawImage(art, -grip[0] + 4, -grip[1]);
       g.restore();
     }
     anims[name] = { ...a, img: c };

@@ -70,6 +70,9 @@ export const mitigate = (raw, def) => Math.max(1, Math.round((raw * raw) / (raw 
 const has = (c, id) => c.upgrades.includes(id);
 const hasImp = (c, id) => c.implants.includes(id);
 const hasCell = (m, id) => m.cell.includes(id);
+// Levels of the cell's upgrades. Upgrades from older saves count as the level they were equal to.
+export const cellLevel = (m, id) => (m.cellLv && m.cellLv[id]) || (m.cell.includes(id) ? D.CELL_LEGACY[id] || 1 : 0);
+const cellV = (m, id, none) => { const u = D.CELL.find((x) => x.id === id), lv = cellLevel(m, id); return lv ? u.levels[Math.min(lv, u.levels.length) - 1].v : none; };
 export const hasPerk = (c, id) => !!c && (c.perks || []).includes(id);
 export const perkById = (id) => D.PERKS.find((p) => p.id === id);
 export const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI'];
@@ -220,7 +223,7 @@ export function newDraft(meta, rng) {
     name: pick(rng, D.OPERATIVE_NAMES), background: 'foundry', step: 1, drone: 'hornet',
     look: { body: female ? 'body_f1' : 'body_m1', hair: female ? 'hair_long_tied' : 'hair_short', skin: randInt(rng, 0, 5), hairColor: randInt(rng, 0, 5) },
     attrs: { str: D.ATTR_START, agi: D.ATTR_START, int: D.ATTR_START, cha: D.ATTR_START },
-    points: D.ATTR_POINTS + (hasCell(meta, 'mentor') ? 1 : 0),
+    points: D.ATTR_POINTS + cellV(meta, 'mentor', 0),
   };
 }
 export const draftAttr = (draft, k) => draft.attrs[k] + (D.BACKGROUNDS.find((b) => b.id === draft.background).attrs[k] || 0);
@@ -241,7 +244,7 @@ export function createChar(s, rng, draft = null, slot = 'char') {
   for (const k of Object.keys(D.ATTRS)) attrs[k] = draftAttr(d, k);
   const c = {
     uid: newUid(), name: (d.name || '').trim().slice(0, 24) || pick(rng, D.OPERATIVE_NAMES), number: m.operatives, background: bg.id,
-    attrs, attrPoints: d.points, level: 1, xp: 0, credits: 25 + (bg.start.credits || 0) + (hasCell(m, 'stash') ? 60 : 0),
+    attrs, attrPoints: d.points, level: 1, xp: 0, credits: 25 + (bg.start.credits || 0) + cellV(m, 'stash', 0),
     gear: starterGear(m), market: [],
     items: { stim: 2, thermal: 0, ion: 0, smoke: 0 }, upgrades: [], implants: [],
     maps: {}, deepest: 0, hp: 1, history: [], perks: [], perkN: {}, lockup: [], xpBank: 0, look: d.look || null,
@@ -249,7 +252,7 @@ export function createChar(s, rng, draft = null, slot = 'char') {
   };
   for (const k of ['smoke', 'ion']) if (bg.start[k]) c.items[k] += bg.start[k];
   c.gear = startingGear(m, bg.id);
-  if (hasCell(m, 'kit')) { c.items.stim += 1; c.items.thermal += 1; }
+  { const kit = cellV(m, 'kit', [0, 0]); c.items.stim += kit[0]; c.items.thermal += kit[1]; }
   c.hp = statsOf(m, c).maxHp;
   let heir = '';
   if (m.heirloom && canEquip(c, m.heirloom)) {
@@ -313,7 +316,8 @@ export function startingGear(meta, bgId) {
 export function starterGear(meta) {
   const g = {};
   for (const [slot, id] of Object.entries(D.STARTER_GEAR)) g[slot] = id ? makeItem(id) : null;
-  if (meta && hasCell(meta, 'cache')) { g.ranged = makeItem('carbine'); g.melee = makeItem('baton'); }
+  if (meta && cellV(meta, 'cache', 0) >= 1) g.melee = makeItem('baton');
+  if (meta && cellV(meta, 'cache', 0) >= 2) g.ranged = makeItem('carbine');
   return g;
 }
 // Main stat (ATK for weapons, DEF for armour) after rarity and upgrades. Each upgrade adds 8% (at least +1).
@@ -888,7 +892,7 @@ export function tenementGift(s) {
 // ---------- town ----------
 export function healCost(s) {
   const st = stats(s);
-  return Math.ceil((st.maxHp - s.char.hp) * 0.5 * hard(s).price * TUNE.priceAll * (hasCell(s.meta, 'ledger') ? 0.5 : 1));
+  return Math.ceil((st.maxHp - s.char.hp) * 0.5 * hard(s).price * TUNE.priceAll * (1 - cellV(s.meta, 'ledger', 0)));
 }
 export function heal(s) {
   const cost = healCost(s);
@@ -1063,9 +1067,12 @@ export function train(s, stat) {
 
 export function buyCell(s, id) {
   const u = D.CELL.find((x) => x.id === id), m = s.meta;
-  if (!u || hasCell(m, id) || m.resolve < u.cost) return false;
-  m.resolve -= u.cost; m.cell.push(id);
-  s.notice = `${u.name}: every future operative benefits.`;
+  const lv = u ? cellLevel(m, id) : 0, next = u && u.levels[lv];
+  if (!next || m.resolve < next.cost) return false;
+  m.resolve -= next.cost;
+  if (!m.cell.includes(id)) m.cell.push(id);
+  m.cellLv = { ...(m.cellLv || {}), [id]: lv + 1 };
+  s.notice = `${u.name} level ${lv + 1}: every future operative benefits.`;
   return true;
 }
 
@@ -1121,6 +1128,7 @@ export function deploy(s, mapId, startSector, rng) {
   s.meta.stats.raids += 1;
   forEachActor(s, (c) => {
     c.startCredits = c.credits; c.safeCredits = c.credits; c.xpBank = 0; c.payout = null;
+    c.stimsAtDeploy = c.items.stim; // what auto battle's out-of-stims pause compares with
     if (D.BACKGROUNDS.find((b) => b.id === c.background).follower) { s.run.allies = Math.min(2, s.run.allies + 1); s.run.follower = true; }
     if (hasTrait(c, 'surplus') && c.items.stim < stats(s).carry) c.items.stim += 1;
     if (has(c, 'quarter') && c.items.stim < stats(s).carry) c.items.stim += 1;
