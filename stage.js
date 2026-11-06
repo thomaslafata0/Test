@@ -5,7 +5,34 @@
 import { portraitCanvas, MUZZLE } from './portraits.js';
 import { play } from './audio.js';
 
+import { droneCanvas, DRONE_W, DRONE_H } from './drones.js';
 export const W = 384, H = 216;
+// "Sharper art" test: each frame is smoothed with the Scale2x pixel-art filter, twice, so edges round off instead of showing blocks.
+const SHARP_RES = 3;
+const sharpCache = new WeakMap();
+function scale2x(src) {
+  const sw = src.width, sh = src.height, a = src.getContext('2d').getImageData(0, 0, sw, sh).data;
+  const out = document.createElement('canvas'); out.width = sw * 2; out.height = sh * 2;
+  const g = out.getContext('2d'), im = g.createImageData(sw * 2, sh * 2), b = new Uint32Array(im.data.buffer), p = new Uint32Array(a.buffer, a.byteOffset, sw * sh);
+  const at = (x, y) => p[Math.max(0, Math.min(sh - 1, y)) * sw + Math.max(0, Math.min(sw - 1, x))];
+  for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++) {
+    const e = at(x, y), n = at(x, y - 1), s = at(x, y + 1), w = at(x - 1, y), o = at(x + 1, y), split = n !== s && w !== o, i = y * 2 * sw * 2 + x * 2, row = sw * 2;
+    b[i] = split && w === n ? w : e; b[i + 1] = split && n === o ? o : e; b[i + row] = split && w === s ? w : e; b[i + row + 1] = split && s === o ? o : e;
+  }
+  g.putImageData(im, 0, 0);
+  return out;
+}
+function sharpSheet(img) {
+  if (sharpCache.has(img)) return sharpCache.get(img);
+  let out = null;
+  try {
+    const c = document.createElement('canvas'); c.width = img.naturalWidth || img.width; c.height = img.naturalHeight || img.height;
+    c.getContext('2d').drawImage(img, 0, 0);
+    out = scale2x(scale2x(c));
+  } catch (e) { out = null; }
+  sharpCache.set(img, out);
+  return out;
+}
 const MELEE = new Set(['hound', 'riot', 'loader', 'brask', 'foreman', 'slagger', 'jailer', 'sedation']);
 const HOVER = new Set(['probe']);
 const osCalm = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -117,7 +144,8 @@ export class Stage {
     this.el.addEventListener('click', (ev) => {
       const b = ev.target.closest('[data-speed]');
       if (!b) return;
-      this.setMode(b.dataset.speed);
+      // On a phone only the current mode shows, and tapping it moves to the next.
+      this.setMode(b.dataset.speed === this.mode && matchMedia('(max-height: 500px) and (orientation: landscape)').matches ? { manual: 'auto1', auto1: 'auto2', auto2: 'manual' }[this.mode] : b.dataset.speed);
     });
     this.syncSpeed();
     const loop = (t) => { try { this.draw(performance.now()); } catch (e) { console.warn('stage draw', e); } requestAnimationFrame(loop); };
@@ -133,6 +161,14 @@ export class Stage {
   cycleMode() { this.setMode({ manual: 'auto1', auto1: 'auto2', auto2: 'manual' }[this.mode]); }
   setFast(on) { this.fast = on; this.applySpeed(); }
   applySpeed() { this.speed = this.mode === 'auto2' ? 2 : this.fast ? 1.6 : 1; }
+  setSharp(on) {
+    if (this.sharp === on) return;
+    this.sharp = on;
+    const k = on ? SHARP_RES : 1;
+    this.canvas.width = W * k; this.canvas.height = H * k;
+    this.ctx.setTransform(k, 0, 0, k, 0, 0);
+    this.ctx.imageSmoothingEnabled = false;
+  }
   syncSpeed() { this.el.querySelectorAll('[data-speed]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.speed === this.mode))); }
   get skip() { return false; }
   wait(ms) { return this.skip ? Promise.resolve() : new Promise((r) => setTimeout(r, ms / this.speed)); }
@@ -152,6 +188,21 @@ export class Stage {
   }
   // Pixels from the frame's bottom edge to the character's feet (8px in the source sheet).
   footPad(actor) { return actor.sheet ? 8 * actor.scale : 0; }
+  // Hovers above the gun, clear of the operative and their partner. Small on purpose: two of them shouldn't crowd a co-op fight.
+  dronePos(actor, info, t = performance.now(), seed = 0) {
+    const c = this.center(actor), size = actor.size || 160, still = reduceMotion || (info && info.damaged);
+    const bob = still ? 0 : Math.sin(t / 310 + seed * 2) * 2, sway = still ? 0 : Math.sin(t / 830 + seed) * 2;
+    return { x: Math.round(c.x + size * 0.16 + sway), y: Math.round(c.y - size * 0.4 + bob + (info && info.damaged ? 12 : 0)) };
+  }
+  drawDrone(actor, info, t, seed) {
+    const g = this.g || this.ctx, p = this.dronePos(actor, info, t, seed), w = DRONE_W * 2, h = DRONE_H * 2;
+    g.save();
+    g.imageSmoothingEnabled = false;
+    g.globalAlpha = actor.alpha === undefined ? 1 : actor.alpha;
+    g.drawImage(droneCanvas(info.type, Math.floor(t / 70), !!info.damaged), p.x - w / 2, p.y - h / 2, w, h);
+    g.restore();
+    if (info.damaged && !reduceMotion && Math.random() < 0.05) this.burst(p.x, p.y - 4, 1, Math.random() < 0.5 ? C.smoke : C.spark, 0.5, 500, -0.02, 1);
+  }
   center(actor) {
     const a = this.anchor(actor.side, actor);
     if (actor.sheet) return { x: a.x + actor.ox, y: a.y + actor.oy - actor.size * 0.3 };
@@ -166,10 +217,11 @@ export class Stage {
   }
 
   // Called after every render of the combat screen.
-  sync({ run, enemy, player, partner = null, sector, boss, theme = 'garrison', allies = 0, pst = {}, est = {}, affix = null, quirk = null, label = '' }) {
+  sync({ run, enemy, player, drone = null, partnerDrone = null, partner = null, sector, boss, theme = 'garrison', allies = 0, pst = {}, est = {}, affix = null, quirk = null, label = '' }) {
     const now = performance.now();
     // Co-op: the friend's operative stands at your shoulder. partner = { idx, name, hp, maxHp, acting }.
     this.partnerInfo = partner;
+    this.drone = drone; this.partnerDrone = partnerDrone;
     if (partner && !this.partner) this.partner = new Actor('player', 'partner', false);
     if (!partner) this.partner = null;
     this.sector = sector; this.boss = boss; this.theme = theme; this.allies = allies;
@@ -437,6 +489,42 @@ export class Stage {
         this.popup('player', '\u201CRun.\u201D', 'level');
         await this.wait(350);
         if (!ev.ok) { this.popup('enemy', 'Shaken \u221225% ATK', 'info'); await this.move(E, 6, 0, 100); await this.move(E, 0, 0, 120); }
+        break;
+      }
+      case 'drone:shoot': {
+        const info = P === this.partner ? this.partnerDrone : this.drone, from = this.dronePos(P, info), c = this.center(E);
+        play('shot');
+        await this.bolt(from, c, C.red, 1, 120);
+        this.burst(c.x, c.y, 3, C.spark, 1.2);
+        this.popup('enemy', `\u2212${ev.dmg}`, '');
+        this.setHp('enemy', ev.ehp);
+        break;
+      }
+      case 'drone:heal': {
+        const info = P === this.partner ? this.partnerDrone : this.drone, from = this.dronePos(P, info), c = this.center(P);
+        await this.bolt(from, c, C.heal, 1, 100);
+        this.burst(c.x, c.y, 4, C.heal, 0.8, 500, -0.04, 1);
+        if (P !== this.partner) this.setHp('player', ev.php);
+        this.popup(P === this.partner ? 'partner' : 'player', `+${ev.amt}`, 'heal');
+        break;
+      }
+      case 'drone:block': {
+        const info = P === this.partner ? this.partnerDrone : this.drone, from = this.dronePos(P, info), c = this.center(P);
+        play('shield');
+        this.burst(c.x, c.y, 12, C.ion, 1.8, 350);
+        this.popup(P === this.partner ? 'partner' : 'player', 'Intercepted', 'info');
+        if (ev.dmg) { const ec = this.center(E); await this.bolt(from, ec, C.ion, 1, 120); this.popup('enemy', `\u2212${ev.dmg}`, ''); this.setHp('enemy', ev.ehp); }
+        await this.wait(200);
+        break;
+      }
+      case 'drone:item': {
+        const info = P === this.partner ? this.partnerDrone : this.drone, from = this.dronePos(P, info), c = this.center(ev.item === 'stim' ? P : E);
+        play(ev.item === 'stim' ? 'heal' : ev.item === 'ion' ? 'zap' : 'throw');
+        await this.bolt(from, c, ev.item === 'stim' ? C.heal : ev.item === 'ion' ? C.ion : C.amber, 2, 220);
+        this.burst(c.x, c.y, ev.item === 'thermal' ? 18 : 8, ev.item === 'stim' ? C.heal : ev.item === 'ion' ? C.ion : C.amber, 2, 420);
+        if (ev.item === 'stim') { if (P !== this.partner) this.setHp('player', ev.php); this.popup(P === this.partner ? 'partner' : 'player', `+${ev.amt}`, 'heal'); }
+        else { if (ev.dmg) { this.popup('enemy', `\u2212${ev.dmg}`, 'crit'); this.flash(E); } else this.popup('enemy', 'Stunned', 'info'); this.setHp('enemy', ev.ehp); }
+        await this.wait(200);
         break;
       }
       case 'ally:shoot': {
@@ -806,7 +894,9 @@ export class Stage {
       bg.globalCompositeOperation = 'source-atop'; bg.globalAlpha = 0.85; bg.fillStyle = actor.flashColor; bg.fillRect(0, 0, f.sw, f.sh);
       g.drawImage(b, 0, 0, f.sw, f.sh, x, y, w, h);
     } else {
-      g.drawImage(f.img, f.sx, 0, f.sw, f.sh, x, y, w, h);
+      const hi = this.sharp ? sharpSheet(f.img) : null;
+      if (hi) { g.imageSmoothingEnabled = true; g.drawImage(hi, f.sx * 4, 0, f.sw * 4, f.sh * 4, x, y, w, h); g.imageSmoothingEnabled = false; }
+      else g.drawImage(f.img, f.sx, 0, f.sw, f.sh, x, y, w, h);
     }
     g.globalAlpha = 1;
   }
@@ -868,6 +958,10 @@ export class Stage {
       if (this.partnerInfo) { const pc = this.center(this.partner); g.fillStyle = this.partnerInfo.acting ? C.amber : 'rgba(221,214,198,.7)'; g.font = '7px monospace'; g.textAlign = 'center'; g.fillText(this.partnerInfo.name.toUpperCase().slice(0, 12), Math.round(pc.x), Math.round(pc.y - this.partner.size * 0.45)); g.textAlign = 'left'; }
     }
     this.drawActor(this.player, t);
+    if (this.player && this.player.alpha > 0) {
+      if (this.partner && this.partnerDrone) this.drawDrone(this.partner, this.partnerDrone, t, 1);
+      if (this.drone) this.drawDrone(this.player, this.drone, t, 0);
+    }
     if (this.playerShield && this.player) {
       const pc = this.center(this.player);
       g.strokeStyle = `rgba(143,220,255,${0.45 + 0.2 * Math.sin(t / 90)})`; g.lineWidth = 2;

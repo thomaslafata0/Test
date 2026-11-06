@@ -113,6 +113,21 @@ const DESK = { viewport: { width: 1280, height: 800 } };
   console.log('PASS crash banner');
   await t.ctx.close();
 
+  // Music: only one track still plays after a change, even where volume can't be set (as on an iPhone).
+  {
+    const ctx2 = await browser.newContext(DESK), m = await ctx2.newPage();
+    await m.addInitScript(() => {
+      const Real = window.Audio; window.tracks = [];
+      window.Audio = function (src) { const a = new Real(src); window.tracks.push(a); Object.defineProperty(a, 'volume', { get: () => 1, set: () => {} }); a.play = () => { Object.defineProperty(a, 'paused', { value: false, configurable: true }); return Promise.resolve(); }; a.pause = () => { Object.defineProperty(a, 'paused', { value: true, configurable: true }); }; return a; };
+    });
+    await m.goto(URL);
+    await m.evaluate(`(async () => { const A = await import('./audio.js'); A.unlock(); A.setMusic('town'); await new Promise((r) => setTimeout(r, 100)); A.setMusic('raid'); await new Promise((r) => setTimeout(r, 1700)); A.setMusic('town'); await new Promise((r) => setTimeout(r, 1700)); })()`);
+    const playing = await m.evaluate(() => window.tracks.filter((a) => !a.paused).map((a) => a.src.split('/').pop()));
+    assert.deepStrictEqual(playing, ['town.mp3'], `tracks still playing: ${playing}`);
+    console.log('PASS only one music track keeps playing');
+    await ctx2.close();
+  }
+
   // A corrupt save is kept, not thrown away.
   const ctx = await browser.newContext(DESK), page = await ctx.newPage();
   await page.goto(URL);

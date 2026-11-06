@@ -10,7 +10,7 @@ function save() { try { localStorage.setItem('cinder-cell-audio', JSON.stringify
 export const getPrefs = () => ({ ...prefs });
 
 function ensure() {
-  if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return ctx; }
+  if (ctx) { if (ctx.state !== 'running') ctx.resume(); return ctx; }
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) return null;
   ctx = new AC();
@@ -39,27 +39,28 @@ export function setPref(k, v) {
 // ---------- music: two looping tracks (town, raid), crossfaded. Quiet by design. ----------
 const TRACKS = { town: 'music/town.mp3', raid: 'music/raid.mp3' };
 const music = {}; // id -> HTMLAudioElement
-let unlocked = false, wantTrack = 'town', fadeTimer = null;
+let unlocked = false, wantTrack = 'town';
 function trackFor(theme) { return theme === 'town' || !theme ? 'town' : 'raid'; }
 export function setMusic(theme) { wantTrack = trackFor(theme); startMusic(); }
+// iPhones ignore an audio element's volume, so the tracks go through the mixer. The old track is always stopped once it has faded.
+const musicGain = {};
+let musicStop = null;
 function startMusic() {
   if (!unlocked) return;
-  const target = prefs.music && !prefs.muted ? prefs.musicVolume * prefs.volume : 0;
+  const on = prefs.music && !prefs.muted, c = ensure();
   for (const id of Object.keys(TRACKS)) {
-    if (!music[id]) { const a = new Audio(TRACKS[id]); a.loop = true; a.preload = 'auto'; a.volume = 0; music[id] = a; }
-    const a = music[id], want = id === wantTrack ? target : 0;
-    if (want > 0 && a.paused) { a.play().catch(() => {}); }
-  }
-  if (fadeTimer) clearInterval(fadeTimer);
-  fadeTimer = setInterval(() => {
-    let done = true;
-    for (const id of Object.keys(music)) {
-      const a = music[id], want = id === wantTrack ? target : 0, d = want - a.volume;
-      if (Math.abs(d) < 0.02) { a.volume = want; if (want === 0 && !a.paused) a.pause(); }
-      else { a.volume = Math.max(0, Math.min(1, a.volume + Math.sign(d) * 0.02)); done = false; }
+    if (!music[id]) { const a = new Audio(TRACKS[id]); a.loop = true; a.preload = 'auto'; a.volume = c ? 1 : 0; music[id] = a; }
+    const a = music[id];
+    if (c && !musicGain[id]) {
+      try { const g = c.createGain(); g.gain.value = 0; c.createMediaElementSource(a).connect(g); g.connect(master); musicGain[id] = g; a.volume = 1; } catch (e) {}
     }
-    if (done) { clearInterval(fadeTimer); fadeTimer = null; }
-  }, 60);
+    const wanted = on && id === wantTrack;
+    if (musicGain[id]) musicGain[id].gain.setTargetAtTime(wanted ? prefs.musicVolume : 0, c.currentTime, 0.25);
+    else a.volume = wanted ? prefs.musicVolume * prefs.volume : 0;
+    if (wanted && a.paused) a.play().catch(() => {});
+  }
+  clearTimeout(musicStop);
+  musicStop = setTimeout(() => { for (const id of Object.keys(music)) if (!(on && id === wantTrack) && !music[id].paused) music[id].pause(); }, 1400);
 }
 
 // ---------- building blocks ----------

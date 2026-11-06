@@ -47,7 +47,7 @@ export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.012, bo
   // Enemy strength in sectors 1-5. Nobody levels up during a raid, so a first raid has to be winnable on level-1 stats.
   earlyCurve: [1, 0.95, 0.88, 0.84, 0.85, 0.95, 0.95, 0.95, 0.95, 0.95],
   // Rewards shrink once an operative is more than overFree levels above the sector. reinforce: enemy strength by districts already freed.
-  overFree: 2, overStep: 0.2, overMin: 0.25, defendHeavy: 0.35, smokeEscape: 0.7, priceAll: 1.15, trainBase: 3, trainStep: 1, fightDrop: FIGHT_DROP, eliteDrop: ELITE_DROP, coopCr: 1, repeatPay: 2, reinforce: [0, 0.5, 0.5, 0.35], bossRepeatXp: 0.5, bossRepeatResolve: 1,
+  extractFail: 0.15, droneAtk: 1, droneShield: 1, droneHeal: 1, droneTech: 1, overFree: 2, overStep: 0.2, overMin: 0.25, defendHeavy: 0.35, smokeEscape: 0.7, priceAll: 1.15, trainBase: 3, trainStep: 1, fightDrop: FIGHT_DROP, eliteDrop: ELITE_DROP, coopCr: 1, repeatPay: 2, reinforce: [0, 0.5, 0.5, 0.35], bossRepeatXp: 0.5, bossRepeatResolve: 1,
   rangedSpread: 0.15, meleeSpread: 0.3, shootGuard: 0.15, momentum: 0.15, coopHp: 2.1, coopAtk: 1.4, coopExtra: 3, reviveHp: 0.2, reviveAfter: 0.15, downsPerRaid: 1, bleedRounds: 3,
   // Share of unsecured credits and XP lost, by position in the five-sector run to the next boss. Beating the boss secures everything.
   extractRates: [0.8, 0.65, 0.5, 0.4, 0], escapeRates: [0.9, 0.85, 0.75, 0.65, 0.6],
@@ -216,7 +216,7 @@ function pickTarget(s, rng) {
 // ---------- character creation ----------
 export function newDraft(meta, rng) {
   return {
-    name: pick(rng, D.OPERATIVE_NAMES), background: 'foundry', step: 1,
+    name: pick(rng, D.OPERATIVE_NAMES), background: 'foundry', step: 1, drone: 'hornet',
     look: { body: pick(rng, ['body_m1', 'body_m2', 'body_f1', 'body_f2']), hair: pick(rng, ['hair_short', 'hair_cropped', 'hair_long_tied', 'hair_shaved', 'hair_mohawk', 'hair_bob']), skin: randInt(rng, 0, 5), hairColor: randInt(rng, 0, 5) },
     attrs: { str: D.ATTR_START, agi: D.ATTR_START, int: D.ATTR_START, cha: D.ATTR_START },
     points: D.ATTR_POINTS + (hasCell(meta, 'mentor') ? 1 : 0),
@@ -244,6 +244,7 @@ export function createChar(s, rng, draft = null, slot = 'char') {
     gear: starterGear(m), market: [],
     items: { stim: 2, thermal: 0, ion: 0, smoke: 0 }, upgrades: [], implants: [],
     maps: {}, deepest: 0, hp: 1, history: [], perks: [], perkN: {}, lockup: [], xpBank: 0, look: d.look || null,
+    drone: { type: D.DRONES[d.drone] ? d.drone : 'hornet', rank: droneRankOf(m, d.drone), damaged: false },
   };
   for (const k of ['smoke', 'ion']) if (bg.start[k]) c.items[k] += bg.start[k];
   c.gear = startingGear(m, bg.id);
@@ -899,6 +900,103 @@ export function heal(s) {
 // Consumables cost more the deeper this operative has been: a stim has to stay a decision at sector 15.
 const consumableScale = (c) => 1 + TUNE.itemScale * Math.max(0, ((c && c.deepest) || 0) - 1);
 export const itemCost = (s, id) => Math.round(D.ITEMS[id].cost * consumableScale(s.char));
+// ---------- drones ----------
+// Ranks are bought with Resolve and belong to the cell, one set per type. Every operative who picks that type starts there.
+export const droneRankOf = (m, type) => Math.max(1, (m.droneRanks && m.droneRanks[D.DRONES[type] ? type : 'hornet']) || 1);
+export const droneOf = (c) => (c && c.drone && !c.drone.damaged ? c.drone : null);
+export const droneValue = (d, rank = d.rank) => D.DRONES[d.type].ranks[rank - 1];
+export const droneHas = (d, rank) => !!d && d.rank >= rank;
+export const droneUpgradeCost = (d) => (d.rank >= D.DRONE_MAX_RANK ? 0 : D.DRONE_UPGRADE[d.rank - 1]);
+export const droneRepairCost = (s) => { const c = s.char; return c && c.drone ? price(s, 20 + 10 * c.drone.rank + 3 * (c.deepest || 0)) : 0; };
+export function pickDrone(s, type) {
+  const c = s.char;
+  if (!c || c.drone || !D.DRONES[type]) return false;
+  c.drone = { type, rank: droneRankOf(s.meta, type), damaged: false };
+  s.notice = `${D.DRONES[type].name} is yours. It stays with you for good.`;
+  return true;
+}
+// free: already paid for. A co-op friend pays from their own cell's Resolve on their own device.
+export function upgradeDrone(s, free = false) {
+  const c = s.char, d = c && c.drone;
+  if (!d || d.rank >= D.DRONE_MAX_RANK) return false;
+  const cost = droneUpgradeCost(d);
+  if (!free && s.meta.resolve < cost) return false;
+  d.rank += 1;
+  // A co-op friend's rank is kept by their own cell, on their own device.
+  if (!free) { s.meta.resolve -= cost; s.meta.droneRanks = { ...(s.meta.droneRanks || {}), [d.type]: d.rank }; }
+  const ab = D.DRONES[d.type].abilities[d.rank];
+  s.notice = `${D.DRONES[d.type].name} is now rank ${d.rank}, for every operative who flies one.${ab ? ` New ability: ${ab.name}.` : ''}`;
+  return true;
+}
+export function repairDrone(s) {
+  const c = s.char, cost = droneRepairCost(s);
+  if (!c || !c.drone || !c.drone.damaged || c.credits < cost) return false;
+  c.credits -= cost; c.drone.damaged = false; ledger(s, 'spend:drone', cost);
+  s.notice = `${D.DRONES[c.drone.type].name} repaired for ${cost} ${D.SETTING.cur}.`;
+  return true;
+}
+// Clearing a sector can knock a drone out until it's repaired in town.
+function droneWear(s, rng) {
+  const hit = [];
+  for (const i of livingActors(s)) withActor(s, i, () => {
+    const d = droneOf(s.char);
+    if (!d || rng() >= D.DRONE_DAMAGE) return;
+    d.damaged = true; hit.push(i);
+    log(s, `${s.char.name.split(' ')[0]}\u2019s ${D.DRONES[d.type].name} takes a hit and goes offline. It needs repairing in town.`, 'bad');
+  });
+  return hit;
+}
+// The drone's move, straight after its operative's.
+function droneTurn(s, rng, who) {
+  const r = s.run, e = r.enemy, c = s.char, st = stats(s), d = droneOf(c);
+  if (!d) return;
+  const v = droneValue(d), name = D.DRONES[d.type].name, bank = r.droneBank || (r.droneBank = {});
+  if (d.type === 'hornet') {
+    const pow = Math.max(st.atk, st.atkM) * v / 100 * (droneHas(d, 3) && e.hp < e.maxHp * 0.3 ? 2 : 1) * TUNE.droneAtk;
+    bank[who] = (bank[who] || 0) + pow;
+    const dmg = Math.floor(bank[who]);
+    if (dmg >= 1) {
+      bank[who] -= dmg; e.hp -= dmg;
+      fx(s, { who: 'drone', type: 'shoot', drone: d.type, dmg });
+      log(s, `${name} hits ${e.name} for ${dmg}.`, 'hit');
+    }
+    if (droneHas(d, 5) && e.hp > 0 && rng() < 0.1) { addStatus(e.st, e.fresh, { exposed: 2 }); log(s, `${name} marks ${e.name}: Exposed.`, 'good'); }
+  } else if (d.type === 'mender') {
+    if (droneHas(d, 3) && (r.pst.bleed || r.pst.burn) && rng() < 0.25) { delete r.pst.bleed; delete r.pst.burn; log(s, `${name} stops the bleeding.`, 'good'); }
+    const used = e.droneSaved || (e.droneSaved = {});
+    let heal = 0;
+    if (droneHas(d, 5) && !used[who] && c.hp < st.maxHp * 0.25) { used[who] = true; heal = Math.round(st.maxHp * 0.15); log(s, `${name}: emergency patch.`, 'good'); }
+    if (c.hp < st.maxHp) {
+      bank[who] = (bank[who] || 0) + st.maxHp * v / 100 * TUNE.droneHeal;
+      const n = Math.floor(bank[who]);
+      bank[who] -= n; heal += n;
+    }
+    heal = Math.min(heal, st.maxHp - c.hp);
+    if (heal > 0) { c.hp += heal; fx(s, { who: 'drone', type: 'heal', drone: d.type, amt: heal }); }
+  } else if (d.type === 'magpie' && rng() < v / 100 * TUNE.droneTech) {
+    const pool = ['thermal'];
+    if (e.stun === 0) pool.push('ion');
+    if (c.hp < st.maxHp * 0.6) pool.push('stim', 'stim');
+    const it = pick(rng, pool), boost = droneHas(d, 5) ? 1.5 : 1;
+    if (it === 'thermal') {
+      const dmg = Math.round((20 + r.sector * 4) * st.tech * outMult(r.pst, e.st) * boost);
+      e.hp -= dmg;
+      fx(s, { who: 'drone', type: 'item', item: 'thermal', drone: d.type, dmg });
+      log(s, `${name} drops a thermal charge: ${dmg} damage.`, 'crit');
+    } else if (it === 'ion') {
+      const droid = e.tags.includes('droid'), ionDmg = droid ? Math.round((12 + r.sector * 2) * st.tech * boost) : 0;
+      e.stun = droid ? 2 : 1; e.hp -= ionDmg;
+      fx(s, { who: 'drone', type: 'item', item: 'ion', drone: d.type, dmg: ionDmg, droid });
+      log(s, `${name} fires an ion pulse. ${e.name} is stunned.`, 'hit');
+    } else {
+      const amt = Math.min(st.maxHp - c.hp, Math.round(st.maxHp * 0.4 * st.tech));
+      c.hp += amt; delete r.pst.bleed; delete r.pst.burn;
+      fx(s, { who: 'drone', type: 'item', item: 'stim', drone: d.type, amt });
+      log(s, `${name} jabs you with a stim. +${amt} HP.`, 'good');
+    }
+  }
+}
+const droneShield = (c, dmg) => { const d = droneOf(c); return d && d.type === 'aegis' && dmg > 0 ? Math.max(1, Math.round(dmg * (1 - droneValue(d) / 100 * TUNE.droneShield))) : dmg; };
 export function restockStims(s) {
   let n = 0;
   while (buyItem(s, 'stim')) n++;
@@ -1067,7 +1165,7 @@ function roomWeights(r, map) {
 export function offerRoute(s, rng) {
   const r = s.run, map = mapById(r.map);
   r.enemy = null;
-  if (r.room >= FIGHTS_PER_SECTOR) return clearSector(s);
+  if (r.room >= FIGHTS_PER_SECTOR) return clearSector(s, rng);
   const remaining = FIGHTS_PER_SECTOR - r.room, needed = MIN_FIGHTS - (r.fightsDone || 0);
   r.forced = false; r.votes = null;
   if (r.room === FIGHTS_PER_SECTOR - 1 && isBossSector(r.sector)) r.choices = ['boss'];
@@ -1328,8 +1426,9 @@ export function incomingRange(s) {
   const st = stats(s), heavy = e.intent === 'heavy', q = e.quirk ? quirkById(e.quirk) : null;
   const base = e.atk * (heavy ? 2.2 : 1) * outMult(e.st, r.pst);
   const min = mitigate(base * 0.85 * (q && q.gamble ? 0.5 : 1), st.def), max = mitigate(base * 1.15 * (q && q.gamble ? 1.8 : 1), st.def);
-  const guarded = (n) => Math.max(1, Math.round(n * (heavy ? TUNE.defendHeavy : 0.5) * (hasTrait(c, 'bulwark') ? 0.7 : 1)));
-  return { min, max, defMin: guarded(min), defMax: guarded(max), lethal: max >= c.hp };
+  const guarded = (n) => droneShield(c, Math.max(1, Math.round(n * (heavy ? TUNE.defendHeavy : 0.5) * (hasTrait(c, 'bulwark') ? 0.7 : 1))));
+  const hiNow = droneShield(c, max);
+  return { min: droneShield(c, min), max: hiNow, defMin: guarded(min), defMax: guarded(max), lethal: hiNow >= c.hp };
 }
 // Auto battle: a fixed, sensible routine. Never runs or uses smoke.
 export function autoAction(s) {
@@ -1622,6 +1721,8 @@ function playerActInner(s, act, rng, who) {
     log(s, `${e.name} decides this isn\u2019t worth it and runs.`, 'good');
     return winFight(s, rng, true);
   }
+  droneTurn(s, rng, who);
+  if (e.hp <= 0) return winFight(s, rng);
   checkPhase(s);
   // In co-op the other operative acts before the enemy does.
   if (isCoop(s)) {
@@ -1799,6 +1900,11 @@ function enemyTurn(s, rng) {
     } else if (q && q.miss && rng() < q.miss) {
       fx(s, { who: 'enemy', type: e.intent, dodged: true, missed: true, dmg: 0 });
       log(s, `${e.name} ${pick(rng, q.misses)}.`, 'good');
+    } else if (droneHas(droneOf(c), 3) && droneOf(c).type === 'aegis' && rng() < 0.08) {
+      const d = droneOf(c), zap = droneHas(d, 5) ? Math.max(1, Math.round(st.atk)) : 0;
+      e.hp -= zap;
+      fx(s, { who: 'drone', type: 'block', drone: d.type, dmg: zap });
+      log(s, `${D.DRONES[d.type].name} stops the attack cold${zap ? ` and zaps ${e.name} for ${zap}` : ''}.`, 'good');
     } else if (rng() < dodgeChance(st, e)) {
       feat(s, 'dodges');
       fx(s, { who: 'enemy', type: e.intent, dodged: true, dmg: 0 });
@@ -1807,6 +1913,7 @@ function enemyTurn(s, rng) {
       const luck = q && q.gamble ? (rng() < 0.5 ? 0.5 : 1.8) : 1;
       let dmg = mitigate(e.atk * (0.85 + rng() * 0.3) * (heavy ? 2.2 : 1) * luck * outMult(e.st, r.pst) * (r.keepDistance ? 1 - TUNE.shootGuard : 1), st.def);
       if (r.defending) dmg = Math.max(1, Math.round(dmg * (heavy ? TUNE.defendHeavy : 0.5) * (hasTrait(c, 'bulwark') ? 0.7 : 1)));
+      dmg = droneShield(c, dmg);
       c.hp -= dmg; vamp(dmg); reflect(dmg);
       if (q && q.bleedOnHit && !r.defending) addPlayerStatus(s, { bleed: 2 }, rng);
       if (luck !== 1) log(s, luck > 1 ? 'The gamble pays off for them.' : 'Their gamble doesn\u2019t pay off.', 'info');
@@ -1817,6 +1924,7 @@ function enemyTurn(s, rng) {
     const sp = D.SPECIALS[e.id];
     let dmg = sp.mult > 0 ? mitigate(e.atk * (0.85 + rng() * 0.3) * sp.mult * outMult(e.st, r.pst) * (r.keepDistance ? 1 - TUNE.shootGuard : 1), st.def) : 0;
     if (r.defending) dmg = Math.max(dmg ? 1 : 0, Math.round(dmg * 0.5 * (hasTrait(c, 'bulwark') ? 0.7 : 1)));
+    dmg = droneShield(c, dmg);
     c.hp -= dmg; vamp(dmg); reflect(dmg);
     const added = r.defending ? [] : addPlayerStatus(s, sp.status, rng);
     fx(s, { who: 'enemy', type: 'special', name: sp.name, dmg, blocked: r.defending, statuses: added });
@@ -1852,13 +1960,13 @@ function gainXp(s, amount) {
 // Beating a boss or leaving: what's unsecured is paid out, less rate. Credits an operative walked in with are never touched.
 // Leaves c.payout for the screen that shows it. Returns credits lost by the current actor.
 const ROUTE_CUT = 0.85; // Smuggler's Route
-function settle(s, kind, rate) {
+function settle(s, kind, rate, exact = false) {
   const r = s.run, me = actorIdx(s);
   let mine = 0;
   forEachActor(s, (a, i) => {
     const safe = a.safeCredits ?? a.startCredits ?? r.startCredits ?? 0, haul = Math.max(0, a.credits - safe), bank = a.xpBank || 0;
     if (!haul && !bank) return;
-    const cut = has(a, 'route') ? rate * ROUTE_CUT : rate, lostCredits = Math.round(haul * cut), lostXp = Math.round(bank * cut), gain = bank - lostXp;
+    const cut = has(a, 'route') && !exact ? rate * ROUTE_CUT : rate, lostCredits = Math.round(haul * cut), lostXp = Math.round(bank * cut), gain = bank - lostXp;
     a.credits -= lostCredits; ledger(s, 'escape loss', -lostCredits);
     if (i === me) mine = lostCredits;
     const fromLevel = a.level, fromXp = a.xp, fromNext = xpToNext(a.level);
@@ -1896,6 +2004,10 @@ function winFight(s, rng, fled = false) {
   const r = s.run, e = r.enemy, c = s.char, m = s.meta;
   // The fight's over: a downed partner gets patched up and shares in it.
   standUp(s, TUNE.reviveAfter);
+  for (const i of livingActors(s)) withActor(s, i, () => {
+    const d = droneOf(s.char);
+    if (d && d.type === 'magpie' && droneHas(d, 3) && rng() < 0.15) { const it = pick(rng, ['stim', 'thermal', 'ion', 'smoke']); if (s.char.items[it] < stats(s).carry) { s.char.items[it] += 1; log(s, `${D.DRONES[d.type].name} comes back with a ${D.ITEMS[it].name}.`, 'good'); } }
+  });
   const easy = payScale(c, r.sector);
   const credits = Math.round(randInt(rng, e.cr[0], e.cr[1]) * creditMult(s) * (fled ? 0.5 : 1) * easy);
   // A boss this operative has already beaten is worth less the second time round.
@@ -2046,7 +2158,7 @@ function resolveEventInner(s, index, rng) {
   s.eventResult = { success, check: !!opt.check, text: fxs.text, notes, label: opt.label };
 }
 
-function clearSector(s) {
+function clearSector(s, rng = Math.random) {
   const r = s.run, c = s.char, map = mapById(r.map), m = s.meta;
   r.cleared = (r.cleared || 0) + 1; feat(s, 'sectors');
   const bonus = Math.round(8 * r.sector * map.credits * creditMult(s) * payScale(c, r.sector));
@@ -2066,12 +2178,26 @@ function clearSector(s) {
   m.bestSector = Math.max(m.bestSector, r.sector);
   m.bestByMap[r.map] = Math.max(m.bestByMap[r.map] || 0, r.sector);
   contractEvent(s, 'sector', {});
-  s.outcome = { sector: r.sector, bonus, credits: r.sectorCredits + bonus, resolve: res, fresh };
+  s.outcome = { sector: r.sector, bonus, credits: r.sectorCredits + bonus, resolve: res, fresh, droneHit: droneWear(s, rng) };
   log(s, `${sectorName(r.sector, r.map)} cleared. +${bonus} ${D.SETTING.cur}${res ? `, +${res} ${D.SETTING.meta}` : ''}.`, 'reward');
   if (isBossSector(r.sector)) { settle(s, 'boss', 0); r.allyHits = 0; }
   s.screen = 'sectorClear';
 }
 
+// Two ways out between bosses. Risky keeps part of the haul but can fail, forcing you into the next sector. Safe always works and keeps nothing.
+export const extractFailChance = (s) => (s.run && extractRate(s.run.sector) > 0 ? TUNE.extractFail : 0);
+export function attemptExtract(s, rng) {
+  if (rng() < extractFailChance(s)) {
+    s.lastResult = { kind: 'note', name: 'Extraction failed', text: 'The pickup was compromised. You\u2019re forced deeper.', notes: [] };
+    log(s, 'The extraction falls apart. The only way left is down.', 'bad');
+    s.run.exitVotes = null;
+    pushDeeper(s, rng);
+    return false;
+  }
+  endRun(s, 'extracted', rng);
+  return true;
+}
+export function safeExtract(s, rng) { s.run.safeExit = true; endRun(s, 'extracted', rng); }
 export function pushDeeper(s, rng) {
   const r = s.run;
   r.sector += 1;
@@ -2136,7 +2262,7 @@ export function endRun(s, how, rngForRestock = Math.random) {
   // Leaving with a partner dead: the fallen operative's slot is cleared first (finishCoopDeath), which then calls back here.
   if (r.fallen && !r.closing) { closeFallen(s, rngForRestock, how); return; }
   standUp(s, 0); // running with a downed partner over your shoulder: they make it out, barely
-  const lost = settle(s, how, how === 'extracted' ? extractRate(r.sector) : escapeRate(r.sector));
+  const lost = r.safeExit ? settle(s, how, 1, true) : settle(s, how, how === 'extracted' ? extractRate(r.sector) : escapeRate(r.sector));
   forEachActor(s, (a) => {
     a.boardId = recordCareer(s, a, 'alive');
     a.fed = false; a.drink = false;
@@ -2169,6 +2295,7 @@ export const unsecured = (s) => { const c = s.char; return Math.max(0, c.credits
 // The share this operative would lose right now, counting Smuggler's Route.
 export const leaveShare = (s) => (s.run ? extractRate(s.run.sector) * (has(s.char, 'route') ? ROUTE_CUT : 1) : 0);
 export const runShare = (s) => (s.run ? escapeRate(s.run.sector) * (has(s.char, 'route') ? ROUTE_CUT : 1) : 0);
+export const unsecuredNow = (s) => unsecured(s);
 export const extractLoss = (s) => Math.round(unsecured(s) * leaveShare(s));
 export const extractXpLoss = (s) => Math.round((s.char.xpBank || 0) * leaveShare(s));
 export const allLiberated = (s) => D.MAPS.every((m) => s.meta.liberated[m.id]);

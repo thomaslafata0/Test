@@ -12,7 +12,7 @@ const SCREENS = {
   town: ``,
   body: `s.char = null; s.draft = E.newDraft(s.meta, rng); s.draft.step = 1; s.screen = 'create';`,
   class: `s.char = null; s.draft = E.newDraft(s.meta, rng); s.draft.step = 2; s.screen = 'create';`,
-  look: `s.char = null; s.draft = E.newDraft(s.meta, rng); s.draft.step = 3; s.screen = 'create';`,
+  drone: `s.char = null; s.draft = E.newDraft(s.meta, rng); s.draft.step = 3; s.screen = 'create';`,
   stats: `s.char = null; s.draft = E.newDraft(s.meta, rng); s.draft.step = 4; s.screen = 'create';`,
   missions: `s.popup = 'missions';`,
   contracts: `s.popup = 'missions'; s.missionTab = 'contracts';`,

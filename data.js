@@ -256,6 +256,22 @@ export const UPGRADES = [
 export const MOD_STEP = 1.25; // each mod an operative buys makes the next one this much dearer
 
 // ---------- permanent progression (Resolve; survives death) ----------
+// Drones: one per operative, chosen at creation. They can't be shot down, and die only with their operative.
+// ranks: the drone's strength at rank 1 to 5. Resolve buys ranks; ranks 3 and 5 add an ability.
+export const DRONES = {
+  hornet: { name: 'Hornet', role: 'Attack', what: 'Fires after each of your turns.', effect: (v) => `Shots add up to ${v}% of your ATK a turn, ignoring armour.`, ranks: [10, 18, 27, 36, 48],
+    abilities: { 3: { name: 'Finisher', desc: 'Double damage to enemies under 30% HP.' }, 5: { name: 'Marker', desc: '10% chance a turn to leave the enemy Exposed.' } } },
+  aegis: { name: 'Aegis', role: 'Shield', what: 'Soaks part of every hit.', effect: (v) => `Blocks ${v}% of attack damage.`, ranks: [9, 15, 21, 28, 36],
+    abilities: { 3: { name: 'Intercept', desc: '8% chance to stop an attack outright.' }, 5: { name: 'Feedback', desc: 'A stopped attack zaps the enemy for your ATK.' } } },
+  mender: { name: 'Mender', role: 'Healing', what: 'Patches you up mid-fight.', effect: (v) => `Heals ${v}% of max HP a turn.`, ranks: [1.5, 2.5, 3.5, 4.5, 5.5],
+    abilities: { 3: { name: 'Coagulant', desc: '25% chance a turn to stop bleeding and burns.' }, 5: { name: 'Emergency', desc: 'Once a fight, heals 15% when you fall under 25% HP.' } } },
+  magpie: { name: 'Magpie', role: 'Tech', what: 'Uses gear it finds, for free.', effect: (v) => `${v}% chance a turn to use a free thermal, ion pulse or stim.`, ranks: [3, 5, 7, 9, 12],
+    abilities: { 3: { name: 'Scavenger', desc: '15% chance to find an item after a fight.' }, 5: { name: 'Overdrive', desc: 'Its thermals and ion pulses hit 50% harder.' } } },
+};
+export const DRONE_ORDER = ['hornet', 'aegis', 'mender', 'magpie'];
+export const DRONE_MAX_RANK = 5;
+export const DRONE_UPGRADE = [4, 7, 11, 16]; // Resolve to reach rank 2, 3, 4 and 5
+export const DRONE_DAMAGE = 0.1; // chance of being knocked out each time a sector is cleared
 export const TRAINING = {
   hp:  { label: 'Endurance',    stat: 'Max HP', per: 8, max: 20, note: 'Scar tissue and stubbornness.' },
   atk: { label: 'Marksmanship', stat: 'ATK',    per: 2, max: 20, note: 'Range time behind the slag heaps.' },

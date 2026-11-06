@@ -80,8 +80,9 @@ const SHEET = process.env.SHEET || '', MIN_TEXT = 11, MIN_TAP = 38, W = 844, H =
   await game(host, async () => { const E = await import('./engine.js'); const g = globalThis.cinderGame, s = g.state(), rng = g.rng(); s.run.perkOffer = null; s.run.lootOffer = null; s.run.room = 99; s.run.enemy = null; E.offerRoute(s, rng); g.after(); });
   check('sector clear comes up', (await st()).screen === 'sectorClear', (await st()).screen);
   await both('sector clear, before voting');
-  await host.tap('button[data-a="extract"]'); await both('sector clear, one vote in');
-  await guest.tap('button[data-a="extract"]'); await host.waitForTimeout(900);
+  const out = (await host.$('button[data-a="extractsafe"]')) ? 'extractsafe' : 'extract';
+  await host.tap(`button[data-a="${out}"]`); await both('sector clear, one vote in');
+  await guest.tap(`button[data-a="${out}"]`); await host.waitForTimeout(900);
   check('both are home', (await st()).screen === 'town', (await st()).screen);
   await both('home with the payout');
   if (SHEET) {

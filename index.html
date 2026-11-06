@@ -591,6 +591,33 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 @media (max-width: 520px) { .board-table { font-size: .8rem; } .board-table td, .board-table th { padding: 5px 3px; } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 html.calm * { animation: none !important; transition: none !important; }
+.drone-pic { image-rendering: pixelated; }
+.body-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.look-colours { display: flex; flex-wrap: wrap; gap: 8px 22px; }
+.look-colours > div { display: grid; gap: 5px; }
+.body-pick { display: grid; place-items: center; width: 68px; height: 68px; padding: 2px; background: var(--panel-2); border: 1px solid var(--line); color: var(--fg); cursor: pointer; overflow: hidden; }
+.body-pick.on { border-color: var(--sodium); box-shadow: inset 0 0 0 1px var(--sodium); }
+.body-pick img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; display: block; }
+.quirk-row { display: grid; gap: 4px; }
+[data-tip] { cursor: help; }
+.pm-stim { display: inline-flex; align-items: center; gap: 2px; font-weight: 500; opacity: .9; white-space: nowrap; }
+.pm-stim .ico { width: 14px; height: 14px; }
+.mate-stat .bar { max-width: 110px; }
+.extract-note { font-size: .88rem; }
+.route-notes { display: grid; gap: 6px; }
+/* Menus move up and down only. Rows meant to swipe sideways (tabs, emotes) set their own overflow. */
+.modal, .panel, .log, #app > section, .columns > section { overflow-x: hidden; overscroll-behavior: contain; }
+.drone-card { display: grid; justify-items: center; gap: 6px; text-align: center; align-content: start; }
+.drone-what { font-size: .9rem; color: var(--muted); line-height: 1.25; }
+.drone-note { font-size: .9rem; margin: 8px 0 0; }
+.drone-bay { display: grid; gap: 10px; }
+.drone-card-big { display: flex; gap: 14px; align-items: center; }
+.drone-pic.big.off { opacity: .7; }
+.drone-id { display: grid; gap: 4px; min-width: 0; }
+.drone-id h3 { margin: 0; }
+.row.i.drone-up { grid-template-columns: minmax(0, 1fr) auto; }
+.row.i.drone-ability { grid-template-columns: auto minmax(0, 1fr); }
+.drone-ability.locked { opacity: .6; }
 button { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 .boot { padding: 40px 16px; text-align: center; color: var(--muted); }
 .st[data-st] { cursor: help; }
@@ -892,6 +919,9 @@ h3 { font-size: 1.05rem; }
   .create-nav .btn { min-height: 46px; padding: 4px 22px; font-size: 1.05rem; }
   .create-nav .btn.big { min-width: 36%; justify-content: center; font-size: 1.25rem; }
   .choices.four { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr); gap: 6px; }
+  .drone-card { padding: 8px; gap: 4px; }
+  .drone-card .drone-pic { width: 48px; height: 36px; }
+  .drone-note { margin: 4px 0 0; font-size: max(11px, .8rem); }
   .choice { min-height: 0; overflow: hidden; padding: 8px 10px; gap: 4px; }
   .choice b { font-size: 1.4rem; line-height: 1.05; }
   .choices.bodies .choice { grid-template-rows: minmax(0, 1fr) auto auto; justify-items: center; text-align: center; align-content: stretch; }
@@ -1096,6 +1126,34 @@ h3 { font-size: 1.05rem; }
   .resolve-link { min-height: 38px; }
   .speed { right: auto; left: 4px; top: 4px; }
   .speed button { min-height: 38px; padding: 0 8px; background: #121518b0; }
+  .speed button[aria-pressed="false"] { display: none; }
+  .pop { font-size: 18px; } .pop.crit, .pop.heavy { font-size: 20px; } .pop.info { font-size: 11px; }
+  .quirk-row { display: flex; flex-wrap: nowrap; gap: 4px; overflow: hidden; flex: none; }
+  .quirk-row .quirk-line { flex: none; }
+  .quirk-row .quirk-line > span:not(.chip) { display: none; }
+  .screen-route > h2 { display: none; }
+  .route-status.muted { display: none; }
+  .route-notes { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; }
+  .route-notes .bulletin { display: block; padding: 3px 8px; line-height: 1.2; }
+  .route-notes .bulletin b { font-size: 1rem; margin-right: 6px; }
+  .route-notes .bulletin span:last-child { font-size: max(11px, .76rem); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+  .screen-route .door { overflow: hidden; align-content: start; }
+  .screen-route .door .desc { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+  .has-mate .num-stat.minor { display: none; }
+  .has-mate .stat .pm-stim { font-size: 11px; }
+  .body-pick { width: 52px; height: 52px; }
+  .look-step { grid-template-columns: minmax(0, 32%) minmax(0, 1fr); gap: 12px; min-height: 0; overflow: hidden; }
+  .look-big { width: 100%; height: 100%; aspect-ratio: auto; overflow: hidden; min-height: 0; }
+  .look-big img { width: 100%; height: 100%; object-fit: contain; }
+  .look-opts { align-content: start; gap: 4px; min-height: 0; }
+  .look-opts .btnrow { flex-wrap: nowrap; gap: 4px; }
+  .look-opts .btnrow .btn { padding: 0 7px; min-height: 38px; font-size: max(12px, .84rem); white-space: nowrap; flex: 1 1 auto; }
+  .look-colours, .look-colours > div { display: contents; }
+  .look-opts { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 5px 8px; align-items: center; }
+  .look-opts .swatches { flex-wrap: nowrap; gap: 4px; }
+  .look-opts .btnrow .btn { padding: 0 3px; }
+  .body-pick { width: 46px; height: 46px; }
+  .extract-note { font-size: max(11px, .8rem); margin: 0; }
   .dt-wheel { grid-template-columns: auto minmax(0, 1fr); gap: 12px; }
   .dt-wheel-left .muted.small:first-of-type { display: none; }
   .dt-wheel-left canvas { width: min(250px, 30vw); height: auto; }
@@ -1166,6 +1224,7 @@ import { Stage, loadSheets, sheetStill, setLookSheets, setCalm as setStageCalm }
 import * as A from './audio.js';
 import { iconURL, gearIconKey } from './icons.js';
 import { Town, SHOPS, setCalm as setTownCalm } from './town.js';
+import { droneIcon } from './drones.js';
 import { autoStep, autoFinish, loadDev, BUILDS } from './dev.js';
 import { Wheel, OrbitScene, loadDowntimeArt, artFor } from './downtime.js';
 import { Net, getCoopPrefs, setCoopPrefs, makeCode, getRoom, setRoom, getLastRoom, setLastRoom } from './net.js';
@@ -1231,6 +1290,8 @@ document.addEventListener('pointerup', endHold, true);
 document.addEventListener('pointercancel', endHold, true);
 document.addEventListener('click', (ev) => {
   if (holdFired) { holdFired = false; ev.stopPropagation(); ev.preventDefault(); return; }
+  const tipEl = ev.target.closest && ev.target.closest('[data-tip]');
+  if (tipEl) hint(tipEl.dataset.tip);
   // Status chips on the battle stage explain themselves when tapped.
   const chip = ev.target.closest && ev.target.closest('[data-st]');
   if (!chip || !state || !state.run || !state.run.enemy) return;
@@ -1241,12 +1302,12 @@ document.addEventListener('click', (ev) => {
 
 // This device's own choices. They don't travel with the save or to a co-op partner.
 const UI_KEY = 'cinder-cell-ui';
-const uiPrefs = { autoStop: true, fastAnim: false, calm: false, lefty: false };
+const uiPrefs = { autoStop: true, fastAnim: false, calm: false, lefty: false, sharpArt: false };
 try { Object.assign(uiPrefs, JSON.parse(localStorage.getItem(UI_KEY)) || {}); } catch (e) {}
 function applyUi() {
   document.documentElement.classList.toggle('calm', uiPrefs.calm);
   document.documentElement.classList.toggle('lefty', uiPrefs.lefty);
-  setStageCalm(uiPrefs.calm); setTownCalm(uiPrefs.calm); stage.setFast(uiPrefs.fastAnim);
+  setStageCalm(uiPrefs.calm); setTownCalm(uiPrefs.calm); stage.setFast(uiPrefs.fastAnim); stage.setSharp(uiPrefs.sharpArt);
 }
 
 function load() {
@@ -1498,7 +1559,7 @@ const isHost = () => !!net && net.role === 'host';
 const myIdx = () => (isGuest() ? 1 : 0);
 // Actions that only touch this screen, never the game.
 const DOWNTIME = new Set(['drink', 'bet', 'stake', 'spin', 'invest', 'withdraw', 'shippart', 'shipcell', 'orbitgo', 'orbitact', 'orbitclose']);
-const LOCAL = new Set(['randomize', 'missiontab', 'markettab', 'chartab', 'continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm', 'cloudcopy', 'cloudload', 'cloudversions', 'cloudrestore', 'cloudkeep', 'devunlock', 'devoff', 'dev', 'autostart']);
+const LOCAL = new Set(['draftdrone', 'randomize', 'missiontab', 'markettab', 'chartab', 'continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm', 'cloudcopy', 'cloudload', 'cloudversions', 'cloudrestore', 'cloudkeep', 'devunlock', 'devoff', 'dev', 'autostart']);
 function coopChip() {
   if (!net) return '';
   const who = net.peerName || (isHost() ? 'friend' : 'host');
@@ -1507,6 +1568,8 @@ function coopChip() {
 // One screen's own view of the game. The friend keeps these across host updates, and the host keeps a copy of what
 // the friend's actions set, so neither player's menus or messages land on the other's screen.
 let home = null, lastHostResolve = null, pendingGuest = null;
+// Local test runs only: gives a friend's home cell some Resolve.
+if (location.hostname === 'localhost') globalThis.cinderTestHome = (n) => { if (home) { home.meta.resolve += n; mirrorHome(); render(); } };
 const homeInfo = () => (home ? { training: home.meta.training, cell: home.meta.cell } : null);
 const travelCopy = (c) => { if (!c) return null; const o = JSON.parse(JSON.stringify(c)); delete o.home; delete o.coopName; delete o.payout; return o; };
 // The friend's screen shows their own cell's Resolve, training and upgrades, not the host's.
@@ -1545,7 +1608,7 @@ function syncHome(hostMeta) {
 let homePayout = 0;
 const GUEST_LOCAL = ['missionTab', 'marketTab', 'charTab', 'popup', 'compare', 'gearSlot', 'confirmSmoke', 'report', 'draft', 'guestSawDeath'];
 const GUEST_VIEW = ['notice', 'perkPick', 'compare', 'popup'];
-const NEEDS_RUN = new Set(['continue', 'room', 'roomDone', 'event', 'eventDone', 'deeper', 'extract', 'loottake', 'lootsell', 'perk', 'perkdrop']);
+const NEEDS_RUN = new Set(['continue', 'room', 'roomDone', 'event', 'eventDone', 'deeper', 'extract', 'extractsafe', 'loottake', 'lootsell', 'perk', 'perkdrop']);
 let guestView = {}, guestQueue = [], guestToast = null, hostSynced = false, awaitingHost = false, awaitTimer = null, inbox = [], pumping = false, hadRun = false;
 function broadcast() {
   if (!isHost() || !net.peer) return;
@@ -1744,12 +1807,14 @@ function headerTools() {
 function statusStrip() {
   const c = state.char;
   if (!c) return `<header class="status"><div class="head-top"><div class="brand">${esc(S.title)}</div>${headerTools()}</div><div class="head-stats"><div class="stat"><span class="label">${esc(S.meta)}</span><span class="v" style="color:var(--sodium)">${state.meta.resolve}</span></div></div></header>`;
-  const st = E.stats(state);
-  return `<header class="status">
+  const st = E.stats(state), mate = E.isCoop(state) ? E.charAt(state, 1 - myIdx()) : null;
+  const mateStat = mate ? (() => { const mx = E.statsOf(state.meta, mate).maxHp; return `<div class="stat hp mate-stat" title="${esc(mate.name)}: ${Math.max(0, mate.hp)} of ${mx} HP, ${mate.items.stim} stims"><span class="label">${esc(mate.name.split(' ')[0])}</span><span class="v">${mate.dead ? 'Dead' : mate.downed ? 'Down' : `${Math.max(0, mate.hp)} / ${mx}`} <span class="pm-stim">${ico('item:stim', 'sm')}\u00D7${mate.items.stim}</span></span>${bar(Math.max(0, mate.hp), mx)}</div>`; })() : '';
+  return `<header class="status ${mate ? 'has-mate' : ''}">
     <div class="head-top"><div class="brand">${esc(S.title)}</div>${headerTools()}</div>
     <div class="head-stats">${coopChip()}
     <div class="stat name-stat"><span class="label">Operative ${c.number} \u00B7 Lv ${c.level}</span><span class="v">${esc(c.name)}</span></div>
     <div class="stat hp"><span class="label">HP</span><span class="v">${Math.max(0, c.hp)} / ${st.maxHp}</span>${bar(c.hp, st.maxHp)}</div>
+    ${mateStat}
     ${[['Shoot', st.atk], ['Strike', st.atkM], ['DEF', st.def, 'minor'], ['SPD', st.spd, 'minor']].map(([k, v, cls]) => `<div class="stat num-stat ${cls || ''}"><span class="label">${k}</span><span class="v">${v}</span></div>`).join('')}
     <div class="stat"><span class="label">${esc(S.currency)}</span><span class="v">${c.credits.toLocaleString()}</span></div>
     ${state.run ? `<div class="stat unsec-stat" title="Earned this stretch. It becomes levels when you beat the boss or get out, and leaving early costs a share."><span class="label">Unsecured</span><span class="v" style="color:var(--sodium)">${E.unsecured(state).toLocaleString()} ${esc(S.cur)} \u00B7 ${(c.xpBank || 0).toLocaleString()} XP</span></div>` : ''}
@@ -1833,23 +1898,27 @@ function createScreen() {
   const skills = E.skillsOf(fake);
   const still = lookStill(d.look, d.background) || sheetStill('player') || portraitURL('player');
   const preview = `<div class="preview"><img src="${still}" alt="" width="128" height="128">${hasLayers() ? '' : '<span class="label">Preview art coming</span>'}</div>`;
-  const steps = ['Body', 'Class', 'Look', 'Stats'].map((l, i) => `<button class="tab" aria-selected="${d.step === i + 1}" data-a="step" data-v="${i + 1}">${i + 1}. ${l}</button>`).join('');
+  const steps = ['Look', 'Class', 'Drone', 'Stats'].map((l, i) => `<button class="tab" aria-selected="${d.step === i + 1}" data-a="step" data-v="${i + 1}">${i + 1}. ${l}</button>`).join('');
   const nav = (back, next) => `<div class="btnrow create-nav">${back ? `<button class="btn" data-a="step" data-v="${back}">Back</button>` : ''}<button class="btn primary big" data-a="step" data-v="${next[0]}">Next: ${next[1]}</button></div>`;
   let body = '';
   if (d.step === 1) {
-    body = `<div class="choices four bodies">${BODIES.map((b) => { const pt = lookPortrait({ ...d.look, body: b.id }); return `<button class="choice ${b.id === d.look.body ? 'on' : ''}" data-a="look" data-v="body" data-k="${b.id}" aria-pressed="${b.id === d.look.body}">${pt ? `<img class="face" src="${pt}" alt="" width="64" height="64">` : ''}<b>${esc(b.name)}</b><span class="chip">${b.sex === 'm' ? 'man' : 'woman'}</span></button>`; }).join('')}</div>${nav(0, [2, 'class'])}`;
+    const sw = (list, key, cur) => `<div class="swatches">${list.map((c, i) => `<button class="swatch ${i === cur ? 'on' : ''}" data-a="look" data-v="${key}" data-k="${i}" style="background:${c[1]}" aria-label="${key} ${i + 1}"></button>`).join('')}</div>`;
+    const bodies = BODIES.map((b) => { const im = lookStill({ ...d.look, body: b.id }, d.background); return `<button class="body-pick ${b.id === d.look.body ? 'on' : ''}" data-a="look" data-v="body" data-k="${b.id}" aria-pressed="${b.id === d.look.body}" aria-label="${esc(b.name)}">${im ? `<img src="${im}" alt="" width="64" height="64">` : esc(b.name)}</button>`; }).join('');
+    body = `<div class="look-step">
+      <div class="look-big"><img src="${still}" alt="" width="128" height="128"></div>
+      <div class="look-opts"><span class="label">Body</span><div class="body-row">${bodies}</div>
+      <span class="label">Hair</span><div class="btnrow">${HAIR.map((h) => `<button class="btn ${h === d.look.hair ? 'primary' : ''}" data-a="look" data-v="hair" data-k="${h}">${esc(HAIR_NAMES[h])}</button>`).join('')}</div>
+      <div class="look-colours"><div><span class="label">Hair colour</span>${sw(HAIRS, 'hairColor', d.look.hairColor)}</div><div><span class="label">Skin</span>${sw(SKINS, 'skin', d.look.skin)}</div></div></div>
+    </div>${nav(0, [2, 'class'])}`;
   } else if (d.step === 2) {
     body = `<div class="choices four classes">${D.BACKGROUNDS.map((b) => `<button class="choice ${b.id === d.background ? 'on' : ''}" data-a="bg" data-v="${b.id}" aria-pressed="${b.id === d.background}">
       <b>${esc(b.name)}</b><span class="chip">${Object.entries(b.attrs).map(([k, v]) => `+${v} ${D.ATTRS[k].short}`).join(', ')}</span>
-      <ul class="bg-stats">${b.perks.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></button>`).join('')}</div>${nav(1, [3, 'look'])}`;
+      <ul class="bg-stats">${b.perks.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></button>`).join('')}</div>${nav(1, [3, 'drone'])}`;
   } else if (d.step === 3) {
-    const sw = (list, key, cur) => `<div class="swatches">${list.map((c, i) => `<button class="swatch ${i === cur ? 'on' : ''}" data-a="look" data-v="${key}" data-k="${i}" style="background:${c[1]}" aria-label="${key} ${i + 1}"></button>`).join('')}</div>`;
-    body = `<div class="look-step">
-      <div class="look-big"><img src="${still}" alt="" width="128" height="128"></div>
-      <div class="look-opts"><span class="label">Hair</span><div class="btnrow">${HAIR.map((h) => `<button class="btn ${h === d.look.hair ? 'primary' : ''}" data-a="look" data-v="hair" data-k="${h}">${esc(HAIR_NAMES[h])}</button>`).join('')}</div>
-      <span class="label">Hair colour</span>${sw(HAIRS, 'hairColor', d.look.hairColor)}
-      <span class="label">Skin</span>${sw(SKINS, 'skin', d.look.skin)}</div>
-    </div>${nav(2, [4, 'stats'])}`;
+    body = `<div class="choices four drones">${D.DRONE_ORDER.map((id) => { const t = D.DRONES[id]; return `<button class="choice drone-card ${(d.drone || 'hornet') === id ? 'on' : ''}" data-a="draftdrone" data-v="${id}" aria-pressed="${(d.drone || 'hornet') === id}">
+      <img class="drone-pic" src="${droneIcon(id)}" alt="" width="64" height="48"><b>${esc(t.name)}</b><span class="chip">${esc(t.role)} \u00B7 rank ${E.droneRankOf(state.meta, id)}</span>
+      <span class="drone-what">${esc(t.effect(t.ranks[E.droneRankOf(state.meta, id) - 1]))}</span></button>`; }).join('')}</div>
+      <p class="muted drone-note">Yours for this operative\u2019s whole life. It can\u2019t be shot down, but it can be knocked out after a sector. Resolve upgrades last: every operative who picks that type keeps them.</p>${nav(2, [4, 'stats'])}`;
   } else {
     const attrRows = Object.entries(D.ATTRS).map(([k, a]) => `<div class="attr-row">
       <div title="${esc(a.desc)}"><div class="name">${esc(a.label)} <span class="num muted">${a.short}</span></div><div class="desc">${esc(a.desc)}</div></div>
@@ -1871,7 +1940,7 @@ function createScreen() {
     <div class="btnrow create-nav"><button class="btn" data-a="step" data-v="3">Back</button><button class="btn primary big" data-a="create">${d.points ? `Start (keep ${d.points} point${d.points > 1 ? 's' : ''})` : 'Start'}</button></div>`;
   }
   return `<section class="panel create-panel">
-    <div class="create-head"><div style="display:grid;gap:4px"><span class="label">New operative \u00B7 #${state.meta.operatives + 1}</span><h2>Who walks through the gate?</h2></div>${preview}</div>
+    <div class="create-head"><div style="display:grid;gap:4px"><span class="label">New operative \u00B7 #${state.meta.operatives + 1}</span><h2>Who walks through the gate?</h2></div>${d.step === 1 ? '' : preview}</div>
     ${notice()}
     <div class="create-tabs"><nav class="tabs">${steps}</nav><button class="btn create-random" data-a="randomize">Randomize</button></div>
     <div class="create-summary"><span class="chip">${esc(BODIES.find((b) => b.id === d.look.body).name)}</span><span class="chip">${esc(bg.name)}</span><span class="chip">${esc(HAIR_NAMES[d.look.hair])}</span><span class="chip">${esc(d.name || 'unnamed')}</span></div>
@@ -1894,6 +1963,7 @@ const popupBadge = (id) => {
   if (id === 'clinic') { const mx = E.stats(state).maxHp; return c.hp < mx * 0.8 ? ` <span class="badge bad" title="You\u2019re hurt: ${c.hp} / ${mx} HP">${Math.round(c.hp / mx * 100)}%</span>` : ''; }
   if (id === 'market') return (c.market || []).some((it) => E.canEquip(c, it) && c.credits >= E.netPrice(state, it) && gearGain(it) > 0) ? ' <span class="badge" title="You can afford an upgrade here">\u2191</span>' : '';
   if (id !== 'character') return '';
+  if (!c.drone || c.drone.damaged) return ' <span class="badge bad" title="Your drone needs attention">!</span>';
   return c.attrPoints ? ` <span class="badge" title="Attribute points to spend">${c.attrPoints}</span>` : canSpendResolve() ? ' <span class="badge" title="You can spend Resolve here">R</span>' : '';
 };
 function townScreen() {
@@ -2058,7 +2128,7 @@ function townPopup() {
   if (!p) return '';
   // The safehouse is one menu: Resolve, the operative, their record, gear and the Lockup, all on one row of tabs.
   const ct = state.charTab || 'resolve', c = state.char, safeTab = (pop, k, label) => `<button class="tab" aria-selected="${id === pop && (!k || ct === k)}" data-a="popup" data-v="${pop}" ${k ? `data-k="${k}"` : ''}>${label}</button>`;
-  let body = p.body(), pair = id === 'character' || id === 'gear' || id === 'lockup' ? `<nav class="tabs pop-tabs">${safeTab('character', 'resolve', `${esc(S.meta)} ${state.meta.resolve}${canSpendResolve() ? ' <span class="badge" title="You can spend Resolve here">+</span>' : ''}`)}${safeTab('character', 'operative', `Operative${c.attrPoints ? ` <span class="badge" title="Attribute points to spend">${c.attrPoints}</span>` : ''}`)}${safeTab('character', 'record', 'Record')}${safeTab('gear', '', 'Gear')}${safeTab('lockup', '', 'Lockup')}</nav>` : '';
+  let body = p.body(), pair = id === 'character' || id === 'gear' || id === 'lockup' ? `<nav class="tabs pop-tabs">${safeTab('character', 'resolve', `${esc(S.meta)} ${state.meta.resolve}${canSpendResolve() ? ' <span class="badge" title="You can spend Resolve here">+</span>' : ''}`)}${safeTab('character', 'operative', `Operative${c.attrPoints ? ` <span class="badge" title="Attribute points to spend">${c.attrPoints}</span>` : ''}`)}${safeTab('character', 'drone', `Drone${!c.drone || c.drone.damaged ? ' <span class="badge bad" title="Needs attention">!</span>' : ''}`)}${safeTab('character', 'record', 'Record')}${safeTab('gear', '', 'Gear')}${safeTab('lockup', '', 'Lockup')}</nav>` : '';
   // A menu's own tabs sit in its header when it has no other tabs there, so the list starts higher up.
   if (!pair) { const m = body.match(/^\s*(<nav class="tabs pop-tabs">[\s\S]*?<\/nav>)/); if (m) { pair = m[1]; body = body.slice(m[0].length); } }
   return `<div class="popup-wrap town-pop"><div class="modal popup wide" role="dialog" aria-modal="true" aria-label="${esc(p.label)}">
@@ -2221,6 +2291,20 @@ function clinic() {
 // Cheapest thing Resolve can buy right now (training rank or cell upgrade), for the tab badge.
 const canSpendResolve = () => { const m = state.meta; return Object.entries(D.TRAINING).some(([k, t]) => m.training[k] < t.max && m.resolve >= E.trainingCost(m.training[k])) || D.CELL.some((u) => !m.cell.includes(u.id) && m.resolve >= u.cost); };
 
+function droneTab() {
+  const c = state.char, m = state.meta, d = c.drone;
+  if (!d) return `<p class="muted drone-note">Every operative gets a drone now. Pick yours: it stays for life.</p><div class="choices four drones">${D.DRONE_ORDER.map((id) => { const t = D.DRONES[id]; return `<button class="choice drone-card" data-a="dronepick" data-v="${id}"><img class="drone-pic" src="${droneIcon(id)}" alt="" width="64" height="48"><b>${esc(t.name)}</b><span class="chip">${esc(t.role)} \u00B7 rank ${E.droneRankOf(m, id)}</span><span class="drone-what">${esc(t.effect(t.ranks[E.droneRankOf(m, id) - 1]))}</span></button>`; }).join('')}</div>`;
+  const t = D.DRONES[d.type], cost = E.droneUpgradeCost(d), repair = E.droneRepairCost(state), maxed = d.rank >= D.DRONE_MAX_RANK;
+  const abilities = Object.entries(t.abilities).map(([rank, a]) => `<div class="row i drone-ability ${d.rank >= +rank ? '' : 'locked'}"><span class="chip ${d.rank >= +rank ? 'good' : ''}">Rank ${rank}</span><div><div class="name">${esc(a.name)}</div><div class="desc">${esc(a.desc)}</div></div></div>`).join('');
+  return `<div class="drone-bay"><div class="drone-card-big">
+      <img class="drone-pic big ${d.damaged ? 'off' : ''}" src="${droneIcon(d.type, 6, d.damaged)}" alt="" width="96" height="72">
+      <div class="drone-id"><span class="label">${esc(t.role)} drone</span><h3>${esc(t.name)}</h3>
+      <div class="pips" style="--n:${D.DRONE_MAX_RANK}" aria-label="rank ${d.rank} of ${D.DRONE_MAX_RANK}">${Array.from({ length: D.DRONE_MAX_RANK }, (_, i) => `<i class="${i < d.rank ? 'on' : ''}"></i>`).join('')}</div>
+      <p class="desc">${esc(t.effect(E.droneValue(d)))}</p></div></div>
+    ${d.damaged ? `<div class="gate-heal bad"><div class="gate-heal-text"><b>${esc(t.name)} is offline</b><span>It does nothing until it\u2019s repaired.</span></div><button class="btn primary" data-a="dronerepair" ${c.credits < repair ? 'disabled' : ''}>${c.credits < repair ? `${cr(repair - c.credits)} short` : `Repair \u00B7 ${cr(repair)}`}</button></div>` : ''}
+    <div class="row i drone-up"><div><div class="name">${maxed ? 'Fully upgraded' : `Upgrade to rank ${d.rank + 1}`}</div><div class="desc">${maxed ? 'Nothing left to add.' : `${esc(t.effect(E.droneValue(d, d.rank + 1)))} Lasts for every ${esc(t.name)} your cell flies.`}</div></div>${maxed ? '' : `<button class="btn ${m.resolve >= cost ? 'primary' : ''}" data-a="droneup" ${m.resolve < cost ? 'disabled' : ''}>${cost} ${esc(S.meta)}</button>`}</div>
+    <div class="rows">${abilities}</div></div>`;
+}
 function character() {
   const m = state.meta, c = state.char, st = E.stats(state);
   const attrRows = Object.entries(D.ATTRS).map(([k, a]) => `<div class="attr-row"><div><div class="name">${esc(a.label)} <span class="num muted">${a.short}</span></div><div class="desc">${esc(a.desc)}</div></div>
@@ -2242,7 +2326,7 @@ function character() {
   const bg = D.BACKGROUNDS.find((b) => b.id === c.background);
   const n = E.respecPoints(c), rcost = E.price(state, E.respecCost(c));
   const charTab = state.charTab || 'resolve';
-  return `${charTab === 'resolve' ? `<section class="resolve-box">
+  return `${charTab === 'drone' ? droneTab() : ''}${charTab === 'resolve' ? `<section class="resolve-box">
       <div class="resolve-head"><div><span class="label">${esc(S.meta)} \u00B7 survives death</span><div class="resolve-num">${m.resolve} <span>banked</span></div></div>
         <p class="muted">Helps every future operative. Earned from new sectors, bosses and contracts.</p></div>
       <div class="two-col">
@@ -2290,8 +2374,10 @@ function gate() {
   // Under 80% health the dispatcher says so, with the clinic one tap away. Deploying hurt is still allowed.
   const hurt = c.hp < st.maxHp * 0.8, hc = E.healCost(state), canHeal = c.credits >= hc;
   const stimEach = E.price(state, E.itemCost(state, 'stim')), stimN = Math.min(st.carry, Math.floor(c.credits / stimEach));
+  const droneRow = !c.drone ? `<div class="gate-heal"><div class="gate-heal-text"><b>No drone yet</b><span>Every operative gets one, free.</span></div><button class="btn" data-a="popup" data-v="character" data-k="drone">Choose</button></div>`
+    : c.drone.damaged ? `<div class="gate-heal"><div class="gate-heal-text"><b>${esc(D.DRONES[c.drone.type].name)} is offline</b><span>It won\u2019t help until it\u2019s repaired.</span></div><button class="btn" data-a="dronerepair" ${c.credits < E.droneRepairCost(state) ? 'disabled' : ''}>Repair \u00B7 ${cr(E.droneRepairCost(state))}</button></div>` : '';
   const noStim = c.items.stim ? '' : `<div class="gate-heal"><div class="gate-heal-text"><b>No stims packed</b><span>${stimN ? 'They heal you mid-fight, and stop bleeding.' : `A stim costs ${cr(stimEach)} and you have ${cr(c.credits)}.`}</span></div><button class="btn" data-a="restock" ${stimN ? '' : 'disabled'}>Restock${stimN ? ` ${stimN} \u00B7 ${cr(stimN * stimEach)}` : ''}</button></div>`;
-  const warn = noStim + (hurt ? `<div class="gate-heal ${c.hp < st.maxHp * 0.5 ? 'bad' : ''}"><div class="gate-heal-text"><b>You\u2019re hurt: ${c.hp} / ${st.maxHp} HP</b>${bar(c.hp, st.maxHp)}<span>${canHeal ? 'Patch up before you go in.' : `Doc wants ${cr(hc)} and you have ${cr(c.credits)}. Going in like this is a risk.`}</span></div><button class="btn primary" data-a="heal" ${canHeal ? '' : 'disabled'}>Patch up \u00B7 ${cr(hc)}</button></div>` : '');
+  const warn = droneRow + noStim + (hurt ? `<div class="gate-heal ${c.hp < st.maxHp * 0.5 ? 'bad' : ''}"><div class="gate-heal-text"><b>You\u2019re hurt: ${c.hp} / ${st.maxHp} HP</b>${bar(c.hp, st.maxHp)}<span>${canHeal ? 'Patch up before you go in.' : `Doc wants ${cr(hc)} and you have ${cr(c.credits)}. Going in like this is a risk.`}</span></div><button class="btn primary" data-a="heal" ${canHeal ? '' : 'disabled'}>Patch up \u00B7 ${cr(hc)}</button></div>` : '');
   const mt = E.maxThreat(state);
   const threat = mt > 0 ? `<div class="threat"><span class="label">Threat level</span><div class="btnrow">${D.THREAT.slice(0, mt + 1).map((t, i) => `<button class="btn ${m.threat === i ? 'primary' : ''}" data-a="threat" data-v="${i}" title="${esc(t.desc)}">${esc(t.name)}</button>`).join('')}</div><p class="muted" style="font-size:.84rem">${esc(D.THREAT[m.threat].desc)}${m.threat ? ' Starts again from sector 1.' : ''}</p></div>` : '';
   const contracts = (m.contracts || []).map((k) => `<div class="contract ${k.done ? 'done' : ''}"><div><b>${esc(k.text)}</b><span class="muted"> ${k.done ? 'Complete' : `${Math.min(k.progress, k.n)} / ${k.n}`}</span></div><span class="chip ${k.done ? 'good' : ''}">+${k.resolve} ${esc(S.meta)} \u00B7 +${k.credits} ${S.cur}</span></div>`).join('');
@@ -2324,7 +2410,7 @@ function combatScreen() {
   const inc = E.incomingRange(state);
   const incChip = inc ? `<span class="chip ${inc.lethal ? 'lethal' : 'bad'}" title="If it connects. Defend to take ${inc.defMin}-${inc.defMax}.">${inc.lethal ? 'Lethal ' : 'Hits '}${inc.min}-${inc.max}</span>` : '';
   const coop = E.isCoop(state), mine = !coop || r.actor === myIdx();
-  const party = coop ? `<div class="party">${[0, 1].map((i) => { const pc = E.charAt(state, i); if (!pc) return ''; const pst = E.statsOf(state.meta, pc); return `<div class="pm ${r.actor === i ? 'turn' : ''} ${i === myIdx() ? 'me' : ''}"><span class="label">${i === myIdx() ? 'You' : esc(pc.name)}${r.actor === i ? ' \u00B7 acting' : ''}${pc.downed ? ` \u00B7 <span class="danger-text">down, ${pc.downed} round${pc.downed > 1 ? 's' : ''} left</span>` : ''}</span><b>${Math.max(0, pc.hp)} / ${pst.maxHp}</b>${bar(pc.hp, pst.maxHp)}</div>`; }).join('')}</div>` : '';
+  const party = coop ? `<div class="party">${[0, 1].map((i) => { const pc = E.charAt(state, i); if (!pc) return ''; const pst = E.statsOf(state.meta, pc); return `<div class="pm ${r.actor === i ? 'turn' : ''} ${i === myIdx() ? 'me' : ''}"><span class="label">${i === myIdx() ? 'You' : esc(pc.name)}${r.actor === i ? ' \u00B7 acting' : ''}${pc.downed ? ` \u00B7 <span class="danger-text">down, ${pc.downed} round${pc.downed > 1 ? 's' : ''} left</span>` : ''}</span><b>${Math.max(0, pc.hp)} / ${pst.maxHp} <span class="pm-stim" title="Stims left">${ico('item:stim', 'sm')}\u00D7${pc.items.stim}</span></b>${bar(pc.hp, pst.maxHp)}</div>`; }).join('')}</div>` : '';
   const waiting = coop && !mine ? `<div class="notice ${c.downed || c.dead ? 'lose' : ''}">${c.dead ? `You\u2019re dead. ${esc(E.charAt(state, 1 - myIdx()).name)} is trying to get out alive.` : c.downed ? `You\u2019re down, bleeding out: ${c.downed} round${c.downed > 1 ? 's' : ''} left. ${esc(E.charAt(state, 1 - myIdx()).name)} can get you up.` : `Waiting for ${esc(E.charAt(state, 1 - myIdx()).name)} to act\u2026`}</div>` : '';
   const downedMate = coop && mine ? E.partnerDown(state) : null;
   const reviveBtn = downedMate ? `<button class="btn primary big" data-a="act" data-v="revive" style="width:100%">Get ${esc(downedMate.name.split(' ')[0])} up \u00B7 ${downedMate.downed} round${downedMate.downed > 1 ? 's' : ''} left<span class="k">V</span></button>` : '';
@@ -2341,15 +2427,14 @@ function combatScreen() {
   }).join('');
   const meta = [...e.tags.filter((t) => t !== 'boss').map((t) => `<span class="tag ${t}">${t}</span>`),
     `<span>ATK <b>${e.atk}</b></span>`, `<span>DEF <b>${e.def}</b></span>`, `<span>SPD <b>${e.spd}</b></span>`,
-    `<span>Dodge <b>${pct(E.dodgeChance(st, e))}</b></span>`, `<span>Run <b>${pct(E.runChance(state))}</b></span>`].join('');
+    `<span>Dodge <b>${pct(E.dodgeChance(st, e))}</b></span>`, `<span>Run <b>${pct(E.runChance(state))}</b></span>`,
+    c.drone ? `<span class="${c.drone.damaged ? 'danger-text' : ''}" title="${esc(`${D.DRONES[c.drone.type].name}, rank ${c.drone.rank}. ${c.drone.damaged ? 'Offline until repaired in town.' : D.DRONES[c.drone.type].effect(E.droneValue(c.drone))}`)}">${esc(D.DRONES[c.drone.type].name)} <b>${c.drone.damaged ? 'off' : `R${c.drone.rank}`}</b></span>` : ''].join('');
   return `<div class="columns"><section class="panel combat"><div class="c-left">
-    <div class="combat-head"><span class="label">${esc(E.mapById(r.map).name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${stage.auto ? '<span class="auto-note">Auto battle \u00B7 tap Manual to take over</span>' : ''}${roomPips(r)}</div>
+    <div class="combat-head"><span class="label">${esc(E.mapById(r.map).name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${stage.auto ? '<span class="auto-note">Auto battle \u00B7 change the mode to take over</span>' : ''}${roomPips(r)}</div>
     <div class="stage-box"><div id="stage-slot"></div></div>
     <div class="intent ${intent.tone}"><span class="dot"></span><b>${esc(intent.label)}</b><span class="tip">${esc(intent.tip)}${st.scan && e.next ? ` <span class="next-intent">Scanner: then ${esc(intentLabel(e, e.next))}</span>` : ''}</span><span class="intent-side">${incChip}${mechanicChip(r)}${r.ready ? `<span class="chip good">Aim +${E.hasPerk(c, 'steady') ? 100 : 50}%</span>` : ''}${r.momentum ? `<span class="chip good">Momentum +${Math.round(E.TUNE.momentum * 100)}%</span>` : ''}</span></div>
     <div class="statline">${meta}</div>
-    ${e.quirk ? `<div class="quirk-line"><span class="chip quirk">${esc(E.quirkById(e.quirk).name)}</span><span>${esc(E.quirkById(e.quirk).desc)}</span></div>` : ''}
-    ${D.MELEE_COUNTER[e.id] ? `<div class="quirk-line"><span class="chip bad">${esc(D.MELEE_COUNTER[e.id].name)}</span><span>${esc(D.MELEE_COUNTER[e.id].desc)}</span></div>` : ''}
-    ${e.affix ? `<div class="quirk-line"><span class="chip bad">${esc(D.AFFIXES[e.affix].name)}</span><span>${esc(D.AFFIXES[e.affix].desc)}</span></div>` : ''}
+    ${(() => { const trait = (cls, t) => (t ? `<div class="quirk-line"><span class="chip ${cls}" data-tip="${esc(`${t.name}: ${t.desc}`)}">${esc(t.name)}</span><span>${esc(t.desc)}</span></div>` : ''); const all = trait('quirk', e.quirk && E.quirkById(e.quirk)) + trait('bad', D.MELEE_COUNTER[e.id]) + trait('bad', e.affix && D.AFFIXES[e.affix]); return all ? `<div class="quirk-row">${all}</div>` : ''; })()}
     </div><div class="c-right">
     ${tip('combat')}
     ${party}${waiting}${reviveBtn}
@@ -2379,7 +2464,7 @@ function mechanicChip(r) {
 function bulletinBox(r) {
   const b = E.bulletinOf(r);
   if (b.id === 'quiet') return '';
-  return `<div class="bulletin"><span class="label">Directorate bulletin</span><b>${esc(b.name)}</b><span>${esc(b.desc)}</span></div>`;
+  return `<div class="bulletin" data-tip="${esc(`${b.name}: ${b.desc}`)}"><span class="label">Directorate bulletin</span><b>${esc(b.name)}</b><span>${esc(b.desc)}</span></div>`;
 }
 function roomPips(r) {
   return `<span class="pips rooms" aria-label="room ${r.room} of ${E.FIGHTS_PER_SECTOR}">${Array.from({ length: E.FIGHTS_PER_SECTOR }, (_, i) => `<i class="${i < r.room ? 'on' : ''}"></i>`).join('')}</span>`;
@@ -2389,7 +2474,7 @@ function roomPips(r) {
 function condBox(r) {
   const k = E.condOf(r);
   if (!r.cond || r.cond === 'none') return '';
-  return `<div class="bulletin cond"><span class="label">This floor</span><b>${esc(k.name)}</b><span>${esc(k.desc)}</span></div>`;
+  return `<div class="bulletin cond" data-tip="${esc(`${k.name}: ${k.desc}`)}"><span class="label">This floor</span><b>${esc(k.name)}</b><span>${esc(k.desc)}</span></div>`;
 }
 function routeScreen() {
   const r = state.run, map = E.mapById(r.map), c = state.char, st = E.stats(state);
@@ -2405,8 +2490,7 @@ function routeScreen() {
     <h2>${r.choices[0] === 'boss' ? 'No way around it' : r.room === 0 ? 'Which way in?' : 'Two doors'}</h2>
     ${tip('route')}
     <div class="mech-row">${mechanicChip(r)}<span class="route-status ${c.hp < st.maxHp * 0.4 ? 'danger-text' : ''}">${c.hp} / ${st.maxHp} HP \u00B7 ${c.items.stim} stims</span><span class="route-status muted">${cds.length ? esc(cds.join(', ')) : 'Skills ready'}</span></div>
-    ${bulletinBox(r)}
-    ${condBox(r)}
+    ${bulletinBox(r) || condBox(r) ? `<div class="route-notes">${bulletinBox(r)}${condBox(r)}</div>` : ''}
     ${coopVote ? `<p class="muted" style="font-size:.9rem">Split votes go to a coin.${votes[myIdx()] === undefined && mate && votes[1 - myIdx()] !== undefined ? ` <b>${esc(mate.name.split(' ')[0])} has voted.</b>` : ''}</p>` : ''}
     <div class="doors">${doors}</div>
   </section>${logPanel()}</div>`;
@@ -2560,6 +2644,7 @@ function modalView() {
       <section><h3>Getting stronger</h3><p><b>Lost on death</b>: levels, gear, implants, contraband, ventures. <b>Kept</b>: Resolve, training, cell upgrades, achievements, and one heirloom with that upgrade.</p></section>
       <section><h3>After curfew</h3><p><b>Lantern</b>: one drink per raid. <b>Wheel</b>: roulette. <b>Orbit</b>: shuttle fights for credits and permanent Marks. <b>Ventures</b>: invest for a return each raid.</p></section>
       <section><h3>Threat and rewards</h3><p>Freeing a district opens Threat levels and reinforces the others. Sectors far below your level pay less, and a boss you\u2019ve beaten pays half XP.</p></section>
+      <section><h3>Drones</h3><p>Every operative has one drone for life. It can\u2019t be shot down and dies only with them. Clearing a sector has a 10% chance of knocking it offline until you repair it in town. Spend Resolve on the Drone tab of the safehouse: ranks 3 and 5 add abilities, and ranks stay with your cell for every operative who picks that type.</p></section>
       <section><h3>Co-op</h3><p>Host from <b>Settings</b> and share the link. You keep your own operative. Vote on doors, pick your own loot, and press <b>E</b> by your partner to trade. At 0 HP you go down and can be revived. If one of you dies, the other must win or run; if both fall, it\u2019s a wipe.</p></section>
       <section><h3>Saves</h3><p>Your cell backs up to the cloud. Enter its code from <b>Settings</b> on any device. Anyone with the code can load it, so keep it private.</p></section>
       <section><h3>Controls</h3><p class="keys"><span><b>WASD</b> walk</span><span><b>E</b> talk</span><span><b>M B C G</b> town menus</span><span><b>Tab</b> battle mode</span><span><b>O</b> settings</span><span><b>A</b> shoot</span><span><b>F</b> strike</span><span><b>D</b> defend</span><span><b>S</b> stim</span><span><b>R</b> run</span><span><b>Q W E T</b> skills</span><span><b>2 3 4</b> items</span><span><b>1 2</b> doors</span><span><b>Enter</b> continue</span><span><b>Esc</b> close</span></p></section>
@@ -2567,7 +2652,7 @@ function modalView() {
     <div class="settings">
       <h3>Gameplay</h3>
       <div class="set-grid">
-      ${[['autoStop', 'Stop auto battle at low HP with no stims'], ['fastAnim', 'Faster fight animations'], ['calm', 'Reduce motion'], ...(matchMedia('(pointer: coarse)').matches ? [['lefty', 'Left-handed fights']] : [])].map(([k, l]) => `<label class="set-row"><span>${l}</span><button class="btn" data-a="uipref" data-v="${k}" aria-pressed="${uiPrefs[k]}">${uiPrefs[k] ? 'On' : 'Off'}</button></label>`).join('')}
+      ${[['autoStop', 'Stop auto battle at low HP with no stims'], ['fastAnim', 'Faster fight animations'], ['calm', 'Reduce motion'], ['sharpArt', 'Sharper art (test)'], ...(matchMedia('(pointer: coarse)').matches ? [['lefty', 'Left-handed fights']] : [])].map(([k, l]) => `<label class="set-row"><span>${l}</span><button class="btn" data-a="uipref" data-v="${k}" aria-pressed="${uiPrefs[k]}">${uiPrefs[k] ? 'On' : 'Off'}</button></label>`).join('')}
       ${isGuest() ? '' : '<div class="set-row"><span>Tips you dismissed</span><button class="btn" data-a="tipsreset">Show again</button></div>'}
       </div>
       <h3>Sound</h3>
@@ -2792,7 +2877,7 @@ function eventScreen() {
 function exitVoteLine() {
   const v = (E.isCoop(state) && net && net.peer && state.run.exitVotes) || null;
   if (!E.isCoop(state) || !net || !net.peer) return '';
-  const pc = E.charAt(state, 1 - myIdx()), name = esc(pc.name.split(' ')[0]), lab = { deeper: 'pushing on', extract: 'extracting' };
+  const pc = E.charAt(state, 1 - myIdx()), name = esc(pc.name.split(' ')[0]), lab = { deeper: 'pushing on', extract: 'a risky extract', extractsafe: 'a safe extract' };
   const me = v && v[myIdx()], them = v && v[1 - myIdx()];
   return `<p class="muted" style="font-size:.9rem">You both have to agree.${them ? ` <b>${name} votes for ${lab[them]}.</b>` : ''}${me ? ` You vote for ${lab[me]}.` : ''}</p>`;
 }
@@ -2801,13 +2886,15 @@ function sectorClearScreen() {
   return popupView(`
     <span class="label">Sector ${r.sector} cleared \u00B7 ${esc(E.mapById(r.map).name)}</span><h2>${esc(E.sectorName(r.sector, r.map))}</h2>
     <dl class="kv"><dt>Sector haul</dt><dd style="color:var(--sodium)">+${cr(o.credits)}</dd><dt>Carrying</dt><dd>${cr(c.credits)}</dd><dt>Condition</dt><dd class="${c.hp < st.maxHp * 0.4 ? 'danger-text' : ''}">${c.hp} / ${st.maxHp} HP \u00B7 ${c.items.stim} stims</dd>${o.resolve ? `<dt>${esc(S.meta)}</dt><dd style="color:var(--sodium)">+${o.resolve}</dd>` : ''}</dl>
+    ${c.drone && c.drone.damaged && o.droneHit && o.droneHit.includes(myIdx()) ? `<div class="notice lose">${esc(D.DRONES[c.drone.type].name)} took a hit and went offline. Repair it in town.</div>` : ''}
     ${E.isBossSector(next) ? `<div class="notice" style="border-color:var(--danger);background:var(--danger-dim)">Boss in sector ${next}.</div>` : ''}
     <div class="btnrow">
       <button class="btn primary big" data-a="deeper">Push to sector ${next}<span class="k">1</span></button>
-      <button class="btn big" data-a="extract">Extract with ${cr(c.credits - E.extractLoss(state))}<span class="k">2</span></button>
+      <button class="btn big" data-a="extract">${E.extractRate(r.sector) ? `Risky extract \u00B7 keep ${cr(c.credits - E.extractLoss(state))}` : `Extract with ${cr(c.credits)}`}<span class="k">2</span></button>
+      ${E.extractRate(r.sector) ? `<button class="btn big" data-a="extractsafe">Safe extract \u00B7 keep ${cr(c.credits - E.unsecuredNow(state))}<span class="k">3</span></button>` : ''}
     </div>
     ${exitVoteLine()}
-    <p class="muted" style="font-size:.88rem">${E.extractRate(r.sector) ? `Leaving now costs <b>${Math.round(E.leaveShare(state) * 100)}%</b> of your unsecured haul: ${cr(E.extractLoss(state))} and ${E.extractXpLoss(state)} XP. Less each sector; nothing after a boss.` : 'Boss down: everything is secure, and leaving is free.'}</p>
+    <p class="muted extract-note">${E.extractRate(r.sector) ? `<b>Risky</b> costs ${Math.round(E.leaveShare(state) * 100)}% of your unsecured haul and has a ${Math.round(E.TUNE.extractFail * 100)}% chance of failing, which forces you into sector ${next}. <b>Safe</b> always works, but you lose all ${cr(E.unsecuredNow(state))} and ${c.xpBank || 0} XP.` : 'Everything is secured, so leaving here costs nothing.'}</p>
   `);
 }
 
@@ -2931,6 +3018,7 @@ function render() {
     const res = stage.sync({ run: r, enemy: r.enemy, sector: r.sector, boss: r.enemy.boss, theme: map.theme, allies: r.allies,
       pst: r.pst, est: r.enemy.st, affix: r.enemy.affix ? D.AFFIXES[r.enemy.affix].name : null, quirk: r.enemy.quirk ? E.quirkById(r.enemy.quirk).name : null,
       player: { name: state.char.name, level: state.char.level, hp: state.char.hp, maxHp: st.maxHp, down: !!state.char.downed || !!state.char.dead },
+      drone: state.char.drone || null, partnerDrone: E.isCoop(state) && E.charAt(state, 1 - myIdx()) ? E.charAt(state, 1 - myIdx()).drone || null : null,
       partner: E.isCoop(state) && E.charAt(state, 1 - myIdx()) ? (() => { const pc = E.charAt(state, 1 - myIdx()); return { idx: 1 - myIdx(), down: !!pc.downed || !!pc.dead, name: pc.name, hp: pc.hp, maxHp: E.statsOf(state.meta, pc).maxHp, acting: r.actor === 1 - myIdx() }; })() : null });
     if (res && res.isNewBoss) {
       busy = true; document.getElementById('app').classList.add('busy');
@@ -3031,7 +3119,7 @@ async function fight(v, who = 0) {
   }
 }
 
-const BUY = new Set(['restock', 'respec', 'buygear', 'upgradegear', 'reroll', 'item', 'upgrade', 'implant', 'heal', 'train', 'cell', 'spend', 'equipheirloom']);
+const BUY = new Set(['droneup', 'droneupfree', 'dronerepair', 'dronepick', 'restock', 'respec', 'buygear', 'upgradegear', 'reroll', 'item', 'upgrade', 'implant', 'heal', 'train', 'cell', 'spend', 'equipheirloom']);
 function act(a, v, k) {
   A.unlock();
   if (a === 'autostop') { stopAuto(); return; }
@@ -3060,6 +3148,12 @@ function act(a, v, k) {
       if (done) { save(); net.send({ t: 'home', home: homeInfo() }); mirrorHome(); }
       render(); return;
     }
+    if (a === 'droneup') {
+      // Paid from the friend's own cell, like their training. The host only raises the rank.
+      const dr = state.char && state.char.drone, cost = dr ? E.droneUpgradeCost(dr) : 0;
+      if (!dr || !cost || home.meta.resolve < cost) { A.play('denied'); return; }
+      home.meta.resolve -= cost; home.meta.droneRanks = { ...(home.meta.droneRanks || {}), [dr.type]: dr.rank + 1 }; save(); net.send({ t: 'act', a: 'droneupfree' }); net.send({ t: 'home', home: homeInfo() }); mirrorHome(); A.play('buy'); return;
+    }
     if (a === 'recruit') { net.send({ t: 'recruit' }); state.coopFallen = null; A.play('click'); return; }
     if (a === 'pickmap') { toast = 'The host picks the target.'; A.play('denied'); render(); return; }
     if (a === 'deploy' || a === 'reset' || a === 'threat') { A.play('denied'); return; }
@@ -3082,6 +3176,11 @@ function applyAct(a, v, k) {
     case 'continue-title': titleOpen = false; if (state.screen === 'intro') state.screen = 'intro'; sfx('door'); break;
     case 'newcell': if (!confirmReset) { confirmReset = true; break; } confirmReset = false; state = keepBoard(E.newGame(rng)); titleOpen = false; break;
     case 'step': state.draft.step = +v; sfx('click'); break;
+    case 'draftdrone': state.draft.drone = v; sfx('click'); break;
+    case 'dronepick': ok = E.pickDrone(state, v); break;
+    case 'droneup': ok = E.upgradeDrone(state); break;
+    case 'droneupfree': ok = E.upgradeDrone(state, true); break;
+    case 'dronerepair': ok = E.repairDrone(state); break;
     case 'look': state.draft.look = state.draft.look || defaultLook(); state.draft.look[v] = v === 'skin' || v === 'hairColor' ? +k : k; sfx('click'); break;
     case 'savecode': { const code = E.exportSave(state); state.report = code; try { navigator.clipboard.writeText(code).then(() => { toast = 'Save code copied.'; render(); }).catch(() => {}); } catch (e) {} sfx('click'); break; }
     case 'loadcode': { const t = (document.getElementById('load-code') || {}).value || ''; const loaded = E.importSave(t, rng); if (loaded) { state = loaded; modal = null; titleOpen = false; toast = 'Save loaded.'; sfx('perk'); } else { toast = 'That is not a Cinder Cell save code.'; sfx('denied'); } break; }
@@ -3159,7 +3258,7 @@ function applyAct(a, v, k) {
     case 'attr': E.draftAdjust(state.draft, v, +k); break;
     case 'randomize': {
       const d = state.draft, any = (list) => list[Math.floor(rng() * list.length)];
-      d.background = any(D.BACKGROUNDS).id; d.name = any(D.OPERATIVE_NAMES);
+      d.background = any(D.BACKGROUNDS).id; d.name = any(D.OPERATIVE_NAMES); d.drone = any(D.DRONE_ORDER);
       d.look = { ...(d.look || defaultLook()), body: any(BODIES).id, hair: any(HAIR), skin: Math.floor(rng() * SKINS.length), hairColor: Math.floor(rng() * HAIRS.length) };
       for (const k of Object.keys(D.ATTRS)) while (E.draftAdjust(d, k, -1));
       for (let i = 0; i < 80 && d.points > 0; i++) E.draftAdjust(d, any(Object.keys(D.ATTRS)), 1);
@@ -3215,7 +3314,8 @@ function applyAct(a, v, k) {
     case 'event': E.resolveEvent(state, +v, rng, actingAs); break;
     case 'eventDone': state.lastResult = null; E.nextEncounter(state, rng); break;
     case 'deeper': if (E.isCoop(state) && net && net.peer && !E.voteExit(state, actingAs, 'deeper')) break; state.lastResult = null; E.pushDeeper(state, rng); break;
-    case 'extract': if (E.isCoop(state) && net && net.peer && !E.voteExit(state, actingAs, 'extract')) break; E.endRun(state, 'extracted', rng); break;
+    case 'extract': if (E.isCoop(state) && net && net.peer && !E.voteExit(state, actingAs, 'extract')) break; E.attemptExtract(state, rng); break;
+    case 'extractsafe': if (E.isCoop(state) && net && net.peer && !E.voteExit(state, actingAs, 'extractsafe')) break; E.safeExtract(state, rng); break;
     case 'recruit': E.recruit(state, rng); if (!state.coopFallen || state.coopFallen.idx !== 1) state.coopFallen = null; break;
     case 'report': {
       const text = E.runReport(state);
@@ -3273,8 +3373,8 @@ document.addEventListener('keydown', (ev) => {
     if (map[key] && E.canUse(state, map[key]) && (!E.isCoop(state) || state.run.actor === myIdx())) { ev.preventDefault(); act('act', map[key]); }
   } else if (state.screen === 'route' && (key === '1' || key === '2') && state.run.choices[+key - 1]) {
     ev.preventDefault(); act('room', String(+key - 1));
-  } else if (state.screen === 'sectorClear' && (key === '1' || key === '2')) {
-    ev.preventDefault(); act(key === '1' ? 'deeper' : 'extract');
+  } else if (state.screen === 'sectorClear' && (key === '1' || key === '2' || (key === '3' && E.extractRate(state.run.sector)))) {
+    ev.preventDefault(); act({ 1: 'deeper', 2: 'extract', 3: 'extractsafe' }[key]);
   } else if (rewardView() === 'loot' && ['1', '2', '3'].includes(key)) {
     ev.preventDefault(); act({ 1: 'loottake', 2: 'lootsell', 3: 'lootstash' }[key]);
   } else if (rewardView() === 'perk' && ['1', '2', '3', '4'].includes(key) && state.run.perkOffer[+key - 1]) {

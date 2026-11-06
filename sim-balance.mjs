@@ -37,13 +37,14 @@ const STYLES = {
 };
 const skipOf = (b) => (b.noArmor ? ARMOR : []);
 function draft(s, rng, b) {
-  const d = E.newDraft(s.meta, rng); d.background = b.bg;
+  const d = E.newDraft(s.meta, rng); d.background = b.bg; d.drone = b.drone || D.DRONE_ORDER[Math.floor(rng() * 4)];
   for (let i = 0; i < 16 && d.points > 0; i++) if (!E.draftAdjust(d, b.attrs[i % b.attrs.length], 1)) { let ok = false; for (const k of Object.keys(D.ATTRS)) if (E.draftAdjust(d, k, 1)) { ok = true; break; } if (!ok) break; }
   return d;
 }
 function shop(s, b, st, o = {}) {
   const c = s.char;
   E.heal(s);
+  if (c.drone && c.drone.damaged) E.repairDrone(s);
   for (let i = 0; c.attrPoints > 0 && i < 60; i++) if (!E.spendAttr(s, b.attrs[i % b.attrs.length])) for (const k of Object.keys(D.ATTRS)) if (E.spendAttr(s, k)) break;
   if (s.meta.heirloom && E.equipHeirloom) E.equipHeirloom(s);
   while (c.items.stim < 2 && E.buyItem(s, 'stim'));
@@ -116,7 +117,7 @@ function raid(s, rng, bots, st, map, start, hook) {
       ev.options.forEach((o, i) => { const ch = E.optionAvailable(s, o) ? E.checkChance(s, o.check) : -1; if (ch > bc) { bc = ch; best = i; } });
       E.resolveEvent(s, best, rng, 0); E.offerRoute(s, rng);
     }
-    else if (s.screen === 'sectorClear') { if (leave(s, st)) E.endRun(s, 'extracted', rng); else E.pushDeeper(s, rng); }
+    else if (s.screen === 'sectorClear') { if (leave(s, st)) E.attemptExtract(s, rng); else E.pushDeeper(s, rng); }
     else break;
   }
   if (steps >= 6000) throw new Error('stuck at ' + s.screen);
@@ -131,6 +132,7 @@ function campaign(seed, bots, stName, map = 'garrison') {
   let ops = 0, raids = 0, deaths = 0, wipes = 0;
   const hire = (slot, b) => { ops++; E.createChar(s, rng, draft(s, rng, b), slot); s.screen = 'town'; };
   while (ops < LIVES * bots.length) {
+    for (let w = 0; w < bots.length; w++) if (E.charAt(s, w)) E.withActor(s, w, () => E.upgradeDrone(s)); // ranks last, so they're worth buying early
     spendResolve(s);
     if (!s.char) hire('char', bots[0]);
     if (coop && !s.char2) hire('char2', bots[1]);
@@ -159,6 +161,12 @@ if (SECTIONS.includes('check')) {
   header();
   for (const b of ['strength', 'strAgi', 'agility', 'intellect', 'charisma']) for (const st of ['cautious', 'standard']) row(`${b} / ${st}`, [BUILDS[b]], st);
   for (const [x, y] of [['strength', 'agility'], ['intellect', 'charisma']]) for (const st of ['cautious', 'standard']) row(`${x} + ${y} / ${st}`, [BUILDS[x], BUILDS[y]], st);
+}
+// Each drone against no drone, on the same seeds and training, at each rank. Repaired free before each raid, so this shows strength alone.
+if (SECTIONS.includes('drones')) {
+  const base = single((s) => { s.char.drone = null; });
+  console.log(`\n=== Drones: ${OPS} operatives, mean deepest sector. No drone: ${base.toFixed(2)} ===`);
+  for (const type of D.DRONE_ORDER) console.log(type.padEnd(8) + [1, 2, 3, 4, 5].map((rank) => { const v = single((s) => { s.char.drone = { type, rank, damaged: false }; }); return `R${rank} ${v.toFixed(2)} ${(v / base - 1 >= 0 ? '+' : '') + Math.round((v / base - 1) * 100)}%`; }).join('  '));
 }
 if (SECTIONS.includes('builds')) {
   console.log(`\n=== Solo builds, standard play: ${CAMP} campaigns, median operatives and raids to beat boss 5 | 10 | 15 (up to ${LIVES} operatives) ===`); header();

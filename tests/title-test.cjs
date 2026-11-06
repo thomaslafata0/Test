@@ -13,7 +13,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
     await page.click('button[data-a="begin"]'); await page.waitForTimeout(300);
     await ov('create1'); await page.screenshot({ path: `${OUT}/create1-${width}.png` });
     await page.click('button[data-a="look"][data-k="body_f2"]'); await page.click('button[data-a="step"][data-v="2"]'); await page.waitForTimeout(150);
-    await page.click('button[data-a="bg"][data-v="clerk"]'); await page.click('button[data-a="step"][data-v="3"]'); await page.waitForTimeout(150);
+    await page.click('button[data-a="bg"][data-v="clerk"]'); await page.click('button[data-a="step"][data-v="1"]'); await page.waitForTimeout(150);
     await ov('create3'); await page.screenshot({ path: `${OUT}/create3-${width}.png`, fullPage: true });
     await page.click('button[data-a="look"][data-v="hair"][data-k="hair_mohawk"]'); await page.click('.swatches .swatch:nth-child(4)');
     await page.click('button[data-a="step"][data-v="4"]'); await page.waitForTimeout(100); await page.click('button[data-a="create"]'); await page.waitForTimeout(500);
