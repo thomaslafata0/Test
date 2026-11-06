@@ -2077,14 +2077,9 @@ export function careerProgress(c) {
   return out;
 }
 export const careerScore = (c) => careerProgress(c).reduce((t, x) => t + groundWorth(x.best, x.threat), 0);
-export function recordCareer(s, c, status, foe = null) {
-  const r = s.run, m = s.meta;
-  if (!r || !c) return '';
-  const k = c.career || (c.career = { raids: 0, kills: 0, bosses: 0 });
-  if (!r.orbit) { k.raids += 1; k.kills += r.kills || 0; k.bosses += r.bosses || 0; }
-  if (m.dev) return ''; // cells touched by dev mode stay off the leaderboard
-  const progress = careerProgress(c), score = careerScore(c);
-  if (score <= 0) return '';
+function careerRow(s, c, status, foe = null) {
+  const m = s.meta, k = c.career || (c.career = { raids: 0, kills: 0, bosses: 0 }), progress = careerProgress(c), score = careerScore(c);
+  if (m.dev || score <= 0) return ''; // cells touched by dev mode stay off the leaderboard
   const top = progress.slice().sort((a, b) => b.threat - a.threat || b.best - a.best)[0];
   const entry = { id: c.uid, name: c.name, number: c.number, background: c.background, level: c.level, status, score, gain: score - (c.boardScore || 0), progress,
     map: top.map, threat: top.threat, deepest: top.best, freed: progress.filter((x) => x.threat === 0 && x.best >= 15).length, raids: k.raids, kills: k.kills, bosses: k.bosses,
@@ -2095,6 +2090,19 @@ export function recordCareer(s, c, status, foe = null) {
   m.boardOut.push(entry);
   if (m.boardOut.length > 100) m.boardOut.splice(0, m.boardOut.length - 100);
   return entry.id;
+}
+export function recordCareer(s, c, status, foe = null) {
+  const r = s.run;
+  if (!r || !c) return '';
+  const k = c.career || (c.career = { raids: 0, kills: 0, bosses: 0 });
+  if (!r.orbit) { k.raids += 1; k.kills += r.kills || 0; k.bosses += r.bosses || 0; }
+  return careerRow(s, c, status, foe);
+}
+// A living operative whose score isn't on the board yet: send it now rather than waiting for their next raid.
+export function syncCareer(s) {
+  const c = s.char;
+  if (!c || s.run || c.dead || s.screen === 'death' || c.boardScore === careerScore(c)) return false;
+  return !!careerRow(s, c, 'alive');
 }
 // This device's copy: one row per operative, best first.
 export function addToBoard(m, entry) {

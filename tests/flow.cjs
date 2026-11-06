@@ -18,7 +18,7 @@ const W = +process.argv[2] || 390;
   const begin = await page.$('button[data-a="begin"]'); if (begin) { await begin.click(); await page.waitForTimeout(300); }
   await shot('create-body');
   await page.click('button[data-a="step"][data-v="2"]'); await page.waitForTimeout(150); await shot('create-class');
-  await page.click('button[data-a="bg"][data-v="runner"]'); await page.click('button[data-a="step"][data-v="3"]'); await page.waitForTimeout(150); await shot('create-details');
+  await page.click('button[data-a="bg"][data-v="runner"]'); await page.click('button[data-a="step"][data-v="4"]'); await page.waitForTimeout(150); await shot('create-details');
   await page.click('button[data-a="create"]'); await page.waitForTimeout(1500); await shot('town-first');
   for (const p of ['missions', 'market', 'clinic', 'character', 'gear']) { await page.click(`button[data-a="popup"][data-v="${p}"]`); await page.waitForTimeout(300); await shot(`pop-${p}`); await page.keyboard.press('Escape'); await page.waitForTimeout(100); }
   await page.click('button[data-a="popup"][data-v="missions"]'); await page.waitForTimeout(200);

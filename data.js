@@ -35,15 +35,19 @@ export const ATTR_START = 1, ATTR_POINTS = 4, ATTR_CREATE_MAX = 5, ATTR_MAX = 10
 
 export const BACKGROUNDS = [
   { id: 'foundry', name: 'Foundry Hand', attrs: { str: 2 }, start: { gear: { melee: 'wrench' } },
+    perks: ['+15 max HP, +2 per level', '+1 DEF', 'Foundry Wrench: Power Strike'],
     perk: 'Tough: +15 max HP, plus 2 more every level, and +1 DEF. Starts with a Foundry Wrench (melee, Power Strike).',
     desc: 'Twelve years on the casting floor before the Directorate came. Strong back, short temper.' },
   { id: 'runner', name: 'Market Runner', attrs: { agi: 2 }, start: { smoke: 1, gear: { ranged: 'slugpistol' } },
+    perks: ['+25% escape', '+1 SPD, +5% dodge', 'Slug Pistol and a smoke'],
     perk: 'Slippery: +25% escape chance, +1 SPD and +5% dodge. Starts with a Slug Pistol and a smoke canister.',
     desc: 'Grew up moving goods past checkpoints. Knows every gap in every fence.' },
   { id: 'clerk', name: 'Defector Clerk', attrs: { int: 2 }, start: { ion: 1, gear: { gadget: 'datapad' } },
+    perks: ['+15% on INT checks', '+1 implant slot', 'Datapad: see next move, items +15%'],
     perk: 'Codes: +15% on Intellect checks and one extra implant slot. Starts with a Directorate Datapad (see the enemy\u2019s next move, items +15%).',
     desc: 'Filed the arrest orders for two years. Still remembers the passwords.' },
   { id: 'preacher', name: 'Street Preacher', attrs: { cha: 2 }, start: { credits: 40 }, follower: true,
+    perks: ['+1 Resolve per boss', '10% off the market', 'A follower fights beside you', '+40 credits'],
     perk: 'Voice: +1 Resolve from every boss and 10% off at the market. A follower walks into every raid with you and fights at your side.',
     desc: 'People listen when they talk. The Directorate has noticed.' },
 ];

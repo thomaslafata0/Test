@@ -83,6 +83,10 @@ Median to the sector-15 boss on the Garrison (operatives / raids): strength 22/6
 - **Loot:** drops can go straight to the Lockup, or the replaced piece can (`E.stashLoot`, `E.takeLoot(..., stashOld)`).
 - **iPhone:** `ios/` is a small WKWebView app loading the live site; see `ios/README.md`. Not compiled yet: it needs Xcode.
 
+- **Phones:** landscape only (`@media (max-height: 500px) and (orientation: landscape)` in `index.html`). `tests/phone-landscape.cjs` fails if a play screen scrolls or its way forward is off screen; `tests/phone-audit.cjs` lists small tap targets and long menus. Creation has four steps (Body, Class, Look, Stats) and Randomize; Missions, Market and Character have sub-tabs.
+- **Battle scenes:** `Stage.background` draws three scenes per map (sectors 1-5, 6-10, 11+); indoor scenes have no rain.
+- **iPhone app:** `ios/` builds with Xcode for team `39BW6948KL` (`xcodebuild -scheme CinderCell -destination id=<udid> -allowProvisioningUpdates`, then `xcrun devicectl device install app`).
+
 ## Testing
 Start the server, then from the repo root:
 ```bash
@@ -137,7 +141,7 @@ Artifact tool, publish `index.html` with `url` set to the live link, `root` set 
 - **Orbit:** permadeath made unmissable, confirm-to-launch, shakedown first flight, refit/win gating, fight tips, one run per town stay, PixelLab ship art and a better backdrop.
 - **Hair:** town flicker fixed (stable shapes, exact colour swap); battle hair added for every body.
 - **Ventures:** unlocks at sectors 5 and 10, caps 500 / 1,500 / 3,000, the bond rebalanced from a coin flip into the best (still risky) option.
-- **Items:** 8 new contraband (Adrenal Spike, Blood Tithe, Iron Lung, Tripwire Kit, Kevlar Padding, Coup de Grâce, Ghost Protocol, War Paint), 17 new gear bases including a tier-6 Warden-pattern set, all with icons.
+- **Items:** 8 new contraband (Adrenal Spike, Blood Tithe, Iron Lung, Tripwire Kit, Kevlar Padding, Coup de Gr\u00E2ce, Ghost Protocol, War Paint), 17 new gear bases including a tier-6 Warden-pattern set, all with icons.
 - **Shop scaling:** higher tiers, a rising floor and pre-upgraded stock as the cell goes deeper.
 - **Raid depth:** sector conditions, six rare doors on every map, 12 new events; Manual updated.
 - Save stays `VERSION = 4`: new fields (`orbitTierWins`, `char.orbitFlown`, `run.cond`, item `premium`) default safely; older orbit wins count as low-orbit wins.

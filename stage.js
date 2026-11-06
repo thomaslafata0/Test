@@ -659,63 +659,118 @@ export class Stage {
 
   // ---------- drawing ----------
   background(sector, boss, theme = 'garrison') {
-    const key = `${theme}-${sector}`;
+    const key = `${theme}-${sector}-${boss ? 1 : 0}`;
     if (this.bgCache[key]) return this.bgCache[key];
     const c = document.createElement('canvas'); c.width = W; c.height = H;
-    const g = c.getContext('2d'), rnd = seeded(sector * 977 + 31);
-    const themes = [
-      { sky: ['#0b0f14', '#1d2833'], glow: '232,151,58', far: '#121820', mid: '#1b232b', floor: ['#262d34', '#121519'] },
-      { sky: ['#0d0f12', '#252a2f'], glow: '232,151,58', far: '#16191d', mid: '#22272c', floor: ['#2b2f33', '#141618'] },
-      { sky: ['#0c1012', '#1f2a27'], glow: '210,170,80', far: '#131a18', mid: '#1d2522', floor: ['#29302c', '#121614'] },
-      { sky: ['#090d15', '#1a2438'], glow: '115,182,212', far: '#10161f', mid: '#18202c', floor: ['#232a35', '#10131a'] },
-      { sky: ['#120c0c', '#2e1d1a'], glow: '212,72,58', far: '#1a1212', mid: '#241918', floor: ['#2e2422', '#151010'] },
-    ];
-    const byMap = {
-      garrison: [themes[0], themes[1], themes[0], themes[3]],
-      foundry: [{ sky: ['#140b06', '#3a1a0b'], glow: '240,110,40', far: '#1c120c', mid: '#2a1a10', floor: ['#33231a', '#170f0a'] }, { sky: ['#120a06', '#33190c'], glow: '255,140,60', far: '#1a110b', mid: '#28190f', floor: ['#30211a', '#150e09'] }],
-      detention: [{ sky: ['#0a0e12', '#1c2a33'], glow: '115,182,212', far: '#10171d', mid: '#1a242c', floor: ['#26313a', '#11161b'] }, { sky: ['#0b0f12', '#222b30'], glow: '180,210,220', far: '#12181c', mid: '#1d252b', floor: ['#2a3237', '#121619'] }],
-      port: [{ sky: ['#060a14', '#1b2a44'], glow: '185,194,204', far: '#0f1622', mid: '#18212f', floor: ['#262e3a', '#10141b'] }, { sky: ['#07091a', '#2a2448'], glow: '210,190,255', far: '#12122a', mid: '#1c1b33', floor: ['#29283a', '#12111a'] }],
+    const g = c.getContext('2d'), rnd = seeded(sector * 977 + 31), Y = 112, band = Math.min(2, Math.floor((sector - 1) / 5));
+    const rect = (col, x, y, w, h) => { g.fillStyle = col; g.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
+    const grad = (a, b, y0, y1) => { const d = g.createLinearGradient(0, y0, 0, y1); d.addColorStop(0, a); d.addColorStop(1, b); return d; };
+    const sky = (a, b, h = Y + 2) => { g.fillStyle = grad(a, b, 0, h); g.fillRect(0, 0, W, h); };
+    const glow = (x, y, r, rgb, al) => { const d = g.createRadialGradient(x, y, 1, x, y, r); d.addColorStop(0, `rgba(${rgb},${al})`); d.addColorStop(1, `rgba(${rgb},0)`); g.fillStyle = d; g.fillRect(x - r, y - r, r * 2, r * 2); };
+    const cone = (x, y, x2, y2, spread, rgb, al) => { g.fillStyle = `rgba(${rgb},${al})`; g.beginPath(); g.moveTo(x, y); g.lineTo(x2 - spread, y2); g.lineTo(x2 + spread, y2); g.fill(); };
+    const floor = (a, b) => { g.fillStyle = grad(a, b, Y, H); g.fillRect(0, Y + 2, W, H - Y); };
+    const perspective = (col = 'rgba(0,0,0,0.28)', step = 14) => { g.strokeStyle = col; g.lineWidth = 1; for (let i = -14; i <= 14; i++) { g.beginPath(); g.moveTo(W / 2 + i * step, Y + 2); g.lineTo(W / 2 + i * step * 5, H); g.stroke(); } for (let y = Y + 6, d = 4; y < H; y += d, d *= 1.35) { g.beginPath(); g.moveTo(0, Math.round(y) + 0.5); g.lineTo(W, Math.round(y) + 0.5); g.stroke(); } };
+    const skyline = (far, lit, maxH = 60) => { for (let x = -4; x < W;) { const w = 10 + Math.floor(rnd() * 26), h = 14 + Math.floor(rnd() * maxH); rect(far, x, Y - h, w, h); for (let i = 0; i < w * h * 0.02; i++) rect(`rgba(${lit},${0.35 + rnd() * 0.5})`, x + 1 + Math.floor(rnd() * Math.max(1, w - 2)), Y - h + 2 + Math.floor(rnd() * Math.max(1, h - 4)), 1, 1); x += w + Math.floor(rnd() * 4); } };
+    const bars = (x, y, w, h, col, gap = 4) => { for (let bx = x; bx < x + w; bx += gap) rect(col, bx, y, 1, h); rect(col, x, y, w, 2); rect(col, x, y + h - 2, w, 2); };
+    const chain = (x, y0, y1, col) => { for (let y = y0; y < y1; y += 4) rect(col, x, y, 2, 3); };
+    const banner = (x, y, w, h, col, mark) => { rect(col, x, y, w, h); g.fillStyle = col; g.beginPath(); g.moveTo(x, y + h); g.lineTo(x + w / 2, y + h + 6); g.lineTo(x + w, y + h); g.fill(); rect(mark, x + w / 2 - 3, y + 5, 6, 10); rect(mark, x + w / 2 - 6, y + 8, 12, 2); };
+    let indoor = false;
+    const scenes = {
+      garrison: [
+        () => { // the outer yard: city behind the wall, watchtowers and searchlights
+          sky('#0b0f14', '#1d2833'); glow(W * 0.6, Y, 220, '232,151,58', 0.2); skyline('#121820', '232,151,58');
+          for (const x of [50 + rnd() * 30, 280 + rnd() * 40]) { rect('#0e1216', x, Y - 62, 5, 62); rect('#0e1216', x + 22, Y - 62, 5, 62); rect('#171d23', x - 5, Y - 78, 42, 18); rect('#232b33', x - 8, Y - 80, 48, 3); rect('rgba(232,190,120,0.8)', x + 2, Y - 74, 24, 6); }
+          cone(70, Y - 70, 150 + rnd() * 90, Y + 40, 30, '232,210,150', 0.07); cone(300, Y - 70, 180 + rnd() * 60, Y + 40, 30, '232,210,150', 0.07);
+          rect('#1b232b', 0, Y - 14, W, 16); for (let x = 0; x < W; x += 24) rect('rgba(0,0,0,0.35)', x, Y - 14, 1, 16);
+          g.strokeStyle = '#4a545c'; for (let x = 0; x < W; x += 8) { g.beginPath(); g.arc(x + 4, Y - 16, 3, 0, Math.PI * 2); g.stroke(); }
+          floor('#262d34', '#121519'); perspective(); for (let x = 0; x < W; x += 8) rect((x / 8) % 2 ? '#1a1a1a' : 'rgba(207,149,40,0.55)', x, Y + 2, 8, 2);
+        },
+        () => { // barracks: lockers, strip lights, the flag
+          indoor = true; sky('#1a2024', '#2a3035'); rect('#12161a', 0, 0, W, 16); for (let x = 16; x < W; x += 74) { rect('rgba(225,235,235,0.9)', x, 16, 42, 2); cone(x + 21, 18, x + 21, Y + 40, 46, '220,235,235', 0.06); }
+          for (let x = 0; x < W; x += 22) { rect('#39454c', x + 1, 48, 20, Y - 48); rect('#2b353b', x + 1, 48, 1, Y - 48); rect('#1c2328', x + 16, 74, 2, 8); for (let v = 0; v < 3; v++) rect('#1c2328', x + 5, 53 + v * 3, 8, 1); }
+          banner(160 + rnd() * 40, 20, 34, 34, '#7a1f1a', '#d8b04a'); rect('#1b2126', 0, Y - 6, W, 8);
+          floor('#3a4044', '#1b1f22'); perspective('rgba(0,0,0,0.22)', 18);
+        },
+        () => { // command deck: tall windows over the city, and screens
+          indoor = true; sky('#0a1018', '#142133'); skyline('#0e1826', '115,182,212', 44);
+          for (let x = -6; x < W; x += 58) rect('#20282f', x, 0, 12, Y);
+          rect('#20282f', 0, 0, W, 14); rect('#20282f', 0, Y - 22, W, 24);
+          for (let x = 22; x < W; x += 64) { rect('#0c2333', x, Y - 18, 34, 12); rect('rgba(115,182,212,0.8)', x + 3, Y - 15, 12 + rnd() * 16, 1); rect('rgba(115,182,212,0.5)', x + 3, Y - 12, 8 + rnd() * 20, 1); rect('rgba(232,151,58,0.7)', x + 3, Y - 9, 6 + rnd() * 10, 1); }
+          banner(W / 2 - 18, 8, 36, 40, '#7a1f1a', '#d8b04a'); floor('#2a3540', '#10151b'); perspective('rgba(115,182,212,0.12)', 22);
+        },
+      ],
+      foundry: [
+        () => { // the furnace hall
+          indoor = true; sky('#120a07', '#2c150b'); for (let x = 0; x < W; x += 34) { g.strokeStyle = '#2a1a12'; g.lineWidth = 2; g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 17, 20); g.lineTo(x + 34, 0); g.stroke(); } rect('#2a1a12', 0, 19, W, 3);
+          for (const x of [40, 170, 300]) { rect('#1d120c', x - 6, 30, 58, Y - 30); rect('#311d12', x, 38, 46, 8); g.fillStyle = grad('#ffd27a', '#ff6a1c', 52, Y - 4); g.fillRect(x + 6, 52, 34, Y - 56); glow(x + 23, Y - 20, 66, '255,120,40', 0.34); }
+          chain(120, 22, 56, '#3a261a'); g.fillStyle = '#3a261a'; g.beginPath(); g.moveTo(106, 56); g.lineTo(136, 56); g.lineTo(130, 76); g.lineTo(112, 76); g.fill(); rect('#ffb050', 109, 56, 24, 3);
+          floor('#33231a', '#150e09'); perspective('rgba(0,0,0,0.3)', 16); g.fillStyle = grad('#ffcf70', '#d9561a', Y + 4, Y + 10); g.fillRect(0, Y + 5, W, 5); glow(W / 2, Y + 8, 170, '255,120,40', 0.12);
+        },
+        () => { // the rolling mill: gears, rollers and hot ingots
+          indoor = true; sky('#16100c', '#2a1c14');
+          for (const [x, r] of [[60, 30], [116, 18], [318, 34]]) { g.strokeStyle = '#3f2c20'; g.lineWidth = 6; g.beginPath(); g.arc(x, 56, r, 0, Math.PI * 2); g.stroke(); g.lineWidth = 3; for (let a = 0; a < 8; a++) { g.beginPath(); g.moveTo(x, 56); g.lineTo(x + Math.cos(a * Math.PI / 4) * r, 56 + Math.sin(a * Math.PI / 4) * r); g.stroke(); } rect('#6a4b34', x - 3, 53, 6, 6); }
+          rect('#20150f', 0, Y - 20, W, 22); for (let x = 3; x < W; x += 11) { rect('#5a4434', x, Y - 21, 8, 8); rect('#2c1f17', x + 2, Y - 19, 4, 4); }
+          for (const x of [34, 190 + rnd() * 40, 340]) { rect('#ff8a34', x, Y - 28, 34, 7); rect('#ffd27a', x + 3, Y - 26, 28, 2); glow(x + 17, Y - 24, 42, '255,120,40', 0.25); }
+          floor('#2c2622', '#121010'); perspective('rgba(0,0,0,0.35)', 20); for (let x = 0; x < W; x += 16) rect((x / 16) % 2 ? '#191512' : 'rgba(255,170,60,0.5)', x, Y + 2, 16, 3);
+        },
+        () => { // the slag yard, outdoors under a burning sky
+          sky('#2b0f08', '#a03a14'); glow(W * 0.3, Y, 200, '255,170,70', 0.4);
+          for (const x of [48, 96, 300, 346]) { rect('#1a0f0a', x, 16, 14, Y - 16); rect('#3a241a', x, 22, 14, 2); for (let i = 0; i < 9; i++) { g.fillStyle = `rgba(30,18,14,${0.5 - i * 0.05})`; g.beginPath(); g.ellipse(x + 7 + i * 7, 12 - i * 1.2, 5 + i * 2, 3 + i, 0, 0, Math.PI * 2); g.fill(); } }
+          for (let x = -30; x < W; x += 72) { g.fillStyle = '#20120c'; g.beginPath(); g.moveTo(x, Y + 2); g.lineTo(x + 40, Y - 22 - rnd() * 22); g.lineTo(x + 90, Y + 2); g.fill(); }
+          floor('#2a1a14', '#0e0807'); for (let i = 0; i < 22; i++) { const x = rnd() * W, y = Y + 8 + rnd() * (H - Y - 10), l = 6 + rnd() * 24; g.strokeStyle = 'rgba(255,120,40,0.55)'; g.lineWidth = 1; g.beginPath(); g.moveTo(x, y); g.lineTo(x + l, y + (rnd() - 0.5) * 6); g.stroke(); }
+        },
+      ],
+      detention: [
+        () => { // the cell block: two tiers of barred doors under cold light
+          indoor = true; sky('#10181d', '#1e2b31');
+          for (const tier of [12, 60]) { rect('#1a252b', 0, tier + 40, W, 5); for (let x = 2; x < W; x += 46) { rect('#070b0e', x, tier, 38, 40); if (rnd() < 0.3) rect('rgba(115,182,212,0.28)', x + 6, tier + 8, 26, 26); if (rnd() < 0.25) rect('#2a3840', x + 14, tier + 18, 10, 22); bars(x, tier, 38, 40, '#51626c'); rect('rgba(200,50,40,0.9)', x + 18, tier - 3, 3, 2); } }
+          for (let x = 0; x < W; x += 12) rect('#3a4a52', x, 50, 1, 6); rect('#3a4a52', 0, 50, W, 1);
+          g.fillStyle = '#1a2428'; g.fillRect(0, Y + 2, W, H - Y); const n = 13; for (let r = 0; r < 7; r++) { const y0 = Y + 2 + Math.pow(r / 7, 1.7) * (H - Y), y1 = Y + 2 + Math.pow((r + 1) / 7, 1.7) * (H - Y); for (let i = -n; i < n; i++) if ((i + r) % 2 === 0) { const s0 = 8 + r * 7, x = W / 2 + i * s0; rect('rgba(130,155,165,0.14)', x, y0, s0, y1 - y0); } }
+        },
+        () => { // the exercise yard: chain link, guard lights, flat grey sky
+          sky('#39433f', '#7d8a84'); skyline('#2a322f', '20,24,22', 34);
+          rect('#3b4441', 0, Y - 56, W, 2); for (let x = 0; x < W; x += 6) { g.strokeStyle = 'rgba(40,48,46,0.55)'; g.lineWidth = 1; g.beginPath(); g.moveTo(x, Y - 56); g.lineTo(x + 56, Y); g.moveTo(x + 56, Y - 56); g.lineTo(x, Y); g.stroke(); }
+          for (let x = 8; x < W; x += 62) { rect('#2a322f', x, Y - 66, 3, 68); g.strokeStyle = '#2a322f'; g.beginPath(); g.moveTo(x, Y - 66); g.lineTo(x + 8, Y - 72); g.stroke(); } g.strokeStyle = '#59645f'; for (let x = 0; x < W; x += 7) { g.beginPath(); g.arc(x, Y - 66, 3, 0, Math.PI * 2); g.stroke(); }
+          floor('#4b5350', '#1f2422'); for (let i = 0; i < 180; i++) rect(`rgba(${rnd() < 0.5 ? '0,0,0' : '200,210,205'},0.16)`, rnd() * W, Y + 4 + rnd() * (H - Y), 2, 1);
+        },
+        () => { // the interrogation wing: stained tile, pipes, one hard lamp
+          indoor = true; sky('#20282a', '#2f3a3a');
+          for (let y = 8; y < Y; y += 10) for (let x = (y % 20 ? 0 : 7); x < W; x += 14) rect('rgba(160,185,180,0.08)', x, y, 13, 9);
+          for (const y of [10, 18]) { rect('#4a3a2c', 0, y, W, 4); for (let x = 30; x < W; x += 90) rect('#6a543f', x, y - 1, 6, 6); }
+          for (let i = 0; i < 6; i++) { const x = rnd() * W; g.fillStyle = 'rgba(70,40,30,0.3)'; g.fillRect(x, 24, 2 + rnd() * 5, 20 + rnd() * 60); }
+          chain(W * 0.5, 22, 42, '#20282a'); rect('#20282a', W * 0.5 - 14, 42, 30, 6); rect('#f4f1dc', W * 0.5 - 10, 48, 22, 2); cone(W * 0.5 + 1, 48, W * 0.5 + 1, H, 110, '240,240,215', 0.09);
+          rect('#111719', 300, 44, 56, Y - 44); bars(300, 44, 56, Y - 44, '#51626c', 7);
+          floor('#3b4543', '#141a19'); perspective('rgba(0,0,0,0.3)', 18); g.fillStyle = '#0a0e0d'; g.beginPath(); g.ellipse(W * 0.5, Y + 40, 10, 3, 0, 0, Math.PI * 2); g.fill();
+        },
+      ],
+      port: [
+        () => { // the landing pad: open sky, a planet, the lift tether
+          sky('#050816', '#2a2448', Y + 2); for (let i = 0; i < 90; i++) rect(`rgba(230,230,255,${0.3 + rnd() * 0.7})`, rnd() * W, rnd() * (Y - 10), 1, 1);
+          g.fillStyle = '#3a3f76'; g.beginPath(); g.arc(70, 8, 46, 0, Math.PI * 2); g.fill(); g.fillStyle = '#54589a'; g.beginPath(); g.arc(62, 2, 42, 0, Math.PI * 2); g.fill(); glow(70, 8, 80, '160,170,255', 0.16);
+          rect('#232a3c', W * 0.72, 0, 4, Y); for (let y = 4; y < Y; y += 11) rect('rgba(210,190,255,0.7)', W * 0.72 - 1, y, 6, 1); rect('#39445c', W * 0.72 - 7, 34, 18, 12);
+          rect('#121827', 170, Y - 50, 5, 52); rect('#121827', 170, Y - 50, 90, 5); chain(240, Y - 45, Y - 22, '#121827');
+          g.fillStyle = '#1a2233'; g.beginPath(); g.moveTo(190, Y - 4); g.lineTo(205, Y - 22); g.lineTo(254, Y - 22); g.lineTo(272, Y - 8); g.lineTo(272, Y - 2); g.fill(); rect('rgba(115,182,212,0.8)', 208, Y - 18, 12, 3);
+          floor('#2a3240', '#10141c'); perspective('rgba(115,182,212,0.13)', 22); for (let i = 0; i < 6; i++) { g.strokeStyle = 'rgba(232,210,90,0.55)'; g.lineWidth = 2; const y = Y + 18 + i * 14, x = W / 2; g.beginPath(); g.moveTo(x - 40 - i * 8, y + 8); g.lineTo(x, y); g.lineTo(x + 40 + i * 8, y + 8); g.stroke(); }
+        },
+        () => { // the cargo hold: stacked containers and an overhead crane
+          indoor = true; sky('#0d1219', '#1c2533'); rect('#0a0e14', 0, 0, W, 12); rect('#2b3648', 0, 12, W, 4); rect('#3a4860', 200 + rnd() * 60, 16, 36, 6); chain(218 + rnd() * 2, 22, 42, '#2b3648');
+          const cols = ['#8a3a2a', '#2f5d76', '#a8842a', '#3f6a4c', '#5a4a78'];
+          for (let x = -6; x < W; x += 44) { const stack = 1 + Math.floor(rnd() * 3); for (let s = 0; s < stack; s++) { const y = Y - (s + 1) * 26, col = cols[Math.floor(rnd() * cols.length)]; rect(col, x, y, 42, 25); rect('rgba(0,0,0,0.25)', x, y + 22, 42, 3); for (let v = 4; v < 40; v += 5) rect('rgba(0,0,0,0.2)', x + v, y + 2, 1, 20); rect('rgba(255,255,255,0.28)', x + 5, y + 5, 12, 2); } }
+          for (let x = 30; x < W; x += 110) cone(x, 16, x, Y + 40, 50, '140,190,230', 0.07);
+          floor('#2a313c', '#11151b'); perspective('rgba(0,0,0,0.3)', 18); for (let x = 0; x < W; x += 12) rect((x / 12) % 2 ? '#14181e' : 'rgba(232,210,90,0.45)', x, Y + 2, 12, 2);
+        },
+        () => { // the top of the lift: above the clouds, tether right beside you
+          sky('#020412', '#3a2a66', Y - 10); for (let i = 0; i < 130; i++) rect(`rgba(240,240,255,${0.3 + rnd() * 0.7})`, rnd() * W, rnd() * (Y - 30), 1, 1);
+          g.fillStyle = '#c8a2d8'; g.beginPath(); g.ellipse(W / 2, Y + 60, W, 76, 0, Math.PI, Math.PI * 2); g.fill(); g.fillStyle = '#8f78bc'; g.beginPath(); g.ellipse(W / 2, Y + 66, W, 76, 0, Math.PI, Math.PI * 2); g.fill(); for (let i = 0; i < 26; i++) { g.fillStyle = 'rgba(250,235,255,0.35)'; g.beginPath(); g.ellipse(rnd() * W, Y - 6 + rnd() * 10, 8 + rnd() * 26, 2, 0, 0, Math.PI * 2); g.fill(); }
+          rect('#39445c', 318, 0, 12, Y + 2); for (let y = 2; y < Y; y += 9) rect('rgba(210,190,255,0.8)', 316, y, 16, 1); rect('#55617e', 306, 30, 36, 18); rect('rgba(115,182,212,0.9)', 310, 35, 28, 4);
+          rect('#232a3c', 0, Y - 8, W, 2); for (let x = 0; x < W; x += 20) rect('#232a3c', x, Y - 8, 2, 10);
+          floor('#1c2436', '#0a0d16'); perspective('rgba(150,200,255,0.2)', 26);
+        },
+      ],
     };
-    const set = byMap[theme] || byMap.garrison;
-    const th = boss ? themes[4] : set[(sector - 1) % set.length];
-    const horizon = 112;
-    let grd = g.createLinearGradient(0, 0, 0, horizon);
-    grd.addColorStop(0, th.sky[0]); grd.addColorStop(1, th.sky[1]);
-    g.fillStyle = grd; g.fillRect(0, 0, W, horizon);
-    const haze = g.createRadialGradient(W * 0.6, horizon, 10, W * 0.6, horizon, 220);
-    haze.addColorStop(0, `rgba(${th.glow},0.22)`); haze.addColorStop(1, `rgba(${th.glow},0)`);
-    g.fillStyle = haze; g.fillRect(0, 0, W, horizon + 10);
-    // far skyline with lit windows, chimneys and masts
-    for (let x = -4; x < W;) {
-      const w = 10 + Math.floor(rnd() * 26), h = 14 + Math.floor(rnd() * 56);
-      g.fillStyle = th.far; g.fillRect(x, horizon - h, w, h);
-      if (rnd() < 0.25) { g.fillRect(x + 3, horizon - h - 22, 3, 22); g.fillStyle = `rgba(${th.glow},0.8)`; g.fillRect(x + 3, horizon - h - 24, 3, 2); }
-      if (rnd() < 0.15) { g.fillStyle = th.far; g.fillRect(x + w / 2, horizon - h - 40, 1, 40); g.fillStyle = '#d4483a'; g.fillRect(x + w / 2, horizon - h - 41, 1, 1); }
-      for (let i = 0; i < w * h * 0.02; i++) { g.fillStyle = rnd() < 0.8 ? `rgba(${th.glow},${0.4 + rnd() * 0.5})` : 'rgba(115,182,212,0.7)'; g.fillRect(x + 1 + Math.floor(rnd() * (w - 2)), horizon - h + 2 + Math.floor(rnd() * (h - 4)), 1, 1); }
-      x += w + Math.floor(rnd() * 4);
-    }
-    if (theme === 'port') { g.fillStyle = '#1d2433'; g.fillRect(W * 0.72, 0, 3, horizon); g.fillStyle = 'rgba(210,190,255,0.5)'; for (let y = 6; y < horizon; y += 14) g.fillRect(W * 0.72 - 1, y, 5, 1); }
-    if (theme === 'foundry') for (let i = 0; i < 4; i++) { const x = 40 + i * 90 + Math.floor(rnd() * 30); g.fillStyle = th.far; g.fillRect(x, horizon - 90, 8, 90); g.fillStyle = 'rgba(255,140,60,0.7)'; g.fillRect(x + 1, horizon - 92, 6, 2); }
-    // perimeter wall with lamps
-    g.fillStyle = th.mid; g.fillRect(0, horizon - 14, W, 16);
-    g.fillStyle = 'rgba(0,0,0,0.35)'; for (let x = 0; x < W; x += 24) g.fillRect(x, horizon - 14, 1, 16);
-    for (let x = 30 + Math.floor(rnd() * 30); x < W; x += 90 + Math.floor(rnd() * 50)) {
-      g.fillStyle = '#0c0e10'; g.fillRect(x, horizon - 40, 2, 28); g.fillRect(x - 3, horizon - 40, 8, 2);
-      g.fillStyle = `rgba(${th.glow},1)`; g.fillRect(x - 2, horizon - 38, 6, 1);
-      const cone = g.createLinearGradient(0, horizon - 38, 0, horizon + 30);
-      cone.addColorStop(0, `rgba(${th.glow},0.18)`); cone.addColorStop(1, `rgba(${th.glow},0)`);
-      g.fillStyle = cone; g.beginPath(); g.moveTo(x - 2, horizon - 37); g.lineTo(x + 4, horizon - 37); g.lineTo(x + 26, horizon + 30); g.lineTo(x - 24, horizon + 30); g.fill();
-    }
-    // floor with perspective grid
-    grd = g.createLinearGradient(0, horizon, 0, H);
-    grd.addColorStop(0, th.floor[0]); grd.addColorStop(1, th.floor[1]);
-    g.fillStyle = grd; g.fillRect(0, horizon + 2, W, H - horizon);
-    g.strokeStyle = 'rgba(0,0,0,0.28)'; g.lineWidth = 1;
-    for (let i = -12; i <= 12; i++) { g.beginPath(); g.moveTo(W / 2 + i * 14, horizon + 2); g.lineTo(W / 2 + i * 70, H); g.stroke(); }
-    for (let y = horizon + 6, d = 4; y < H; y += d, d *= 1.35) { g.beginPath(); g.moveTo(0, Math.round(y) + 0.5); g.lineTo(W, Math.round(y) + 0.5); g.stroke(); }
-    if (theme === 'detention') { g.fillStyle = 'rgba(0,0,0,0.5)'; for (let x = 4; x < W; x += 6) g.fillRect(x, horizon - 13, 1, 13); }
-    // hazard stripe along the base of the wall
-    for (let x = 0; x < W; x += 8) { g.fillStyle = (x / 8) % 2 ? '#1a1a1a' : 'rgba(207,149,40,0.55)'; g.fillRect(x, horizon + 2, 8, 2); }
+    (scenes[theme] || scenes.garrison)[band]();
+    if (boss) { g.fillStyle = 'rgba(120,18,12,0.24)'; g.fillRect(0, 0, W, H); glow(W * 0.7, Y - 30, 150, '212,72,58', 0.3); banner(W * 0.7 - 16, 4, 32, 40, '#7a1f1a', '#e8c35a'); }
+    c.indoor = indoor;
     return (this.bgCache[key] = c);
   }
 
@@ -758,10 +813,12 @@ export class Stage {
     const g = this.ctx;
     g.save();
     if (t < this.shakeUntil) g.translate(Math.round((Math.random() * 2 - 1) * this.shakeMag), Math.round((Math.random() * 2 - 1) * this.shakeMag));
-    g.drawImage(this.background(this.sector, this.boss, this.theme), 0, 0);
+    const backdrop = this.background(this.sector, this.boss, this.theme);
+    g.drawImage(backdrop, 0, 0);
     if (this.boss && !reduceMotion) { g.fillStyle = `rgba(212,72,58,${0.06 + 0.06 * Math.sin(t / 300)})`; g.fillRect(0, 0, W, H); }
     g.fillStyle = this.theme === 'foundry' ? 'rgba(255,150,70,0.35)' : 'rgba(160,180,200,0.22)';
-    for (const d of this.rain) { d.y += d.v; d.x -= d.v * 0.25; if (d.y > H) { d.y = -6; d.x = Math.random() * (W + 40); } g.fillRect(Math.round(d.x), Math.round(d.y), 1, 4); }
+    // Rain outdoors; in the foundry, sparks. Under a roof, neither.
+    if (!backdrop.indoor || this.theme === 'foundry') for (const d of this.rain) { d.y += d.v; d.x -= d.v * 0.25; if (d.y > H) { d.y = -6; d.x = Math.random() * (W + 40); } g.fillRect(Math.round(d.x), Math.round(d.y), 1, 4); }
 
     const ea = this.anchor('enemy');
     this.pad(ea.x, ea.y + 1, 58, 11);

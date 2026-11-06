@@ -29,7 +29,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   console.log('guest sees:', await gScreen());
   await guest.screenshot({ path: `${OUT}/coop-guest-create.png` });
   // guest creates an operative
-  await guest.click('button[data-a="step"][data-v="2"]'); await guest.click('button[data-a="bg"][data-v="runner"]'); await guest.click('button[data-a="step"][data-v="3"]'); await guest.waitForTimeout(100);
+  await guest.click('button[data-a="step"][data-v="2"]'); await guest.click('button[data-a="bg"][data-v="runner"]'); await guest.click('button[data-a="step"][data-v="4"]'); await guest.waitForTimeout(100);
   await guest.click('button[data-a="create"]'); await guest.waitForTimeout(700);
   console.log('guest after create:', await gScreen(), '| host chip:', await host.evaluate(() => (document.querySelector('.head-stats .chip') || {}).textContent));
   const hostState = () => host.evaluate(() => { const s = JSON.parse(localStorage.getItem('cinder-cell-save-v1')); return { coop: s.coop, c1: s.char && s.char.name, c2: s.char2 && s.char2.name, ready: s.guestReady, screen: s.screen, actor: s.run && s.run.actor }; });

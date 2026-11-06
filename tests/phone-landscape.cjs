@@ -5,6 +5,13 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
 const toFight = `for (let i = 0; i < 30 && s.screen !== 'combat'; i++) { if (s.run.choices && s.run.choices.length) { const k = s.run.choices.findIndex((x) => x === 'fight' || x === 'elite'); E.enterRoom(s, Math.max(0, k), rng); } else E.offerRoute(s, rng); if (['event', 'room'].includes(s.screen)) { s.screen = 'route'; s.run.choices = null; } }`;
 const SCREENS = {
   town: ``,
+  body: `s.char = null; s.draft = E.newDraft(s.meta, rng); s.draft.step = 1; s.screen = 'create';`,
+  class: `s.char = null; s.draft = E.newDraft(s.meta, rng); s.draft.step = 2; s.screen = 'create';`,
+  look: `s.char = null; s.draft = E.newDraft(s.meta, rng); s.draft.step = 3; s.screen = 'create';`,
+  stats: `s.char = null; s.draft = E.newDraft(s.meta, rng); s.draft.step = 4; s.screen = 'create';`,
+  missions: `s.popup = 'missions';`,
+  heirloomDeath: `s.meta.cell.push('heirloom'); c.gear.ranged = E.makeItem('cannon', 'elite', rng); c.gear.melee = E.makeItem('cannon', 'rare', rng); E.deploy(s, 'garrison', 1, rng); ${toFight} s.run.enemy.atk = 1e6; s.run.enemy.intent = 'attack'; for (let i = 0; i < 12 && s.screen === 'combat'; i++) { c.hp = 1; s.run.enemy.intent = 'attack'; s.run.enemy.stun = 0; E.playerAct(s, 'defend', rng); }`,
+  eventDone: `E.deploy(s, 'garrison', 1, rng); s.event = D.EVENTS[0].id; s.screen = 'event'; E.resolveEvent(s, 0, rng);`,
   route: `E.deploy(s, 'garrison', 6, rng); E.offerRoute(s, rng); s.lastResult = { kind: 'fight', enemy: 'Patrol Trooper', credits: 20, xp: 9, feats: [] };`,
   combat: `c.attrs.int = 5; c.attrs.agi = 5; c.attrs.cha = 5; c.items.thermal = 2; c.items.ion = 2; c.items.smoke = 2; E.deploy(s, 'garrison', 1, rng); ${toFight}`,
   perk: `c.upgrades.push('broker'); E.deploy(s, 'garrison', 1, rng); s.run.perkOffer = ['ironlung', 'chit', 'ambush', 'grudge']; s.screen = 'perk';`,
@@ -27,6 +34,9 @@ const SCREENS = {
       await p.evaluate(async (src) => { const E = await import('./engine.js'), D = await import('./data.js'), rng = E.seededRng(7), s = E.newGame(rng); E.createChar(s, rng); s.screen = 'town'; const c = s.char; c.name = 'Tamsin Rook'; c.credits = 900; c.level = 6; c.attrPoints = 3; s.meta.resolve = 12; E.mapProgress(c, 'garrison').insertions.push(6); eval(src); localStorage.setItem('cinder-cell-save-v1', JSON.stringify(s)); }, setup);
       await p.reload(); await p.waitForTimeout(350); await p.tap('button[data-a="continue-title"]', { timeout: 2000 }).catch(() => {}); await p.waitForTimeout(650);
       bad = await fits(); check(`${w}x${h} ${name}`, !bad.length, bad.join('; '));
+      // The way forward has to be on screen without scrolling.
+      const hidden = await p.evaluate(() => [...document.querySelectorAll('.btn.big, .btn.primary')].filter((e) => { const r = e.getBoundingClientRect(); if (!r.width || e.closest('.rows')) return false; const x = r.x + r.width / 2, y = r.y + r.height / 2; if (y > innerHeight || y < 0) return true; const hit = document.elementFromPoint(x, y); return !hit || !(hit === e || e.contains(hit)); }).map((e) => e.textContent.trim().slice(0, 24)));
+      check(`${w}x${h} ${name} buttons on screen`, !hidden.length, hidden.join(', '));
       await p.screenshot({ path: `${OUT}/ph-${name}-${w}.png` });
     }
     // Upright on a phone asks you to turn it.

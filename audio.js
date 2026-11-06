@@ -171,3 +171,16 @@ export function setAmbience(theme) {
     stop: () => { try { rain.stop(); oscs.forEach(([o, l]) => { o.stop(); l.stop(); }); g.disconnect(); } catch (e) {} },
   };
 }
+
+// On a phone, going to the background silences the game; coming back picks up where it was.
+if (typeof document !== 'undefined' && typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches) {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      for (const a of Object.values(music)) a.pause();
+      if (ctx && ctx.state === 'running') ctx.suspend();
+    } else {
+      if (ctx && ctx.state === 'suspended') ctx.resume();
+      startMusic();
+    }
+  });
+}

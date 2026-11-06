@@ -591,6 +591,9 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 
 /* compact pass: tighter spacing and type everywhere. Later rules win. */
+.create-panel { padding: 16px 18px; }
+.bg-stats { margin: 0; padding-left: 1.1em; font-size: .86rem; color: var(--sodium); display: grid; gap: 3px; }
+.choices.classes { align-items: stretch; }
 .set-row .btnrow { flex-wrap: nowrap; }
 .settings .text { padding: 4px 8px; font-size: .86rem; }
 .set-row .btn { padding: 4px 10px; font-size: .84rem; }
@@ -709,7 +712,7 @@ h3 { font-size: 1.05rem; }
   #app > section, #app > .columns { flex: 1 1 auto; min-height: 0; }
   #app > section { overflow-y: auto; }
   .tipbox, .columns > aside, .aa-feats, .brand, .tools .tool:not(.menu-tool) { display: none; }
-  .tools .menu-tool { display: block; padding: 5px 12px; }
+  .tools .menu-tool { display: block; padding: 4px 14px; min-height: 32px; }
   .status { display: flex; align-items: center; flex-wrap: nowrap; padding: 0 0 3px; gap: 8px; }
   .head-top { order: 2; margin-left: auto; flex: none; }
   .head-stats { flex-wrap: nowrap; gap: 0 12px; min-width: 0; align-items: center; }
@@ -763,7 +766,9 @@ h3 { font-size: 1.05rem; }
   .town-spend { font-size: .74rem; gap: 3px; }
   .town-spend b { flex: 1 1 100%; }
   .town-spend .btn { padding: 3px 5px; font-size: .72rem; }
-  .town-panel .notice { font-size: .68rem; padding: 3px 6px; max-height: 58px; overflow: hidden; }
+  .town-panel .notice { font-size: .68rem; padding: 3px 6px; max-height: 42px; overflow: hidden; }
+  .town-panel:has(.town-spend) .notice { display: none; }
+  .town-panel .shortcuts .btn { min-height: 28px; }
   .doors { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .door { padding: 6px 10px; }
   .door .ico { width: 28px; height: 28px; }
@@ -796,7 +801,181 @@ h3 { font-size: 1.05rem; }
   .kv { font-size: .78rem; }
   .payout .payout-row { gap: 8px; }
 }
+@media (pointer: coarse) {
+  input, select, textarea, .settings .text { font-size: 16px; } /* iOS zooms the page when a smaller field gets focus */
+  .modal .close, .pop-head .tool { min-height: 38px; min-width: 56px; }
+  .tool { min-height: 34px; }
+  .town-spend .btn, .set-row .btn, .stepper .btn, .rows .btn { min-height: 38px; min-width: 42px; }
+  input[type="range"] { min-height: 34px; }
+  .resolve-link { min-height: 34px; }
+  .tabs .tab { min-height: 38px; }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .modal .close { position: sticky; top: 0; float: right; z-index: 3; }
+  /* The way forward is never below the fold. */
+  .panel .btnrow:has(.btn.big), .modal .btnrow:has(.btn.big), .panel > div:has(> .btn.big), .modal > div:has(> .btn.big) { position: sticky; bottom: -5px; z-index: 2; background: var(--panel); padding-block: 3px; }
+  /* Character creation: every step on one screen. */
+  .create-panel { display: grid; grid-template-rows: auto minmax(0, 1fr); padding: 4px 8px; gap: 3px; position: relative; }
+  .create-head { position: absolute; top: 4px; right: 8px; z-index: 1; }
+  .create-head > div:first-child, .create-summary { display: none; }
+  .preview, .preview img { width: 46px; height: 46px; }
+  .preview { padding: 0; }
+  .create-panel .tabs { padding-right: 56px; }
+  .create-panel > .notice { display: none; }
+  .choices.four { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; align-content: start; }
+  .choice { padding: 6px 7px; gap: 3px; justify-items: start; }
+  .choice b { font-size: .92rem; line-height: 1.05; }
+  .choice .face { width: 76px; height: 76px; }
+  .bg-stats { font-size: .74rem; padding-left: 1em; margin: 0; color: var(--sodium); display: grid; gap: 2px; }
+  .create-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+  .create-grid > div { gap: 3px !important; }
+  .create-grid .label { font-size: .55rem; }
+  .create-grid .btnrow { gap: 3px; }
+  .create-grid .btnrow .btn { padding: 3px 7px; font-size: .74rem; min-height: 30px; }
+  .create-grid .btn.big { padding: 5px 10px; font-size: .84rem; flex: 1 1 auto; }
+  .create-grid .text { padding: 3px 8px; min-height: 30px; flex: 1; min-width: 0; }
+  .swatches { gap: 3px; flex-wrap: wrap; display: flex; }
+  .swatch { width: 28px; height: 28px; min-width: 0; min-height: 0; }
+  .points { display: flex; justify-content: space-between; align-items: center; padding: 0; }
+  .points .big-num, .create-grid .big-num { font-size: 1rem; }
+  .attr-row { padding: 1px 6px; gap: 6px; }
+  .attr-row .desc, .create-unlocks { display: none; }
+  .attr-row .name { font-size: .82rem; }
+  .stepper { gap: 4px; }
+  .create-grid .stepper .btn { width: 32px; min-width: 32px; min-height: 28px; padding: 0; }
+  .create-grid .rows .row, .create-grid .attr-row { min-height: 0; }
+  .create-grid .kv { font-size: .68rem; gap: 0 8px; }
+  .pop-head { position: sticky; top: -7px; z-index: 2; background: var(--panel); padding-block: 2px; }
+  .pop-head h2 { font-size: 1.05rem; }
+  .pop-head .label { font-size: .55rem; }
+  .two-col { gap: 8px; }
+  .create-grid, .choices { gap: 4px; }
+}
 @media (pointer: coarse) { body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; } .touch-only { display: inline; } .keys-only { display: none; } .k { display: none; } }
+
+/* Town layout: side column keeps its own place on every size. */
+.town-side { display: contents; }
+.town-info { order: 1; display: grid; gap: 8px; min-width: 0; }
+.town-info:empty { display: none; }
+.town-panel > .town-head { order: 0; }
+.town-panel > .town, .town-panel > #town-slot { order: 2; }
+.town-side > .shortcuts { order: 3; }
+/* Creation */
+.create-tabs { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--line); }
+.create-tabs .tabs { border: 0; flex: 1; }
+.create-random { margin-bottom: 4px; }
+.look-step { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; align-items: start; }
+.look-big { padding: 6px; border: 1px solid var(--line); background: var(--panel-2); }
+.look-big img { display: block; width: 168px; height: 168px; image-rendering: pixelated; }
+.look-opts { display: grid; gap: 7px; min-width: 0; }
+/* Missions */
+.gate { display: grid; gap: 10px; }
+.maps-locked { font-size: .8rem; margin-top: 5px; }
+.gate-brief { display: grid; gap: 5px; font-size: .9rem; }
+.mech-title { font-family: var(--display); text-transform: uppercase; letter-spacing: .04em; color: var(--sodium); }
+.deploy-go { display: grid; gap: 6px; }
+.ins .ins-name { font-family: var(--body); font-size: .78em; text-transform: none; letter-spacing: 0; opacity: .8; }
+/* Combat console */
+.c-left, .c-right { display: grid; gap: 8px; min-width: 0; align-content: start; }
+.combat .stage, #stage-slot { width: min(100%, 96vh); margin-inline: auto; }
+.c-right { position: relative; padding: 11px 8px 8px; background: linear-gradient(180deg, #161b20, #0f1316); border: 1px solid #333d45; box-shadow: inset 0 1px 0 #ffffff0d; }
+.c-right::before { content: ''; position: absolute; inset: 0 0 auto; height: 4px; background: repeating-linear-gradient(135deg, #e8973a 0 8px, #15191d 8px 16px); opacity: .75; }
+.actions .btn, .skills .btn, .items .btn { --acc: #5d6b75; position: relative; background: linear-gradient(180deg, #2b343b 0%, #1b2126 100%); border: 1px solid #3c4851; border-bottom: 3px solid #090c0e; border-left: 3px solid var(--acc); box-shadow: inset 0 1px 0 #ffffff14; color: #e9e3d4; transition: transform .06s, filter .1s; }
+.actions .btn:hover:not(:disabled), .skills .btn:hover:not(:disabled), .items .btn:hover:not(:disabled) { filter: brightness(1.18); border-color: #566570; border-left-color: var(--acc); }
+.actions .btn:active:not(:disabled), .skills .btn:active:not(:disabled), .items .btn:active:not(:disabled) { transform: translateY(2px); border-bottom-width: 1px; }
+.actions .btn[data-v="shoot"] { --acc: #e8973a; background: linear-gradient(180deg, #f0a44a, #c9762a); color: #1a1208; border-color: #f4bb72; border-bottom-color: #6d3f12; }
+.actions .btn[data-v="strike"] { --acc: #d4483a; background: linear-gradient(180deg, #5a2823, #2f1714); border-color: #7e3a33; border-left-color: #d4483a; }
+.actions .btn[data-v="defend"] { --acc: #73b6d4; }
+.actions .btn[data-v="stim"] { --acc: #8db57d; }
+.actions .btn[data-v="run"] { --acc: #a79a7c; }
+.actions .btn[data-v="revive"] { --acc: #8db57d; }
+.skills .btn.ready { --acc: #73b6d4; background: linear-gradient(180deg, #1f3440, #141f26); border-color: #375567; border-left-color: #73b6d4; }
+.skills .btn:not(.ready) { --acc: #39434a; filter: saturate(.3) brightness(.8); }
+.sk-status { color: #9fd3ea; }
+.items .btn { --acc: #b77be8; }
+.intent { background: #12171b; }
+@media (max-height: 500px) and (orientation: landscape) {
+  /* Town: the side column never moves or scrolls while you walk. */
+  #app > .town-panel { display: grid; grid-template-columns: minmax(0, 1fr) 168px; grid-template-rows: minmax(0, 1fr); gap: 6px; overflow: hidden; }
+  .town-panel > .town, .town-panel > #town-slot { grid-column: 1; grid-row: 1; width: 100%; height: 100%; margin: 0; min-height: 0; }
+  .town-side { display: flex; flex-direction: column; gap: 4px; grid-column: 2; grid-row: 1; overflow: hidden; min-height: 0; margin: 0 !important; touch-action: none; }
+  .town-info { gap: 4px; overflow: hidden; flex: 0 1 auto; min-height: 0; margin: 0; }
+  .town-side > .shortcuts { margin-top: auto; flex: none; }
+  .town { touch-action: none; overscroll-behavior: none; }
+  /* Creation */
+  .create-panel { display: flex; flex-direction: column; gap: 4px; padding: 3px 8px; position: relative; overflow: hidden; height: 100%; }
+  #app > .create-panel { overflow: hidden; }
+  .create-head { position: absolute; top: 3px; right: 8px; }
+  .create-head > div:first-child, .create-summary { display: none !important; }
+  .create-tabs { padding-right: 58px; flex: none; }
+  .create-tabs .tab { padding: 3px 7px; font-size: .86rem; min-height: 36px; }
+  .create-random { padding: 3px 8px; font-size: .78rem; min-height: 32px; margin-bottom: 2px; }
+  .create-panel > .choices, .create-panel > .create-grid, .create-panel > .look-step { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+  .create-panel > .create-nav { flex: none; position: static; background: none; padding: 0; margin-top: auto; justify-content: flex-end; }
+  .create-panel .create-nav .btn { min-height: 38px; padding: 4px 16px; font-size: .9rem; }
+  .look-step { gap: 10px; align-items: stretch; }
+  .look-big { padding: 2px; display: grid; place-items: center; }
+  .look-big img { width: 150px; height: 150px; }
+  .look-opts { gap: 3px; align-content: start; }
+  .look-opts .btnrow { gap: 3px; }
+  .look-opts .btnrow .btn { padding: 3px 7px; min-height: 34px; font-size: .78rem; }
+  .look-opts .label { font-size: .55rem; }
+  .look-opts .swatch { width: 34px; height: 34px; }
+  /* Missions: pick a map on the left; the way in is always on screen. */
+  .gate { grid-template-columns: minmax(0, 46%) minmax(0, 1fr); grid-template-areas: 'maps go' 'brief go'; gap: 6px 10px; align-items: start; }
+  .gate-maps { grid-area: maps; }
+  .gate-brief { grid-area: brief; font-size: .74rem; }
+  .gate-brief .threat .btn { padding: 3px 6px; font-size: .72rem; min-height: 32px; }
+  .deploy-go { grid-area: go; align-content: start; }
+  .maps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .map-card { padding: 5px 7px; gap: 1px; }
+  .map-card b { font-size: .86rem; }
+  .map-card .label { font-size: .5rem; }
+  .maps-locked { font-size: .66rem; margin-top: 3px; }
+  .ins { display: grid; gap: 4px; }
+  .ins .btn.big { padding: 6px 10px; font-size: .9rem; min-height: 40px; text-align: left; }
+  .gate-warn { font-size: .72rem; }
+  .contract { font-size: .74rem; }
+  /* Combat: the scene gets the room, the console stays tight. */
+  .combat { grid-template-columns: minmax(0, 1fr) minmax(0, 236px); gap: 6px; }
+  .combat-head { display: none; }
+  .combat .stage, #stage-slot { width: min(100%, calc((100dvh - 120px) * 1.778)); margin-inline: auto; }
+  .hud { grid-template-columns: minmax(0, 1fr) auto; padding: 1px 5px; align-items: center; column-gap: 6px; }
+  .hud .bar { grid-column: 1 / -1; height: 4px; order: 3; }
+  .hud-row { min-width: 0; }
+  .c-left { gap: 3px; }
+  .intent { padding: 1px 6px; display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
+  .combat .intent { grid-template-columns: none; }
+  .intent b { font-size: .86rem; white-space: nowrap; }
+  .intent .tip { font-size: .66rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
+  .intent .dot { margin: 0; flex: none; width: 7px; height: 7px; }
+  .intent-side { flex: none; gap: 3px; }
+  .mech { font-size: .6rem; padding: 1px 4px; }
+  .mech b { font-size: .68rem; }
+  .statline { font-size: .58rem; gap: 2px 8px; flex-wrap: nowrap; overflow: hidden; white-space: nowrap; }
+  .statline .tag { font-size: .5rem; padding: 0 3px; }
+  .quirk-line { flex-wrap: nowrap; overflow: hidden; white-space: nowrap; font-size: .6rem; gap: 4px; }
+  .c-right { padding: 7px 4px 4px; gap: 3px; height: 100%; align-content: stretch; grid-template-rows: auto auto auto; }
+  .actions, .skills, .items { gap: 3px; }
+  .actions .btn { min-height: 44px; padding: 2px; font-size: .86rem; }
+  .actions .btn.twoline { padding: 2px; }
+  .actions .btn.atk { min-height: 50px; }
+  .actions .btn .wpn { display: none; }
+  .actions .btn .bs { font-size: .6rem; }
+  .actions .btn[data-v="defend"] .bs, .actions .btn[data-v="stim"] .bs { display: none; }
+  .skills { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .skills .btn { min-height: 38px; padding: 2px 4px; gap: 0; }
+  .sk-name { font-size: .72rem; gap: 3px; white-space: nowrap; overflow: hidden; }
+  .sk-name .ico { width: 14px; height: 14px; }
+  .sk-note { font-size: 0; }
+  .sk-note .sk-status { font-size: .54rem; }
+  .items { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .items .btn { min-height: 32px; padding: 1px 2px; font-size: .6rem; }
+  .items .bs { display: none; }
+  .items .btn.confirm .bs { display: block; font-size: .52rem; }
+  .items .bt { gap: 2px; line-height: 1; }
+  .items .ico { width: 14px; height: 14px; }
+}
 </style>
 
 <div class="rotate-note"><b>Turn your phone sideways</b><span class="muted">Cinder Cell plays in landscape.</span><div><button class="btn" onclick="this.closest('.rotate-note').remove()">Play upright anyway</button></div></div>
@@ -879,6 +1058,7 @@ async function flushBoard() {
 async function loadBoard() {
   if (!BOARD_ON) return;
   if (!(globalBoard && globalBoard.rows)) globalBoard = { loading: true };
+  if (!isGuest()) E.syncCareer(state);
   flushBoard();
   try {
     const res = await fetch('/board?limit=100', { cache: 'no-store' });
@@ -1069,7 +1249,7 @@ const isHost = () => !!net && net.role === 'host';
 const myIdx = () => (isGuest() ? 1 : 0);
 // Actions that only touch this screen, never the game.
 const DOWNTIME = new Set(['drink', 'bet', 'stake', 'spin', 'invest', 'withdraw', 'shippart', 'shipcell', 'orbitgo', 'orbitact', 'orbitclose']);
-const LOCAL = new Set(['continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm', 'cloudcopy', 'cloudload', 'cloudversions', 'cloudrestore', 'cloudkeep', 'devunlock', 'devoff', 'dev', 'autostart']);
+const LOCAL = new Set(['randomize', 'missiontab', 'markettab', 'chartab', 'continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm', 'cloudcopy', 'cloudload', 'cloudversions', 'cloudrestore', 'cloudkeep', 'devunlock', 'devoff', 'dev', 'autostart']);
 function coopChip() {
   if (!net) return '';
   const who = net.peerName || (isHost() ? 'friend' : 'host');
@@ -1114,7 +1294,7 @@ function syncHome(hostMeta) {
   save();
 }
 let homePayout = 0;
-const GUEST_LOCAL = ['popup', 'compare', 'gearSlot', 'confirmSmoke', 'report', 'draft', 'guestSawDeath'];
+const GUEST_LOCAL = ['missionTab', 'marketTab', 'charTab', 'popup', 'compare', 'gearSlot', 'confirmSmoke', 'report', 'draft', 'guestSawDeath'];
 const GUEST_VIEW = ['notice', 'perkPick', 'compare', 'popup'];
 const NEEDS_RUN = new Set(['continue', 'room', 'roomDone', 'event', 'eventDone', 'deeper', 'extract', 'loottake', 'lootsell', 'perk', 'perkdrop']);
 let guestView = {}, guestQueue = [], guestToast = null, hostSynced = false, awaitingHost = false, awaitTimer = null, inbox = [], pumping = false, hadRun = false;
@@ -1402,45 +1582,47 @@ function createScreen() {
   const skills = E.skillsOf(fake);
   const still = lookStill(d.look, d.background) || sheetStill('player') || portraitURL('player');
   const preview = `<div class="preview"><img src="${still}" alt="" width="128" height="128">${hasLayers() ? '' : '<span class="label">Preview art coming</span>'}</div>`;
-  const steps = ['Body', 'Class', 'Details'].map((l, i) => `<button class="tab" aria-selected="${d.step === i + 1}" data-a="step" data-v="${i + 1}">${i + 1}. ${l}</button>`).join('');
+  const steps = ['Body', 'Class', 'Look', 'Stats'].map((l, i) => `<button class="tab" aria-selected="${d.step === i + 1}" data-a="step" data-v="${i + 1}">${i + 1}. ${l}</button>`).join('');
+  const nav = (back, next) => `<div class="btnrow create-nav">${back ? `<button class="btn" data-a="step" data-v="${back}">Back</button>` : ''}<button class="btn primary big" data-a="step" data-v="${next[0]}">Next: ${next[1]}</button></div>`;
   let body = '';
   if (d.step === 1) {
-    body = `<div class="choices four">${BODIES.map((b) => { const pt = lookPortrait({ ...d.look, body: b.id }); return `<button class="choice ${b.id === d.look.body ? 'on' : ''}" data-a="look" data-v="body" data-k="${b.id}" aria-pressed="${b.id === d.look.body}">${pt ? `<img class="face" src="${pt}" alt="" width="64" height="64">` : ''}<b>${esc(b.name)}</b><span class="chip">${b.sex === 'm' ? 'man' : 'woman'}</span><span class="desc">${esc(b.desc)}</span></button>`; }).join('')}</div>
-      <div class="btnrow"><button class="btn primary big" data-a="step" data-v="2">Next: class</button></div>`;
+    body = `<div class="choices four">${BODIES.map((b) => { const pt = lookPortrait({ ...d.look, body: b.id }); return `<button class="choice ${b.id === d.look.body ? 'on' : ''}" data-a="look" data-v="body" data-k="${b.id}" aria-pressed="${b.id === d.look.body}">${pt ? `<img class="face" src="${pt}" alt="" width="64" height="64">` : ''}<b>${esc(b.name)}</b><span class="chip">${b.sex === 'm' ? 'man' : 'woman'}</span></button>`; }).join('')}</div>${nav(0, [2, 'class'])}`;
   } else if (d.step === 2) {
-    body = `<div class="choices">${D.BACKGROUNDS.map((b) => `<button class="choice ${b.id === d.background ? 'on' : ''}" data-a="bg" data-v="${b.id}" aria-pressed="${b.id === d.background}">
+    body = `<div class="choices four classes">${D.BACKGROUNDS.map((b) => `<button class="choice ${b.id === d.background ? 'on' : ''}" data-a="bg" data-v="${b.id}" aria-pressed="${b.id === d.background}">
       <b>${esc(b.name)}</b><span class="chip">${Object.entries(b.attrs).map(([k, v]) => `+${v} ${D.ATTRS[k].short}`).join(', ')}</span>
-      <span class="desc">${esc(b.desc)}</span><span class="bg-perk">${esc(b.perk)}</span></button>`).join('')}</div>
-      <div class="btnrow"><button class="btn" data-a="step" data-v="1">Back</button><button class="btn primary big" data-a="step" data-v="3">Next: details</button></div>`;
+      <ul class="bg-stats">${b.perks.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></button>`).join('')}</div>${nav(1, [3, 'look'])}`;
+  } else if (d.step === 3) {
+    const sw = (list, key, cur) => `<div class="swatches">${list.map((c, i) => `<button class="swatch ${i === cur ? 'on' : ''}" data-a="look" data-v="${key}" data-k="${i}" style="background:${c[1]}" aria-label="${key} ${i + 1}"></button>`).join('')}</div>`;
+    body = `<div class="look-step">
+      <div class="look-big"><img src="${still}" alt="" width="128" height="128"></div>
+      <div class="look-opts"><span class="label">Hair</span><div class="btnrow">${HAIR.map((h) => `<button class="btn ${h === d.look.hair ? 'primary' : ''}" data-a="look" data-v="hair" data-k="${h}">${esc(HAIR_NAMES[h])}</button>`).join('')}</div>
+      <span class="label">Hair colour</span>${sw(HAIRS, 'hairColor', d.look.hairColor)}
+      <span class="label">Skin</span>${sw(SKINS, 'skin', d.look.skin)}</div>
+    </div>${nav(2, [4, 'stats'])}`;
   } else {
     const attrRows = Object.entries(D.ATTRS).map(([k, a]) => `<div class="attr-row">
-      <div><div class="name">${esc(a.label)} <span class="num muted">${a.short}</span></div><div class="desc">${esc(a.desc)}</div></div>
+      <div title="${esc(a.desc)}"><div class="name">${esc(a.label)} <span class="num muted">${a.short}</span></div><div class="desc">${esc(a.desc)}</div></div>
       <div class="stepper"><button class="btn" data-a="attr" data-v="${k}" data-k="-1" aria-label="Lower ${a.label}" ${d.attrs[k] <= D.ATTR_START ? 'disabled' : ''}>\u2212</button>
       <span class="num big-num">${attrs[k]}</span>
       <button class="btn" data-a="attr" data-v="${k}" data-k="1" aria-label="Raise ${a.label}" ${d.points <= 0 || attrs[k] >= D.ATTR_CREATE_MAX ? 'disabled' : ''}>+</button></div></div>`).join('');
-    const sw = (list, key, cur) => `<div class="swatches">${list.map((c, i) => `<button class="swatch ${i === cur ? 'on' : ''}" data-a="look" data-v="${key}" data-k="${i}" style="background:${c[1]}" aria-label="${key} ${i + 1}"></button>`).join('')}</div>`;
     body = `<div class="create-grid">
-      <div style="display:grid;gap:14px;align-content:start;min-width:0">
+      <div style="display:grid;gap:10px;align-content:start;min-width:0">
         <label class="label" for="op-name">Name</label>
         <div class="btnrow"><input id="op-name" class="text" maxlength="24" value="${esc(d.name)}" autocomplete="off"><button class="btn" data-a="randname">Random</button></div>
-        <span class="label">Hair</span><div class="btnrow">${HAIR.map((h) => `<button class="btn ${h === d.look.hair ? 'primary' : ''}" data-a="look" data-v="hair" data-k="${h}">${esc(HAIR_NAMES[h])}</button>`).join('')}</div>
-        <span class="label">Skin</span>${sw(SKINS, 'skin', d.look.skin)}
-        <span class="label">Hair colour</span>${sw(HAIRS, 'hairColor', d.look.hairColor)}
-        <p class="muted" style="font-size:.85rem">${hasLayers() ? 'What you see is what walks into the yard.' : 'Looks are saved now and drawn once the character art lands.'}</p>
+        <dl class="kv"><dt>Max HP</dt><dd>${st.maxHp}</dd><dt>Shoot \u00B7 Strike</dt><dd>${st.atk} \u00B7 ${st.atkM} ATK</dd><dt>DEF \u00B7 SPD</dt><dd>${st.def} \u00B7 ${st.spd}</dd><dt>Skills</dt><dd>${skills.map((k) => D.SKILLS[k].name).join(', ')}</dd></dl>
+        <p class="muted create-unlocks" style="font-size:.85rem">Skills: STR 6 Power Strike, INT 3 Overload, AGI 4 Suppressing Fire, CHA 3 Intimidate.</p>
       </div>
-      <div style="display:grid;gap:14px;align-content:start;min-width:0">
+      <div style="display:grid;gap:8px;align-content:start;min-width:0">
         <div class="points"><span class="label">Attribute points left</span><span class="num big-num" style="color:${d.points ? 'var(--sodium)' : 'var(--muted)'}">${d.points}</span></div>
         <div class="rows">${attrRows}</div>
-        <dl class="kv"><dt>Max HP</dt><dd>${st.maxHp}</dd><dt>Shoot \u00B7 Strike</dt><dd>${st.atk} \u00B7 ${st.atkM} ATK</dd><dt>DEF \u00B7 SPD</dt><dd>${st.def} \u00B7 ${st.spd}</dd><dt>Skills</dt><dd>${skills.map((k) => D.SKILLS[k].name).join(', ')}</dd></dl>
-        <p class="muted" style="font-size:.85rem">STR 6 Power Strike (or any real melee weapon), INT 3 Overload, AGI 4 Suppressing Fire, CHA 3 Intimidate. Every class starts with one. A point per level.</p>
-        <div class="btnrow"><button class="btn" data-a="step" data-v="2">Back</button><button class="btn primary big" data-a="create">${d.points ? `Start (keep ${d.points} point${d.points > 1 ? 's' : ''} for later)` : 'Start'}</button></div>
       </div>
-    </div>`;
+    </div>
+    <div class="btnrow create-nav"><button class="btn" data-a="step" data-v="3">Back</button><button class="btn primary big" data-a="create">${d.points ? `Start (keep ${d.points} point${d.points > 1 ? 's' : ''})` : 'Start'}</button></div>`;
   }
-  return `<section class="panel" style="padding:28px">
+  return `<section class="panel create-panel">
     <div class="create-head"><div style="display:grid;gap:4px"><span class="label">New operative \u00B7 #${state.meta.operatives + 1}</span><h2>Who walks through the gate?</h2></div>${preview}</div>
     ${notice()}
-    <nav class="tabs">${steps}</nav>
+    <div class="create-tabs"><nav class="tabs">${steps}</nav><button class="btn create-random" data-a="randomize">Randomize</button></div>
     <div class="create-summary"><span class="chip">${esc(BODIES.find((b) => b.id === d.look.body).name)}</span><span class="chip">${esc(bg.name)}</span><span class="chip">${esc(HAIR_NAMES[d.look.hair])}</span><span class="chip">${esc(d.name || 'unnamed')}</span></div>
     ${body}
   </section>`;
@@ -1464,11 +1646,9 @@ const popupBadge = (id) => {
 function townScreen() {
   return `<section class="panel town-panel">
     <div class="town-head"><h2>${esc(S.town)}</h2><p class="muted town-help"><span class="keys-only">WASD or tap to walk \u00B7 <b>E</b> to talk</span><span class="touch-only">Tap to walk \u00B7 tap someone to talk</span>${state.char.fed ? ' <span class="chip good">Fed: +5% XP</span>' : ''}</p></div>
-    ${tip('town')}${state.popup ? '' : notice()}
-    ${townSpend()}
-    ${coopBar()}
+    <div class="town-side"><div class="town-info">${tip('town')}${state.popup ? '' : notice()}${townSpend()}${coopBar()}</div>
+    <nav class="shortcuts" aria-label="Town menus">${Object.entries(POPUPS).filter(([, p]) => !p.hidden).map(([id, p]) => `<button class="btn" data-a="popup" data-v="${id}">${esc(p.label)}${popupBadge(id)}</button>`).join('')}${downtimeBar()}</nav></div>
     <div id="town-slot"></div>
-    <nav class="shortcuts" aria-label="Town menus">${Object.entries(POPUPS).filter(([, p]) => !p.hidden).map(([id, p]) => `<button class="btn" data-a="popup" data-v="${id}">${esc(p.label)}${popupBadge(id)}</button>`).join('')}${downtimeBar()}</nav>
   </section>${townPopup()}${tradeView()}`;
 }
 // Beat a boss or get out: what's now yours, counting up, then the attribute points to spend.
@@ -1744,10 +1924,11 @@ function market() {
     return `<div class="row ${modIco ? 'i' : ''} ${owned ? 'owned' : ''}">${modIco}<div><div class="name">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div></div>${owned ? '<span></span>' : buyBtn('upgrade', u.id, '', E.modCost(c, u))}</div>`;
   }).join('');
   const disc = 1 - E.price(state, 100) / 100;
-  return `<p class="muted">New gear replaces the old for good. Restocks after every raid.${disc > 0 ? ` Charisma: ${pct(disc)} off.` : ''}</p>
-    ${marketGear()}
-    <h3>Supplies</h3><div class="rows">${items}</div>
-    <h3>Contacts &amp; mods <span class="num muted" style="font-size:.85rem">${c.upgrades.length} / ${D.UPGRADES.length} \u00B7 each one raises the price of the rest</span></h3><div class="rows">${ups}</div>`;
+  const tab = state.marketTab || 'gear', tabBtn = (k, label) => `<button class="tab" aria-selected="${tab === k}" data-a="markettab" data-v="${k}">${label}</button>`;
+  return `<nav class="tabs pop-tabs">${tabBtn('gear', 'Gear')}${tabBtn('supplies', 'Supplies')}${tabBtn('mods', `Mods ${c.upgrades.length}/${D.UPGRADES.length}`)}</nav>
+    ${tab === 'gear' ? `<p class="muted">New gear replaces the old for good. Restocks after every raid.${disc > 0 ? ` Charisma: ${pct(disc)} off.` : ''}</p>${marketGear()}` : ''}
+    ${tab === 'supplies' ? `<div class="rows">${items}</div>` : ''}
+    ${tab === 'mods' ? `<p class="muted">Each one you buy raises the price of the rest.</p><div class="rows">${ups}</div>` : ''}`;
 }
 
 function clinic() {
@@ -1789,15 +1970,17 @@ function character() {
   const wall = m.fallen.length ? m.fallen.map((f) => `<div><span>${esc(f.name)} <span class="muted">\u00B7 Lv ${f.level}</span></span><span class="muted">${esc(E.sectorName(f.sector, f.map))}, ${esc(f.killer)}</span></div>`).join('') : '<p class="muted">No names yet. Keep it that way.</p>';
   const bg = D.BACKGROUNDS.find((b) => b.id === c.background);
   const n = E.respecPoints(c), rcost = E.price(state, E.respecCost(c));
-  return `<section class="resolve-box">
+  const charTab = state.charTab || 'resolve', charBtn = (k, label) => `<button class="tab" aria-selected="${charTab === k}" data-a="chartab" data-v="${k}">${label}</button>`;
+  const charNav = `<nav class="tabs pop-tabs">${charBtn('resolve', `${esc(S.meta)} ${m.resolve}`)}${charBtn('operative', `Operative${c.attrPoints ? ` <span class="badge">${c.attrPoints}</span>` : ''}`)}${charBtn('record', 'Record')}</nav>`;
+  return `${charNav}${charTab === 'resolve' ? `<section class="resolve-box">
       <div class="resolve-head"><div><span class="label">${esc(S.meta)} \u00B7 survives death</span><div class="resolve-num">${m.resolve} <span>banked</span></div></div>
         <p class="muted">Helps every future operative. Earned from new sectors, bosses and contracts.</p></div>
       <div class="two-col">
         <div style="display:grid;gap:8px;align-content:start;min-width:0"><span class="label">Training</span><div class="rows">${rows}</div></div>
         <div style="display:grid;gap:8px;align-content:start;min-width:0"><span class="label">Cell upgrades</span><div class="rows">${cell}</div></div>
       </div>
-    </section>
-    <div class="two-col">
+    </section>` : ''}
+    ${charTab === 'operative' ? `<div class="two-col">
       <div style="display:grid;gap:14px;align-content:start;min-width:0">
         <h3>${esc(c.name)} <span class="num muted" style="font-size:.85rem">${esc(bg.name)} \u00B7 Lv ${c.level} \u00B7 lost on death</span></h3>
         <p class="muted" style="font-size:.9rem">${esc(bg.perk)}</p>
@@ -1810,8 +1993,8 @@ function character() {
         <span class="label">Skills</span><div class="rows">${skills}</div>
       </div>
     </div>
-    <h3>This operative</h3>
-    <div class="two-col">
+    ` : ''}
+    ${charTab === 'record' ? `<div class="two-col">
       <div style="display:grid;gap:14px;align-content:start;min-width:0">
         <span class="label">Marks \u00B7 ${(c.marks || []).length} / 5 \u00B7 earned in orbit</span>${(c.marks || []).length ? `<div class="perk-list">${c.marks.map((id) => { const mk = D.MARKS[id]; return `<div class="perk-mini rare">${ico(`mark:${id}`, 'sm2')}<div><b>${esc(mk.name)}</b><span>${esc(mk.desc)}</span></div></div>`; }).join('')}</div>` : '<p class="muted">None yet. Fly the shuttle (Orbit, after curfew) on the harder runs.</p>'}
         ${(() => { const fb = E.featBuffs(m), t = Object.entries(fb).filter(([k, v]) => k !== 'vs' && v > 0), vs = Object.keys(fb.vs).length; return `<span class="label">Achievements \u00B7 the cell\u2019s permanent edges</span>${t.length || vs ? `<div class="chips">${t.map(([k, v]) => `<span class="chip good">+${(v * 100).toFixed(1).replace(/\.0$/, '')}% ${esc(E.BUFF_NAMES[k])}</span>`).join('')}${vs ? `<span class="chip good">bonus damage vs ${vs} enemy type${vs > 1 ? 's' : ''}</span>` : ''}<button class="btn" data-a="modal" data-v="feats" style="margin-left:4px">All feats</button></div>` : '<p class="muted">No tiers yet. Everything the cell does counts: see <button class="btn" data-a="modal" data-v="feats">Feats</button>.</p>'}`; })()}
@@ -1821,40 +2004,32 @@ function character() {
         <span class="label">Choices that changed you</span><div class="wall">${history}</div>
         <span class="label">The wall \u00B7 ${m.operatives} operative${m.operatives === 1 ? '' : 's'} so far</span><div class="wall">${wall}</div>
       </div>
-    </div>`;
+    </div>` : ''}`;
 }
 
 function gate() {
   const c = state.char, st = E.stats(state), m = state.meta;
-  const sel = E.mapById(state.gateMap || 'garrison');
-  const cards = D.MAPS.map((mp) => {
-    const open = E.mapUnlocked(state, mp), prog = c.maps[mp.id], lib = m.liberated[mp.id];
-    const traits = [mp.credits !== 1 ? `${mp.credits > 1 ? '+' : ''}${pct(mp.credits - 1)} credits` : null, mp.level ? `enemies +${mp.level} lv` : null].filter(Boolean);
-    return `<button class="map-card ${mp.id === sel.id ? 'on' : ''} theme-${mp.theme}" data-a="pickmap" data-v="${mp.id}" ${open ? '' : 'disabled'} aria-pressed="${mp.id === sel.id}">
-      <span class="label">${!open ? `Locked \u00B7 reach sector ${mp.unlock}` : lib ? '<span class="lib">Liberated</span>' : `Best: sector ${m.bestByMap[mp.id] || 0} / 15`}</span>
-      <b>${esc(mp.name)}</b>
-      <span class="mech-line"><b>${esc(mp.mechanic.name)}.</b> ${esc(mp.mechanic.desc)}</span>
-      ${traits.length ? `<span class="chips">${traits.map((t) => `<span class="chip">${t}</span>`).join('')}</span>` : ''}
-      ${prog && prog.deepest ? `<span class="label">This operative: sector ${prog.deepest}</span>` : ''}</button>`;
+  const sel = E.mapById(state.gateMap || 'garrison'), tab = state.missionTab || 'deploy';
+  const open = D.MAPS.filter((mp) => E.mapUnlocked(state, mp)), locked = D.MAPS.filter((mp) => !E.mapUnlocked(state, mp));
+  const cards = open.map((mp) => {
+    const lib = m.liberated[mp.id];
+    return `<button class="map-card ${mp.id === sel.id ? 'on' : ''} theme-${mp.theme}" data-a="pickmap" data-v="${mp.id}" aria-pressed="${mp.id === sel.id}"><b>${esc(mp.name)}</b><span class="label">${lib ? '<span class="lib">Liberated</span>' : `Best: sector ${m.bestByMap[mp.id] || 0} / 15`}</span></button>`;
   }).join('');
+  const traits = [sel.credits !== 1 ? `${sel.credits > 1 ? '+' : ''}${pct(sel.credits - 1)} credits` : null, sel.level ? `enemies +${sel.level} lv` : null, (c.maps[sel.id] || {}).deepest ? `this operative: sector ${c.maps[sel.id].deepest}` : null].filter(Boolean);
   const ins = [...E.insertionsAt(c, sel.id, m.threat || 0)].sort((a, b) => a - b);
-  const warn = c.hp < st.maxHp * 0.6 ? `<p class="danger-text">You\u2019re going in at ${c.hp}/${st.maxHp} HP. The clinic is right there.</p>` : '';
+  const warn = c.hp < st.maxHp * 0.6 ? `<p class="danger-text gate-warn">Going in at ${c.hp}/${st.maxHp} HP. The clinic is right there.</p>` : '';
   const mt = E.maxThreat(state);
-  const threat = mt > 0 ? `<div class="threat"><span class="label">Threat level</span><div class="btnrow">${D.THREAT.slice(0, mt + 1).map((t, i) => `<button class="btn ${m.threat === i ? 'primary' : ''}" data-a="threat" data-v="${i}" title="${esc(t.desc)}">${esc(t.name)}</button>`).join('')}</div><p class="muted" style="font-size:.88rem">${esc(D.THREAT[m.threat].desc)}${m.threat ? ' Starts again from sector 1.' : ''}</p></div>` : '';
+  const threat = mt > 0 ? `<div class="threat"><span class="label">Threat level</span><div class="btnrow">${D.THREAT.slice(0, mt + 1).map((t, i) => `<button class="btn ${m.threat === i ? 'primary' : ''}" data-a="threat" data-v="${i}" title="${esc(t.desc)}">${esc(t.name)}</button>`).join('')}</div><p class="muted" style="font-size:.84rem">${esc(D.THREAT[m.threat].desc)}${m.threat ? ' Starts again from sector 1.' : ''}</p></div>` : '';
   const contracts = (m.contracts || []).map((k) => `<div class="contract ${k.done ? 'done' : ''}"><div><b>${esc(k.text)}</b><span class="muted"> ${k.done ? 'Complete' : `${Math.min(k.progress, k.n)} / ${k.n}`}</span></div><span class="chip ${k.done ? 'good' : ''}">+${k.resolve} ${esc(S.meta)} \u00B7 +${k.credits} ${S.cur}</span></div>`).join('');
-  return `<div class="maps">${cards}</div>
-    ${threat}
-    <div class="deploy-row">
-      <div style="display:grid;gap:8px;min-width:0">
-        <span class="label">Insertion point \u00B7 ${esc(sel.name)}</span>
-        ${isGuest() ? `<p class="muted" style="font-size:.9rem">The host picks the target. Tell them you\u2019re ready.</p><div><button class="btn ${state.guestReady ? 'primary' : ''}" data-a="coopready" aria-pressed="${!!state.guestReady}">${state.guestReady ? 'Ready \u00B7 waiting for the host' : 'Ready for the raid'}</button></div>`
-        : `<div class="ins">${ins.map((n) => `<button class="btn ${n === ins[ins.length - 1] ? 'primary' : ''}" data-a="deploy" data-v="${n}" ${E.isCoop(state) && !state.guestReady ? 'disabled' : ''}>Sector ${n} \u00B7 ${esc(E.sectorName(n, sel.id))}</button>`).join('')}</div>${E.isCoop(state) ? `<p class="muted" style="font-size:.88rem">${state.guestReady ? `${esc(state.guestName || 'Your friend')} is ready.` : `Waiting for ${esc(state.guestName || 'your friend')} to press Ready at their terminal.`}</p>` : ''}`}
-        ${ins.length === 1 ? '<p class="muted" style="font-size:.88rem">Beat a boss to start deeper next time.</p>' : ''}
-        ${warn}
-        
-      </div>
-      <div style="display:grid;gap:8px;min-width:0"><span class="label">Contracts</span><div class="contracts">${contracts || '<p class="muted">No jobs right now.</p>'}</div></div>
-    </div>`;
+  const tabBtn = (k, label) => `<button class="tab" aria-selected="${tab === k}" data-a="missiontab" data-v="${k}">${label}</button>`;
+  const go = isGuest() ? `<div class="deploy-go"><span class="muted">The host picks the target.</span><button class="btn big ${state.guestReady ? 'primary' : ''}" data-a="coopready" aria-pressed="${!!state.guestReady}">${state.guestReady ? 'Ready \u00B7 waiting for the host' : 'Ready for the raid'}</button></div>`
+    : `<div class="deploy-go">${E.isCoop(state) ? `<span class="muted" style="font-size:.84rem">${state.guestReady ? `${esc(state.guestName || 'Your friend')} is ready.` : `Waiting for ${esc(state.guestName || 'your friend')} to press Ready.`}</span>` : ''}<div class="ins">${ins.map((n) => `<button class="btn big ${n === ins[ins.length - 1] ? 'primary' : ''}" data-a="deploy" data-v="${n}" ${E.isCoop(state) && !state.guestReady ? 'disabled' : ''}><span class="ins-n">Sector ${n}</span> <span class="ins-name">${esc(E.sectorName(n, sel.id))}</span></button>`).join('')}</div>${ins.length === 1 ? '<span class="muted" style="font-size:.82rem">Beat a boss to start deeper next time.</span>' : ''}${warn}</div>`;
+  return `<nav class="tabs pop-tabs">${tabBtn('deploy', 'Deploy')}${tabBtn('contracts', `Contracts ${(m.contracts || []).length}`)}</nav>
+    ${tab === 'contracts' ? `<div class="contracts">${contracts || '<p class="muted">No jobs right now.</p>'}</div>` : `<div class="gate">
+      <div class="gate-maps"><div class="maps">${cards}</div>${locked.length ? `<p class="muted maps-locked">Locked: ${locked.map((mp) => `${esc(mp.name)} (reach sector ${mp.unlock})`).join(', ')}</p>` : ''}</div>
+      <div class="gate-brief"><b class="mech-title">${esc(sel.mechanic.name)}</b> <span class="mech-line">${esc(sel.mechanic.desc)}</span>${traits.length ? `<div class="chips">${traits.map((x) => `<span class="chip">${esc(x)}</span>`).join('')}</div>` : ''}${threat}</div>
+      ${go}
+    </div>`}`;
 }
 
 function portraitImg(e, cls = '') {
@@ -2194,7 +2369,7 @@ function boardView() {
     <button class="tool close" data-a="closemodal" aria-label="Close">Close</button>
     <h2>Leaderboard <span class="num muted" style="font-size:.9rem">${online ? `top ${board.length} of ${globalBoard.total.toLocaleString()} operatives, everyone\u2019s` : `this device\u2019s best ${board.length} operatives`}</span></h2>
     ${!online && BOARD_ON ? `<p class="muted" style="font-size:.9rem">${globalBoard && globalBoard.loading ? 'Fetching the global board\u2026' : 'Can\u2019t reach the global board right now, so these are your own operatives. Yours will be sent when the connection is back.'}</p>` : ''}
-    <p class="muted" style="font-size:.9rem">How far each operative got: ${E.SECTOR_POINTS} per sector, ${E.BOSS_POINTS} per boss, ${E.LIBERATE_POINTS.toLocaleString()} per district freed. Repeat clears add nothing; threat levels add ${Math.round(E.THREAT_POINTS * 100)}% each.</p>
+    <p class="muted" style="font-size:.9rem">How far each operative got: ${E.SECTOR_POINTS} per sector, ${E.BOSS_POINTS} per boss, ${E.LIBERATE_POINTS.toLocaleString()} per district freed. Repeat clears add nothing; threat levels add ${Math.round(E.THREAT_POINTS * 100)}% each.${state.meta.dev ? ' <b>This cell has used dev mode, so it isn\u2019t on the board.</b>' : ''}</p>
     ${board.length ? `<table class="board-table"><thead><tr><th>#</th><th>Operative</th><th>Got to</th><th>Status</th><th class="num">Score</th></tr></thead><tbody>${rows}</tbody></table>` : '<p class="muted">No operatives on the board yet.</p>'}
   </div></div>`;
 }
@@ -2693,6 +2868,14 @@ function applyAct(a, v, k) {
     case 'begin': state.screen = 'create'; if (!state.draft) state.draft = E.newDraft(state.meta, rng); break;
     case 'bg': state.draft.background = v; { for (const key of Object.keys(D.ATTRS)) while (E.draftAttr(state.draft, key) > D.ATTR_CREATE_MAX) E.draftAdjust(state.draft, key, -1); } break;
     case 'attr': E.draftAdjust(state.draft, v, +k); break;
+    case 'randomize': {
+      const d = state.draft, any = (list) => list[Math.floor(rng() * list.length)];
+      d.background = any(D.BACKGROUNDS).id; d.name = any(D.OPERATIVE_NAMES);
+      d.look = { ...(d.look || defaultLook()), body: any(BODIES).id, hair: any(HAIR), skin: Math.floor(rng() * SKINS.length), hairColor: Math.floor(rng() * HAIRS.length) };
+      for (const k of Object.keys(D.ATTRS)) while (E.draftAdjust(d, k, -1));
+      for (let i = 0; i < 80 && d.points > 0; i++) E.draftAdjust(d, any(Object.keys(D.ATTRS)), 1);
+      sfx('click'); break;
+    }
     case 'randname': state.draft.name = D.OPERATIVE_NAMES[Math.floor(rng() * D.OPERATIVE_NAMES.length)]; break;
     case 'create': E.createChar(state, rng); state.gateMap = 'garrison'; state.popup = null; break;
     case 'tab': case 'popup': state.popup = v === 'gate' ? 'missions' : v === 'safehouse' ? 'character' : v; state.notice = null; break;
@@ -2726,6 +2909,9 @@ function applyAct(a, v, k) {
     case 'implant': ok = E.installImplant(state, v); break;
     case 'unimplant': E.removeImplant(state, v); break;
     case 'heal': ok = E.heal(state); break;
+    case 'missiontab': state.missionTab = v; sfx('click'); break;
+    case 'markettab': state.marketTab = v; sfx('click'); break;
+    case 'chartab': state.charTab = v; sfx('click'); break;
     case 'train': ok = E.train(state, v); break;
     case 'cell': ok = E.buyCell(state, v); break;
     case 'spend': ok = E.spendAttr(state, v); break;
@@ -2762,6 +2948,8 @@ document.addEventListener('click', (ev) => {
   if (ev.target.classList && ev.target.classList.contains('cmp-pop')) { act('closecompare'); return; }
   if (ev.target.classList && ev.target.classList.contains('town-pop')) { act('closepopup'); return; }
   const b = ev.target.closest('button[data-a]');
+  // No hover on a touch screen: tapping something with a tooltip shows it.
+  if (!b && ev.target.closest && matchMedia('(pointer: coarse)').matches) { const h = ev.target.closest('[title]'); if (h && !busy) { toast = h.title; render(); return; } }
   if (!b || b.disabled) return;
   act(b.dataset.a, b.dataset.v, b.dataset.k);
 });
@@ -2845,6 +3033,7 @@ async function start(data) {
   else state.coop = false;
   try { navigator.storage && navigator.storage.persist && navigator.storage.persist().catch(() => {}); } catch (e) {}
   render();
+  if (!isGuest()) E.syncCareer(state);
   flushBoard();
   loadLayers().then((ok) => { if (ok) { lookKey = ''; render(); } });
   loadDowntimeArt().then((ok) => { if (ok && modal) render(); });

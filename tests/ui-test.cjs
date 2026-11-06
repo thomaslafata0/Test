@@ -75,7 +75,7 @@ const URL = 'http://localhost:8765/index.html';
     await shot('create');
     await page.click('button[data-a="step"][data-v="2"]'); await page.click('button[data-a="bg"][data-v="preacher"]'); await page.waitForTimeout(100);
     await shot('create-preacher');
-    await page.click('button[data-a="step"][data-v="3"]'); await page.click('button[data-a="create"]'); await page.waitForTimeout(200);
+    await page.click('button[data-a="step"][data-v="4"]'); await page.click('button[data-a="create"]'); await page.waitForTimeout(200);
     await page.keyboard.press('Escape'); await page.click('button[data-a="popup"][data-v="character"]'); await page.waitForTimeout(150);
     for (const k of ['cha', 'cha']) { const b = await page.$(`.town-pop button[data-a="spend"][data-v="${k}"]`); if (b) await b.click(); }
     await page.keyboard.press('Escape'); await page.click('button[data-a="popup"][data-v="gear"]'); await page.waitForTimeout(200);

@@ -16,7 +16,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
     await page.click('button[data-a="bg"][data-v="clerk"]'); await page.click('button[data-a="step"][data-v="3"]'); await page.waitForTimeout(150);
     await ov('create3'); await page.screenshot({ path: `${OUT}/create3-${width}.png`, fullPage: true });
     await page.click('button[data-a="look"][data-v="hair"][data-k="hair_mohawk"]'); await page.click('.swatches .swatch:nth-child(4)');
-    await page.click('button[data-a="create"]'); await page.waitForTimeout(500);
+    await page.click('button[data-a="step"][data-v="4"]'); await page.waitForTimeout(100); await page.click('button[data-a="create"]'); await page.waitForTimeout(500);
     const s = await page.evaluate(() => JSON.parse(localStorage.getItem('cinder-cell-save-v1')));
     console.log(width, 'look saved:', JSON.stringify(s.char.look), s.char.background);
     // save code round trip

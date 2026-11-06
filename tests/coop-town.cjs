@@ -13,7 +13,7 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   await host.click('button[data-a="modal"][data-v="settings"]'); await host.waitForTimeout(150); await host.click('button[data-a="coophost"]'); await host.waitForTimeout(300);
   const code = await host.evaluate(() => document.querySelector('.settings b.num').textContent); await host.keyboard.press('Escape');
   await guest.goto(URL + '?join=' + code); await guest.waitForTimeout(1000);
-  await guest.click('button[data-a="step"][data-v="2"]'); await guest.click('button[data-a="bg"][data-v="runner"]'); await guest.click('button[data-a="step"][data-v="3"]'); await guest.waitForTimeout(100); await guest.click('button[data-a="create"]'); await guest.waitForTimeout(1200);
+  await guest.click('button[data-a="step"][data-v="2"]'); await guest.click('button[data-a="bg"][data-v="runner"]'); await guest.click('button[data-a="step"][data-v="4"]'); await guest.waitForTimeout(100); await guest.click('button[data-a="create"]'); await guest.waitForTimeout(1200);
   const hs = () => host.evaluate(() => { const s = JSON.parse(localStorage.getItem('cinder-cell-save-v1')); const g = (c) => Object.fromEntries(Object.entries(c.gear).map(([k, v]) => [k, v && v.base])); return { a: { cr: s.char.credits, gear: g(s.char) }, b: { cr: s.char2.credits, gear: g(s.char2) }, lock: [...(s.char.lockup || []), ...(s.char2.lockup || [])].map((x) => x.base), lockB: (s.char2.lockup || []).map((x) => x.base), trade: s.trade }; });
   const count = (o) => Object.values(o.a.gear).concat(Object.values(o.b.gear), o.lock).filter(Boolean).length;
   let s0 = await hs(); const total = count(s0), money = s0.a.cr + s0.b.cr;
