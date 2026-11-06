@@ -215,9 +215,10 @@ function pickTarget(s, rng) {
 
 // ---------- character creation ----------
 export function newDraft(meta, rng) {
+  const female = rng() < 0.5;
   return {
     name: pick(rng, D.OPERATIVE_NAMES), background: 'foundry', step: 1, drone: 'hornet',
-    look: { body: pick(rng, ['body_m1', 'body_m2', 'body_f1', 'body_f2']), hair: pick(rng, ['hair_short', 'hair_cropped', 'hair_long_tied', 'hair_shaved', 'hair_mohawk', 'hair_bob']), skin: randInt(rng, 0, 5), hairColor: randInt(rng, 0, 5) },
+    look: { body: female ? 'body_f1' : 'body_m1', hair: female ? 'hair_long_tied' : 'hair_short', skin: randInt(rng, 0, 5), hairColor: randInt(rng, 0, 5) },
     attrs: { str: D.ATTR_START, agi: D.ATTR_START, int: D.ATTR_START, cha: D.ATTR_START },
     points: D.ATTR_POINTS + (hasCell(meta, 'mentor') ? 1 : 0),
   };
@@ -913,6 +914,15 @@ export function pickDrone(s, type) {
   if (!c || c.drone || !D.DRONES[type]) return false;
   c.drone = { type, rank: droneRankOf(s.meta, type), damaged: false };
   s.notice = `${D.DRONES[type].name} is yours. It stays with you for good.`;
+  return true;
+}
+// Swapping is free in town, and each type keeps its own rank. An offline drone has to be repaired first, so swapping can't dodge the bill.
+// rank: a co-op friend's rank for that type, from their own cell.
+export function switchDrone(s, type, rank = null) {
+  const c = s.char;
+  if (!c || s.run || !c.drone || c.drone.damaged || c.drone.type === type || !D.DRONES[type]) return false;
+  c.drone = { type, rank: Math.max(1, Math.min(D.DRONE_MAX_RANK, rank || droneRankOf(s.meta, type))), damaged: false };
+  s.notice = `${D.DRONES[type].name} is flying with you now, at rank ${c.drone.rank}.`;
   return true;
 }
 // free: already paid for. A co-op friend pays from their own cell's Resolve on their own device.

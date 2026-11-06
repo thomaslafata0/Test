@@ -1,0 +1,708 @@
+{
+ "op_f": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 7
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 7,
+    "tip": [
+     71,
+     -194
+    ]
+   },
+   "attackM": {
+    "frames": 9,
+    "fps": 12,
+    "loop": false,
+    "pad": 7,
+    "tip": [
+     59,
+     -179
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 7
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 7
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 7
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 7
+   }
+  },
+  "size": 256,
+  "feetY": 248,
+  "fig": 239
+ },
+ "crawler": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 29
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 29,
+    "tip": [
+     -47,
+     -53
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 29
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 29
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 29
+   }
+  },
+  "size": 168,
+  "feetY": 138,
+  "fig": 101
+ },
+ "drone_aegis": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 18
+   }
+  },
+  "size": 96,
+  "feetY": 77,
+  "fig": 60
+ },
+ "drone_hornet": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 40
+   }
+  },
+  "size": 120,
+  "feetY": 79,
+  "fig": 41
+ },
+ "drone_magpie": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 15
+   }
+  },
+  "size": 96,
+  "feetY": 80,
+  "fig": 63
+ },
+ "drone_mender": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 15
+   }
+  },
+  "size": 100,
+  "feetY": 84,
+  "fig": 61
+ },
+ "halvek": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 8
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 8,
+    "tip": [
+     -105,
+     -206
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 8
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 8
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 8
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 8
+   }
+  },
+  "size": 256,
+  "feetY": 247,
+  "fig": 238
+ },
+ "hound": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 43
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 43,
+    "tip": [
+     -85,
+     -93
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 43
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 43
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 43
+   }
+  },
+  "size": 220,
+  "feetY": 176,
+  "fig": 132
+ },
+ "interrogator": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 7
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 7,
+    "tip": [
+     -66,
+     -201
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 7
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 7
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 7
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 7
+   }
+  },
+  "size": 256,
+  "feetY": 248,
+  "fig": 241
+ },
+ "marksman": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 9
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 9,
+    "tip": [
+     -97,
+     -94
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 9
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 9
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 9
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 9
+   }
+  },
+  "size": 256,
+  "feetY": 246,
+  "fig": 239
+ },
+ "officer": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 8
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 8,
+    "tip": [
+     -69,
+     -157
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 8
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 8
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 8
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 8
+   }
+  },
+  "size": 256,
+  "feetY": 247,
+  "fig": 237
+ },
+ "op_m": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 6
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 6,
+    "tip": [
+     82,
+     -195
+    ]
+   },
+   "attackM": {
+    "frames": 9,
+    "fps": 12,
+    "loop": false,
+    "pad": 6,
+    "tip": [
+     98,
+     -167
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 6
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 6
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 6
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 6
+   }
+  },
+  "size": 256,
+  "feetY": 249,
+  "fig": 243
+ },
+ "ostrane": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 7
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 7,
+    "tip": [
+     -57,
+     -176
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 7
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 7
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 7
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 7
+   }
+  },
+  "size": 256,
+  "feetY": 248,
+  "fig": 242
+ },
+ "patrol": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 9
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 9,
+    "tip": [
+     -97,
+     -186
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 9
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 9
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 9
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 9
+   }
+  },
+  "size": 256,
+  "feetY": 246,
+  "fig": 239
+ },
+ "probe": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 25
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 25,
+    "tip": [
+     -56,
+     -68
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 25
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 25
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 25
+   }
+  },
+  "size": 168,
+  "feetY": 142,
+  "fig": 119
+ },
+ "riot": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 4
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 4,
+    "tip": [
+     -63,
+     -213
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 4
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 4
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 4
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 4
+   }
+  },
+  "size": 256,
+  "feetY": 251,
+  "fig": 245
+ },
+ "sentinel": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 15
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 15,
+    "tip": [
+     -81,
+     -201
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 15
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 15
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 15
+   }
+  },
+  "size": 256,
+  "feetY": 240,
+  "fig": 225
+ },
+ "shock": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 11
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 11,
+    "tip": [
+     -120,
+     -188
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 11
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 11
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 11
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 11
+   }
+  },
+  "size": 256,
+  "feetY": 244,
+  "fig": 234
+ }
+}

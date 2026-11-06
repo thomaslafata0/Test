@@ -90,6 +90,22 @@ const turns = ({ s, rng }, n, act = 'defend') => { for (let i = 0; i < n && s.sc
   const d3 = E.newDraft(s.meta, rng); d3.drone = 'aegis'; E.createChar(s, rng, d3); assert.strictEqual(s.char.drone.rank, 1, 'other types start from their own rank');
   assert.strictEqual(s.char.drone.damaged, false);
   console.log('PASS upgrades last across operatives, and repairs cost credits');
+  // Switching: free in town, each type keeps its rank, and an offline drone can't dodge its repair.
+  const cost0 = s.char.credits;
+  s.meta.droneRanks = { hornet: 4 };
+  assert.strictEqual(E.switchDrone(s, 'hornet'), true);
+  assert.strictEqual(s.char.drone.rank, 4, 'a type keeps its rank');
+  assert.strictEqual(s.char.credits, cost0, 'switching is free');
+  assert.strictEqual(E.switchDrone(s, 'hornet'), false, 'already flying it');
+  assert.strictEqual(E.switchDrone(s, 'nonsense'), false);
+  s.char.drone.damaged = true;
+  assert.strictEqual(E.switchDrone(s, 'aegis'), false, 'repair first');
+  s.char.drone.damaged = false;
+  assert.strictEqual(E.switchDrone(s, 'aegis'), true);
+  assert.strictEqual(s.char.drone.rank, 1);
+  E.deploy(s, 'garrison', 1, rng);
+  assert.strictEqual(E.switchDrone(s, 'mender'), false, 'not during a raid');
+  console.log('PASS switching drones');
 }
 // Old operatives have no drone: nothing breaks, and they get one free pick.
 {

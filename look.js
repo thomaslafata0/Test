@@ -1,13 +1,17 @@
+import { gunSprite, GUN_GRIP } from './guns.js';
 // Character looks: body, class outfit, hair, colours and held weapon, composited from the layered pack in chars2/
 // (manifest.json; see docs/CHARACTER_ART_PROMPT_CHATGPT.md). Every overlay was drawn on body_m1: see compose().
 // Without the pack, everything returns null and the game falls back to the single player sheet.
 
+// New operatives are male or female. The other two bodies remain for older saves.
 export const BODIES = [
-  { id: 'body_m1', name: 'Broad', sex: 'm', desc: 'Casting-floor shoulders.' },
-  { id: 'body_m2', name: 'Lean', sex: 'm', desc: 'Built for fences and vents.' },
-  { id: 'body_f1', name: 'Solid', sex: 'f', desc: 'Carried loader rigs for a living.' },
-  { id: 'body_f2', name: 'Wiry', sex: 'f', desc: 'Fast, and knows it.' },
+  { id: 'body_m1', name: 'Male', sex: 'm' },
+  { id: 'body_f1', name: 'Female', sex: 'f' },
 ];
+const OLD_BODIES = { body_m2: 'm', body_f2: 'f' };
+export const sexOf = (look) => { const b = look && BODIES.find((x) => x.id === look.body); return b ? b.sex : (look && OLD_BODIES[look.body]) || 'm'; };
+// Each operative's hair is drawn into their art, so the style follows from the choice; town uses the closest match.
+export const HAIR_FOR = { m: 'hair_short', f: 'hair_long_tied' };
 export const HAIR = ['hair_short', 'hair_cropped', 'hair_long_tied', 'hair_shaved', 'hair_mohawk', 'hair_bob'];
 export const HAIR_NAMES = { hair_short: 'Short', hair_cropped: 'Cropped', hair_long_tied: 'Tied back', hair_shaved: 'Shaved', hair_mohawk: 'Mohawk', hair_bob: 'Bob' };
 // Palettes replace the neutral ramps in the art: [dark, mid, light].
@@ -264,6 +268,8 @@ export function townSheets(look, background) {
 // idle, charge and attack; the melee weapon in attackM; no weapon on hit, defend and death (the pack has none there).
 export function battleSheet(look, background, ranged, melee) {
   if (!ready || !look) return null;
+  const hd = hdSheet(look, ranged);
+  if (hd) return hd;
   const key = `battle:${JSON.stringify([look, background, ranged, melee])}`;
   if (sheetCache[key]) return sheetCache[key];
   const anims = {};
@@ -274,6 +280,62 @@ export function battleSheet(look, background, ranged, melee) {
   const m = compose('battle', 'attack', look, background, melee);
   if (m) anims.attackM = { img: m.img, frames: m.frames, fps: m.fps, loop: false, tip: m.tip };
   return (sheetCache[key] = anims.idle ? { size: 96, anims, look: true } : null);
+}
+
+// ---------- high-resolution operatives ----------
+// One finished figure per sex, from sprites/op_f and op_m. Hair and skin are recoloured from the art; guns other than the
+// pistol they were drawn holding are painted over it from the older weapon art.
+const ops = { m: null, f: null };
+export function setOpSheets(m, f) { ops.m = m; ops.f = f; for (const k of Object.keys(sheetCache)) if (k.startsWith('hd:')) delete sheetCache[k]; for (const k of Object.keys(stillCache)) if (k.startsWith('hd')) delete stillCache[k]; }
+const NATURAL_HAIR = 3; // the colour they were drawn with
+const NATURAL_SKIN = 1;
+const AIM = { idle: [20], charge: [20], attack: [20, 20, 8, -3, -5, -8, -5, -4, 0] };
+const hsv = (r, g, b) => { const mx = Math.max(r, g, b), mn = Math.min(r, g, b), c = mx - mn; let h = 0; if (c) h = mx === r ? ((g - b) / c) % 6 : mx === g ? (b - r) / c + 2 : (r - g) / c + 4; return [(h * 60 + 360) % 360, mx ? c / mx : 0, mx / 255]; };
+const rgb = (hex) => [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
+function hdSheet(look, ranged) {
+  const op = ops[sexOf(look)];
+  if (!op || !op.anims.idle) return null;
+  const gun = ranged && ranged !== 'wpn_pistol' ? ranged : null, key = `hd:${sexOf(look)}:${look.hairColor}:${look.skin}:${gun}`;
+  if (sheetCache[key]) return sheetCache[key];
+  const hair = look.hairColor !== NATURAL_HAIR && HAIRS[look.hairColor] ? rgb(HAIRS[look.hairColor][1]) : null;
+  const skin = look.skin !== NATURAL_SKIN && SKINS[look.skin] ? rgb(SKINS[look.skin][2]) : null;
+  const art = gun ? gunSprite(gun) : null, grip = gun ? GUN_GRIP[gun] : null, anims = {};
+  for (const [name, a] of Object.entries(op.anims)) {
+    if (!hair && !skin && !(art && AIM[name])) { anims[name] = a; continue; }
+    const fw = a.img.width / a.frames, fh = a.img.height, c = document.createElement('canvas'); c.width = a.img.width; c.height = fh;
+    const g = c.getContext('2d', { willReadFrequently: true }); g.imageSmoothingEnabled = false; g.drawImage(a.img, 0, 0);
+    const id = g.getImageData(0, 0, c.width, fh), p = id.data;
+    for (let f = 0; f < a.frames; f++) {
+      const ox = Math.round(f * fw);
+      let top = fh;
+      for (let y = 0; y < fh && top === fh; y++) for (let x = 0; x < fw; x++) if (p[(y * c.width + ox + x) * 4 + 3] > 40) { top = y; break; }
+      for (let y = top; y < fh; y++) for (let x = 0; x < fw; x++) {
+        const o = (y * c.width + ox + x) * 4; if (p[o + 3] < 40) continue;
+        const [h, s, v] = hsv(p[o], p[o + 1], p[o + 2]);
+        if (hair && y < top + 46 && (h < 30 || h > 350) && s > 0.56) { const k = Math.min(1.3, v * 1.5); for (let n = 0; n < 3; n++) p[o + n] = Math.min(255, hair[n] * k); }
+        else if (skin && h > 8 && h < 36 && s > 0.2 && s < 0.56 && v > 0.55) { const k = Math.min(1.15, v * 1.12); for (let n = 0; n < 3; n++) p[o + n] = Math.min(255, skin[n] * k); }
+      }
+    }
+    g.putImageData(id, 0, 0);
+    if (art && AIM[name]) for (let f = 0; f < a.frames; f++) {
+      const ox = Math.round(f * fw), yFrom = Math.round(fh * 0.22), yTo = Math.round(fh * 0.55);
+      let tipX = -1, tipY = 0;
+      for (let y = yFrom; y < yTo; y++) for (let x = fw - 1; x > tipX; x--) { const o = (y * c.width + ox + x) * 4; if (p[o + 3] > 60 && !(p[o] > 200 && p[o + 1] > 180)) { tipX = x; tipY = y; break; } }
+      if (tipX < 0) continue;
+      // The drawn-in pistol is about this long; the hand holding it sits at its near end.
+      const list = AIM[name], ang = (list[f] === undefined ? list[0] : list[f]) * Math.PI / 180, reach = 36;
+      const hx = ox + tipX - Math.cos(ang) * reach, hy = tipY - Math.sin(ang) * reach;
+      g.save(); g.beginPath(); g.rect(ox, 0, fw, fh); g.clip();
+      g.translate(hx, hy); g.rotate(ang);
+      g.clearRect(6, -16, 64, 30);
+      g.drawImage(art, -grip[0], -grip[1]);
+      g.restore();
+    }
+    anims[name] = { ...a, img: c };
+    // Shots leave from the end of the longer barrel.
+    if (art && a.tip) anims[name].tip = [a.tip[0] + (art.width - grip[0]) - 36, a.tip[1]];
+  }
+  return (sheetCache[key] = { size: op.size, hd: true, fig: op.fig, anims, look: true });
 }
 
 // ---------- stills and portraits ----------
@@ -291,6 +353,8 @@ function cropStill(img, sx, fw, fh) {
 }
 // A full-figure still (town, facing down) of a look, as a data URL.
 export function lookStill(look, background) {
+  const hdS = ready && look ? hdSheet(look, null) : null;
+  if (hdS) { const k = `hdstill:${JSON.stringify(look)}`; const a = hdS.anims.idle; return stillCache[k] || (stillCache[k] = cropStill(a.img, 0, a.img.width / a.frames, a.img.height)); }
   const sh = townSheets(look, background);
   if (!sh) return null;
   const key = `still:${JSON.stringify([look, background])}`;
@@ -298,6 +362,8 @@ export function lookStill(look, background) {
 }
 // The battle pose still (facing right, with the ranged weapon), for victory and death screens.
 export function lookBattleStill(look, background, ranged) {
+  const hdS = ready && look ? hdSheet(look, ranged) : null;
+  if (hdS) { const k = `hdbstill:${JSON.stringify([look, ranged])}`; const a = hdS.anims.idle; return stillCache[k] || (stillCache[k] = cropStill(a.img, 0, a.img.width / a.frames, a.img.height)); }
   const sh = battleSheet(look, background, ranged, null);
   if (!sh) return null;
   const key = `bstill:${JSON.stringify([look, background, ranged])}`;

@@ -5,34 +5,12 @@
 import { portraitCanvas, MUZZLE } from './portraits.js';
 import { play } from './audio.js';
 
-import { droneCanvas, DRONE_W, DRONE_H } from './drones.js';
+import { droneCanvas, droneHiFrame, DRONE_W, DRONE_H } from './drones.js';
 export const W = 384, H = 216;
-// "Sharper art" test: each frame is smoothed with the Scale2x pixel-art filter, twice, so edges round off instead of showing blocks.
-const SHARP_RES = 3;
-const sharpCache = new WeakMap();
-function scale2x(src) {
-  const sw = src.width, sh = src.height, a = src.getContext('2d').getImageData(0, 0, sw, sh).data;
-  const out = document.createElement('canvas'); out.width = sw * 2; out.height = sh * 2;
-  const g = out.getContext('2d'), im = g.createImageData(sw * 2, sh * 2), b = new Uint32Array(im.data.buffer), p = new Uint32Array(a.buffer, a.byteOffset, sw * sh);
-  const at = (x, y) => p[Math.max(0, Math.min(sh - 1, y)) * sw + Math.max(0, Math.min(sw - 1, x))];
-  for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++) {
-    const e = at(x, y), n = at(x, y - 1), s = at(x, y + 1), w = at(x - 1, y), o = at(x + 1, y), split = n !== s && w !== o, i = y * 2 * sw * 2 + x * 2, row = sw * 2;
-    b[i] = split && w === n ? w : e; b[i + 1] = split && n === o ? o : e; b[i + row] = split && w === s ? w : e; b[i + row + 1] = split && s === o ? o : e;
-  }
-  g.putImageData(im, 0, 0);
-  return out;
-}
-function sharpSheet(img) {
-  if (sharpCache.has(img)) return sharpCache.get(img);
-  let out = null;
-  try {
-    const c = document.createElement('canvas'); c.width = img.naturalWidth || img.width; c.height = img.naturalHeight || img.height;
-    c.getContext('2d').drawImage(img, 0, 0);
-    out = scale2x(scale2x(c));
-  } catch (e) { out = null; }
-  sharpCache.set(img, out);
-  return out;
-}
+// The fight draws at 3x, so high-resolution sprites keep their detail. Older art scales up with crisp pixels.
+const RES = 3;
+// How tall each high-resolution figure stands on the stage. The enemy stands further back, so it's smaller.
+const HD_HEIGHT = { player: 146, partner: 124, patrol: 112, probe: 66, officer: 108, hound: 78, riot: 116, marksman: 112, interrogator: 112, shock: 116, sentinel: 116, halvek: 118, crawler: 92, ostrane: 112 };
 const MELEE = new Set(['hound', 'riot', 'loader', 'brask', 'foreman', 'slagger', 'jailer', 'sedation']);
 const HOVER = new Set(['probe']);
 const osCalm = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -48,19 +26,22 @@ export function setLookSheets(player, partner) { lookSheets.player = player || n
 export async function loadSheets(base = 'sprites/') {
   let man;
   try { const res = await fetch(base + 'manifest.json', { cache: 'no-cache' }); if (!res.ok) return 0; man = await res.json(); } catch (e) { return 0; }
+  // High-resolution sheets replace older ones of the same name.
+  try { const res = await fetch(base + 'hd.json', { cache: 'no-cache' }); if (res.ok) { const hd = await res.json(); for (const k of Object.keys(hd)) man[k] = { ...hd[k], hd: true }; } } catch (e) {}
   await Promise.all(Object.entries(man).map(async ([id, def]) => {
     const anims = {};
     await Promise.all(Object.entries(def.anims || {}).map(([name, a]) => new Promise((ok) => {
       const img = new Image();
-      img.onload = () => { anims[name] = { img, frames: a.frames || 1, fps: a.fps || 8, loop: !!a.loop }; ok(); };
+      img.onload = () => { anims[name] = { img, frames: a.frames || 1, fps: a.fps || 8, loop: !!a.loop, pad: a.pad, tip: a.tip }; ok(); };
       img.onerror = () => ok();
       img.src = `${base}${id}/${name}.png`;
     })));
-    if (anims.idle) sheets[id] = { size: def.size || anims.idle.img.height, anims };
+    if (anims.idle) sheets[id] = { size: def.size || anims.idle.img.height, anims, hd: !!def.hd, fig: def.fig };
   }));
   return Object.keys(sheets).length;
 }
 
+export const sheetOf = (id) => sheets[id] || null;
 // First idle frame of a character's sheet, cropped to the figure, as a data URL (for victory/death screens).
 const stills = {};
 export function sheetStill(id) {
@@ -93,11 +74,14 @@ class Actor {
     this.anim = 'idle'; this.animStart = 0; this.rest = 'idle';
   }
   get scale() {
+    if (this.sheet && this.sheet.hd) return (HD_HEIGHT[this.side === 'enemy' ? this.id : this.side] || 112) / this.sheet.fig;
     // Sheet characters fill about half their frame, so they're drawn larger than the frame size.
     if (this.sheet) return this.side === 'player' ? 2 : this.side === 'partner' ? 1.7 : this.side === 'ally' ? 1.1 : this.sheet.size >= 128 ? 1.1 : 1.6;
     return this.side === 'player' ? 3 : this.boss ? 2.5 : 2;
   }
   get size() { return (this.sheet ? this.sheet.size : 40) * this.scale; }
+  // The figure's height on the stage.
+  get tall() { return this.sheet && this.sheet.hd ? this.sheet.fig * this.scale : this.size * 0.8; }
   setAnim(name, t) { if (this.sheet && this.sheet.anims[name]) { this.anim = name; this.animStart = t; } }
   frame(t) {
     if (!this.sheet) return { img: this.drawn, sx: 0, sw: 40, sh: 40 };
@@ -109,7 +93,7 @@ class Actor {
       else { this.anim = this.sheet.anims[this.rest] ? this.rest : 'idle'; this.animStart = t; a = this.sheet.anims[this.anim]; f = 0; }
     }
     const fw = a.img.width / a.frames;
-    return { img: a.img, sx: f * fw, sw: fw, sh: a.img.height };
+    return { img: a.img, sx: f * fw, sw: fw, sh: a.img.height, pad: a.pad };
   }
 }
 
@@ -117,7 +101,7 @@ export class Stage {
   constructor() {
     this.el = document.createElement('div');
     this.el.className = 'stage';
-    this.el.innerHTML = `<canvas width="${W}" height="${H}" aria-hidden="true"></canvas>
+    this.el.innerHTML = `<canvas width="${W * RES}" height="${H * RES}" aria-hidden="true"></canvas>
       <div class="hud hud-enemy"><div class="hud-row"><b class="hud-name"></b><span class="hud-tag"></span></div><div class="bar enemy"><i></i></div><div class="hud-row"><span class="hud-st"></span><span class="hud-hp num"></span></div></div>
       <div class="hud hud-player"><div class="hud-row"><b class="hud-name"></b><span class="hud-tag"></span></div><div class="bar"><i></i></div><div class="hud-row"><span class="hud-st"></span><span class="hud-hp num"></span></div></div>
       <div class="cine" hidden><i class="bar-top"></i><i class="bar-bot"></i><div class="cine-card"><span class="cine-label"></span><b class="cine-name"></b><span class="cine-epithet"></span></div><span class="cine-skip">Click to skip</span></div>
@@ -125,6 +109,7 @@ export class Stage {
       <div class="speed" role="group" aria-label="Battle mode"><button data-speed="manual" title="You choose every move">Manual</button><button data-speed="auto1" title="Auto battle: the operative fights with a fixed routine. Tap Manual to take over.">Auto 1\u00D7</button><button data-speed="auto2" title="Auto battle at double speed.">Auto 2\u00D7</button></div>`;
     this.canvas = this.el.querySelector('canvas');
     this.ctx = this.canvas.getContext('2d');
+    this.ctx.scale(RES, RES);
     this.ctx.imageSmoothingEnabled = false;
     this.buf = document.createElement('canvas');
     this.pops = this.el.querySelector('.pops');
@@ -161,14 +146,6 @@ export class Stage {
   cycleMode() { this.setMode({ manual: 'auto1', auto1: 'auto2', auto2: 'manual' }[this.mode]); }
   setFast(on) { this.fast = on; this.applySpeed(); }
   applySpeed() { this.speed = this.mode === 'auto2' ? 2 : this.fast ? 1.6 : 1; }
-  setSharp(on) {
-    if (this.sharp === on) return;
-    this.sharp = on;
-    const k = on ? SHARP_RES : 1;
-    this.canvas.width = W * k; this.canvas.height = H * k;
-    this.ctx.setTransform(k, 0, 0, k, 0, 0);
-    this.ctx.imageSmoothingEnabled = false;
-  }
   syncSpeed() { this.el.querySelectorAll('[data-speed]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.speed === this.mode))); }
   get skip() { return false; }
   wait(ms) { return this.skip ? Promise.resolve() : new Promise((r) => setTimeout(r, ms / this.speed)); }
@@ -188,28 +165,32 @@ export class Stage {
   }
   // Pixels from the frame's bottom edge to the character's feet (8px in the source sheet).
   footPad(actor) { return actor.sheet ? 8 * actor.scale : 0; }
-  // Hovers above the gun, clear of the operative and their partner. Small on purpose: two of them shouldn't crowd a co-op fight.
+  // Hovers up above the head and slightly forward, clear of the operative and their partner. Small on purpose: two of them shouldn't crowd a co-op fight.
   dronePos(actor, info, t = performance.now(), seed = 0) {
-    const c = this.center(actor), size = actor.size || 160, still = reduceMotion || (info && info.damaged);
+    const c = this.center(actor), size = actor.tall * 1.1, still = reduceMotion || (info && info.damaged);
     const bob = still ? 0 : Math.sin(t / 310 + seed * 2) * 2, sway = still ? 0 : Math.sin(t / 830 + seed) * 2;
-    return { x: Math.round(c.x + size * 0.16 + sway), y: Math.round(c.y - size * 0.4 + bob + (info && info.damaged ? 12 : 0)) };
+    return { x: Math.round(c.x + size * 0.1 + sway), y: Math.round(c.y - size * 0.62 + bob + (info && info.damaged ? 12 : 0)) };
   }
   drawDrone(actor, info, t, seed) {
     const g = this.g || this.ctx, p = this.dronePos(actor, info, t, seed), w = DRONE_W * 2, h = DRONE_H * 2;
     g.save();
     g.imageSmoothingEnabled = false;
     g.globalAlpha = actor.alpha === undefined ? 1 : actor.alpha;
-    g.drawImage(droneCanvas(info.type, Math.floor(t / 70), !!info.damaged), p.x - w / 2, p.y - h / 2, w, h);
+    const hf = droneHiFrame(info.type, t, !!info.damaged);
+    if (hf) { const k = Math.min(34 / hf.sh, 50 / hf.sw), tall = hf.sh * k, wide = hf.sw * k; g.drawImage(hf.img, hf.sx, 0, hf.sw, hf.sh, Math.round(p.x - wide / 2), Math.round(p.y - tall / 2), wide, tall); }
+    else g.drawImage(droneCanvas(info.type, Math.floor(t / 70), !!info.damaged), p.x - w / 2, p.y - h / 2, w, h);
     g.restore();
     if (info.damaged && !reduceMotion && Math.random() < 0.05) this.burst(p.x, p.y - 4, 1, Math.random() < 0.5 ? C.smoke : C.spark, 0.5, 500, -0.02, 1);
   }
   center(actor) {
     const a = this.anchor(actor.side, actor);
+    if (actor.sheet && actor.sheet.hd) return { x: a.x + actor.ox, y: a.y + actor.oy - actor.tall * 0.5 };
     if (actor.sheet) return { x: a.x + actor.ox, y: a.y + actor.oy - actor.size * 0.3 };
     return { x: a.x + actor.ox, y: a.y + actor.oy - actor.size * (actor.side === 'player' ? 0.45 : 0.5) };
   }
   muzzle(actor) {
     const a = this.anchor(actor.side, actor), s = actor.size, m = !actor.sheet && MUZZLE[actor.id];
+    if (actor.sheet && actor.sheet.hd) { const at = actor.sheet.anims.attack, tip = at && at.tip; if (tip) return { x: a.x + actor.ox + tip[0] * actor.scale, y: a.y + actor.oy + tip[1] * actor.scale }; return { x: a.x + actor.ox + (actor.side === 'enemy' ? -1 : 1) * actor.tall * 0.25, y: a.y + actor.oy - actor.tall * 0.65 }; }
     if (actor.sheet && actor.sheet.look && actor.sheet.anims.attack && actor.sheet.anims.attack.tip) { const tip = actor.sheet.anims.attack.tip[0] || actor.sheet.anims.attack.tip; if (tip && tip.length === 2) return { x: a.x + actor.ox - s / 2 + (tip[0] / 96) * s, y: a.y + actor.oy - s + (tip[1] / 96) * s + this.footPad(actor) }; }
     if (actor.sheet) return actor.side === 'player' ? { x: a.x + actor.ox + s * 0.18, y: a.y + actor.oy - s * 0.36 } : { x: a.x + actor.ox - s * 0.18, y: a.y + actor.oy - s * 0.36 };
     if (m) return { x: a.x + actor.ox - s / 2 + (m[0] / 40) * s, y: a.y + actor.oy - s + (m[1] / 40) * s };
@@ -885,7 +866,8 @@ export class Stage {
     const w = Math.round(f.sw * s), h = Math.round(f.sh * s);
     let bob = 0;
     if (!reduceMotion) bob = actor.side === 'enemy' ? Math.sin(t / (HOVER.has(actor.id) ? 380 : 650)) * (HOVER.has(actor.id) ? 3 : 1) : Math.sin(t / 720) * 1.2;
-    const x = Math.round(a.x + actor.ox - w / 2), y = Math.round(a.y + actor.oy - h + this.footPad(actor) + bob);
+    const feet = actor.sheet && actor.sheet.hd ? (f.pad || 0) * s : this.footPad(actor);
+    const x = Math.round(a.x + actor.ox - w / 2), y = Math.round(a.y + actor.oy - h + feet + bob);
     g.globalAlpha = actor.alpha;
     if (actor.flash > t) {
       const b = this.buf; b.width = f.sw; b.height = f.sh;
@@ -894,9 +876,7 @@ export class Stage {
       bg.globalCompositeOperation = 'source-atop'; bg.globalAlpha = 0.85; bg.fillStyle = actor.flashColor; bg.fillRect(0, 0, f.sw, f.sh);
       g.drawImage(b, 0, 0, f.sw, f.sh, x, y, w, h);
     } else {
-      const hi = this.sharp ? sharpSheet(f.img) : null;
-      if (hi) { g.imageSmoothingEnabled = true; g.drawImage(hi, f.sx * 4, 0, f.sw * 4, f.sh * 4, x, y, w, h); g.imageSmoothingEnabled = false; }
-      else g.drawImage(f.img, f.sx, 0, f.sw, f.sh, x, y, w, h);
+      g.drawImage(f.img, f.sx, 0, f.sw, f.sh, x, y, w, h);
     }
     g.globalAlpha = 1;
   }

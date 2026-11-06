@@ -357,7 +357,7 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .ending .big-title { color: var(--ok); }
 
 /* ---------- icons ---------- */
-.ico { image-rendering: pixelated; flex: none; display: block; }
+.ico { flex: none; display: block; }
 .ico-sm { width: 24px; height: 24px; }
 .ico-sm2 { width: 36px; height: 36px; }
 .ico-md { width: 48px; height: 48px; }
@@ -414,6 +414,16 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .rf.sm .ico { width: 28px; height: 28px; }
 .rf.empty { width: 52px; height: 52px; border-style: dashed; background: var(--panel-2); }
 .rname { color: var(--rar); font-weight: 600; }
+/* Icon frames: a recessed plate tinted by rarity, brighter corners, and a glow on the best gear. */
+.rf:not(.empty) { position: relative; background: radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--rar) 26%, #1a2026) 0%, #12161a 78%); border: 1px solid color-mix(in srgb, var(--rar) 62%, #0b0d0f); box-shadow: inset 0 0 0 1px #0a0c0e, inset 0 1px 0 1px #ffffff12, inset 0 -6px 10px #0000005c; }
+.rf:not(.empty)::before, .rf:not(.empty)::after { content: ''; position: absolute; width: 6px; height: 6px; pointer-events: none; border: 1px solid var(--rar); }
+.rf:not(.empty)::before { left: -1px; top: -1px; border-right: 0; border-bottom: 0; }
+.rf:not(.empty)::after { right: -1px; bottom: -1px; border-left: 0; border-top: 0; }
+.rf.r-elite { box-shadow: inset 0 0 0 1px #0a0c0e, inset 0 1px 0 1px #ffffff12, inset 0 -6px 10px #0000005c, 0 0 7px #b77be855; }
+.rf.r-legendary { box-shadow: inset 0 0 0 1px #0a0c0e, inset 0 1px 0 1px #ffffff1a, inset 0 -6px 10px #0000005c, 0 0 10px #e8b23a77; }
+.rf.r-unique { box-shadow: inset 0 0 0 1px #0a0c0e, inset 0 1px 0 1px #ffffff1a, inset 0 -6px 10px #0000005c, 0 0 10px #e8673a77; }
+.row.i > .ico { background: radial-gradient(circle at 50% 40%, #2a333a 0%, #14191d 80%); box-shadow: inset 0 0 0 1px #0a0c0e, inset 0 1px 0 1px #ffffff10; }
+.item { background: linear-gradient(180deg, color-mix(in srgb, var(--rar) 7%, var(--panel-2)) 0%, var(--panel-2) 42%); }
 .item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); gap: 10px; }
 .item { display: grid; gap: 8px; align-content: start; padding: 12px 14px; background: var(--panel-2); border: 1px solid var(--line); border-top: 3px solid var(--rar); min-width: 0; }
 .item-head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; align-items: center; }
@@ -591,13 +601,10 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 @media (max-width: 520px) { .board-table { font-size: .8rem; } .board-table td, .board-table th { padding: 5px 3px; } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 html.calm * { animation: none !important; transition: none !important; }
-.drone-pic { image-rendering: pixelated; }
-.body-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.drone-pic { image-rendering: pixelated; object-fit: contain; }
+.sex-row .sex-pick { flex: 1 1 0; }
 .look-colours { display: flex; flex-wrap: wrap; gap: 8px 22px; }
 .look-colours > div { display: grid; gap: 5px; }
-.body-pick { display: grid; place-items: center; width: 68px; height: 68px; padding: 2px; background: var(--panel-2); border: 1px solid var(--line); color: var(--fg); cursor: pointer; overflow: hidden; }
-.body-pick.on { border-color: var(--sodium); box-shadow: inset 0 0 0 1px var(--sodium); }
-.body-pick img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; display: block; }
 .quirk-row { display: grid; gap: 4px; }
 [data-tip] { cursor: help; }
 .pm-stim { display: inline-flex; align-items: center; gap: 2px; font-weight: 500; opacity: .9; white-space: nowrap; }
@@ -616,6 +623,8 @@ html.calm * { animation: none !important; transition: none !important; }
 .drone-id { display: grid; gap: 4px; min-width: 0; }
 .drone-id h3 { margin: 0; }
 .row.i.drone-up { grid-template-columns: minmax(0, 1fr) auto; }
+.row.i.drone-swap { grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; }
+.row.i.drone-swap .drone-pic { width: 48px; height: 36px; }
 .row.i.drone-ability { grid-template-columns: auto minmax(0, 1fr); }
 .drone-ability.locked { opacity: .6; }
 button { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
@@ -1141,7 +1150,6 @@ h3 { font-size: 1.05rem; }
   .screen-route .door .desc { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
   .has-mate .num-stat.minor { display: none; }
   .has-mate .stat .pm-stim { font-size: 11px; }
-  .body-pick { width: 52px; height: 52px; }
   .look-step { grid-template-columns: minmax(0, 32%) minmax(0, 1fr); gap: 12px; min-height: 0; overflow: hidden; }
   .look-big { width: 100%; height: 100%; aspect-ratio: auto; overflow: hidden; min-height: 0; }
   .look-big img { width: 100%; height: 100%; object-fit: contain; }
@@ -1152,7 +1160,6 @@ h3 { font-size: 1.05rem; }
   .look-opts { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 5px 8px; align-items: center; }
   .look-opts .swatches { flex-wrap: nowrap; gap: 4px; }
   .look-opts .btnrow .btn { padding: 0 3px; }
-  .body-pick { width: 46px; height: 46px; }
   .extract-note { font-size: max(11px, .8rem); margin: 0; }
   .dt-wheel { grid-template-columns: auto minmax(0, 1fr); gap: 12px; }
   .dt-wheel-left .muted.small:first-of-type { display: none; }
@@ -1220,11 +1227,11 @@ h3 { font-size: 1.05rem; }
 import * as D from './data.js';
 import * as E from './engine.js';
 import { portraitURL } from './portraits.js';
-import { Stage, loadSheets, sheetStill, setLookSheets, setCalm as setStageCalm } from './stage.js';
+import { Stage, loadSheets, sheetOf, sheetStill, setLookSheets, setCalm as setStageCalm } from './stage.js';
 import * as A from './audio.js';
 import { iconURL, gearIconKey } from './icons.js';
 import { Town, SHOPS, setCalm as setTownCalm } from './town.js';
-import { droneIcon } from './drones.js';
+import { droneIcon, setDroneArt } from './drones.js';
 import { autoStep, autoFinish, loadDev, BUILDS } from './dev.js';
 import { Wheel, OrbitScene, loadDowntimeArt, artFor } from './downtime.js';
 import { Net, getCoopPrefs, setCoopPrefs, makeCode, getRoom, setRoom, getLastRoom, setLastRoom } from './net.js';
@@ -1239,7 +1246,7 @@ function shareOrCopy(text, done) {
   if (sh) { try { sh.postMessage(text); return; } catch (e) {} }
   try { navigator.clipboard.writeText(text).then(() => { toast = done; render(); }).catch(() => {}); } catch (e) {}
 }
-import { BODIES, HAIR, HAIR_NAMES, SKINS, HAIRS, defaultLook, loadLayers, hasLayers, lookStill, lookBattleStill, lookPortrait, townSheets, battleSheet, weaponLayer } from './look.js';
+import { BODIES, HAIR_FOR, sexOf, setOpSheets, HAIR, HAIR_NAMES, SKINS, HAIRS, defaultLook, loadLayers, hasLayers, lookStill, lookBattleStill, lookPortrait, townSheets, battleSheet, weaponLayer } from './look.js';
 
 const SAVE_KEY = 'cinder-cell-save-v1';
 const rng = Math.random;
@@ -1302,12 +1309,12 @@ document.addEventListener('click', (ev) => {
 
 // This device's own choices. They don't travel with the save or to a co-op partner.
 const UI_KEY = 'cinder-cell-ui';
-const uiPrefs = { autoStop: true, fastAnim: false, calm: false, lefty: false, sharpArt: false };
+const uiPrefs = { autoStop: true, fastAnim: false, calm: false, lefty: false };
 try { Object.assign(uiPrefs, JSON.parse(localStorage.getItem(UI_KEY)) || {}); } catch (e) {}
 function applyUi() {
   document.documentElement.classList.toggle('calm', uiPrefs.calm);
   document.documentElement.classList.toggle('lefty', uiPrefs.lefty);
-  setStageCalm(uiPrefs.calm); setTownCalm(uiPrefs.calm); stage.setFast(uiPrefs.fastAnim); stage.setSharp(uiPrefs.sharpArt);
+  setStageCalm(uiPrefs.calm); setTownCalm(uiPrefs.calm); stage.setFast(uiPrefs.fastAnim);
 }
 
 function load() {
@@ -1903,11 +1910,10 @@ function createScreen() {
   let body = '';
   if (d.step === 1) {
     const sw = (list, key, cur) => `<div class="swatches">${list.map((c, i) => `<button class="swatch ${i === cur ? 'on' : ''}" data-a="look" data-v="${key}" data-k="${i}" style="background:${c[1]}" aria-label="${key} ${i + 1}"></button>`).join('')}</div>`;
-    const bodies = BODIES.map((b) => { const im = lookStill({ ...d.look, body: b.id }, d.background); return `<button class="body-pick ${b.id === d.look.body ? 'on' : ''}" data-a="look" data-v="body" data-k="${b.id}" aria-pressed="${b.id === d.look.body}" aria-label="${esc(b.name)}">${im ? `<img src="${im}" alt="" width="64" height="64">` : esc(b.name)}</button>`; }).join('');
+    const sexes = BODIES.map((b) => `<button class="btn sex-pick ${b.id === d.look.body ? 'primary' : ''}" data-a="look" data-v="body" data-k="${b.id}" aria-pressed="${b.id === d.look.body}">${esc(b.name)}</button>`).join('');
     body = `<div class="look-step">
       <div class="look-big"><img src="${still}" alt="" width="128" height="128"></div>
-      <div class="look-opts"><span class="label">Body</span><div class="body-row">${bodies}</div>
-      <span class="label">Hair</span><div class="btnrow">${HAIR.map((h) => `<button class="btn ${h === d.look.hair ? 'primary' : ''}" data-a="look" data-v="hair" data-k="${h}">${esc(HAIR_NAMES[h])}</button>`).join('')}</div>
+      <div class="look-opts"><span class="label">Operative</span><div class="btnrow sex-row">${sexes}</div>
       <div class="look-colours"><div><span class="label">Hair colour</span>${sw(HAIRS, 'hairColor', d.look.hairColor)}</div><div><span class="label">Skin</span>${sw(SKINS, 'skin', d.look.skin)}</div></div></div>
     </div>${nav(0, [2, 'class'])}`;
   } else if (d.step === 2) {
@@ -1918,7 +1924,7 @@ function createScreen() {
     body = `<div class="choices four drones">${D.DRONE_ORDER.map((id) => { const t = D.DRONES[id]; return `<button class="choice drone-card ${(d.drone || 'hornet') === id ? 'on' : ''}" data-a="draftdrone" data-v="${id}" aria-pressed="${(d.drone || 'hornet') === id}">
       <img class="drone-pic" src="${droneIcon(id)}" alt="" width="64" height="48"><b>${esc(t.name)}</b><span class="chip">${esc(t.role)} \u00B7 rank ${E.droneRankOf(state.meta, id)}</span>
       <span class="drone-what">${esc(t.effect(t.ranks[E.droneRankOf(state.meta, id) - 1]))}</span></button>`; }).join('')}</div>
-      <p class="muted drone-note">Yours for this operative\u2019s whole life. It can\u2019t be shot down, but it can be knocked out after a sector. Resolve upgrades last: every operative who picks that type keeps them.</p>${nav(2, [4, 'stats'])}`;
+      <p class="muted drone-note">You can switch drones for free in town. It can\u2019t be shot down, but it can be knocked out after a sector. Resolve upgrades last: each type keeps its rank for every operative.</p>${nav(2, [4, 'stats'])}`;
   } else {
     const attrRows = Object.entries(D.ATTRS).map(([k, a]) => `<div class="attr-row">
       <div title="${esc(a.desc)}"><div class="name">${esc(a.label)} <span class="num muted">${a.short}</span></div><div class="desc">${esc(a.desc)}</div></div>
@@ -1943,7 +1949,7 @@ function createScreen() {
     <div class="create-head"><div style="display:grid;gap:4px"><span class="label">New operative \u00B7 #${state.meta.operatives + 1}</span><h2>Who walks through the gate?</h2></div>${d.step === 1 ? '' : preview}</div>
     ${notice()}
     <div class="create-tabs"><nav class="tabs">${steps}</nav><button class="btn create-random" data-a="randomize">Randomize</button></div>
-    <div class="create-summary"><span class="chip">${esc(BODIES.find((b) => b.id === d.look.body).name)}</span><span class="chip">${esc(bg.name)}</span><span class="chip">${esc(HAIR_NAMES[d.look.hair])}</span><span class="chip">${esc(d.name || 'unnamed')}</span></div>
+    <div class="create-summary"><span class="chip">${sexOf(d.look) === 'f' ? 'Female' : 'Male'}</span><span class="chip">${esc(bg.name)}</span><span class="chip">${esc(d.name || 'unnamed')}</span></div>
     ${body}
   </section>`;
 }
@@ -2293,7 +2299,7 @@ const canSpendResolve = () => { const m = state.meta; return Object.entries(D.TR
 
 function droneTab() {
   const c = state.char, m = state.meta, d = c.drone;
-  if (!d) return `<p class="muted drone-note">Every operative gets a drone now. Pick yours: it stays for life.</p><div class="choices four drones">${D.DRONE_ORDER.map((id) => { const t = D.DRONES[id]; return `<button class="choice drone-card" data-a="dronepick" data-v="${id}"><img class="drone-pic" src="${droneIcon(id)}" alt="" width="64" height="48"><b>${esc(t.name)}</b><span class="chip">${esc(t.role)} \u00B7 rank ${E.droneRankOf(m, id)}</span><span class="drone-what">${esc(t.effect(t.ranks[E.droneRankOf(m, id) - 1]))}</span></button>`; }).join('')}</div>`;
+  if (!d) return `<p class="muted drone-note">Every operative gets a drone now. Pick one to start: you can switch later in town.</p><div class="choices four drones">${D.DRONE_ORDER.map((id) => { const t = D.DRONES[id]; return `<button class="choice drone-card" data-a="dronepick" data-v="${id}"><img class="drone-pic" src="${droneIcon(id)}" alt="" width="64" height="48"><b>${esc(t.name)}</b><span class="chip">${esc(t.role)} \u00B7 rank ${E.droneRankOf(m, id)}</span><span class="drone-what">${esc(t.effect(t.ranks[E.droneRankOf(m, id) - 1]))}</span></button>`; }).join('')}</div>`;
   const t = D.DRONES[d.type], cost = E.droneUpgradeCost(d), repair = E.droneRepairCost(state), maxed = d.rank >= D.DRONE_MAX_RANK;
   const abilities = Object.entries(t.abilities).map(([rank, a]) => `<div class="row i drone-ability ${d.rank >= +rank ? '' : 'locked'}"><span class="chip ${d.rank >= +rank ? 'good' : ''}">Rank ${rank}</span><div><div class="name">${esc(a.name)}</div><div class="desc">${esc(a.desc)}</div></div></div>`).join('');
   return `<div class="drone-bay"><div class="drone-card-big">
@@ -2303,7 +2309,9 @@ function droneTab() {
       <p class="desc">${esc(t.effect(E.droneValue(d)))}</p></div></div>
     ${d.damaged ? `<div class="gate-heal bad"><div class="gate-heal-text"><b>${esc(t.name)} is offline</b><span>It does nothing until it\u2019s repaired.</span></div><button class="btn primary" data-a="dronerepair" ${c.credits < repair ? 'disabled' : ''}>${c.credits < repair ? `${cr(repair - c.credits)} short` : `Repair \u00B7 ${cr(repair)}`}</button></div>` : ''}
     <div class="row i drone-up"><div><div class="name">${maxed ? 'Fully upgraded' : `Upgrade to rank ${d.rank + 1}`}</div><div class="desc">${maxed ? 'Nothing left to add.' : `${esc(t.effect(E.droneValue(d, d.rank + 1)))} Lasts for every ${esc(t.name)} your cell flies.`}</div></div>${maxed ? '' : `<button class="btn ${m.resolve >= cost ? 'primary' : ''}" data-a="droneup" ${m.resolve < cost ? 'disabled' : ''}>${cost} ${esc(S.meta)}</button>`}</div>
-    <div class="rows">${abilities}</div></div>`;
+    <div class="rows">${abilities}</div>
+    <span class="label">Switch drone \u00B7 free in town</span>
+    <div class="rows">${D.DRONE_ORDER.filter((id) => id !== d.type).map((id) => { const o = D.DRONES[id], rk = E.droneRankOf(m, id); return `<div class="row i drone-swap"><img class="drone-pic" src="${droneIcon(id)}" alt="" width="48" height="36"><div><div class="name">${esc(o.name)} <span class="chip">${esc(o.role)} \u00B7 rank ${rk}</span></div><div class="desc">${esc(o.effect(o.ranks[rk - 1]))}</div></div><button class="btn" data-a="droneswitch" data-v="${id}" ${d.damaged || state.run ? 'disabled' : ''}>${d.damaged ? 'Repair first' : 'Switch'}</button></div>`; }).join('')}</div></div>`;
 }
 function character() {
   const m = state.meta, c = state.char, st = E.stats(state);
@@ -2644,7 +2652,7 @@ function modalView() {
       <section><h3>Getting stronger</h3><p><b>Lost on death</b>: levels, gear, implants, contraband, ventures. <b>Kept</b>: Resolve, training, cell upgrades, achievements, and one heirloom with that upgrade.</p></section>
       <section><h3>After curfew</h3><p><b>Lantern</b>: one drink per raid. <b>Wheel</b>: roulette. <b>Orbit</b>: shuttle fights for credits and permanent Marks. <b>Ventures</b>: invest for a return each raid.</p></section>
       <section><h3>Threat and rewards</h3><p>Freeing a district opens Threat levels and reinforces the others. Sectors far below your level pay less, and a boss you\u2019ve beaten pays half XP.</p></section>
-      <section><h3>Drones</h3><p>Every operative has one drone for life. It can\u2019t be shot down and dies only with them. Clearing a sector has a 10% chance of knocking it offline until you repair it in town. Spend Resolve on the Drone tab of the safehouse: ranks 3 and 5 add abilities, and ranks stay with your cell for every operative who picks that type.</p></section>
+      <section><h3>Drones</h3><p>Every operative flies one drone, and you can switch type for free in town. It can\u2019t be shot down. Clearing a sector has a 10% chance of knocking it offline until you repair it in town. Spend Resolve on the Drone tab of the safehouse: ranks 3 and 5 add abilities, and ranks stay with your cell for every operative who picks that type.</p></section>
       <section><h3>Co-op</h3><p>Host from <b>Settings</b> and share the link. You keep your own operative. Vote on doors, pick your own loot, and press <b>E</b> by your partner to trade. At 0 HP you go down and can be revived. If one of you dies, the other must win or run; if both fall, it\u2019s a wipe.</p></section>
       <section><h3>Saves</h3><p>Your cell backs up to the cloud. Enter its code from <b>Settings</b> on any device. Anyone with the code can load it, so keep it private.</p></section>
       <section><h3>Controls</h3><p class="keys"><span><b>WASD</b> walk</span><span><b>E</b> talk</span><span><b>M B C G</b> town menus</span><span><b>Tab</b> battle mode</span><span><b>O</b> settings</span><span><b>A</b> shoot</span><span><b>F</b> strike</span><span><b>D</b> defend</span><span><b>S</b> stim</span><span><b>R</b> run</span><span><b>Q W E T</b> skills</span><span><b>2 3 4</b> items</span><span><b>1 2</b> doors</span><span><b>Enter</b> continue</span><span><b>Esc</b> close</span></p></section>
@@ -2652,7 +2660,7 @@ function modalView() {
     <div class="settings">
       <h3>Gameplay</h3>
       <div class="set-grid">
-      ${[['autoStop', 'Stop auto battle at low HP with no stims'], ['fastAnim', 'Faster fight animations'], ['calm', 'Reduce motion'], ['sharpArt', 'Sharper art (test)'], ...(matchMedia('(pointer: coarse)').matches ? [['lefty', 'Left-handed fights']] : [])].map(([k, l]) => `<label class="set-row"><span>${l}</span><button class="btn" data-a="uipref" data-v="${k}" aria-pressed="${uiPrefs[k]}">${uiPrefs[k] ? 'On' : 'Off'}</button></label>`).join('')}
+      ${[['autoStop', 'Stop auto battle at low HP with no stims'], ['fastAnim', 'Faster fight animations'], ['calm', 'Reduce motion'], ...(matchMedia('(pointer: coarse)').matches ? [['lefty', 'Left-handed fights']] : [])].map(([k, l]) => `<label class="set-row"><span>${l}</span><button class="btn" data-a="uipref" data-v="${k}" aria-pressed="${uiPrefs[k]}">${uiPrefs[k] ? 'On' : 'Off'}</button></label>`).join('')}
       ${isGuest() ? '' : '<div class="set-row"><span>Tips you dismissed</span><button class="btn" data-a="tipsreset">Show again</button></div>'}
       </div>
       <h3>Sound</h3>
@@ -3119,7 +3127,7 @@ async function fight(v, who = 0) {
   }
 }
 
-const BUY = new Set(['droneup', 'droneupfree', 'dronerepair', 'dronepick', 'restock', 'respec', 'buygear', 'upgradegear', 'reroll', 'item', 'upgrade', 'implant', 'heal', 'train', 'cell', 'spend', 'equipheirloom']);
+const BUY = new Set(['droneswitch', 'droneup', 'droneupfree', 'dronerepair', 'dronepick', 'restock', 'respec', 'buygear', 'upgradegear', 'reroll', 'item', 'upgrade', 'implant', 'heal', 'train', 'cell', 'spend', 'equipheirloom']);
 function act(a, v, k) {
   A.unlock();
   if (a === 'autostop') { stopAuto(); return; }
@@ -3148,6 +3156,7 @@ function act(a, v, k) {
       if (done) { save(); net.send({ t: 'home', home: homeInfo() }); mirrorHome(); }
       render(); return;
     }
+    if (a === 'droneswitch') { net.send({ t: 'act', a, v, k: String(E.droneRankOf(home.meta, v)) }); A.play('click'); return; }
     if (a === 'droneup') {
       // Paid from the friend's own cell, like their training. The host only raises the rank.
       const dr = state.char && state.char.drone, cost = dr ? E.droneUpgradeCost(dr) : 0;
@@ -3178,10 +3187,11 @@ function applyAct(a, v, k) {
     case 'step': state.draft.step = +v; sfx('click'); break;
     case 'draftdrone': state.draft.drone = v; sfx('click'); break;
     case 'dronepick': ok = E.pickDrone(state, v); break;
+    case 'droneswitch': ok = E.switchDrone(state, v, k ? +k : null); break;
     case 'droneup': ok = E.upgradeDrone(state); break;
     case 'droneupfree': ok = E.upgradeDrone(state, true); break;
     case 'dronerepair': ok = E.repairDrone(state); break;
-    case 'look': state.draft.look = state.draft.look || defaultLook(); state.draft.look[v] = v === 'skin' || v === 'hairColor' ? +k : k; sfx('click'); break;
+    case 'look': state.draft.look = state.draft.look || defaultLook(); state.draft.look[v] = v === 'skin' || v === 'hairColor' ? +k : k; if (v === 'body') state.draft.look.hair = HAIR_FOR[sexOf(state.draft.look)]; sfx('click'); break;
     case 'savecode': { const code = E.exportSave(state); state.report = code; try { navigator.clipboard.writeText(code).then(() => { toast = 'Save code copied.'; render(); }).catch(() => {}); } catch (e) {} sfx('click'); break; }
     case 'loadcode': { const t = (document.getElementById('load-code') || {}).value || ''; const loaded = E.importSave(t, rng); if (loaded) { state = loaded; modal = null; titleOpen = false; toast = 'Save loaded.'; sfx('perk'); } else { toast = 'That is not a Cinder Cell save code.'; sfx('denied'); } break; }
     case 'coophost': {
@@ -3259,7 +3269,7 @@ function applyAct(a, v, k) {
     case 'randomize': {
       const d = state.draft, any = (list) => list[Math.floor(rng() * list.length)];
       d.background = any(D.BACKGROUNDS).id; d.name = any(D.OPERATIVE_NAMES); d.drone = any(D.DRONE_ORDER);
-      d.look = { ...(d.look || defaultLook()), body: any(BODIES).id, hair: any(HAIR), skin: Math.floor(rng() * SKINS.length), hairColor: Math.floor(rng() * HAIRS.length) };
+      const sexPick = any(BODIES); d.look = { ...(d.look || defaultLook()), body: sexPick.id, hair: HAIR_FOR[sexPick.sex], skin: Math.floor(rng() * SKINS.length), hairColor: Math.floor(rng() * HAIRS.length) };
       for (const k of Object.keys(D.ATTRS)) while (E.draftAdjust(d, k, -1));
       for (let i = 0; i < 80 && d.points > 0; i++) E.draftAdjust(d, any(Object.keys(D.ATTRS)), 1);
       sfx('click'); break;
@@ -3433,7 +3443,7 @@ async function start(data) {
   loadLayers().then((ok) => { if (ok) { lookKey = ''; render(); } });
   loadDowntimeArt().then((ok) => { if (ok && modal) render(); });
   // PixelLab sheets, if any have been delivered. Re-render so the stage picks them up.
-  loadSheets().then((n) => { if (n && ['combat', 'victory', 'death'].includes(state.screen)) { stage.enemyRef = null; stage.player = null; render(); } });
+  loadSheets().then((n) => { setOpSheets(sheetOf('op_m'), sheetOf('op_f')); for (const id of D.DRONE_ORDER) setDroneArt(id, sheetOf(`drone_${id}`)); lookKey = ''; if (n) { stage.enemyRef = null; stage.player = null; stage.partner = null; render(); } });
 }
 window.claude?.hot?.snapshot?.(() => ({ state }));
 window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
