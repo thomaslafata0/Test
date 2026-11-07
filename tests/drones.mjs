@@ -81,7 +81,10 @@ const turns = ({ s, rng }, n, act = 'defend') => { for (let i = 0; i < n && s.sc
   assert.strictEqual(E.upgradeDrone(s), false, 'rank 5 is the top');
   assert.strictEqual(E.repairDrone(s), false, 'nothing to repair');
   c.drone.damaged = true; c.credits = 0;
-  assert.strictEqual(E.repairDrone(s), false, 'repairs cost credits');
+  assert.strictEqual(E.droneRepairCost(s), 0, 'the first repair is free');
+  assert.strictEqual(E.repairDrone(s), true, 'the first repair needs no credits'); assert.strictEqual(c.droneFixed, true);
+  c.drone.damaged = true; c.credits = 0;
+  assert.strictEqual(E.repairDrone(s), false, 'later repairs cost credits');
   c.credits = 1000; const before = c.credits, cost = E.droneRepairCost(s);
   assert(cost > 0); assert.strictEqual(E.repairDrone(s), true);
   assert.strictEqual(c.credits, before - cost); assert.strictEqual(c.drone.damaged, false);

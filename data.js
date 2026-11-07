@@ -427,7 +427,7 @@ export const ROOMS = {
   elite:  { desc: 'A veteran enemy: tougher, double credits, +50% XP.', fight: true },
   event:  { desc: 'Something worth a look. Choices and consequences, no guaranteed fight.' },
   supply: { desc: 'Credits and maybe an item. No fight.' },
-  rest:   { desc: 'Patch up: heal 30% of max HP.' },
+  rest:   { desc: 'Patch up: heal 30% of max HP and stop any bleeding or burns.' },
   cells:  { desc: 'Free a prisoner. They fight beside you until you leave.' },
   cargo:  { desc: 'A big haul of credits, but the next enemy is alerted.' },
   boss:   { desc: 'The sector boss. No way around it.', fight: true },

@@ -45,7 +45,7 @@ const saved = (p) => p.evaluate(() => JSON.parse(localStorage.getItem('cinder-ce
   // Repairs, from the mission screen.
   ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true }); p = await ctx.newPage(); watch(p, 'repair');
   await p.goto(URL);
-  await p.evaluate(seed(`c.drone.damaged = true; c.credits = 400;`));
+  await p.evaluate(seed(`c.drone.damaged = true; c.droneFixed = true; c.credits = 400;`));
   await p.reload(); await p.tap('button[data-a="continue-title"]'); await p.waitForTimeout(400);
   await p.tap('.shortcuts [data-v="missions"]'); await p.waitForTimeout(200);
   assert(/offline/.test(await p.textContent('.gate')), 'warned before a raid');

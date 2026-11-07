@@ -65,6 +65,20 @@ for (const [sector, want] of [[1, 0.8], [2, 0.65], [3, 0.5], [4, 0.4], [5, 0], [
   ok('a copy stacks instead of duplicating, up to 3', s.char.perkN.ironlung === 3 && s.char.perks.filter((x) => x === 'ironlung').length === 1, `${s.char.perkN.ironlung}`);
   s.char.credits = 99999; const before = E.perkCap(s.char), c1 = E.perkCapCost(s); ok('the cap can be raised for credits', E.buyPerkCap(s) && E.perkCap(s.char) === before + 1 && E.perkCapCost(s) > c1);
   s.run.perkOffer = ['ironlung']; s.screen = 'perk'; E.choosePerk(s, 'ironlung', rng); ok('a raised cap takes one more', s.char.perkN.ironlung === 4);
+  // A debt survives a raid and is paid from the secured haul, not from money still at risk.
+  { const g3 = game(41), s3 = g3.s, c3 = s3.char; c3.debt = 100; c3.credits = 0;
+    E.deploy(s3, 'garrison', 1, g3.rng); E.offerRoute(s3, g3.rng);
+    for (let i = 0; i < 30 && s3.screen !== 'combat'; i++) { if (s3.run.choices && s3.run.choices.length) E.enterRoom(s3, Math.max(0, s3.run.choices.indexOf('fight')), g3.rng); else E.offerRoute(s3, g3.rng); }
+    c3.hp = 9999; s3.run.enemy.hp = 1;
+    for (let i = 0; i < 5 && s3.screen === 'combat'; i++) E.playerAct(s3, 'shoot', g3.rng, 0);
+    const mid = c3.credits;
+    ok('mid-raid credits don\u2019t touch the debt', mid > 0 && E.debtOf(c3) === 100, `${mid} ${E.debtOf(c3)}`);
+    E.endRun(s3, 'extracted', g3.rng);
+    const kept = c3.payout ? c3.payout.credits : 0;
+    ok('the debt carries through the raid', E.debtOf(c3) === Math.max(0, 100 - kept), `kept ${kept}, owe ${E.debtOf(c3)}, cr ${c3.credits}`);
+    ok('the secured haul pays it first', c3.credits === Math.max(0, kept - 100) && c3.payout.debtPaid === Math.min(100, kept), JSON.stringify({ cr: c3.credits, paid: c3.payout.debtPaid, kept }));
+    const saved = JSON.parse(JSON.stringify(s3)); ok('the debt is in the save', E.debtOf(saved.char) === E.debtOf(c3));
+  }
   // At the cap the piece is still offered, and can be taken by paying or borrowing for more room on the spot.
   { const g2 = game(31), s2 = g2.s; s2.char.perkN = { ironlung: 3 }; s2.char.perks = ['ironlung'];
     E.deploy(s2, 'garrison', 1, g2.rng); s2.run.perkOffer = ['ironlung']; s2.screen = 'perk';
@@ -76,8 +90,10 @@ for (const [sector, want] of [[1, 0.8], [2, 0.65], [3, 0.5], [4, 0.4], [5, 0], [
     ok('the shortfall becomes debt', s2.char.credits === 0 && E.debtOf(s2.char) === cost - 40, `${E.debtOf(s2.char)} vs ${cost - 40}`);
     const owed = E.debtOf(s2.char); s2.ledger = s2.ledger || {}; s2.char.credits += owed + 25; E.settleDebt(s2.char);
     ok('earnings pay the debt first', E.debtOf(s2.char) === 0 && s2.char.credits === 25, `${E.debtOf(s2.char)} ${s2.char.credits}`);
-    s2.char.debt = E.debtMax(s2.char); s2.char.credits = 0; s2.run.perkOffer = ['ironlung']; s2.screen = 'perk';
-    ok('no borrowing past the limit', E.choosePerk(s2, 'ironlung', g2.rng, 0, 'borrow') === false);
+    s2.char.debt = 1; s2.char.credits = 0; s2.run.perkOffer = ['ironlung']; s2.screen = 'perk';
+    ok('no second loan while one is unpaid', E.choosePerk(s2, 'ironlung', g2.rng, 0, 'borrow') === false && !E.capRaiseWay(s2) && E.buyPerkCap(s2, true) === false);
+    s2.char.debt = 0; s2.char.credits = 0; for (let i = 0; i < 6; i++) E.buyPerkCap(s2, true);
+    ok('standing in the shop borrows once', E.debtOf(s2.char) > 0 && E.debtOf(s2.char) <= E.debtMax(s2.char) && s2.char.perkCapUp === 2, `${E.debtOf(s2.char)} ${s2.char.perkCapUp}`);
   }
   // Old saves: a tier becomes that many copies.
   const old = game(14); old.s.char.perks = ['chit', 'hollow']; old.s.char.perkLv = { chit: 3 }; delete old.s.char.perkN;

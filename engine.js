@@ -65,8 +65,9 @@ export const extractRate = (sector) => TUNE.extractRates[(sector - 1) % 5];
 export const escapeRate = (sector) => TUNE.escapeRates[(sector - 1) % 5];
 export const isBossSector = (n) => n % 5 === 0;
 // Optional credit accounting for the simulators: set s.ledger = {} and every credit gain or spend is tallied by source.
-// Every credit earned goes to a debt first. Spending never touches it.
-const ledger = (s, k, n) => { if (s.ledger && n) s.ledger[k] = (s.ledger[k] || 0) + n; if (n > 0 && !String(k).startsWith('spend')) { settleDebt(s.char); settleDebt(s.char2); } };
+// Credits earned in town go to a debt first. In a raid nothing is taken until the haul is secured (settle), so a debt is never
+// paid with money that an extraction would have lost.
+const ledger = (s, k, n) => { if (s.ledger && n) s.ledger[k] = (s.ledger[k] || 0) + n; if (n > 0 && !s.run && !String(k).startsWith('spend')) { settleDebt(s.char); settleDebt(s.char2); } };
 export const mapById = (id) => D.MAPS.find((m) => m.id === id) || D.MAPS[0];
 export const sectorName = (n, mapId = 'garrison') => {
   const list = mapById(mapId).sectors, len = list.length;
@@ -917,7 +918,8 @@ export const droneOf = (c) => (c && c.drone && !c.drone.damaged ? c.drone : null
 export const droneValue = (d, rank = d.rank) => D.DRONES[d.type].ranks[rank - 1];
 export const droneHas = (d, rank) => !!d && d.rank >= rank;
 export const droneUpgradeCost = (d) => (d.rank >= D.DRONE_MAX_RANK ? 0 : D.DRONE_UPGRADE[d.rank - 1]);
-export const droneRepairCost = (s) => { const c = s.char; return c && c.drone ? price(s, 20 + 10 * c.drone.rank + 3 * (c.deepest || 0)) : 0; };
+// The first repair for each operative is on the house: an early drone loss shouldn't eat a first raid's haul.
+export const droneRepairCost = (s) => { const c = s.char; return c && c.drone ? (c.droneFixed ? price(s, 20 + 10 * c.drone.rank + 3 * (c.deepest || 0)) : 0) : 0; };
 export function pickDrone(s, type) {
   const c = s.char;
   if (!c || c.drone || !D.DRONES[type]) return false;
@@ -950,8 +952,8 @@ export function upgradeDrone(s, free = false) {
 export function repairDrone(s) {
   const c = s.char, cost = droneRepairCost(s);
   if (!c || !c.drone || !c.drone.damaged || c.credits < cost) return false;
-  c.credits -= cost; c.drone.damaged = false; ledger(s, 'spend:drone', cost);
-  s.notice = `${D.DRONES[c.drone.type].name} repaired for ${cost} ${D.SETTING.cur}.`;
+  c.credits -= cost; c.drone.damaged = false; c.droneFixed = true; ledger(s, 'spend:drone', cost);
+  s.notice = cost ? `${D.DRONES[c.drone.type].name} repaired for ${cost} ${D.SETTING.cur}.` : `${D.DRONES[c.drone.type].name} repaired. The first one\u2019s free.`;
   return true;
 }
 // Clearing a sector can knock a drone out until it's repaired in town.
@@ -1277,7 +1279,7 @@ export function enterRoom(s, idx, rng) {
     else text = 'Shelves of requisitioned supplies. You take what fits in your pockets.';
   } else if (kind === 'rest') {
     let h = 0; const pct = r.cond === 'supplies' ? 0.4 : 0.3;
-    forEachActor(s, (a, i) => { const m2 = stats(s).maxHp, hh = Math.min(m2 - a.hp, Math.round(m2 * pct)); a.hp += hh; if (i === actorIdx(s)) h = hh; });
+    forEachActor(s, (a, i) => { const m2 = stats(s).maxHp, hh = Math.min(m2 - a.hp, Math.round(m2 * pct)); a.hp += hh; if (i === actorIdx(s)) h = hh; delete r.pst.bleed; delete r.pst.burn; });
     notes.push(`+${h} HP`);
     text = 'Five quiet minutes. You rewrap the bandages and breathe.';
     if (r.alert > 0) { r.alert = Math.max(0, r.alert - 2); notes.push(`alarm down to ${r.alert}`); text += ' Up on the wall, the alarm lights blink back to amber.'; }
@@ -1470,11 +1472,23 @@ export function bestAttack(s) {
   return m > r ? 'strike' : 'shoot';
 }
 // What the enemy's telegraphed attack can do, by the same sums as the attack itself. Null when the next move isn't a plain attack.
+export function dotDamage(s) {
+  const r = s.run, st = stats(s); if (!r || !r.pst) return 0;
+  return (r.pst.bleed > 0 ? Math.max(1, Math.round(st.maxHp * 0.06)) : 0) + (r.pst.burn > 0 ? Math.max(1, Math.round(st.maxHp * 0.08)) : 0);
+}
 export function incomingRange(s) {
   const r = s.run, e = r.enemy, c = s.char;
   if (!e || e.stun > 0) return null;
   if (e.boss && intentHidden(s)) return null;
   if (e.intent === 'sig') return sigRange(s);
+  if (e.intent === 'special') {
+    // A special move: its multiplier, halved by Defend (which also blocks its status).
+    const sp = D.SPECIALS[e.id];
+    if (!sp || !(sp.mult > 0)) return null;
+    const st = stats(s), b = e.atk * sp.mult * outMult(e.st, r.pst), lo = mitigate(b * 0.85, st.def), hi = mitigate(b * 1.15, st.def);
+    const g = (n) => droneShield(c, Math.max(1, Math.round(n * 0.5 * (hasTrait(c, 'bulwark') ? 0.7 : 1))));
+    return { min: droneShield(c, lo), max: droneShield(c, hi), defMin: g(lo), defMax: g(hi), lethal: droneShield(c, hi) >= c.hp };
+  }
   if (e.intent !== 'attack' && e.intent !== 'heavy') return null;
   const st = stats(s), heavy = e.intent === 'heavy', q = e.quirk ? quirkById(e.quirk) : null;
   const twice = !heavy && e.bs && e.bs.twice; // Vane with his coat off: two lighter shots
@@ -2515,9 +2529,10 @@ function settle(s, kind, rate, exact = false) {
       a.xp -= xpToNext(a.level); a.level += 1; a.attrPoints += 1; points += 1;
       a.hp += stats(s).maxHp - before;
     }
+    const debtPaid = settleDebt(a); // the secured haul pays Marrow first
     a.xpBank = 0; a.safeCredits = a.credits;
     s.meta.payouts = (s.meta.payouts || 0) + 1;
-    a.payout = { id: s.meta.payouts, kind, rate: cut, credits: haul - lostCredits, lostCredits, xp: gain, lostXp, fromLevel, toLevel: a.level, fromPct: fromXp / fromNext, toPct: a.xp / xpToNext(a.level), points, tally };
+    a.payout = { id: s.meta.payouts, kind, rate: cut, credits: haul - lostCredits, lostCredits, debtPaid, debtLeft: debtOf(a), xp: gain, lostXp, fromLevel, toLevel: a.level, fromPct: fromXp / fromNext, toPct: a.xp / xpToNext(a.level), points, tally };
   });
   return mine;
 }
@@ -2634,8 +2649,10 @@ export function capRaiseWay(s) {
   const c = s.char, cost = perkCapCost(s);
   if (perkCap(c) >= PERK_CAP_MAX) return null;
   if (c.credits >= cost) return { cost, owe: 0 };
+  // One loan at a time: nothing more on credit until the last one is paid off.
+  if (debtOf(c) > 0) return null;
   const owe = cost - Math.max(0, c.credits);
-  return debtOf(c) + owe <= debtMax(c) ? { cost, owe } : null;
+  return owe <= debtMax(c) ? { cost, owe } : null;
 }
 export function buyPerkCap(s, borrow = false) {
   const c = s.char, way = capRaiseWay(s);
