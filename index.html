@@ -106,15 +106,17 @@ p { margin: 0; }
 .hud-hp { font-size: .68rem; color: var(--muted); justify-self: end; }
 .hud .bar i { transition: width .35s ease; }
 .pops { position: absolute; inset: 0; pointer-events: none; }
-.pop { position: absolute; transform: translate(-50%, 0); font-family: var(--display); font-weight: 800; font-size: clamp(1.1rem, 3.6vw, 1.9rem); color: #fff; text-shadow: 0 2px 0 #000, 0 0 8px #000; animation: pop 1s ease-out forwards; white-space: nowrap; }
-.pop.crit { color: #ffd27a; font-size: clamp(1.4rem, 4.6vw, 2.4rem); }
-.pop.heavy { color: #ff7a64; font-size: clamp(1.3rem, 4.2vw, 2.2rem); }
+.pop { position: absolute; transform: translate(-50%, 0); font-family: var(--display); font-weight: 800; font-size: clamp(1.3rem, 4.2vw, 2.3rem); color: #fff; text-shadow: 0 2px 0 #000, 0 0 8px #000; animation: pop 1s linear forwards; white-space: nowrap; }
+.pop.crit { color: #fff1c9; font-size: clamp(2rem, 6.6vw, 3.6rem); -webkit-text-stroke: 1px #b8451f; text-shadow: 0 3px 0 #000, 0 0 16px #ff8a3c, 0 0 5px #000; animation-name: popCrit; z-index: 2; }
+.pop.heavy { color: #ff7a64; font-size: clamp(1.6rem, 5vw, 2.8rem); }
 .pop.heal { color: var(--ok); }
 .pop.ion { color: var(--ion); }
 .pop.info { font-family: var(--mono); font-weight: 500; font-size: clamp(.65rem, 1.8vw, .85rem); letter-spacing: .08em; text-transform: uppercase; color: var(--fg); }
-.pop.tag { font-family: var(--mono); font-size: clamp(.6rem, 1.6vw, .75rem); letter-spacing: .2em; color: #ffd27a; margin-top: 2.2em; }
+.pop.tag { font-family: var(--mono); font-size: clamp(.7rem, 1.8vw, .9rem); letter-spacing: .24em; color: #ffd27a; margin-top: 3.8em; animation-name: pop; }
 .pop.level { color: #f1d98a; letter-spacing: .08em; }
-@keyframes pop { 0% { opacity: 0; transform: translate(-50%, 8px) scale(.7); } 15% { opacity: 1; transform: translate(-50%, 0) scale(1.1); } 30% { transform: translate(-50%, 0) scale(1); } 100% { opacity: 0; transform: translate(-50%, -34px); } }
+/* Pop and settle, hold so it can be read, then drift away. */
+@keyframes pop { 0% { opacity: 0; transform: translate(-50%, 10px) scale(.4); } 8% { opacity: 1; transform: translate(-50%, -3px) scale(1.28); } 16% { transform: translate(-50%, 0) scale(.94); } 24% { transform: translate(-50%, 0) scale(1); } 66% { opacity: 1; transform: translate(-50%, -6px) scale(1); } 100% { opacity: 0; transform: translate(-50%, -30px) scale(.97); } }
+@keyframes popCrit { 0% { opacity: 0; transform: translate(-50%, 6px) scale(.25) rotate(var(--tilt, 0deg)); } 6% { opacity: 1; transform: translate(-50%, -6px) scale(1.65) rotate(var(--tilt, 0deg)); } 14% { transform: translate(-50%, 0) scale(.9) rotate(calc(var(--tilt, 0deg) * -.4)); } 22% { transform: translate(-50%, 0) scale(1.1) rotate(0deg); } 30% { transform: translate(-50%, 0) scale(1) rotate(0deg); } 72% { opacity: 1; transform: translate(-50%, -5px) scale(1); } 100% { opacity: 0; transform: translate(-50%, -26px) scale(1.03); } }
 .speed { position: absolute; right: 2%; top: 4%; display: flex; gap: 2px; }
 .speed button { background: #121518cc; border: 1px solid var(--line); color: var(--muted); font-family: var(--mono); font-size: .62rem; padding: 3px 6px; }
 .speed button[aria-pressed="true"] { color: var(--sodium); border-color: var(--sodium); }
@@ -248,7 +250,7 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .head-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .head-stats { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 28px; }
 .tools { display: flex; gap: 4px; flex-wrap: wrap; }
-.stage:has(.cine.on:not(.out)) .hud { opacity: 0; transition: opacity .3s; }
+.stage:has(.cine.on:not(.out)) .hud, .stage:has(.cine.on:not(.out)) .speed { opacity: 0; transition: opacity .3s; }
 .status .brand { margin-right: 8px; }
 .tool { background: none; border: 1px solid var(--line); color: var(--muted); font-family: var(--mono); font-size: .64rem; letter-spacing: .1em; text-transform: uppercase; padding: 6px 9px; }
 .tool:hover { color: var(--fg); border-color: var(--sodium); }
@@ -328,6 +330,35 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .cine-name { font-family: var(--display); font-weight: 800; font-size: clamp(1.3rem, 5vw, 2.6rem); line-height: 1; text-transform: uppercase; color: #fff; }
 .cine-epithet { font-family: var(--body); font-style: italic; font-size: clamp(.75rem, 2vw, 1rem); color: var(--fg); }
 .cine-skip { position: absolute; right: 2%; bottom: 3%; font-family: var(--mono); font-size: .55rem; letter-spacing: .1em; color: #ffffff77; text-transform: uppercase; z-index: 2; }
+
+/* a boss talking in the fight: over the stage, never in the way of a tap */
+.bsay { position: absolute; left: 2%; right: 47%; bottom: 6%; z-index: 4; display: grid; gap: 2px; padding: 5px 10px; pointer-events: none; background: #000000d0; border-left: 3px solid var(--danger); opacity: 0; transform: translateY(4px); transition: opacity .18s ease, transform .18s ease; }
+.bsay[hidden] { display: none; }
+@media (max-width: 560px) { .bsay { left: 1%; right: 1%; bottom: 66px; } }
+.bsay.on { opacity: 1; transform: none; }
+.bsay.narration { border-left-color: var(--ion); }
+.bsay.narration .bsay-text { font-style: italic; color: #cfd6dc; }
+.bsay-text { font-family: var(--body); font-size: clamp(.82rem, 2vw, 1.02rem); line-height: 1.25; color: #efe7d6; }
+.bsay-note { font-family: var(--mono); font-size: max(11px, .72rem); line-height: 1.2; color: var(--sodium); }
+.bsay-note[hidden] { display: none; }
+.stage:has(.cine.on:not(.out)) .bsay { opacity: 0; }
+.area-line { margin: 0; padding: 2px 0 2px 10px; border-left: 2px solid var(--sodium); font-style: italic; font-size: .95rem; line-height: 1.3; color: var(--fg); max-width: 72ch; }
+.intent.sigi b { color: #ffd9a8; }
+/* scenes: the fallen line, a boss's first defeat */
+.scene-wrap { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); background: #040507ee; cursor: pointer; }
+.scene { width: min(720px, 100%); max-height: 100%; overflow-y: auto; overflow-x: hidden; display: grid; gap: 10px; align-content: center; cursor: default; }
+.scene h2 { font-size: 2rem; text-transform: uppercase; }
+.scene-beat { margin: 0; font-size: 1.3rem; line-height: 1.35; color: #efe7d6; min-height: 3.6em; }
+.fallen .scene-beat { font-size: 1.5rem; min-height: 0; }
+.scene.fresh .scene-beat, .scene.fresh .scene-note { animation: sceneIn .45s ease; }
+.scene-note { margin: 0; padding: 4px 0 4px 10px; border-left: 3px solid var(--sodium); color: var(--sodium); font-style: italic; }
+@keyframes sceneIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.codex-entry { padding: 8px 0; border-top: 1px solid var(--line); }
+.codex-entry h3 { margin: 0 0 3px; }
+.codex-entry p { margin: 0; line-height: 1.4; }
+.codex-entry.locked h3, .codex-entry.locked p { color: var(--muted); }
+.st-pinned { border-color: #73b6d4; color: #a9d6ea; }
+.pop.st-pinned { color: #a9d6ea; font-family: var(--mono); font-size: clamp(.7rem, 2vw, .95rem); letter-spacing: .12em; margin-top: 1.6em; }
 
 /* contraband */
 .perks { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
@@ -459,7 +490,7 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .btn.warn .bs { color: #ff8a78; opacity: 1; }
 /* walkable town */
 .town { position: relative; border: 1px solid var(--line); background: #0b0d10; overflow: hidden; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
-.town canvas { display: block; width: 100%; height: auto; aspect-ratio: 416 / 256; image-rendering: pixelated; cursor: pointer; outline: none; }
+.town canvas { display: block; width: 100%; height: auto; aspect-ratio: 688 / 384; image-rendering: pixelated; cursor: pointer; outline: none; }
 .town:not(.ready) canvas { opacity: .25; }
 .town.failed::after { content: 'Town art could not load. Use the buttons below.'; position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: .9rem; }
 .town-bubble { position: absolute; transform: translate(-50%, -100%); max-width: min(260px, 70%); padding: 6px 10px; background: #f3ead6; color: #1a1208; font-size: .85rem; line-height: 1.3; border: 2px solid #1a1208; pointer-events: none; text-align: center; }
@@ -473,6 +504,7 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .coop-bar .emotes .btn { padding: 3px 8px; font-size: .78rem; min-height: 0; }
 .coop-bar > .btn { padding: 3px 8px; font-size: .78rem; min-height: 0; }
 .town-prompt { position: absolute; left: 50%; bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transform: translateX(-50%); max-width: calc(100% - 16px); padding: 4px 10px; background: #121518e0; border: 1px solid var(--line); font-family: var(--mono); font-size: .68rem; letter-spacing: .06em; color: var(--fg); pointer-events: none; text-align: center; }
+.town-prompt.act { pointer-events: auto; cursor: pointer; }
 .town-fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
 .town-fade.on { animation: tfade .45s ease-out; }
 @media (max-width: 520px) { .town-prompt { font-size: .58rem; padding: 3px 7px; } .town-bubble { font-size: .78rem; } }
@@ -820,6 +852,79 @@ h3 { font-size: 1.05rem; }
   * { -webkit-tap-highlight-color: transparent; }
   .btn:active:not(:disabled), .tab:active, .tool:active, .door:active, .choice:active { filter: brightness(1.3); transform: translateY(1px); }
 }
+/* Juice: press feel, transitions, boss card, rare drops, level-up, death reveal, raid tally. */
+.btn, .door, .tab, .tool, .choice { transition: transform .1s ease-out, filter .1s ease-out, border-color .12s; }
+.btn:active:not(:disabled), .tab:active, .tool:active, .choice:active { transform: scale(.965) translateY(1px); filter: brightness(1.25); transition-duration: .03s; }
+.btn.big:active:not(:disabled) { transform: scale(.98) translateY(2px); }
+.door:active { transform: scale(.985) translateY(2px); filter: brightness(1.2); transition-duration: .03s; }
+.actions .btn:active:not(:disabled), .skills .btn:active:not(:disabled), .items .btn:active:not(:disabled) { transform: translateY(2px) scale(.97); filter: brightness(1.2); transition-duration: .03s; }
+html.calm .btn:active, html.calm .door:active, html.calm .tab:active, html.calm .tool:active, html.calm .choice:active, html.calm .actions .btn:active, html.calm .skills .btn:active, html.calm .items .btn:active { transform: none; }
+@media (prefers-reduced-motion: reduce) { .btn:active, .door:active, .tab:active, .tool:active, .choice:active, .actions .btn:active, .skills .btn:active, .items .btn:active { transform: none !important; } }
+[data-cnt].counting { color: #fff1c9; }
+/* A cover over the new screen that gets out of the way. It takes no input, so the screen beneath works from the first frame. */
+#wipe { position: fixed; inset: 0; z-index: 60; pointer-events: none; display: none; overflow: hidden; }
+#wipe.fade, #wipe.door { display: block; }
+#wipe.fade { background: #050608; animation: wipeFade .18s ease-in forwards; }
+#wipe i { position: absolute; left: 0; right: 0; height: 50.5%; background: repeating-linear-gradient(135deg, #1a1f24 0 14px, #14181c 14px 28px); }
+#wipe.door i:first-child { top: 0; border-bottom: 3px solid var(--sodium); animation: wipeUp .24s cubic-bezier(.55, 0, .9, .4) forwards; }
+#wipe.door i:last-child { bottom: 0; border-top: 3px solid #6d4a1c; animation: wipeDown .24s cubic-bezier(.55, 0, .9, .4) forwards; }
+@keyframes wipeFade { to { opacity: 0; } }
+@keyframes wipeUp { 0%, 18% { transform: none; } 100% { transform: translateY(-103%); } }
+@keyframes wipeDown { 0%, 18% { transform: none; } 100% { transform: translateY(103%); } }
+/* The stage drains as an operative falls. */
+.stage canvas { transition: filter 1s ease-in; }
+.stage.fallen canvas { filter: grayscale(1) brightness(.5) contrast(1.1); }
+.stage.fallen .hud, .stage.fallen .speed { opacity: 0; transition: opacity .5s; }
+/* Boss close-up: the card sits left of the face. */
+.cine-card { max-width: 62%; padding: 8px 14px 8px 10px; background: linear-gradient(90deg, #000c 0%, #0009 72%, #0000 100%); }
+.cine-line { font-family: var(--body); font-size: clamp(.82rem, 2.1vw, 1.05rem); line-height: 1.28; color: #efe7d6; margin-top: 5px; opacity: 0; transform: translateY(6px); transition: opacity .4s ease, transform .4s ease; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.cine-line:empty { display: none; }
+.cine.say .cine-line { opacity: 1; transform: none; }
+.cine.out .cine-line { opacity: 0; }
+.cine-name { text-shadow: 0 2px 0 #000; }
+.cine-label { font-size: max(11px, clamp(.5rem, 1.6vw, .7rem)); }
+.cine-skip { font-size: 11px; }
+/* A drop worth stopping for. */
+.modal.rare-drop { border-color: var(--rar); box-shadow: 0 0 0 1px var(--rar), 0 0 44px -6px var(--rar); animation: rareIn .45s cubic-bezier(.2, 1.3, .4, 1); }
+.rare-drop h2 { color: var(--rar); text-shadow: 0 0 16px var(--rar); }
+.rare-drop .item.new { position: relative; overflow: hidden; box-shadow: 0 0 0 2px var(--rar), 0 0 26px -2px var(--rar); animation: rareGlow 1.5s ease-in-out infinite; }
+.rare-drop .item.new::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(105deg, #fff0 35%, #fff5 50%, #fff0 65%); transform: translateX(-110%); animation: rareSweep .9s .15s ease-out forwards; }
+#app.still .modal.rare-drop, #app.still .rare-drop .item.new::after { animation: none; }
+#app.still .rare-drop .item.new::after { transform: translateX(110%); }
+@keyframes rareIn { 0% { transform: scale(.94); filter: brightness(1.7); } 100% { transform: none; filter: none; } }
+@keyframes rareGlow { 50% { box-shadow: 0 0 0 2px var(--rar), 0 0 44px 4px var(--rar); } }
+@keyframes rareSweep { to { transform: translateX(110%); } }
+/* Level-up. */
+.modal.payout { position: relative; }
+.payout-wrap.lvup::before { content: ''; position: fixed; inset: 0; z-index: 3; pointer-events: none; background: radial-gradient(circle at 50% 55%, #f1d98a99, #f1d98a22 45%, #f1d98a00 75%); animation: lvFlash .7s ease-out forwards; }
+.payout.lvup { animation: lvPunch .5s cubic-bezier(.2, 1.4, .4, 1); }
+.payout.lvup .payout-up b { display: inline-block; animation: lvWord .6s cubic-bezier(.2, 1.5, .4, 1); }
+.payout-up b { text-shadow: 0 0 14px #9be08a88; }
+@keyframes lvFlash { from { opacity: 1; } to { opacity: 0; } }
+@keyframes lvPunch { 0% { transform: scale(1.04); box-shadow: 0 0 50px #f1d98a; } 100% { transform: none; } }
+@keyframes lvWord { 0% { transform: scale(.5); opacity: 0; } 60% { transform: scale(1.3); opacity: 1; } 100% { transform: none; } }
+/* The tally: three small numbers, then credits and XP. */
+.tally { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; }
+.tally > div { display: grid; gap: 1px; padding: 6px 8px; background: var(--panel-2); border: 1px solid var(--line); opacity: .55; transition: opacity .15s, border-color .15s; }
+.tally > div.on, .tally > div.done { opacity: 1; }
+.tally > div.on { border-color: var(--sodium); }
+.tally b { font-family: var(--display); font-size: 1.45rem; line-height: 1.1; color: var(--fg); }
+#app.still .tally > div, .payout.settled .tally > div { opacity: 1; }
+/* Permadeath: everything is drained, and the record comes up one line at a time. */
+[data-dl] { opacity: 0; transform: translateY(5px); transition: opacity .55s ease, transform .55s ease; pointer-events: none; }
+[data-dl][data-on] { opacity: 1; transform: none; pointer-events: auto; }
+.screen-death { background: radial-gradient(ellipse at 50% 30%, #1a1c1e 0%, #0b0c0e 80%); }
+.screen-death.playing { animation: deathIn 1s ease-out; cursor: pointer; }
+@keyframes deathIn { from { background-color: #000; filter: brightness(.2); } to { filter: none; } }
+.screen-death .killer img:first-child { filter: grayscale(1) brightness(.72); }
+#app:has(.screen-death.playing) .status { opacity: .28; filter: grayscale(1); }
+#app .status { transition: opacity .6s ease, filter .6s ease; }
+.death-rec { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+.death-rec > div { display: grid; gap: 1px; padding: 6px 10px; border-left: 2px solid var(--danger); background: #ffffff08; }
+.death-rec b { font-family: var(--display); font-size: 1.35rem; line-height: 1.15; color: var(--fg); }
+.death-skip { position: absolute; right: 14px; bottom: 10px; font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: #ffffff66; pointer-events: none; }
+.screen-death { position: relative; }
+.screen-death:not(.playing) .death-skip { display: none; }
 /* Shared bits used by every size. */
 .pop-head .close { position: static; }
 .pop-head h2 { min-width: 0; }
@@ -1056,17 +1161,20 @@ h3 { font-size: 1.05rem; }
   .aa-spend .btn { padding: 2px 12px; font-size: 1rem; min-width: 76px; }
 
   /* A fight: the scene on the left, the console on the right. Both use the full height. */
-  html.lefty .combat { grid-template-columns: minmax(0, 42%) minmax(0, 1fr); }
+  html.lefty .combat { grid-template-columns: minmax(0, 34%) minmax(0, 1fr); }
   html.lefty .c-left { order: 2; }
   html.lefty .c-right { order: 1; }
-  .combat { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 42%); gap: 6px; align-items: stretch; align-content: stretch; grid-template-rows: minmax(0, 1fr); padding: 5px 6px; overflow: hidden !important; }
+  .combat { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 34%); gap: 6px; align-items: stretch; align-content: stretch; grid-template-rows: minmax(0, 1fr); padding: 5px 6px; overflow: hidden !important; }
   .combat-head, .auto-note, .hud-tag { display: none; }
-  .c-left { display: flex; flex-direction: column; gap: 3px; min-width: 0; min-height: 0; }
-  .c-left > * { flex: none; }
+  /* The fight fills the left: stat line and traits share one row under the stage. */
+  .c-left { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); grid-auto-rows: auto; gap: 2px 8px; min-width: 0; min-height: 0; }
+  .c-left > * { grid-column: 1 / -1; min-width: 0; }
+  .c-left > .statline { grid-column: 1; }
+  .c-left > .quirk-row { grid-column: 2; overflow: hidden; }
   .c-left > .stage-box { flex: 1 1 0; min-height: 0; container-type: size; display: grid; place-items: center; }
-  .combat .stage, #stage-slot { width: min(100cqw, calc((100cqh - 32px) * 1.7778)); margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1px; background: var(--line); }
+  .combat .stage, #stage-slot { width: min(100cqw, calc((100cqh - 27px) * 1.7778)); margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1px; background: var(--line); }
   .stage canvas { grid-column: 1 / -1; }
-  .hud { position: static; width: auto; max-width: none; height: 30px; border: 0; background: var(--panel-2); padding: 2px 8px; gap: 1px 6px; grid-template-columns: minmax(0, 1fr) auto; align-items: center; align-content: center; }
+  .hud { position: static; width: auto; max-width: none; height: 26px; border: 0; background: var(--panel-2); padding: 1px 8px; gap: 1px 6px; grid-template-columns: minmax(0, 1fr) auto; align-items: center; align-content: center; }
   .hud-player { order: 2; }
   .hud-enemy { order: 3; }
   .hud-row { min-width: 0; }
@@ -1076,12 +1184,13 @@ h3 { font-size: 1.05rem; }
   .hud-st { display: none; }
   .speed { right: 4px; top: 4px; gap: 3px; }
   .speed button { font-size: 11px; padding: 0 9px; min-height: 38px; }
-  .intent, .combat .intent { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; padding: 2px 8px; grid-template-columns: none; min-height: 28px; }
-  .intent b { font-size: 1.05rem; white-space: nowrap; }
+  .intent, .combat .intent { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; padding: 0 8px; grid-template-columns: none; min-height: 26px; }
+  .intent b { font-size: 1.05rem; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; }
   .intent .tip { font-size: max(12px, .84rem); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
   .intent .dot { margin: 0; flex: none; width: 8px; height: 8px; }
   .intent-side { flex: none; gap: 4px; }
-  .mech { padding: 2px 6px; }
+  .mech { padding: 0 6px; }
+  .quirk-row .quirk-line > span:not(.chip) { display: none; }
   .statline { gap: 2px 10px; flex-wrap: nowrap; overflow: hidden; white-space: nowrap; }
   .quirk-line { flex-wrap: nowrap; overflow: hidden; white-space: nowrap; gap: 6px; font-size: max(11px, .78rem); }
   .c-right { display: flex; flex-direction: column; gap: 4px; padding: 9px 5px 5px; min-height: 0; overflow: hidden; }
@@ -1089,15 +1198,15 @@ h3 { font-size: 1.05rem; }
   .party .pm { padding: 2px 6px; }
   .actions, .skills, .items { gap: 4px; }
   .c-right > .actions { flex: 2.3 1 auto; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: minmax(44px, 1.25fr) minmax(38px, 1fr); }
-  .actions .btn { grid-column: span 2; min-height: 0; padding: 2px 4px; font-size: 1.15rem; }
-  .actions .btn.atk { grid-column: span 3; font-size: 1.4rem; }
+  .actions .btn { grid-column: span 2; min-height: 0; padding: 2px 3px; font-size: .95rem; }
+  .actions .btn.atk { grid-column: span 3; font-size: 1.15rem; }
   .actions .btn .wpn { display: none; }
   .actions .btn .bs { font-size: max(11px, .8rem); }
   .actions .btn.atk .bs { font-size: max(12px, .88rem); }
   .actions .btn[data-v="stim"] .bs { display: none; }
   .c-right > .skills { flex: 2 1 auto; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(38px, 1fr); }
   .skills .btn { min-height: 0; padding: 2px 8px; gap: 0; align-content: center; }
-  .sk-name { font-size: max(13px, .95rem); gap: 5px; white-space: nowrap; overflow: hidden; }
+  .sk-name { font-size: max(12px, .8rem); gap: 4px; white-space: nowrap; overflow: hidden; }
   .sk-name .ico { width: 16px; height: 16px; }
   .sk-note { display: flex; gap: 6px; font-size: max(11px, .78rem); white-space: nowrap; overflow: hidden; }
   .sk-note .sk-status { order: -1; flex: none; text-transform: uppercase; letter-spacing: .04em; }
@@ -1112,6 +1221,7 @@ h3 { font-size: 1.05rem; }
   .town-spend { display: none; }
   .town-panel .shortcuts .btn:has(.badge) { border-color: var(--sodium); }
   .town-prompt { font-size: max(12px, .82rem); padding: 5px 12px; }
+  .town-prompt.act:not([hidden]) { min-height: 38px; display: flex; align-items: center; }
   .town-bubble { font-size: max(13px, .9rem); }
   .create-grid .attr-row .desc { display: none; }
   .create-grid .attr-row { padding: 2px 10px; }
@@ -1146,7 +1256,47 @@ h3 { font-size: 1.05rem; }
   .speed { right: auto; left: 4px; top: 4px; }
   .speed button { min-height: 38px; padding: 0 8px; background: #121518b0; }
   .speed button[aria-pressed="false"] { display: none; }
-  .pop { font-size: 18px; } .pop.crit, .pop.heavy { font-size: 20px; } .pop.info { font-size: 11px; }
+  .pop { font-size: 21px; } .pop.heavy { font-size: 25px; } .pop.crit { font-size: 34px; -webkit-text-stroke: .6px #b8451f; } .pop.info, .pop.quirk, .pop.st-bleed, .pop.st-burn, .pop.st-shaken, .pop.st-exposed { font-size: 11px; } .pop.tag { font-size: 12px; margin-top: 3.4em; }
+  .cine-card { max-width: 66%; bottom: 15%; padding: 4px 10px 4px 8px; }
+  .cine-name { font-size: 1.5rem; }
+  .cine-epithet { font-size: max(12px, .8rem); }
+  .cine-line { font-size: max(12px, .82rem); line-height: 1.2; margin-top: 2px; }
+  .bsay { left: 1%; right: 1%; bottom: 34px; padding: 2px 6px; gap: 0; }
+  .bsay-text { font-size: max(12px, .84rem); line-height: 1.18; }
+  .bsay-note { font-size: 11px; }
+  .intent.fx { flex-wrap: wrap; row-gap: 2px; }
+  .intent.fx .intent-side { flex: 1 1 100%; flex-wrap: wrap; justify-content: flex-start; align-items: center; gap: 3px; }
+  .intent.fx .intent-side .chip { padding: 1px 4px; letter-spacing: .02em; }
+  .intent.fx .intent-side .mech { padding: 1px 4px; }
+  .area-line { font-size: max(12px, .84rem); line-height: 1.2; padding: 0 0 0 8px; max-width: none; }
+  .intent.sigi { flex-wrap: wrap; row-gap: 0; }
+  .intent.sigi .tip { white-space: normal; flex: 1 1 100%; order: 3; line-height: 1.15; }
+  .scene { gap: 6px; }
+  .scene h2 { font-size: 1.4rem; }
+  .scene-beat { font-size: 1.1rem; line-height: 1.25; min-height: 0; }
+  .fallen .scene-beat { font-size: 1.2rem; }
+  .scene-note { font-size: max(12px, .9rem); }
+  .codex-entry p { font-size: max(12px, .86rem); line-height: 1.3; }
+  .codex-entry h3 { font-size: 1.05rem; }
+  .tally { gap: 6px; }
+  .tally > div { padding: 2px 6px; grid-template-columns: 1fr auto; align-items: baseline; gap: 6px; }
+  .tally b { font-size: 1.2rem; }
+  .modal.payout { gap: 5px; }
+  .death-rec { grid-template-columns: auto auto auto minmax(0, 1fr); gap: 6px; }
+  .death-rec > div { padding: 1px 8px; }
+  .death-rec b { font-size: 1.05rem; }
+  .death-skip { right: 10px; bottom: 4px; }
+  .screen-death .story { display: none; }
+  .screen-death .big-title { line-height: 1; }
+  .screen-death .kv { font-size: max(12px, .84rem); }
+  .payout > p.muted { display: none; }
+  .payout-row > div { padding: 3px 10px; gap: 0; }
+  .payout-total { margin-top: 1px; padding-top: 1px; }
+  .payout .payout-row b { font-size: 1.35rem; }
+  .payout-line { font-size: max(12px, .84rem); line-height: 1.2; }
+  .payout .aa-spend { padding-block: 2px; }
+  .payout .aa-spend .btn { min-height: 38px; }
+  .payout .btn.big { min-height: 40px; padding-block: 2px; }
   .quirk-row { display: flex; flex-wrap: nowrap; gap: 4px; overflow: hidden; flex: none; }
   .quirk-row .quirk-line { flex: none; }
   .quirk-row .quirk-line > span:not(.chip) { display: none; }
@@ -1236,11 +1386,12 @@ h3 { font-size: 1.05rem; }
 <script type="module">
 import * as D from './data.js';
 import * as E from './engine.js';
+import { fallenLine, BOSS_MOVES } from './lore.js';
 import { portraitURL } from './portraits.js';
 import { Stage, loadSheets, sheetOf, sheetStill, setLookSheets, setCalm as setStageCalm } from './stage.js';
 import * as A from './audio.js';
 import { iconURL, gearIconKey } from './icons.js';
-import { Town, SHOPS, setCalm as setTownCalm } from './town.js';
+import { Town, SHOPS, setCalm as setTownCalm } from './street.js';
 import { droneIcon, setDroneArt, droneHiFrame } from './drones.js';
 import { TitleScene } from './titlefx.js';
 import { autoStep, autoFinish, loadDev, BUILDS } from './dev.js';
@@ -1322,6 +1473,8 @@ document.addEventListener('click', (ev) => {
 const UI_KEY = 'cinder-cell-ui';
 const uiPrefs = { autoStims: true, autoStop: true, fastAnim: false, calm: false, lefty: false };
 try { Object.assign(uiPrefs, JSON.parse(localStorage.getItem(UI_KEY)) || {}); } catch (e) {}
+const calmNow = () => uiPrefs.calm || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
+const juice = { wipes: 0, levelFlashes: 0, rareDrops: 0 }; // read by tests/juice.cjs
 function applyUi() {
   document.documentElement.classList.toggle('calm', uiPrefs.calm);
   document.documentElement.classList.toggle('lefty', uiPrefs.lefty);
@@ -1819,8 +1972,45 @@ function headerTools() {
     <button class="tool" data-a="sound" aria-pressed="${!p.muted}" aria-label="Toggle all sound">${p.muted ? 'Sound off' : 'Sound on'}</button>
     <button class="tool" data-a="modal" data-v="board" aria-label="Leaderboard">Board</button>
     <button class="tool" data-a="modal" data-v="feats" aria-label="Achievements">Achievements</button>
+    <button class="tool" data-a="modal" data-v="codex" aria-label="Codex">${codexLabel()}</button>
     ${devOn && !isGuest() ? '<button class="tool" data-a="modal" data-v="dev" aria-label="Dev mode">Dev</button>' : ''}
     <button class="tool" data-a="modal" data-v="settings" aria-label="Settings">Settings</button></div>`;
+}
+// Numbers in the strip count to their new value. The strip is rebuilt on every render and always carries the true value in data-val; the
+// counter only overwrites what's shown while it runs, and its last step reads the truth back from the page.
+const cntSpan = (k, v) => `<span data-cnt="${k}" data-val="${v}">${v.toLocaleString()}</span>`;
+const counts = { recs: {}, owner: null, raf: 0 };
+function syncCounts() {
+  const owner = state.char ? `${state.char.number}|${state.char.name}` : null, now = performance.now(), seen = {};
+  if (owner !== counts.owner) { counts.owner = owner; counts.recs = {}; }
+  for (const el of document.querySelectorAll('[data-cnt]')) {
+    const k = el.dataset.cnt, to = +el.dataset.val;
+    seen[k] = true;
+    let rec = counts.recs[k];
+    if (!rec) rec = counts.recs[k] = { v: to, from: to, to, t0: 0, dur: 0 };
+    if (to !== rec.to) {
+      if (calmNow() || document.hidden) { rec.v = rec.from = rec.to = to; rec.dur = 0; }
+      else { rec.from = rec.v; rec.to = to; rec.t0 = now; rec.dur = Math.min(750, 300 + Math.abs(to - rec.v) * 4); }
+    }
+    if (rec.v !== rec.to) { el.textContent = Math.round(rec.v).toLocaleString(); el.classList.add('counting'); }
+  }
+  for (const k of Object.keys(counts.recs)) if (!seen[k]) delete counts.recs[k];
+  if (!counts.raf && Object.values(counts.recs).some((r) => r.v !== r.to)) counts.raf = requestAnimationFrame(tickCounts);
+}
+function tickCounts(now) {
+  counts.raf = 0;
+  let more = false;
+  for (const [k, rec] of Object.entries(counts.recs)) {
+    if (rec.v === rec.to) continue;
+    const p = rec.dur ? Math.min(1, Math.max(0, now - rec.t0) / rec.dur) : 1;
+    rec.v = p >= 1 ? rec.to : rec.from + (rec.to - rec.from) * (1 - Math.pow(1 - p, 2));
+    for (const el of document.querySelectorAll(`[data-cnt="${k}"]`)) {
+      if (p >= 1) { el.textContent = (+el.dataset.val).toLocaleString(); el.classList.remove('counting'); }
+      else { el.textContent = Math.round(rec.v).toLocaleString(); el.classList.add('counting'); }
+    }
+    if (p < 1) more = true;
+  }
+  if (more) counts.raf = requestAnimationFrame(tickCounts);
 }
 function statusStrip() {
   const c = state.char;
@@ -1834,8 +2024,8 @@ function statusStrip() {
     <div class="stat hp"><span class="label">HP</span><span class="v">${Math.max(0, c.hp)} / ${st.maxHp}</span>${bar(c.hp, st.maxHp)}</div>
     ${mateStat}
     ${[['Shoot', st.atk], ['Strike', st.atkM], ['DEF', st.def, 'minor'], ['SPD', st.spd, 'minor']].map(([k, v, cls]) => `<div class="stat num-stat ${cls || ''}"><span class="label">${k}</span><span class="v">${v}</span></div>`).join('')}
-    <div class="stat"><span class="label">${esc(S.currency)}</span><span class="v">${c.credits.toLocaleString()}</span></div>
-    ${state.run ? `<div class="stat unsec-stat" title="Earned this stretch. It becomes levels when you beat the boss or get out, and leaving early costs a share."><span class="label">Unsecured</span><span class="v" style="color:var(--sodium)">${E.unsecured(state).toLocaleString()} ${esc(S.cur)} \u00B7 ${(c.xpBank || 0).toLocaleString()} XP</span></div>` : ''}
+    <div class="stat"><span class="label">${esc(S.currency)}</span><span class="v">${cntSpan('credits', c.credits)}</span></div>
+    ${state.run ? `<div class="stat unsec-stat" title="Earned this stretch. It becomes levels when you beat the boss or get out, and leaving early costs a share."><span class="label">Unsecured</span><span class="v" style="color:var(--sodium)">${cntSpan('unsec', E.unsecured(state))} ${esc(S.cur)} \u00B7 ${cntSpan('xpbank', c.xpBank || 0)} XP</span></div>` : ''}
     ${state.screen === 'town' ? `<button class="stat resolve-link" data-a="tab" data-v="character" data-k="resolve" title="Spend Resolve on the Character tab"><span class="label">${esc(S.meta)} \u00B7 spend</span><span class="v" style="color:var(--sodium)">${state.meta.resolve}</span></button>` : `<div class="stat"><span class="label">${esc(S.meta)}</span><span class="v" style="color:var(--sodium)">${state.meta.resolve}</span></div>`}
     </div>
   </header>`;
@@ -1899,6 +2089,7 @@ function titleScreen() {
         ${getLastRoom() && !net ? `<button class="btn big" data-a="coopresume">${getLastRoom().role === 'host' ? 'Host room' : 'Rejoin room'} ${esc(getLastRoom().code)}</button>` : ''}
         <button class="btn big" data-a="modal" data-v="board">Leaderboard</button>
         <button class="btn big" data-a="modal" data-v="feats">Achievements</button>
+        <button class="btn big" data-a="modal" data-v="codex">${codexLabel()}</button>
         <button class="btn big" data-a="modal" data-v="manual">Field manual</button>
         <button class="btn big" data-a="modal" data-v="settings">Settings &amp; co-op</button>
       </div>
@@ -2023,8 +2214,11 @@ function payoutView() {
   if (!p || modal || (titleOpen && !isGuest())) return '';
   const c = state.char, up = p.toLevel > p.fromLevel, fresh = p.id !== playedPayout;
   const spend = c.attrPoints ? `<div class="aa-spend" style="justify-content:center"><span class="label">${c.attrPoints} attribute point${c.attrPoints > 1 ? 's' : ''} to spend</span>${Object.entries(D.ATTRS).map(([k, a]) => `<button class="btn" data-a="spend" data-v="${k}" title="${esc(a.desc)}" ${c.attrs[k] >= D.ATTR_MAX ? 'disabled' : ''}>${a.short} ${c.attrs[k]}\u2192${c.attrs[k] + 1}</button>`).join('')}</div>` : '';
-  return `<div class="popup-wrap payout-wrap"><div class="modal popup payout" role="dialog" aria-modal="true" aria-label="Payout">
+  const t = p.tally;
+  const tally = t ? `<div class="tally">${[['Kills', t.kills], ['Sectors cleared', t.sectors], ['Damage dealt', t.dmg]].map(([k, v]) => `<div><span class="label">${k}</span><b class="num" data-tally="${v}">${(fresh ? 0 : v).toLocaleString()}</b></div>`).join('')}</div>` : '';
+  return `<div class="popup-wrap payout-wrap"><div class="modal popup payout ${fresh ? '' : 'settled'}" role="dialog" aria-modal="true" aria-label="Payout">
     <span class="label">${p.rate ? `You keep ${100 - Math.round(p.rate * 100)}% of what you picked up` : 'You keep all of it'}</span><h2>${esc(PAYOUT_TITLE[p.kind] || 'Payout')}</h2>
+    ${tally}
     <div class="payout-row">${payoutColumn(S.currency, p.credits, p.lostCredits, S.cur, p, fresh)}${payoutColumn('XP', p.xp, p.lostXp, 'XP', p, fresh)}</div>
     ${p.rate ? '<p class="muted" style="font-size:.85rem;margin:0">Credits you walked in with were never at risk. Beat the boss and you keep everything.</p>' : ''}
     <div class="payout-level"><span class="label">Level ${up && !fresh ? p.toLevel : p.fromLevel}</span><div class="feat-bar payout-bar"><i style="width:${Math.round((fresh ? p.fromPct : p.toPct) * 100)}%"></i></div></div>
@@ -2033,32 +2227,76 @@ function payoutView() {
     <div class="btnrow" style="justify-content:center"><button class="btn primary big" data-a="payoutclose">${c.attrPoints ? 'Spend later' : 'Continue'}</button></div>
   </div></div>`;
 }
-// Runs once per payout: count the numbers up, then fill the bar, once for every level gained.
+// Runs once per payout: the tally counts up one number at a time, then the money, the XP, and the bar, once for every level gained.
+// A tap on the window jumps to the end. Any re-render drops this (root is gone) and draws the true final numbers.
 function animatePayout() {
   const p = state.char && state.char.payout;
   if (!p || modal || (titleOpen && !isGuest()) || p.id === playedPayout) return;
   playedPayout = p.id;
   const root = document.querySelector('.payout');
   if (!root) return;
-  A.play('coin');
-  const t0 = performance.now(), dur = 800, nums = [...root.querySelectorAll('[data-count]')];
-  const tick = (now) => {
-    if (!root.isConnected) return;
-    const k = Math.min(1, (now - t0) / dur);
-    for (const n of nums) n.textContent = `+${Math.round(+n.dataset.count * k).toLocaleString()}`;
-    if (k < 1) { requestAnimationFrame(tick); return; }
-    const bar = root.querySelector('.payout-bar i'), lab = root.querySelector('.payout-level .label'), upEl = root.querySelector('.payout-up');
+  const wrap = root.closest('.payout-wrap'), bar = root.querySelector('.payout-bar i'), lab = root.querySelector('.payout-level .label'), upEl = root.querySelector('.payout-up');
+  const seq = [...root.querySelectorAll('[data-tally]')].map((el) => ({ el, to: +el.dataset.tally, fmt: (v) => v.toLocaleString(), dur: 320 }))
+    .concat([...root.querySelectorAll('[data-count]')].map((el) => ({ el, to: +el.dataset.count, fmt: (v) => `+${v.toLocaleString()}`, dur: 480, coin: true })));
+  let done = false, timer = 0, raf = 0;
+  const levelFlash = () => {
+    A.play('levelBurst');
+    if (calmNow()) return;
+    juice.levelFlashes++;
+    root.classList.remove('lvup'); wrap.classList.remove('lvup'); void root.offsetWidth;
+    root.classList.add('lvup'); wrap.classList.add('lvup');
+  };
+  // The end state, whichever way we got here.
+  const settle = () => {
+    for (const s of seq) { s.el.textContent = s.fmt(s.to); const row = s.el.closest('.tally > div'); if (row) { row.classList.remove('on'); row.classList.add('done'); } }
+    root.classList.add('settled');
+    if (lab) lab.textContent = `Level ${p.toLevel}`;
+    if (bar) bar.style.width = `${Math.round(p.toPct * 100)}%`;
+    if (upEl && p.toLevel > p.fromLevel) upEl.hidden = false;
+    root.removeEventListener('click', skip);
+  };
+  const finish = () => { if (done) return; done = true; clearTimeout(timer); cancelAnimationFrame(raf); settle(); };
+  const skip = (ev) => {
+    if (ev.target.closest('button')) return;
+    const leveled = !upEl || upEl.hidden ? p.toLevel > p.fromLevel : false;
+    if (!done) { if (leveled) levelFlash(); A.play('tallyDone'); }
+    finish();
+  };
+  if (calmNow()) { A.play('coin'); if (p.toLevel > p.fromLevel) A.play('levelBurst'); settle(); return; }
+  root.addEventListener('click', skip);
+  const live = () => root.isConnected && !done;
+  // The bar fills to the top once per level gained, and each one gets its moment.
+  const levels = () => {
     let level = p.fromLevel;
     const step = () => {
-      if (!root.isConnected) return;
+      if (!live()) return;
       if (level < p.toLevel) {
         bar.style.width = '100%';
-        setTimeout(() => { if (!root.isConnected) return; level += 1; A.play('perk'); lab.textContent = `Level ${level}`; bar.style.transition = 'none'; bar.style.width = '0%'; void bar.offsetWidth; bar.style.transition = ''; if (upEl) upEl.hidden = false; step(); }, 420);
-      } else bar.style.width = `${Math.round(p.toPct * 100)}%`;
+        timer = setTimeout(() => { if (!live()) return; level += 1; levelFlash(); lab.textContent = `Level ${level}`; bar.style.transition = 'none'; bar.style.width = '0%'; void bar.offsetWidth; bar.style.transition = ''; if (upEl) upEl.hidden = false; step(); }, 420);
+      } else { bar.style.width = `${Math.round(p.toPct * 100)}%`; timer = setTimeout(() => { if (live()) finish(); }, 500); }
     };
     step();
   };
-  requestAnimationFrame(tick);
+  const run = (i) => {
+    if (!live()) return;
+    if (i >= seq.length) { A.play('tallyDone'); levels(); return; }
+    const s = seq[i], row = s.el.closest('.tally > div'), dur = s.to ? s.dur : 110;
+    if (row) row.classList.add('on');
+    if (s.coin && s.to) A.play('coin');
+    const t0 = performance.now();
+    let lastTick = 0;
+    const tick = (now) => {
+      if (!live()) return;
+      const k = Math.min(1, Math.max(0, now - t0) / dur), e = 1 - Math.pow(1 - k, 2);
+      s.el.textContent = s.fmt(k >= 1 ? s.to : Math.round(s.to * e));
+      if (!s.coin && s.to && now - lastTick > 55) { lastTick = now; A.play('tally'); }
+      if (k < 1) { raf = requestAnimationFrame(tick); return; }
+      if (row) { row.classList.remove('on'); row.classList.add('done'); }
+      timer = setTimeout(() => run(i + 1), s.coin ? 60 : 90);
+    };
+    raf = requestAnimationFrame(tick);
+  };
+  run(0);
 }
 // The Lockup: this operative's spare gear. It dies with them.
 function lockupTab() {
@@ -2434,9 +2672,11 @@ function portraitImg(e, cls = '') {
   return src ? `<img class="portrait ${cls}" src="${src}" alt="Portrait of ${esc(e.name)}" width="160" height="160">` : '';
 }
 
-function intentLabel(e, k) { return k === 'special' ? D.SPECIALS[e.id].name : D.INTENTS[k] ? D.INTENTS[k].label : k; }
+function intentLabel(e, k) { if (k.startsWith('sig:')) return BOSS_MOVES[e.id][k.slice(4)].name; return k === 'special' ? D.SPECIALS[e.id].name : D.INTENTS[k] ? D.INTENTS[k].label : k; }
 function intentInfo(e) {
   if (e.stun > 0) return { label: `Stunned \u00B7 ${e.stun} turn${e.stun > 1 ? 's' : ''}`, tone: 'calm', tip: 'It can\u2019t act. Free hits.' };
+  if (e.boss && E.intentHidden(state)) return { label: 'Lights out', tone: 'danger', tip: 'You can\u2019t read her. Strike can\u2019t miss; shots miss 25% of the time.' };
+  if (e.intent === 'sig') return E.sigInfo(state) || { label: 'Thrown off', tone: 'calm', tip: 'You stopped the move. Its turn is wasted.' };
   if (e.intent === 'special') { const sp = D.SPECIALS[e.id]; return { label: sp.name, tone: 'danger', tip: sp.tip }; }
   return D.INTENTS[e.intent];
 }
@@ -2469,7 +2709,7 @@ function combatScreen() {
   return `<div class="columns"><section class="panel combat"><div class="c-left">
     <div class="combat-head"><span class="label">${esc(E.mapById(r.map).name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${stage.auto ? '<span class="auto-note">Auto battle \u00B7 change the mode to take over</span>' : ''}${roomPips(r)}</div>
     <div class="stage-box"><div id="stage-slot"></div></div>
-    <div class="intent ${intent.tone}"><span class="dot"></span><b>${esc(intent.label)}</b><span class="tip">${esc(intent.tip)}${st.scan && e.next ? ` <span class="next-intent">Scanner: then ${esc(intentLabel(e, e.next))}</span>` : ''}</span><span class="intent-side">${incChip}${mechanicChip(r)}${r.ready ? `<span class="chip good">Aim +${E.hasPerk(c, 'steady') ? 100 : 50}%</span>` : ''}${r.momentum ? `<span class="chip good">Momentum +${Math.round(E.TUNE.momentum * 100)}%</span>` : ''}</span></div>
+    <div class="intent ${intent.tone} ${e.intent === 'sig' ? 'sigi' : ''} ${E.bossEffects(state).length ? 'fx' : ''}"><span class="dot"></span><b>${esc(intent.label)}</b><span class="tip">${esc(intent.tip)}${st.scan && e.next && !(e.boss && E.intentHidden(state)) ? ` <span class="next-intent">Scanner: then ${esc(intentLabel(e, e.next))}</span>` : ''}</span><span class="intent-side">${incChip}${E.bossEffects(state).map((x) => `<span class="chip bad" data-tip="${esc(x.tip)}" title="${esc(x.tip)}">${esc(x.label)}</span>`).join('')}${mechanicChip(r)}${r.ready ? `<span class="chip good">Aim +${E.hasPerk(c, 'steady') ? 100 : 50}%</span>` : ''}${r.momentum ? `<span class="chip good">Momentum +${Math.round(E.TUNE.momentum * 100)}%</span>` : ''}</span></div>
     <div class="statline">${meta}</div>
     ${(() => { const trait = (cls, t) => (t ? `<div class="quirk-line"><span class="chip ${cls}" data-tip="${esc(`${t.name}: ${t.desc}`)}">${esc(t.name)}</span><span>${esc(t.desc)}</span></div>` : ''); const all = trait('quirk', e.quirk && E.quirkById(e.quirk)) + trait('bad', D.MELEE_COUNTER[e.id]) + trait('bad', e.affix && D.AFFIXES[e.affix]); return all ? `<div class="quirk-row">${all}</div>` : ''; })()}
     </div><div class="c-right">
@@ -2480,7 +2720,7 @@ function combatScreen() {
       <button class="btn twoline atk ${D.MELEE_COUNTER[e.id] ? 'warn' : ''}" data-a="act" data-v="strike" title="${esc(E.meleeOf(c).name)}: ${st.atkM} ATK, ${pct(E.critChance(st, e, true))} crit. Swingy damage, ignores cover, and your next attack hits ${Math.round(E.TUNE.momentum * 100)}% harder."><span class="bt">Strike<span class="k">F</span></span><span class="wpn">${esc(E.meleeOf(c).name)}</span><span class="bs"><b class="rng">${mr[0]}\u2013${mr[1]}</b> dmg${D.MELEE_COUNTER[e.id] ? ' \u00B7 hits back!' : ''}</span></button>
       <button class="btn twoline" data-a="act" data-v="defend" title="Take half damage, about a third from a heavy strike, and steady your next shot."><span class="bt">Defend<span class="k">D</span></span><span class="bs">${inc ? `Take ${inc.defMin}-${inc.defMax}` : 'Half damage'}</span></button>
       <button class="btn twoline" data-a="act" data-v="stim" title="${esc(D.ITEMS.stim.desc)}" ${c.items.stim ? '' : 'disabled'}><span class="bt">${ico('item:stim', 'sm')}Stim <span class="num">\u00D7${c.items.stim}</span><span class="k">S</span></span><span class="bs">${esc(D.ITEMS.stim.short)}</span></button>
-      <button class="btn twoline" data-a="act" data-v="run" title="Getting away drops ${Math.round(E.runShare(state) * 100)}% of unsecured credits and XP. Failing gives the enemy a free turn."><span class="bt">Run<span class="k">R</span></span><span class="bs" title="Getting away drops ${Math.round(E.runShare(state) * 100)}% of unsecured credits and XP">${pct(E.runChance(state))}, lose ${Math.round(E.runShare(state) * 100)}%</span></button>
+      <button class="btn twoline" data-a="act" data-v="run" ${E.canUse(state, 'run') ? '' : 'disabled'} title="Getting away drops ${Math.round(E.runShare(state) * 100)}% of unsecured credits and XP. Failing gives the enemy a free turn."><span class="bt">Run<span class="k">R</span></span><span class="bs" title="Getting away drops ${Math.round(E.runShare(state) * 100)}% of unsecured credits and XP">${E.runBlocked(state) ? esc(E.runBlocked(state)) : `${pct(E.runChance(state))}, lose ${Math.round(E.runShare(state) * 100)}%`}</span></button>
     </div>
     ${skills ? `<div class="skills ${mine ? '' : 'locked'}">${skills}</div>` : ''}
     ${items.trim() ? `<div class="items">${items}</div>` : ''}
@@ -2494,7 +2734,7 @@ function mechanicChip(r) {
   if (m.id === 'alarm') v = `${'\u25A0'.repeat(r.alert)}${'\u25A1'.repeat(5 - r.alert)} ${r.alert}/5`;
   if (m.id === 'vents') v = r.enemy ? (r.vent === 1 ? 'blast next turn' : `blast in ${r.vent} turns`) : 'every 3 turns';
   if (m.id === 'allies') v = `${r.allies}/2 with you`;
-  if (m.id === 'snipers') v = '20% per turn';
+  if (m.id === 'snipers') v = `${Math.round(E.sniperChance(r) * 100)}% per turn`;
   const hot = (m.id === 'vents' && r.enemy && r.vent === 1) || (m.id === 'alarm' && r.alert >= 3);
   return `<span class="mech ${hot ? 'hot' : ''}" title="${esc(m.desc)}"><b>${esc(m.name)}</b> ${v}</span>`;
 }
@@ -2524,6 +2764,7 @@ function routeScreen() {
   return `<div class="columns"><section class="panel screen-route">
     <div class="raid-where" style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center"><span class="label">${esc(map.name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${roomPips(r)}</div>
     ${afterAction()}
+    ${r.areaLine && r.room === 0 && r.areaLine.sector === r.sector ? `<p class="area-line">${esc(r.areaLine.text)}</p>` : ''}
     <h2>${r.choices[0] === 'boss' ? 'No way around it' : r.room === 0 ? 'Which way in?' : 'Two doors'}</h2>
     ${tip('route')}
     <div class="mech-row">${mechanicChip(r)}<span class="route-status ${c.hp < st.maxHp * 0.4 ? 'danger-text' : ''}">${c.hp} / ${st.maxHp} HP \u00B7 ${c.items.stim} stims</span><span class="route-status muted">${cds.length ? esc(cds.join(', ')) : 'Skills ready'}</span></div>
@@ -2574,6 +2815,7 @@ function afterAction() {
     for (const n of o.notes || []) chips.push(n);
     if (o.loot) chips.push(`dropped ${o.loot}`);
     if (o.resolve) chips.push(`+${o.resolve} ${S.meta}`);
+    if (o.defeatLine) main += ` <span class="muted">${esc(o.defeatLine)}</span>`;
   } else {
     main = `<b>${esc(o.name)}</b> <span class="muted">${esc(o.text)}</span>`;
     chips = o.notes || [];
@@ -2585,16 +2827,17 @@ function afterAction() {
     <button class="tool" data-a="dismissresult" aria-label="Hide">\u00D7</button>${feats}</div>`;
 }
 // The view behind loot, contraband and sector-clear popups.
-function popupView(inner) {
+function popupView(inner, cls = '') {
   const r = state.run;
   return `<div class="columns"><section class="panel screen-behind">
     <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center"><span class="label">${esc(E.mapById(r.map).name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${roomPips(r)}</div>
     ${afterAction()}
     <p class="muted">The corridor goes quiet for a moment.</p>
   </section>${logPanel()}</div>
-  <div class="popup-wrap"><div class="modal popup" role="dialog" aria-modal="true">${inner}</div></div>`;
+  <div class="popup-wrap"><div class="modal popup ${cls}" role="dialog" aria-modal="true">${inner}</div></div>`;
 }
 
+const isRareDrop = (it) => !!it && (['elite', 'legendary', 'unique'].includes(it.rarity) || !!E.baseOf(it).unique);
 function lootScreen() {
   const r = state.run, c = state.char, it = r.lootOffer, b = E.baseOf(it), old = c.gear[b.slot], ok = E.canEquip(c, it), free = E.lockupFree(state), oldKept = old && E.baseOf(old).tier > 0;
   return popupView(`
@@ -2611,7 +2854,7 @@ function lootScreen() {
       <button class="btn big" data-a="lootsell">Leave it<span class="k">2 \u00B7 Esc</span></button>
     </div>
     <p class="muted" style="font-size:.86rem">Lockup: ${free} free of ${E.lockupCap(state.meta)}. It waits at the safehouse and dies with this operative.</p>
-  `);
+  `, isRareDrop(it) ? `rare-drop r-${it.rarity}` : '');
 }
 
 // Co-op rewards: each player sees only their own choice, then waits for the other.
@@ -2656,9 +2899,10 @@ function modalView() {
   const p = A.getPrefs();
   if (modal === 'menu') return `<div class="modal-wrap" data-a="closemodal"><div class="modal menu-modal" role="dialog" aria-modal="true" aria-label="Menu">
     <div class="pop-head"><h2>Menu</h2><button class="tool close" data-a="closemodal" aria-label="Close">Close</button></div>
-    <div class="menu-grid"><button class="btn" data-a="modal" data-v="manual">Manual</button><button class="btn" data-a="sound">${p.muted ? 'Sound off' : 'Sound on'}</button><button class="btn" data-a="modal" data-v="board">Leaderboard</button><button class="btn" data-a="modal" data-v="feats">Achievements</button><button class="btn" data-a="modal" data-v="settings">Settings</button>${devOn && !isGuest() ? '<button class="btn" data-a="modal" data-v="dev">Dev</button>' : ''}</div></div></div>`;
+    <div class="menu-grid"><button class="btn" data-a="modal" data-v="manual">Manual</button><button class="btn" data-a="sound">${p.muted ? 'Sound off' : 'Sound on'}</button><button class="btn" data-a="modal" data-v="board">Leaderboard</button><button class="btn" data-a="modal" data-v="feats">Achievements</button><button class="btn" data-a="modal" data-v="codex">${codexLabel()}</button><button class="btn" data-a="modal" data-v="settings">Settings</button>${devOn && !isGuest() ? '<button class="btn" data-a="modal" data-v="dev">Dev</button>' : ''}</div></div></div>`;
   if (modal === 'board') return boardView();
   if (modal === 'feats') return featsView();
+  if (modal === 'codex') return codexView();
   if (modal === 'dev') return devOn && !isGuest() ? devView() : '';
   const body = modal === 'manual' ? `
     <div class="manual">
@@ -2673,6 +2917,7 @@ function modalView() {
       <section><h3>Enemy moves</h3><ul>
         <li><b>Heavy strike</b>: x2.2. Defend takes about a third.</li>
         <li><b>Signature move</b>: Defend halves it and blocks the status.</li>
+        <li><b>Boss moves</b>: named on the intent line with their counter. Bosses change at 75%, 50% and 25% HP.</li>
         <li><b>Cover</b>: your shots deal half.</li>
         <li><b>Repair</b>: hit it before it heals.</li></ul></section>
       <section><h3>Status effects</h3><ul>${Object.values(D.STATUSES).map((x) => `<li><b>${esc(x.name)}</b>: ${esc(x.desc)}</li>`).join('')}</ul></section>
@@ -2733,6 +2978,55 @@ function modalView() {
 function featBar(p) {
   return `<div class="feat-bar" role="progressbar" aria-valuenow="${Math.round(p.pct * 100)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${Math.round(p.pct * 100)}%"></i></div>`;
 }
+// The cell's story so far. Everything scrolls one way, and a locked entry says how to open it.
+const codexLabel = () => { const n = !isGuest() && state.meta.codexNew ? state.meta.codexNew.length : 0; return `Codex${n ? ` (${n} new)` : ''}`; };
+function codexView() {
+  const list = E.codexEntries(state, isGuest() && home ? home.meta : null), fresh = state.meta.codexNew || [], open = list.filter((x) => x.open).length;
+  return `<div class="modal-wrap" data-a="closemodal"><div class="modal codex" role="dialog" aria-modal="true" aria-label="Codex">
+    <div class="pop-head"><h2>Codex</h2><span class="muted small">${open} of ${list.length}</span><button class="tool close" data-a="closemodal" aria-label="Close">Close</button></div>
+    ${list.map(({ entry: x, open: on }) => `<section class="codex-entry ${on ? '' : 'locked'}"><h3>${on ? esc(x.title) : 'Sealed'}${on && !isGuest() && fresh.includes(x.id) ? ' <span class="chip good">New</span>' : ''}</h3><p>${esc(on ? x.text.join(' ') : x.hint)}</p></section>`).join('')}
+  </div></div>`;
+}
+
+// Scenes that hold the screen until they're read: the fallen line for a new operative, and a boss's first defeat. A tap moves on, Skip ends it.
+// The place in a scene belongs to this screen. A defeat scene comes from the saved state, so both co-op players get it and read at their own pace.
+let sceneLocal = null, sceneDone = null;
+function sceneSync() {
+  if (auto) { if (state.scene) state.scene = null; sceneLocal = null; return; }
+  const sc = state.scene;
+  if (sc && sc.id !== sceneDone && !(sceneLocal && sceneLocal.id === sc.id)) { sceneLocal = { ...sc, i: 0, fresh: true }; if (sc.beats.length === 1) sceneFull(); }
+}
+function sceneFull() { if (sceneLocal && sceneLocal.key && !isGuest()) E.markSceneSeen(state, sceneLocal.key); }
+function sceneEnd() {
+  if (!sceneLocal) return;
+  sceneDone = sceneLocal.id; sceneLocal = null;
+  if (state.scene && state.scene.id === sceneDone && !isGuest()) state.scene = null;
+  A.play('click'); save(); render();
+}
+function sceneNext() {
+  if (!sceneLocal) return;
+  if (sceneLocal.i >= sceneLocal.beats.length - 1) return sceneEnd();
+  sceneLocal.i += 1; sceneLocal.fresh = true;
+  if (sceneLocal.i === sceneLocal.beats.length - 1) sceneFull();
+  A.play('click'); render();
+}
+function sceneView() {
+  const sc = sceneLocal;
+  if (!sc || (titleOpen && !isGuest())) return '';
+  const last = sc.i >= sc.beats.length - 1, fresh = sc.fresh; sc.fresh = false;
+  return `<div class="scene-wrap ${sc.kind}" data-a="scenenext"><div class="scene ${fresh ? 'fresh' : ''}" role="dialog" aria-modal="true" aria-label="${esc(sc.name)}">
+    <span class="label">${sc.kind === 'fallen' ? esc(sc.label) : 'Target down'}</span>
+    <h2>${esc(sc.name)}</h2>
+    <p class="scene-beat">${esc(sc.beats[sc.i])}</p>
+    ${last && sc.note ? `<p class="scene-note">${esc(sc.note)}</p>` : ''}
+    <div class="btnrow"><button class="btn primary big" data-a="scenenext">${last ? (sc.kind === 'fallen' ? 'Go to the yard' : 'Move on') : 'Next'}<span class="k">\u21B5</span></button>${last ? '' : '<button class="btn" data-a="sceneskip">Skip</button>'}</div>
+  </div></div>`;
+}
+function fallenScene(s, c) {
+  sceneDone = null;
+  sceneLocal = { id: `f${c.uid}`, kind: 'fallen', label: `Operative ${c.number}`, name: c.name, beats: [fallenLine(E.fallenCount({ meta: s.meta, char: c }), rng)], i: 0, fresh: true };
+}
+
 function featsView() {
   const F = state.meta.feats || { counters: {}, tiers: {} }, fb = E.featBuffs(state.meta);
   const totals = Object.entries(fb).filter(([k, v]) => k !== 'vs' && v > 0).map(([k, v]) => `<span class="chip good">+${(v * 100).toFixed(1).replace(/\.0$/, '')}% ${esc(E.BUFF_NAMES[k])}</span>`);
@@ -2948,20 +3242,87 @@ function heirloomPick() {
     ${h ? `<p class="muted" style="font-size:.88rem">In the locker: <span class="rname r-${h.rarity}">${esc(E.itemName(h))}</span> (picked the best piece for you; tap another to swap).${E.baseOf(h).req ? ` The next operative needs ${esc(E.reqText(E.baseOf(h).req))} to use it.` : ''}${cache && ['ranged', 'melee'].includes(E.baseOf(h).slot) ? ` The next operative carries it instead of the cache's ${E.baseOf(h).slot === 'ranged' ? 'carbine' : 'baton'}.` : ''}</p>` : ''}</div>`;
 }
 
+// Permadeath, slowly. Each part of the screen carries data-dl and shows once its turn has come. deathReveal holds the place in this
+// module, not the save or the page, so a render in the middle (a co-op update, the heirloom pick) keeps it. The text is always in the page.
+const deathReveal = { key: null, step: 0, total: 0, playing: false, timer: 0, ticks: {} };
+function deathArm(o) {
+  const key = `${o.number}|${o.name}|${o.map}|${o.sector}|${o.killer}`;
+  if (key === deathReveal.key) return;
+  clearTimeout(deathReveal.timer);
+  const instant = calmNow() || auto;
+  Object.assign(deathReveal, { key, step: instant ? 1e9 : 0, playing: !instant, timer: 0 });
+}
+function deathPartsOn() { for (const el of document.querySelectorAll('[data-dl]')) if (+el.dataset.dl < deathReveal.step) el.setAttribute('data-on', ''); }
+function deathEnd() {
+  clearTimeout(deathReveal.timer); deathReveal.timer = 0;
+  deathReveal.playing = false; deathReveal.step = 1e9;
+  deathPartsOn();
+  const sec = document.querySelector('.screen-death'); if (sec) sec.classList.remove('playing');
+  A.duckMusic(false);
+}
+function deathNext() {
+  deathReveal.timer = 0;
+  if (!deathReveal.playing) return;
+  if (deathReveal.step >= deathReveal.total) { A.play('deathToll'); deathEnd(); return; }
+  const i = deathReveal.step++;
+  deathPartsOn();
+  const el = document.querySelector(`[data-dl="${i}"]`), slow = el && el.dataset.dt ? +el.dataset.dt : 260;
+  if (el && el.dataset.dt) A.play('deathTick');
+  deathReveal.timer = setTimeout(deathNext, slow);
+}
+// After a render: start it once the screen is really showing, and put things back if we've left.
+function deathSync() {
+  if (state.screen !== 'death' || (titleOpen && !isGuest())) {
+    if (deathReveal.playing) { clearTimeout(deathReveal.timer); deathReveal.timer = 0; deathReveal.playing = false; A.duckMusic(false); }
+    deathReveal.key = null;
+    return;
+  }
+  if (deathReveal.playing && !deathReveal.timer) { A.duckMusic(true); deathReveal.timer = setTimeout(deathNext, 350); }
+}
 function deathScreen() {
   const o = state.outcome;
-  return `<section class="panel screen-mid screen-death" style="padding:32px">
-    <span class="label">Signal lost \u00B7 ${o.orbit ? 'the lift corridor' : `${esc(E.mapById(o.map).name)} \u00B7 Sector ${o.sector}`}</span>
-    <h1 class="big-title" style="color:var(--danger)">${esc(o.name)}</h1>
-    ${o.killerId ? `<div class="killer">${(() => { const me = o.look ? lookStill(o.look, o.background) : null; return me ? `<img class="portrait" src="${me}" alt="" width="160" height="160"><span class="label vs">vs</span>` : ''; })()}${portraitImg({ id: o.killerId, name: o.killer, portrait: o.killerPortrait })}<span class="label">Last seen<br>engaging a ${esc(o.killer)}</span></div>` : ''}
-    <p class="story">Operative ${o.number} ${o.orbit ? `was lost in orbit when a ${esc(o.killer)} broke the shuttle apart` : `went down in the ${esc(E.sectorName(o.sector, o.map))}${o.killerId ? `, killed by a ${esc(o.killer)}` : `, taken by ${esc(o.killer)}`}`}. The ${o.credits.toLocaleString()} ${S.currency}, the gear, ${o.perks ? `${o.perks} piece${o.perks > 1 ? 's' : ''} of contraband, ` : ''}the implants and level ${o.level} went with them.</p>
-    ${o.wipe ? '<p class="notice lose">A wipe. Both of you fell on this raid, and everything you carried went with you.</p>' : ''}<dl class="kv"><dt>${esc(S.meta)} to spend</dt><dd style="color:var(--sodium)">${state.meta.resolve}</dd><dt>Deepest ever</dt><dd>Sector ${state.meta.bestSector}</dd>${o.score ? `<dt>Final score</dt><dd>${o.score.toLocaleString()} points${o.boardRank ? `, <b style="color:var(--sodium)">#${o.boardRank.toLocaleString()} of ${o.boardTotal.toLocaleString()}</b> worldwide` : ''} <button class="btn" data-a="modal" data-v="board" style="margin-left:8px">View</button></dd>` : ''}</dl>
-    ${heirloomPick()}
-    <p class="muted" style="font-size:.88rem">Spend Resolve at the safehouse once your next operative is in town.</p>
-    <div><button class="btn primary big" data-a="recruit">Build the next operative</button></div>
+  deathArm(o);
+  let n = 0;
+  // dt: how long this part holds the stage before the next, and it gets a low tick. Without it, the part just arrives.
+  const dl = (dt = 0) => { const i = n++; return ` data-dl="${i}"${dt ? ` data-dt="${dt}"` : ''}${i < deathReveal.step ? ' data-on' : ''}`; };
+  const html = `<section class="panel screen-mid screen-death ${deathReveal.playing ? 'playing' : ''}" style="padding:32px">
+    <span class="label"${dl(500)}>Signal lost \u00B7 ${o.orbit ? 'the lift corridor' : `${esc(E.mapById(o.map).name)} \u00B7 Sector ${o.sector}`}</span>
+    <h1 class="big-title" style="color:var(--danger)"${dl(750)}>${esc(o.name)}</h1>
+    ${o.killerId ? `<div class="killer"${dl(600)}>${(() => { const me = o.look ? lookStill(o.look, o.background) : null; return me ? `<img class="portrait" src="${me}" alt="" width="160" height="160"><span class="label vs">vs</span>` : ''; })()}${portraitImg({ id: o.killerId, name: o.killer, portrait: o.killerPortrait })}<span class="label">Last seen<br>engaging a ${esc(o.killer)}</span></div>` : ''}
+    <div class="death-rec">
+      <div${dl(420)}><span class="label">Level</span><b class="num">${o.level}</b></div>
+      <div${dl(420)}><span class="label">Deepest sector</span><b class="num">${o.deepest === undefined ? o.sector : o.deepest}</b></div>
+      ${o.kills === undefined ? '' : `<div${dl(420)}><span class="label">Kills</span><b class="num">${o.kills.toLocaleString()}</b></div>`}
+      <div${dl(620)}><span class="label">${o.orbit ? 'Lost to' : 'Killed by'}</span><b>${esc(o.killer)}</b></div>
+    </div>
+    <p class="story"${dl(450)}>Operative ${o.number} ${o.orbit ? `was lost in orbit when a ${esc(o.killer)} broke the shuttle apart` : `went down in the ${esc(E.sectorName(o.sector, o.map))}${o.killerId ? `, killed by a ${esc(o.killer)}` : `, taken by ${esc(o.killer)}`}`}. The ${o.credits.toLocaleString()} ${S.currency}, the gear, ${o.perks ? `${o.perks} piece${o.perks > 1 ? 's' : ''} of contraband, ` : ''}the implants and level ${o.level} went with them.</p>
+    ${o.wipe ? `<p class="notice lose"${dl()}>A wipe. Both of you fell on this raid, and everything you carried went with you.</p>` : ''}<dl class="kv"${dl()}><dt>${esc(S.meta)} to spend</dt><dd style="color:var(--sodium)">${state.meta.resolve}</dd><dt>Deepest ever</dt><dd>Sector ${state.meta.bestSector}</dd>${o.score ? `<dt>Final score</dt><dd>${o.score.toLocaleString()} points${o.boardRank ? `, <b style="color:var(--sodium)">#${o.boardRank.toLocaleString()} of ${o.boardTotal.toLocaleString()}</b> worldwide` : ''} <button class="btn" data-a="modal" data-v="board" style="margin-left:8px">View</button></dd>` : ''}</dl>
+    ${(() => { const h = heirloomPick(); return h ? `<div${dl()}>${h}</div>` : ''; })()}
+    <p class="muted" style="font-size:.88rem"${dl()}>Spend Resolve at the safehouse once your next operative is in town.</p>
+    <div${dl()}><button class="btn primary big" data-a="recruit">Build the next operative</button></div>
+    <span class="death-skip">Tap to skip</span>
   </section>`;
+  deathReveal.total = n;
+  return html;
 }
 
+// A real change of screen gets a quick cover: blast doors into fights and raids, a short fade elsewhere. It's over the new screen, which already takes input.
+const WIPE_GROUP = { route: 'raid', room: 'raid', event: 'raid', sectorClear: 'raid', victory: 'raid', perk: 'raid', loot: 'raid', combat: 'combat', town: 'town' };
+let wipeFrom = null, wipeEl = null, wipeTimer = 0;
+function screenWipe() {
+  const key = titleOpen && !isGuest() ? 'title' : WIPE_GROUP[state.screen] || state.screen, from = wipeFrom;
+  wipeFrom = key;
+  if (from === null || from === key || key === 'death' || auto || calmNow()) return;
+  if (!wipeEl) { wipeEl = document.createElement('div'); wipeEl.id = 'wipe'; wipeEl.setAttribute('aria-hidden', 'true'); wipeEl.innerHTML = '<i></i><i></i>'; document.body.append(wipeEl); }
+  juice.wipes++;
+  wipeEl.className = ''; void wipeEl.offsetWidth;
+  wipeEl.className = key === 'combat' || (from === 'town' && key === 'raid') || (from === 'raid' && key === 'town') ? 'door' : 'fade';
+  clearTimeout(wipeTimer);
+  wipeTimer = setTimeout(() => { wipeEl.className = ''; }, 280);
+}
+
+const BOSS_SEEN_KEY = 'cinder-cell-boss-seen';
+let lastLootKey = '';
 function render() {
   if (!appReadySent) { appReadySent = true; const r = appBridge('ready'); if (r) requestAnimationFrame(() => setTimeout(() => { try { r.postMessage(1); } catch (e) {} }, 80)); }
   if (isGuest() && (!hostSynced || (!state.char && home && home.char))) {
@@ -3008,6 +3369,8 @@ function render() {
   if (state.sharedToast) { toast = state.sharedToast; state.sharedToast = null; A.play('buy'); if (isHost()) guestToast = toast; }
   if (state.contractDone) { toast = `Contract complete: ${state.contractDone}`; state.contractDone = null; A.play('perk'); if (isHost()) guestToast = toast; }
   if (state.featUnlocks && state.featUnlocks.length) { const u = state.featUnlocks; toast = `Achievement: ${u.slice(0, 2).map((x) => `${x.name} ${E.ROMAN[x.tier - 1]} (${x.text}${x.resolve ? `, +${x.resolve} ${S.meta}` : ''})`).join(' \u00B7 ')}${u.length > 2 ? ` and ${u.length - 2} more` : ''}`; state.featUnlocks = null; A.play('perk'); if (isHost()) guestToast = toast; }
+  if (!isGuest() && state.meta && !titleOpen) { const fresh = E.codexFresh(state); if (fresh.length) { const note = `Codex: ${fresh[0].title}${fresh.length > 1 ? ` and ${fresh.length - 1} more` : ''}`; toast = toast ? `${toast} \u00B7 ${note}` : note; A.play('perk'); if (isHost()) guestToast = toast; } }
+  sceneSync();
   // Keep the page where it was: scroll positions of menus and the page, and the focused button, survive the rebuild.
   // Inside a shop or menu, a message floats instead of joining the page: anything inline pushes the buttons out from under the cursor.
   if ((state.popup || modal) && state.notice) { toast = state.notice; state.notice = null; }
@@ -3015,11 +3378,18 @@ function render() {
   const kept = [...app.querySelectorAll('.modal, .log')].map((el) => ({ cls: el.className, top: el.scrollTop })).filter((k) => k.top > 0);
   const pageY = window.scrollY, fo = document.activeElement, foKey = fo && fo.dataset && fo.dataset.a ? [fo.dataset.a, fo.dataset.v || '', fo.dataset.k || ''].join('|') : null;
   const sameView = lastView === [state.screen, state.popup || '', modal || '', state.compare == null ? '' : state.compare].join('|');
-  app.innerHTML = stimPromptView() + autoBar() + coopBanner() + (titleOpen && !isGuest() ? titleScreen() : (showStatus ? statusStrip() : '') + screens[state.screen]()) + modalView() + payoutView() +
+  app.innerHTML = stimPromptView() + autoBar() + coopBanner() + (titleOpen && !isGuest() ? titleScreen() : (showStatus ? statusStrip() : '') + screens[state.screen]()) + modalView() + payoutView() + sceneView() +
     (toast ? `<div class="toast" role="status">${esc(toast)}</div>` : '');
   toast = null;
   mountTitle();
   animatePayout();
+  syncCounts();
+  deathSync();
+  screenWipe();
+  // A drop worth stopping for gets its sound once, when it first appears.
+  { const lo = state.run && ['loot', 'perk'].includes(state.screen) ? state.run.lootOffer : null, k = lo && !titleOpen ? `${state.run.sector}.${state.run.room}.${lo.base}.${lo.rarity}` : '';
+    if (k !== lastLootKey) { lastLootKey = k; if (k && isRareDrop(lo)) { juice.rareDrops++; A.play('rareDrop'); } } }
+  { const e = state.run && state.screen === 'combat' && !titleOpen ? state.run.enemy : null; A.setBossLayer(!!(e && e.boss), !!(e && e.phase2)); }
   lastView = [state.screen, state.popup || '', modal || '', state.compare == null ? '' : state.compare].join('|');
   if (sameView) {
     app.classList.add('still');
@@ -3058,10 +3428,19 @@ function render() {
       player: { name: state.char.name, level: state.char.level, hp: state.char.hp, maxHp: st.maxHp, down: !!state.char.downed || !!state.char.dead },
       drone: state.char.drone || null, partnerDrone: E.isCoop(state) && E.charAt(state, 1 - myIdx()) ? E.charAt(state, 1 - myIdx()).drone || null : null,
       partner: E.isCoop(state) && E.charAt(state, 1 - myIdx()) ? (() => { const pc = E.charAt(state, 1 - myIdx()); return { idx: 1 - myIdx(), down: !!pc.downed || !!pc.dead, name: pc.name, hp: pc.hp, maxHp: E.statsOf(state.meta, pc).maxHp, acting: r.actor === 1 - myIdx() }; })() : null });
+    if (r.enemy.say && r.enemy.say.n !== stage.sayN && !busy && !(res && res.isNewBoss)) stage.speak(r.enemy.say); // a line this screen hasn't shown: a friend who missed the event
     if (res && res.isNewBoss) {
-      busy = true; document.getElementById('app').classList.add('busy');
-      const info = D.BOSS_INFO[r.enemy.id] || {};
-      stage.bossIntro({ name: r.enemy.name, epithet: info.epithet, label: `${map.name} \u00B7 Sector ${r.sector}` }).then(() => { busy = false; document.getElementById('app').classList.remove('busy'); scheduleAuto(); drainGuest(); });
+      // Once per boss fight on this device: reloading in the middle of one doesn't play it again.
+      const seenKey = `${state.meta.stats.raids}|${state.char.number}|${r.map}|${r.sector}|${r.enemy.id}`;
+      let seen = null; try { seen = localStorage.getItem(BOSS_SEEN_KEY); } catch (e) {}
+      if (seen === seenKey) stage.showBoss();
+      else {
+        try { localStorage.setItem(BOSS_SEEN_KEY, seenKey); } catch (e) {}
+        busy = true; document.getElementById('app').classList.add('busy');
+        const info = D.BOSS_INFO[r.enemy.id] || {};
+        const scene = r.enemy.intro;
+        stage.bossIntro({ name: r.enemy.name, epithet: info.epithet, line: r.enemy.line || (D.ENEMIES[r.enemy.id] || {}).line, lines: scene && scene.beats, onFull: () => { if (scene && scene.first && !isGuest()) { E.markSceneSeen(state, scene.key); save(); } }, label: `${map.name} \u00B7 Sector ${r.sector}` }).then(() => { busy = false; document.getElementById('app').classList.remove('busy'); scheduleAuto(); drainGuest(); });
+      }
     }
   }
   if (sameView && pageY) window.scrollTo(0, pageY);
@@ -3089,7 +3468,7 @@ function stimPromptView() {
   const c = state.char, st = E.stats(state);
   return `<div class="modal-wrap stim-prompt"><div class="modal" role="alertdialog" aria-label="Out of stims"><div class="pop-head"><h2>Out of stims</h2></div>
     <p>Auto battle has paused. <b>${Math.max(0, c.hp)} / ${st.maxHp} HP</b> against ${esc(state.run.enemy.name)}.</p>
-    <div class="btnrow"><button class="btn primary big" data-a="stimprompt" data-v="continue">Continue auto</button><button class="btn big" data-a="stimprompt" data-v="manual">Take over</button><button class="btn big" data-a="stimprompt" data-v="run">Run \u00B7 ${Math.round(E.runChance(state) * 100)}%, lose ${Math.round(E.runShare(state) * 100)}%</button></div></div></div>`;
+    <div class="btnrow"><button class="btn primary big" data-a="stimprompt" data-v="continue">Continue auto</button><button class="btn big" data-a="stimprompt" data-v="manual">Take over</button><button class="btn big" data-a="stimprompt" data-v="run" ${E.canUse(state, 'run') ? '' : 'disabled'}>Run \u00B7 ${Math.round(E.runChance(state) * 100)}%, lose ${Math.round(E.runShare(state) * 100)}%</button></div></div></div>`;
 }
 function autoSafetyStop() {
   const c = state.char, danger = uiPrefs.autoStop && !c.items.stim && c.hp < E.stats(state).maxHp * 0.3;
@@ -3117,7 +3496,7 @@ town.onMove = (p) => {
   net.send({ t: 'pos', ...p, menu: state.popup || null });
 };
 globalThis.cinderTown = town; // handy for debugging in the console
-globalThis.cinderGame = { state: () => state, rng: () => rng, after: () => { save(); if (isHost()) broadcast(); render(); } }; // for tests/coop-wipe.cjs
+globalThis.cinderGame = { state: () => state, rng: () => rng, after: () => { save(); if (isHost()) broadcast(); render(); }, stage, juice, audio: A, death: deathReveal }; // for tests/coop-wipe.cjs, tests/juice.cjs
 let lastScreen = null, lastView = '';
 // Walking into a building (or talking to its NPC) opens that building's menu.
 town.onOpen = (id) => { if (state.screen !== 'town' || modal) return; state.popup = id; state.notice = null; A.play('click'); render(); };
@@ -3163,7 +3542,7 @@ async function fight(v, who = 0) {
   // The friend sees the move as it happens, not after the host's animation.
   if (isHost() && net.peer) net.send({ t: 'fx', ev: events });
   save();
-  try { await stage.play(events); } finally {
+  try { await stage.play(events); if (state.screen === 'death') await stage.fallHold(); } finally {
     busy = false;
     document.getElementById('app').classList.remove('busy');
     if (state.run && state.run.alert > alertBefore) A.play('alarm');
@@ -3178,7 +3557,9 @@ function act(a, v, k) {
   A.unlock();
   if (a === 'autostop') { stopAuto(); return; }
   if (auto) return;
-  if (a === 'closemodal') { modal = null; confirmReset = false; state.report = null; render(); return; }
+  if (a === 'scenenext') return sceneNext();
+  if (a === 'sceneskip') return sceneEnd();
+  if (a === 'closemodal') { if (modal === 'codex' && !isGuest()) state.meta.codexNew = []; modal = null; confirmReset = false; state.report = null; render(); return; }
   if (a === 'stimprompt') {
     stimPrompt = false; stimPromptDone = true; A.play('click');
     if (v === 'manual') stage.setMode('manual');
@@ -3198,7 +3579,7 @@ function act(a, v, k) {
     if (a === 'givecredits' || a === 'givegear') giveArm = null;
     if (a === 'create') {
       // The friend's operative is born in their own cell, then walks into the host's game.
-      E.createChar(home, rng, state.draft); home.screen = 'town'; home.notice = null; localDraft = null; state.draft = null;
+      E.createChar(home, rng, state.draft); home.screen = 'town'; home.notice = null; localDraft = null; state.draft = null; fallenScene(home, home.char);
       if (!net.local) writeSave(home);
       if (home.char && (home.char.gear || {})) net.send({ t: 'char', char: travelCopy(home.char), home: homeInfo() });
       A.play('click'); return;
@@ -3328,7 +3709,7 @@ function applyAct(a, v, k) {
       sfx('click'); break;
     }
     case 'randname': state.draft.name = D.OPERATIVE_NAMES[Math.floor(rng() * D.OPERATIVE_NAMES.length)]; break;
-    case 'create': E.createChar(state, rng); state.gateMap = 'garrison'; state.popup = null; break;
+    case 'create': E.createChar(state, rng); state.gateMap = 'garrison'; state.popup = null; fallenScene(state, state.char); break;
     case 'tab': case 'popup': state.popup = v === 'gate' ? 'missions' : v === 'safehouse' ? 'character' : v; if (k && state.popup === 'character') state.charTab = k; state.notice = null; break;
     case 'closepopup': state.popup = null; state.notice = null; state.compare = null; break;
     case 'compare': state.compare = +v; sfx('click'); break;
@@ -3396,6 +3777,17 @@ function applyAct(a, v, k) {
   else if (['step', 'look', 'tab', 'popup', 'closepopup', 'pickmap', 'continue', 'roomDone', 'eventDone', 'event', 'bg', 'attr', 'create', 'begin', 'recruit', 'extract'].includes(a)) sfx('click');
 }
 
+// Every press answers at once with a sound that suits it. The click that follows doesn't repeat it (audio.js).
+document.addEventListener('pointerdown', (ev) => {
+  const b = ev.target.closest && ev.target.closest('button, [data-a]');
+  if (!b || b.disabled) return;
+  A.press(b.classList.contains('door') ? 'pressDoor' : b.classList.contains('tab') ? 'pressTab' : b.matches('.primary, .big, .actions .btn') ? 'pressBig' : 'press');
+}, true);
+// The death screen: a tap anywhere on it (not the header) goes straight to the end and does nothing else.
+document.addEventListener('click', (ev) => {
+  if (!deathReveal.playing || !ev.target.closest || ev.target.closest('.status, .modal-wrap')) return;
+  ev.stopPropagation(); ev.preventDefault(); deathEnd();
+}, true);
 document.addEventListener('click', (ev) => {
   if (ev.target.classList && ev.target.classList.contains('modal-wrap')) { act('closemodal'); return; }
   if (ev.target.classList && ev.target.classList.contains('cmp-pop')) { act('closecompare'); return; }
@@ -3414,6 +3806,8 @@ document.addEventListener('input', (ev) => {
 document.addEventListener('change', (ev) => { if (ev.target.id === 'vol') A.play('click'); });
 
 document.addEventListener('keydown', (ev) => {
+  if (sceneLocal && !modal && !(titleOpen && !isGuest())) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); sceneNext(); } else if (ev.key === 'Escape') sceneEnd(); return; }
+  if (deathReveal.playing && !modal && ['Enter', ' ', 'Escape'].includes(ev.key)) { ev.preventDefault(); deathEnd(); return; }
   if (ev.key === 'Escape' && modal) { act('closemodal'); return; }
   if (ev.key === 'Escape' && state.trade && state.screen === 'town') { act('tradecancel'); return; }
   if (state.char && state.char.payout && !modal && !titleOpen) { if (ev.key === 'Enter' || ev.key === 'Escape') act('payoutclose'); return; }
@@ -3459,8 +3853,8 @@ function applyLook() {
   if (key === lookKey) return;
   lookKey = key;
   const mine = c && c.look ? [c.look, c.background, ...wp(c)] : null, theirs = p && p.look ? [p.look, p.background, ...wp(p)] : null;
-  town.setPlayerSheets(mine ? townSheets(mine[0], mine[1]) : null);
-  town.setPartnerSheets(theirs ? townSheets(theirs[0], theirs[1]) : null);
+  town.setPlayerSheets(mine ? townSheets(mine[0], mine[1]) : null, mine ? battleSheet(...mine) : null);
+  town.setPartnerSheets(theirs ? townSheets(theirs[0], theirs[1]) : null, theirs ? battleSheet(...theirs) : null);
   setLookSheets(mine ? battleSheet(...mine) : null, theirs ? battleSheet(...theirs) : null);
   stage.player = null; stage.partner = null;
 }

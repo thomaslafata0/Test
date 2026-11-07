@@ -41,7 +41,7 @@ const SHEET = process.env.SHEET || '', MIN_TEXT = 11, MIN_TAP = 38, W = 844, H =
   await both('hosting and joining');
   await host.tap('.modal [data-a="closemodal"]'); await guest.tap('.modal [data-a="closemodal"]').catch(() => {}); await guest.waitForTimeout(400);
   for (const v of [2, 3, 4]) { await guest.tap(`button[data-a="step"][data-v="${v}"]`); await guest.waitForTimeout(120); }
-  await guest.tap('button[data-a="create"]'); await guest.waitForTimeout(900);
+  await guest.tap('button[data-a="create"]'); await guest.waitForTimeout(150); await guest.click('button[data-a="scenenext"]', { timeout: 1500 }).catch(() => {}); await guest.waitForTimeout(900);
   await host.waitForFunction(() => !!globalThis.cinderGame.state().char2, null, { timeout: 5000 });
   await both('the yard, together');
   // Ready up and deploy.

@@ -4,18 +4,25 @@
 // code-drawn portraits.
 import { portraitCanvas, MUZZLE } from './portraits.js';
 import { play } from './audio.js';
+import { MAPS } from './data.js';
 
 import { droneCanvas, droneHiFrame, DRONE_W, DRONE_H } from './drones.js';
 export const W = 384, H = 216;
 // The fight draws at 3x, so high-resolution sprites keep their detail. Older art scales up with crisp pixels.
 const RES = 3;
 // How tall each high-resolution figure stands on the stage. The enemy stands further back, so it's smaller.
-const HD_HEIGHT = { player: 146, partner: 124, patrol: 112, probe: 66, officer: 108, hound: 78, riot: 116, marksman: 112, interrogator: 112, shock: 116, sentinel: 116, halvek: 118, crawler: 92, ostrane: 112 };
-const MELEE = new Set(['hound', 'riot', 'loader', 'brask', 'foreman', 'slagger', 'jailer', 'sedation']);
+const HD_HEIGHT = { player: 146, partner: 124, patrol: 112, probe: 66, officer: 108, hound: 78, riot: 116, marksman: 112, interrogator: 112, shock: 116, sentinel: 116, halvek: 118, crawler: 92, ostrane: 112, ally: 98,
+  welder: 66, foreman: 112, loader: 112, slagger: 114, jailer: 108, sedation: 108, dockguard: 112, gunner: 112, brask: 122, crucible: 128, kell: 116, vane: 116,
+  smallbot: 62, bulwark: 62, spotweld: 60, slagrunt: 60, cuffbot: 60, gasbot: 62, mortarbot: 66, deckbot: 60 };
+const MELEE = new Set(['hound', 'riot', 'loader', 'brask', 'foreman', 'slagger', 'jailer', 'sedation', 'bulwark', 'spotweld', 'cuffbot']);
+// Charge poses that were drawn to loop from their first frame. The rest settle into a brace and breathe on their last frames.
+const CHARGE_LOOPS = new Set(['gunner', 'marksman', 'riot', 'shock']);
 const HOVER = new Set(['probe']);
 const osCalm = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 let reduceMotion = osCalm;
 export const setCalm = (on) => { reduceMotion = osCalm || on; };
+const MAX_PARTICLES = 260; // the stage draws at 3x on a phone: keep the sparks affordable
+const BLOOD = ['#a3261e', '#7d1a15', '#c23a2e'], FLECK = ['#9aa4ad', '#5f6a73', '#c6ced4'];
 const C = { amber: '#ffb35a', crit: '#fff1c9', red: '#ff5a44', ion: '#8fdcff', heal: '#9be08a', smoke: '#8b949c', spark: '#ffd27a' };
 
 // ---------- sprite sheets ----------
@@ -28,20 +35,97 @@ export async function loadSheets(base = 'sprites/') {
   try { const res = await fetch(base + 'manifest.json', { cache: 'no-cache' }); if (!res.ok) return 0; man = await res.json(); } catch (e) { return 0; }
   // High-resolution sheets replace older ones of the same name.
   try { const res = await fetch(base + 'hd.json', { cache: 'no-cache' }); if (res.ok) { const hd = await res.json(); for (const k of Object.keys(hd)) man[k] = { ...hd[k], hd: true }; } } catch (e) {}
-  await Promise.all(Object.entries(man).map(async ([id, def]) => {
-    const anims = {};
-    await Promise.all(Object.entries(def.anims || {}).map(([name, a]) => new Promise((ok) => {
-      const img = new Image();
-      img.onload = () => { anims[name] = { img, frames: a.frames || 1, fps: a.fps || 8, loop: !!a.loop, pad: a.pad, tip: a.tip }; ok(); };
-      img.onerror = () => ok();
-      img.src = `${base}${id}/${name}.png`;
-    })));
-    if (anims.idle) sheets[id] = { size: def.size || anims.idle.img.height, anims, hd: !!def.hd, fig: def.fig };
-  }));
-  return Object.keys(sheets).length;
+  // Operatives, drones and the townsfolk load now. Enemies load with their map, so a phone only ever holds one map's fighters.
+  const now = [];
+  for (const [id, def] of Object.entries(man)) {
+    if (def.hd && !EAGER.test(id)) lazySheets[id] = { def, base }; else now.push(loadSheet(id, def, base));
+  }
+  await Promise.all(now);
+  return Object.keys(sheets).length + Object.keys(lazySheets).length;
+}
+const EAGER = /^(op_|drone_)|^(prisoner|marrow|ilse|handler|dispatcher|vendor|worker|kid|patrol)$/;
+const lazySheets = {}, sheetLoads = {};
+async function loadSheet(id, def, base) {
+  const anims = {};
+  await Promise.all(Object.entries(def.anims || {}).map(([name, a]) => new Promise((ok) => {
+    const img = new Image();
+    img.onload = () => { anims[name] = { img, frames: a.frames || 1, fps: a.fps || 8, loop: !!a.loop, pad: a.pad, tip: a.tip }; ok(); };
+    img.onerror = () => ok();
+    img.src = `${base}${id}/${name}.png`;
+  })));
+  if (anims.idle) sheets[id] = { size: def.size || anims.idle.img.height, anims, hd: !!def.hd, fig: def.fig };
+}
+export function ensureSheet(id) {
+  if (sheets[id] || !lazySheets[id]) return Promise.resolve();
+  return sheetLoads[id] || (sheetLoads[id] = loadSheet(id, lazySheets[id].def, lazySheets[id].base).finally(() => { delete sheetLoads[id]; }));
+}
+// Load this map's fighters ahead of the first fight and let go of the last map's.
+let sheetsFor = null;
+function loadMapSheets(theme) {
+  if (theme === sheetsFor) return;
+  sheetsFor = theme;
+  const map = MAPS.find((m) => m.theme === theme);
+  if (!map) return;
+  const keep = new Set([...map.pool.map((p) => p[0]), ...map.bosses]);
+  for (const id of Object.keys(lazySheets)) if (!keep.has(id)) delete sheets[id];
+  for (const k of Object.keys(tintCache)) if (!k.endsWith(`-${theme}`)) delete tintCache[k];
+  (async () => { for (const id of keep) await ensureSheet(id); })();
 }
 
 export const sheetOf = (id) => sheets[id] || null;
+// Enemies shared between maps wear that map's colours. Recoloured once per enemy and map, in code. Bright glows (eyes, muzzles) keep their colour.
+const MAP_TINT = { foundry: [1, 0.72, 0.52, 0.42, 0.86], detention: [0.62, 0.78, 1, 0.48, 0.92], port: [0.96, 1, 1.06, 0.55, 1.28] };
+const TINTED = new Set(['probe', 'officer', 'hound', 'riot', 'marksman', 'interrogator', 'shock', 'sentinel', 'crawler', 'ostrane']);
+const tintCache = {};
+function tintedSheet(id, theme) {
+  const base = sheets[id], tint = MAP_TINT[theme];
+  if (!base || !base.hd || !tint || !TINTED.has(id)) return base || null;
+  const key = `${id}-${theme}`;
+  if (tintCache[key]) return tintCache[key];
+  const [r, gr, b, amt, gain] = tint, anims = {};
+  for (const [name, a] of Object.entries(base.anims)) {
+    const c = document.createElement('canvas'); c.width = a.img.width; c.height = a.img.height;
+    const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(a.img, 0, 0);
+    const im = g.getImageData(0, 0, c.width, c.height), d = im.data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (!d[i + 3]) continue;
+      const mx = Math.max(d[i], d[i + 1], d[i + 2]), mn = Math.min(d[i], d[i + 1], d[i + 2]);
+      if (mx > 170 && (mx - mn) / mx > 0.6) continue;
+      const l = (0.3 * d[i] + 0.59 * d[i + 1] + 0.11 * d[i + 2]) * gain;
+      d[i] = Math.min(255, d[i] * (1 - amt) + l * r * amt); d[i + 1] = Math.min(255, d[i + 1] * (1 - amt) + l * gr * amt); d[i + 2] = Math.min(255, d[i + 2] * (1 - amt) + l * b * amt);
+    }
+    g.putImageData(im, 0, 0);
+    anims[name] = { ...a, img: c };
+  }
+  return (tintCache[key] = { ...base, anims });
+}
+// Painted backdrops: per map, an area and then a boss arena for each stretch of five sectors. They load when needed; the code-drawn scene stands in until then.
+const BG_OPEN = new Set(['garrison_1', 'garrison_2', 'foundry_1', 'port_1', 'port_2']);
+const bgCache = new Map();
+function paintedBackdrop(theme, sector, boss) {
+  const band = Math.min(2, Math.floor((sector - 1) / 5)), key = `${theme}_${band * 2 + (boss ? 2 : 1)}`;
+  let e = bgCache.get(key);
+  if (!e) {
+    e = { canvas: null, open: BG_OPEN.has(key) };
+    bgCache.set(key, e);
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas'); c.width = W * RES; c.height = H * RES;
+      const q = c.getContext('2d'); q.imageSmoothingEnabled = true; q.imageSmoothingQuality = 'high';
+      q.drawImage(img, 0, 0, c.width, c.height);
+      // Slightly soft and dark, so the fighters read first. Built by scaling, which every phone can do.
+      const s = document.createElement('canvas'); s.width = Math.round(c.width / 5); s.height = Math.round(c.height / 5);
+      const sq = s.getContext('2d'); sq.imageSmoothingEnabled = true; sq.imageSmoothingQuality = 'high'; sq.drawImage(img, 0, 0, s.width, s.height);
+      q.globalAlpha = 0.5; q.drawImage(s, 0, 0, c.width, c.height); q.globalAlpha = 1;
+      q.fillStyle = 'rgba(7,11,16,0.26)'; q.fillRect(0, 0, c.width, c.height);
+      e.canvas = c;
+      // Keep only the last few in memory: each one is about 3 MB on a phone.
+      if (bgCache.size > 3) { const old = bgCache.keys().next().value; if (old !== key) bgCache.delete(old); }
+    };
+    img.src = `bg/${key}.png`;
+  } else { bgCache.delete(key); bgCache.set(key, e); }
+  return e;
+}
 // First idle frame of a character's sheet, cropped to the figure, as a data URL (for victory/death screens).
 const stills = {};
 export function sheetStill(id) {
@@ -86,8 +170,9 @@ class Actor {
   frame(t) {
     if (!this.sheet) return { img: this.drawn, sx: 0, sw: 40, sh: 40 };
     let a = this.sheet.anims[this.anim] || this.sheet.anims.idle;
-    let f = Math.floor(((t - this.animStart) / 1000) * a.fps);
-    if (a.loop) f %= a.frames;
+    let f = Math.max(0, Math.floor(((t - this.animStart) / 1000) * a.fps)); // never negative: the clock stands still during hit-stop
+    if (a.loop && this.anim === 'charge' && this.sheet.hd && !CHARGE_LOOPS.has(this.id) && a.frames >= 6) { if (f >= a.frames) f = a.frames - 1 - [3, 2, 1, 0, 1, 2][(f - a.frames) % 6]; }
+    else if (a.loop) f %= a.frames;
     else if (f >= a.frames) {
       if (this.anim === 'death') f = a.frames - 1;
       else { this.anim = this.sheet.anims[this.rest] ? this.rest : 'idle'; this.animStart = t; a = this.sheet.anims[this.anim]; f = 0; }
@@ -97,6 +182,8 @@ class Actor {
   }
 }
 
+const SIG_COLOR = { shutter: '#9aa3ad', confiscate: '#e6d36a', anchor: '#c79a5a', siege: '#ffb347', roll: '#ff8a3c', floor: '#ff8a3c', overtime: '#d4483a', front: '#e6d36a', count: '#e6d36a', lights: '#73b6d4', crane: '#c79a5a', salute: '#fff1c9', redact: '#efe7d6', audit: '#ffffff' };
+
 export class Stage {
   constructor() {
     this.el = document.createElement('div');
@@ -104,7 +191,8 @@ export class Stage {
     this.el.innerHTML = `<canvas width="${W * RES}" height="${H * RES}" aria-hidden="true"></canvas>
       <div class="hud hud-enemy"><div class="hud-row"><b class="hud-name"></b><span class="hud-tag"></span></div><div class="bar enemy"><i></i></div><div class="hud-row"><span class="hud-st"></span><span class="hud-hp num"></span></div></div>
       <div class="hud hud-player"><div class="hud-row"><b class="hud-name"></b><span class="hud-tag"></span></div><div class="bar"><i></i></div><div class="hud-row"><span class="hud-st"></span><span class="hud-hp num"></span></div></div>
-      <div class="cine" hidden><i class="bar-top"></i><i class="bar-bot"></i><div class="cine-card"><span class="cine-label"></span><b class="cine-name"></b><span class="cine-epithet"></span></div><span class="cine-skip">Click to skip</span></div>
+      <div class="cine" hidden><i class="bar-top"></i><i class="bar-bot"></i><div class="cine-card"><span class="cine-label"></span><b class="cine-name"></b><span class="cine-epithet"></span><span class="cine-line"></span></div><span class="cine-skip">Tap to skip</span></div>
+      <div class="bsay" hidden role="status"><span class="bsay-text"></span><span class="bsay-note"></span></div>
       <div class="pops" aria-hidden="true"></div>
       <div class="speed" role="group" aria-label="Battle mode"><button data-speed="manual" title="You choose every move">Manual</button><button data-speed="auto1" title="Auto battle: the operative fights with a fixed routine. Tap Manual to take over.">Auto 1\u00D7</button><button data-speed="auto2" title="Auto battle at double speed.">Auto 2\u00D7</button></div>`;
     this.canvas = this.el.querySelector('canvas');
@@ -116,7 +204,10 @@ export class Stage {
     this.hud = { enemy: this.el.querySelector('.hud-enemy'), player: this.el.querySelector('.hud-player') };
     this.max = { enemy: 1, player: 1 };
     this.particles = []; this.bolts = []; this.rings = []; this.projectiles = []; this.tweens = [];
-    this.shakeUntil = 0; this.shakeMag = 0;
+    this.shakeUntil = 0; this.shakeMag = 0; this.shakeLen = 1;
+    this.stopAt = 0; this.stopUntil = 0; this.stopBudget = 0; this.frameFlash = null; this.zoom = null; this.enemyTags = [];
+    this.sayN = 0; this.sigLog = []; this.bfx = null; this.drop = null; // boss moves: last line shown, animations played (tests/boss.cjs reads it), what's on the stage
+    this.fxCount = { shakes: 0, stops: 0, flashes: 0, screenFlashes: 0, casings: 0, metal: 0, flesh: 0 }; // tests/juice.cjs reads these
     this.bgCache = {};
     this.rain = Array.from({ length: 70 }, (_, i) => ({ x: (i * 53) % W, y: (i * 97) % H, v: 3 + (i % 4) }));
     this.enemy = null; this.player = null; this.enemyRef = null; this.runRef = null;
@@ -133,7 +224,7 @@ export class Stage {
       this.setMode(b.dataset.speed === this.mode && matchMedia('(max-height: 500px) and (orientation: landscape)').matches ? { manual: 'auto1', auto1: 'auto2', auto2: 'manual' }[this.mode] : b.dataset.speed);
     });
     this.syncSpeed();
-    const loop = (t) => { try { this.draw(performance.now()); } catch (e) { console.warn('stage draw', e); } requestAnimationFrame(loop); };
+    const loop = (t) => { try { this.draw(performance.now()); } catch (e) { console.warn('stage draw', e); const g = this.ctx; g.setTransform(RES, 0, 0, RES, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; } requestAnimationFrame(loop); };
     requestAnimationFrame(loop);
   }
 
@@ -159,7 +250,7 @@ export class Stage {
   // Drawn busts sit on the pad cut off at the bottom; full-body sheets stand on it.
   anchor(side, actor) {
     const sheet = actor ? actor.sheet : (side === 'enemy' ? this.enemy : this.player)?.sheet;
-    if (side === 'enemy') return { x: 290, y: sheet ? 126 : 122 };
+    if (side === 'enemy') return { x: 290, y: sheet ? 160 : 122 };
     if (side === 'partner') return { x: 38, y: 198 };
     return sheet ? { x: 104, y: 206 } : { x: 98, y: 228 };
   }
@@ -171,13 +262,23 @@ export class Stage {
     const bob = still ? 0 : Math.sin(t / 310 + seed * 2) * 2, sway = still ? 0 : Math.sin(t / 830 + seed) * 2;
     return { x: Math.round(c.x + size * 0.1 + sway), y: Math.round(c.y - size * 0.62 + bob + (info && info.damaged ? 12 : 0)) };
   }
+  // Plays the drone's ability, and waits for the moment it lands.
+  async droneMove(actor) {
+    if (!this.droneAct) this.droneAct = new Map();
+    this.droneAct.set(actor, performance.now());
+    await this.wait(300);
+  }
   drawDrone(actor, info, t, seed) {
     const g = this.g || this.ctx, p = this.dronePos(actor, info, t, seed), w = DRONE_W * 2, h = DRONE_H * 2;
     g.save();
     g.imageSmoothingEnabled = false;
     g.globalAlpha = actor.alpha === undefined ? 1 : actor.alpha;
-    const hf = droneHiFrame(info.type, t, !!info.damaged);
-    if (hf) { const k = Math.min(34 / hf.sh, 50 / hf.sw), tall = hf.sh * k, wide = hf.sw * k; g.drawImage(hf.img, hf.sx, 0, hf.sw, hf.sh, Math.round(p.x - wide / 2), Math.round(p.y - tall / 2), wide, tall); }
+    const hf = droneHiFrame(info.type, t, !!info.damaged, this.droneAct && this.droneAct.get(actor));
+    if (hf) {
+      // Sized from the idle frame so the drone doesn't jump when its ability plays; a little larger while acting, so the move reads.
+      const k = Math.min(34 / hf.idleH, 50 / hf.idleW) * (hf.acting ? 1.35 : 1), tall = hf.sh * k, wide = hf.sw * k;
+      g.drawImage(hf.img, hf.sx, 0, hf.sw, hf.sh, Math.round(p.x - wide / 2), Math.round(p.y + (hf.idleH * k) / 2 - tall), Math.round(wide), Math.round(tall));
+    }
     else g.drawImage(droneCanvas(info.type, Math.floor(t / 70), !!info.damaged), p.x - w / 2, p.y - h / 2, w, h);
     g.restore();
     if (info.damaged && !reduceMotion && Math.random() < 0.05) this.burst(p.x, p.y - 4, 1, Math.random() < 0.5 ? C.smoke : C.spark, 0.5, 500, -0.02, 1);
@@ -213,19 +314,21 @@ export class Stage {
     if (partner && !this.partner) this.partner = new Actor('player', 'partner', false);
     if (!partner) this.partner = null;
     this.sector = sector; this.boss = boss; this.theme = theme; this.allies = allies;
+    loadMapSheets(theme);
     if (!this.allySprite) this.allySprite = portraitCanvas('prisoner');
     if (sheets.prisoner) {
       this.allyActors = this.allyActors || [];
       while (this.allyActors.length < allies) this.allyActors.push(new Actor('prisoner', 'ally', false));
       this.allyActors.length = allies;
     }
-    this.intent = enemy.intent; this.stun = enemy.stun;
+    this.intent = enemy.intent; this.stun = enemy.stun; this.enemyTags = enemy.tags || [];
     this.max.enemy = enemy.maxHp; this.max.player = player.maxHp;
     this.setHud('enemy', enemy.name, enemy.boss ? (enemy.phase2 ? 'ENRAGED' : 'BOSS') : enemy.elite ? 'ELITE' : `SECTOR ${sector}`, enemy.hp);
     this.setHud('player', player.name, `LV ${player.level}`, player.hp);
     this.setStatuses('player', pst);
     this.setStatuses('enemy', est, affix, quirk);
     this.label = label;
+    this.bfx = enemy.bs ? { shutter: enemy.bs.shutter, floor: enemy.bs.floor, front: enemy.bs.front, lights: enemy.bs.lights, wreck: enemy.bs.wreck, sig: enemy.sig ? enemy.sig.id : null, left: enemy.sig ? enemy.sig.left : 0 } : null;
     let isNewBoss = false;
     if (this.runRef !== run || !this.player) {
       this.runRef = run;
@@ -241,11 +344,13 @@ export class Stage {
     }
     if (this.enemyRef !== enemy) {
       this.enemyRef = enemy;
+      this.hideSay(); this.sayN = enemy.say ? enemy.say.n : 0; this.drop = null; // what was said before a reload stays said
       this.enemy = new Actor(enemy.id, 'enemy', enemy.boss);
+      if (this.enemy.sheet) this.enemy.sheet = tintedSheet(enemy.id, theme) || this.enemy.sheet;
+      else if (lazySheets[enemy.id]) { const actor = this.enemy; ensureSheet(enemy.id).then(() => { const sh = tintedSheet(enemy.id, theme); if (sh) { actor.sheet = sh; actor.drawn = null; } }); }
       this.enemy.ox = 140; this.enemy.alpha = 0;
-      this.tween(enemy.boss ? 800 : 450, (p) => { this.enemy.ox = 140 * (1 - ease(p)); this.enemy.alpha = p; });
       if (enemy.boss) { isNewBoss = true; this.enemy.alpha = 0; this.enemy.ox = 0; }
-      else { play('door'); if (quirk) setTimeout(() => this.popup('enemy', quirk.toUpperCase(), 'quirk'), 450 / (this.speed || 1)); }
+      else { this.tween(450, (p) => { this.enemy.ox = 140 * (1 - ease(p)); this.enemy.alpha = p; }); play('door'); if (quirk) setTimeout(() => this.popup('enemy', quirk.toUpperCase(), 'quirk'), 450 / (this.speed || 1)); }
     }
     this.enemy.rest = enemy.intent === 'heavy' && !enemy.stun ? 'charge' : 'idle';
     if (this.enemy.anim === 'idle' && this.enemy.rest === 'charge') this.enemy.setAnim('charge', now);
@@ -255,47 +360,107 @@ export class Stage {
 
   setStatuses(side, st = {}, affix = null, quirk = null) {
     const el = this.hud[side].querySelector('.hud-st');
-    const names = { bleed: 'BLEED', burn: 'BURN', shaken: 'SHAKEN', exposed: 'EXPOSED' };
+    const names = { bleed: 'BLEED', burn: 'BURN', shaken: 'SHAKEN', exposed: 'EXPOSED', pinned: 'PINNED' };
     el.innerHTML = (quirk ? `<i class="st quirk" data-st="quirk">${quirk.toUpperCase()}</i>` : '') + (affix ? `<i class="st affix" data-st="affix">${affix.toUpperCase()}</i>` : '') +
       Object.entries(st).filter(([, n]) => n > 0).map(([k, n]) => `<i class="st st-${k}" data-st="${k}">${names[k] || k} ${n}</i>`).join('');
   }
 
-  // Cinematic boss entrance: letterbox, silhouette, reveal, name card. Click skips.
-  bossIntro({ name, epithet, label }) {
-    const E = this.enemy, cine = this.el.querySelector('.cine');
+  // A boss seen already (a reload mid-fight, say) just stands there.
+  showBoss() { const E = this.enemy; if (E) { E.alpha = 1; E.ox = 0; E.oy = 0; } }
+  // Cinematic boss entrance: letterbox, silhouette slam, reveal in close-up, name card, a line of dialogue. Tap skips.
+  // lines: beats shown one after another (a first meeting has several). A tap moves to the next beat, and on the last one closes the card. onFull: the last beat was reached.
+  bossIntro({ name, epithet, label, line, lines, onFull }) {
+    const E = this.enemy, cine = this.el.querySelector('.cine'), beats = lines && lines.length ? lines : [line || ''];
     if (!E) return Promise.resolve();
     if (this.skip) { E.alpha = 1; E.ox = 0; return Promise.resolve(); }
+    this.hideSay();
     return new Promise((done) => {
-      let finished = false;
+      let finished = false, beat = -1, beatTimer = 0, closing = false;
       const timers = [];
       const at = (ms, fn) => timers.push(setTimeout(fn, ms / this.speed));
+      const live = (fn) => (p) => { if (!finished) fn(p); };
       const finish = () => {
         if (finished) return; finished = true;
-        timers.forEach(clearTimeout);
+        timers.forEach(clearTimeout); clearTimeout(beatTimer);
         cine.hidden = true; cine.className = 'cine';
-        this.dim = 0; E.alpha = 1; E.ox = 0; E.oy = 0; E.flash = 0;
-        this.el.removeEventListener('click', finish);
+        this.dim = 0; this.zoom = null; E.alpha = 1; E.ox = 0; E.oy = 0; E.flash = 0;
+        this.el.removeEventListener('click', tap);
         done();
       };
+      const close = () => {
+        if (closing || finished) return; closing = true;
+        if (reduceMotion) { finish(); return; }
+        cine.classList.add('out');
+        const k0 = this.zoom ? this.zoom.k : 1;
+        this.tween(380, live((p) => { const e = ease(p); if (this.zoom) this.zoom.k = k0 + (1 - k0) * e; this.dim = 0.3 * (1 - p); }));
+        at(400, finish);
+      };
+      // Long enough to read at phone size. One line keeps the old timing.
+      const hold = (text) => (beats.length === 1 ? (reduceMotion ? 2600 : 1800) : Math.max(2400, 46 * text.length));
+      const showBeat = (i) => {
+        beat = i;
+        clearTimeout(beatTimer);
+        cine.querySelector('.cine-line').textContent = beats[i];
+        cine.classList.add('say');
+        if (i === beats.length - 1 && onFull) onFull();
+        beatTimer = setTimeout(() => { if (i < beats.length - 1) showBeat(i + 1); else close(); }, hold(beats[i]) / this.speed);
+      };
+      const tap = () => { if (beats.length > 1 && beat < beats.length - 1) showBeat(beat + 1); else finish(); };
       cine.querySelector('.cine-label').textContent = label;
       cine.querySelector('.cine-name').textContent = name;
       cine.querySelector('.cine-epithet').textContent = epithet || '';
+      cine.querySelector('.cine-line').textContent = beats.length > 1 ? '' : beats[0];
+      cine.querySelector('.cine-skip').textContent = beats.length > 1 ? 'Tap for next' : 'Tap to skip';
       cine.hidden = false; cine.className = 'cine';
       void cine.offsetWidth;
       cine.classList.add('on');
-      this.dim = 0.75;
-      E.alpha = 1; E.oy = -70; E.ox = 0;
-      this.flash(E, '#000000', 1500);
       play('bossSting');
-      this.tween(420, (p) => { E.oy = -70 * (1 - p * p); });
-      at(420, () => { this.shake(6, 500); const c = this.center(E); this.burst(c.x, c.y + 40, 30, '#8b949c', 2.5, 700, 0.02, 3); });
-      at(1300, () => { this.flash(E, '#ffffff', 160); this.tween(500, (p) => { this.dim = 0.75 * (1 - p) + 0.25 * p; }); });
-      at(1500, () => { cine.classList.add('card'); play('bossName'); });
-      at(3000, () => { cine.classList.add('out'); this.tween(400, (p) => { this.dim = 0.25 * (1 - p); }); });
-      at(3450, finish);
-      setTimeout(() => this.el.addEventListener('click', finish), 250);
+      setTimeout(() => { if (!finished) this.el.addEventListener('click', tap); }, 250);
+      E.alpha = 1; E.ox = 0;
+      // Reduced motion: no slam, flash or push-in, just the card, long enough to read.
+      if (reduceMotion) {
+        E.oy = 0; this.dim = 0.25;
+        cine.classList.add('card');
+        showBeat(0);
+        return;
+      }
+      // A close-up on the head: zoom about a point that puts the face right of centre, clear of the card.
+      const a = this.anchor('enemy', E), hx = a.x, hy = a.y - E.tall * 0.82, K = 2.1;
+      // Above the frame by up to 20 stage pixels is fine: the letterbox hides what the zoom leaves bare at the top.
+      const px = Math.max(0, Math.min(W, (W * 0.68 - K * hx) / (1 - K))), py = Math.max(-20, Math.min(H, (H * 0.4 - K * hy) / (1 - K)));
+      this.zoom = { x: px, y: py, k: 1.5 };
+      this.dim = 0.8;
+      E.oy = -50;
+      this.flash(E, '#000000', 1100);
+      this.tween(380, live((p) => { E.oy = -50 * (1 - p * p); }));
+      at(380, () => { this.shake(7, 450); const c = this.center(E); this.burst(c.x, c.y + 40, 26, '#8b949c', 2.5, 700, 0.02, 3); });
+      at(1000, () => {
+        this.flash(E, '#ffffff', 130); this.screenFlash('#ffffff', 0.3, 110);
+        this.tween(450, live((p) => { this.dim = 0.8 * (1 - p) + 0.3 * p; }));
+        this.tween(2250, live((p) => { if (this.zoom) this.zoom.k = 1.5 + 0.6 * ease(p); }));
+      });
+      at(1100, () => { cine.classList.add('card'); play('bossName'); });
+      at(1500, () => { if (beat < 0) showBeat(0); });
     });
   }
+
+  // A boss's line in the fight. It sits over the bottom of the stage, takes no taps and holds nothing up: the turn carries on underneath.
+  speak({ text, kind = 'boss', note = '', n = 0 }) {
+    const el = this.el.querySelector('.bsay');
+    if (!el || !text) return;
+    if (n) this.sayN = n;
+    el.querySelector('.bsay-text').textContent = text;
+    const nt = el.querySelector('.bsay-note'); nt.textContent = note || ''; nt.hidden = !note;
+    el.className = `bsay ${kind === 'narration' ? 'narration' : ''}`;
+    el.hidden = false;
+    void el.offsetWidth;
+    el.classList.add('on');
+    clearTimeout(this.sayTimer);
+    this.sayTimer = setTimeout(() => this.hideSay(), Math.max(3000, 60 * (text.length + (note || '').length)));
+  }
+  hideSay() { clearTimeout(this.sayTimer); const el = this.el.querySelector('.bsay'); if (el) { el.hidden = true; el.classList.remove('on'); } }
+  // The move's own animation when its art exists, otherwise the nearest thing the sheet has.
+  sigAnim(actor, n) { const a = (actor.sheet && actor.sheet.anims) || {}; return a[`sig${n}`] ? `sig${n}` : a.special ? 'special' : 'attack'; }
 
   setHud(side, name, tag, hp) {
     const h = this.hud[side];
@@ -318,14 +483,48 @@ export class Stage {
     el.textContent = text;
     const [x, y] = side === 'enemy' ? [75, 22] : side === 'partner' ? [10, 48] : [26, 52];
     el.style.left = `${x + (Math.random() * 8 - 4)}%`; el.style.top = `${y + (Math.random() * 6 - 3)}%`;
-    el.style.animationDuration = `${1000 / (this.speed || 1)}ms`;
+    // A number has to be readable, so 2x doesn't cut it quite in half. The longer crit keeps its hold.
+    const life = (cls.includes('crit') ? 1250 : 1050) / Math.max(1, (this.speed || 1) * 0.8);
+    el.style.animationDuration = `${life}ms`;
+    if (cls.includes('crit')) el.style.setProperty('--tilt', `${Math.random() < 0.5 ? -5 : 5}deg`);
     this.pops.append(el);
-    setTimeout(() => el.remove(), 1100 / (this.speed || 1));
+    while (this.pops.childElementCount > 10) this.pops.firstElementChild.remove();
+    setTimeout(() => el.remove(), life + 60);
   }
 
-  shake(mag, ms) { if (reduceMotion || this.skip) return; this.shakeMag = mag; this.shakeUntil = performance.now() + ms / this.speed; }
+  shake(mag, ms) {
+    if (reduceMotion || this.skip) return;
+    const t = performance.now();
+    if (t < this.shakeUntil && mag < this.shakeMag * ((this.shakeUntil - t) / this.shakeLen)) return; // a small hit doesn't cut a big shake short
+    this.shakeMag = mag; this.shakeLen = ms / this.speed; this.shakeUntil = t + this.shakeLen; this.fxCount.shakes++;
+  }
+  // The whole stage holds still for a moment on a big hit. Each playback has a budget, so a run of crits can't drag a turn.
+  hitStop(ms) {
+    if (reduceMotion || this.skip) return;
+    const d = Math.min(ms / this.speed, this.stopBudget);
+    if (d < 10) return;
+    const t = performance.now();
+    this.stopBudget -= d; this.fxCount.stops++;
+    if (t < this.stopUntil) this.stopUntil += d;
+    else { this.stopAt = t; this.stopUntil = t + d; }
+  }
+  // Time stood still, so everything in flight picks up where it was.
+  endStop() {
+    const at = this.stopAt, until = this.stopUntil, d = until - at;
+    for (const tw of this.tweens) tw.start = tw.start <= at ? tw.start + d : until;
+    for (const b of this.bolts) b.born = b.born <= at ? b.born + d : until;
+    for (const r of this.rings) r.born = r.born <= at ? r.born + d : until;
+    for (const pt of this.particles) pt.born = pt.born <= at ? pt.born + d : until;
+    for (const a of [this.enemy, this.player, this.partner, ...(this.allyActors || [])]) if (a) { a.animStart += d; if (a.flash > at) a.flash += d; }
+    this.stopAt = 0; this.stopUntil = 0;
+  }
+  screenFlash(color, alpha, ms) {
+    if (reduceMotion || this.skip) return;
+    this.frameFlash = { color, alpha, until: performance.now() + ms, ms }; this.fxCount.screenFlashes++;
+  }
   burst(x, y, n, color, spd = 2, life = 350, grav = 0.05, size = 1) {
     if (this.skip) return;
+    n = Math.min(n, MAX_PARTICLES - this.particles.length);
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2, v = spd * (0.4 + Math.random());
       this.particles.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - spd * 0.3, life: life * (0.6 + Math.random() * 0.6), born: performance.now(), color, g: grav, size });
@@ -338,30 +537,85 @@ export class Stage {
     this.bolts.push(b);
     return this.wait(ms);
   }
-  flash(actor, color = '#ffffff', ms = 140) { actor.flashColor = color; actor.flash = performance.now() + ms / (this.skip ? 1 : this.speed); }
+  flash(actor, color = '#ffffff', ms = 140) { if (reduceMotion) return; actor.flashColor = color; actor.flash = performance.now() + ms / (this.skip ? 1 : this.speed); this.fxCount.flashes++; }
+  // Debris thrown back off a hit: dir is the way the shot was travelling, and most of it comes back towards the shooter.
+  spray(x, y, dir, n, colors, spd, life, grav, size) {
+    if (this.skip) return;
+    n = Math.min(n, MAX_PARTICLES - this.particles.length);
+    const born = performance.now();
+    for (let i = 0; i < n; i++) {
+      const v = spd * (0.35 + Math.random());
+      this.particles.push({ x, y, vx: (Math.random() < 0.72 ? -dir : dir) * v * (0.3 + Math.random() * 0.7), vy: -v * (0.2 + Math.random() * 0.8), life: life * (0.6 + Math.random() * 0.7), born, color: colors[i % colors.length], g: grav, size });
+    }
+  }
+  // What a hit looks like depends on what got hit: sparks and metal flecks off droids and armour, small dark specks off people and beasts.
+  impact(actor, { crit = false, heavy = false, small = false } = {}) {
+    const c = this.center(actor), dir = actor.side === 'enemy' ? 1 : -1, k = crit ? 1.9 : heavy ? 1.4 : small ? 0.5 : 1;
+    const tags = actor.side === 'enemy' ? this.enemyTags : [], metal = tags.includes('droid') || tags.includes('armored');
+    const x = c.x + (Math.random() * 14 - 7) - dir * 4, y = c.y - actor.tall * 0.08 + (Math.random() * 16 - 8);
+    if (metal) {
+      this.fxCount.metal++;
+      this.spray(x, y, dir, Math.round(9 * k), [C.spark, '#fff1c9', C.amber], 3.2, 300, 0.13, 2);
+      this.spray(x, y, dir, Math.round(4 * k), FLECK, 2.2, 600, 0.17, 3);
+    } else {
+      this.fxCount.flesh++;
+      this.spray(x, y, dir, Math.round(7 * k), BLOOD, 2.2, 460, 0.15, 2);
+      this.spray(x, y, dir, Math.round(2 * k), BLOOD, 1.5, 520, 0.17, 3);
+    }
+  }
+  // A spent case kicked out of the breech, back and up. It tumbles, drops and bounces once on the floor.
+  casing(actor, kind = 'brass') {
+    if (this.skip || this.particles.length >= MAX_PARTICLES) return;
+    const m = this.muzzle(actor), dir = actor.side === 'enemy' ? -1 : 1, a = this.anchor(actor.side, actor);
+    this.particles.push({ kind: 'casing', x: m.x - dir * Math.max(8, actor.tall * 0.1), y: m.y + 8, vx: -dir * (0.7 + Math.random() * 0.9), vy: -1.1 - Math.random() * 0.9, g: 0.17, floor: a.y + actor.oy - 4 - Math.random() * 6, life: 950, born: performance.now(), color: kind === 'shell' ? '#b5402e' : '#d8b04a', size: kind === 'shell' ? 1.4 : 1, bounced: 0 });
+    this.fxCount.casings++;
+    play('casing');
+  }
 
   async hit(actor, dmg, { crit = false, note = '', heavy = false } = {}) {
-    const c = this.center(actor), dir = actor.side === 'enemy' ? 1 : -1;
-    play(crit ? 'crit' : heavy ? 'heavy' : actor.side === 'player' ? 'hurt' : 'hit');
+    const dir = actor.side === 'enemy' ? 1 : -1, big = heavy || dmg >= (this.max[actor.side === 'enemy' ? 'enemy' : 'player'] || 1) * 0.25;
+    play(crit ? 'crit' : big ? 'heavy' : actor.side === 'player' ? 'hurt' : 'hit');
     actor.setAnim('hit', performance.now());
-    this.flash(actor);
-    this.burst(c.x, c.y, crit || heavy ? 18 : 9, crit ? C.crit : C.spark, crit ? 3 : 2);
-    if (crit || heavy) this.shake(crit ? 4 : 3, 220);
-    this.popup(actor.side, `\u2212${dmg}${note ? ` ${note}` : ''}`, crit ? 'crit' : heavy ? 'heavy' : '');
+    this.flash(actor, '#ffffff', crit ? 190 : 140);
+    this.impact(actor, { crit, heavy: big });
+    if (crit) {
+      const c = this.center(actor);
+      this.ring(c.x, c.y, 44, C.crit, 240, 3);
+      this.burst(c.x, c.y, 12, C.crit, 3.2, 300, 0.05);
+      this.hitStop(80); this.shake(8, 340); this.screenFlash('#fff1c9', 0.24, 95);
+    } else if (big) { this.hitStop(50); this.shake(4, 230); }
+    if (!dmg && actor.side === 'enemy') { this.popup('enemy', 'Missed', 'info'); return; }
+    this.popup(actor.side, `\u2212${dmg}${note ? ` ${note}` : ''}`, crit ? 'crit' : big ? 'heavy' : '');
     if (crit) this.popup(actor.side, 'CRITICAL', 'tag');
-    const x0 = actor.ox;
-    await this.move(actor, x0 + 7 * dir, actor.oy - 2, 70);
+    const x0 = actor.ox, kick = crit ? 12 : big ? 9 : 7;
+    await this.move(actor, x0 + kick * dir, actor.oy - 2, 70);
     await this.move(actor, x0, actor.oy + 2, 140);
+  }
+
+  // After the last blow on an operative: the fall holds while the picture drains. A tap anywhere moves on.
+  fallHold(ms = 1200) {
+    if (reduceMotion) return Promise.resolve();
+    return new Promise((done) => {
+      this.el.classList.add('fallen');
+      let timer = 0;
+      const end = () => { clearTimeout(timer); document.removeEventListener('click', end, true); this.el.classList.remove('fallen'); done(); };
+      timer = setTimeout(end, ms);
+      document.addEventListener('click', end, true);
+    });
   }
 
   // ---------- turn playback ----------
   async play(events) {
+    this.stopBudget = 100; // ms of hit-stop this whole playback may add, however many crits land
     for (const ev of events) {
       if (!this.skip) await this.handle(ev);
       else this.apply(ev);
       await this.wait(110);
     }
     this.playerShield = false;
+    // Whatever happened, anyone who hasn't left or fallen is standing there, visible.
+    const gone = events.some((ev) => ((ev.type === 'smoke' || ev.type === 'run') && ev.ok !== false) || ev.type === 'down');
+    if (!gone) for (const a of [this.player, this.partner]) if (a && a.alpha < 1) { a.alpha = 1; a.ox = 0; }
     if (this.player && this.player.alpha > 0) { this.player.oy = 0; }
   }
   apply(ev) { this.setHp('enemy', ev.ehp); this.setHp('player', ev.php); }
@@ -387,6 +641,7 @@ export class Stage {
         await this.move(P, 6, -4, 70);
         const m = this.muzzle(P);
         this.burst(m.x, m.y, 6, C.amber, 1.5, 120, 0);
+        this.casing(P);
         await this.bolt(m, this.center(E), ev.crit ? C.crit : C.amber, ev.ready ? 3 : 2, 170);
         this.move(P, 0, 0, 140);
         this.setHp('enemy', ev.ehp);
@@ -400,9 +655,11 @@ export class Stage {
         for (const h of ev.hits) {
           const m = this.muzzle(P), c = this.center(E);
           this.burst(m.x, m.y, 4, C.amber, 1.2, 100, 0);
+          this.casing(P);
           await this.bolt(m, { x: c.x + (Math.random() * 16 - 8), y: c.y + (Math.random() * 16 - 8) }, ev.suppress ? C.ion : C.amber, 2, 120);
-          this.flash(E); this.burst(c.x, c.y, 5, C.spark, 1.5);
-          this.popup('enemy', `\u2212${h.dmg}`, h.crit ? 'crit' : '');
+          this.flash(E); this.impact(E, { crit: h.crit, small: !h.crit });
+          if (h.crit) { play('crit'); this.hitStop(50); this.shake(6, 220); this.screenFlash('#fff1c9', 0.18, 80); }
+          this.popup('enemy', h.dmg ? `\u2212${h.dmg}` : 'Missed', h.crit ? 'crit' : h.dmg ? '' : 'info');
         }
         this.setHp('enemy', ev.ehp);
         this.move(P, 0, 0, 120);
@@ -416,6 +673,7 @@ export class Stage {
         await this.move(P, 6, -4, 70);
         const m = this.muzzle(P), c = this.center(E);
         this.burst(m.x, m.y, 10, C.amber, 2, 140, 0);
+        this.casing(P, 'shell');
         for (let i = 0; i < 5; i++) this.bolt(m, { x: c.x + (i - 2) * 9, y: c.y + (Math.random() * 20 - 10) }, C.amber, 1, 150);
         await this.wait(150);
         this.shake(3, 180);
@@ -484,15 +742,17 @@ export class Stage {
       }
       case 'drone:shoot': {
         const info = P === this.partner ? this.partnerDrone : this.drone, from = this.dronePos(P, info), c = this.center(E);
+        await this.droneMove(P);
         play('shot');
         await this.bolt(from, c, C.red, 1, 120);
-        this.burst(c.x, c.y, 3, C.spark, 1.2);
+        this.impact(E, { small: true });
         this.popup('enemy', `\u2212${ev.dmg}`, '');
         this.setHp('enemy', ev.ehp);
         break;
       }
       case 'drone:heal': {
         const info = P === this.partner ? this.partnerDrone : this.drone, from = this.dronePos(P, info), c = this.center(P);
+        await this.droneMove(P);
         await this.bolt(from, c, C.heal, 1, 100);
         this.burst(c.x, c.y, 4, C.heal, 0.8, 500, -0.04, 1);
         if (P !== this.partner) this.setHp('player', ev.php);
@@ -501,6 +761,7 @@ export class Stage {
       }
       case 'drone:block': {
         const info = P === this.partner ? this.partnerDrone : this.drone, from = this.dronePos(P, info), c = this.center(P);
+        await this.droneMove(P);
         play('shield');
         this.burst(c.x, c.y, 12, C.ion, 1.8, 350);
         this.popup(P === this.partner ? 'partner' : 'player', 'Intercepted', 'info');
@@ -510,6 +771,7 @@ export class Stage {
       }
       case 'drone:item': {
         const info = P === this.partner ? this.partnerDrone : this.drone, from = this.dronePos(P, info), c = this.center(ev.item === 'stim' ? P : E);
+        await this.droneMove(P);
         play(ev.item === 'stim' ? 'heal' : ev.item === 'ion' ? 'zap' : 'throw');
         await this.bolt(from, c, ev.item === 'stim' ? C.heal : ev.item === 'ion' ? C.ion : C.amber, 2, 220);
         this.burst(c.x, c.y, ev.item === 'thermal' ? 18 : 8, ev.item === 'stim' ? C.heal : ev.item === 'ion' ? C.ion : C.amber, 2, 420);
@@ -524,7 +786,7 @@ export class Stage {
         if (ally) ally.setAnim('attack', now());
         this.burst(from.x, from.y, 4, C.amber, 1, 100, 0);
         await this.bolt(from, c, C.amber, 1, 160);
-        this.flash(E); this.burst(c.x, c.y, 5, C.spark, 1.5);
+        this.flash(E); this.impact(E, { small: true });
         this.popup('enemy', `\u2212${ev.dmg}`, '');
         this.setHp('enemy', ev.ehp);
         await this.wait(120);
@@ -544,7 +806,7 @@ export class Stage {
       case 'env:sniper': {
         const target = this.center(P);
         await this.bolt({ x: W * 0.72, y: 0 }, target, C.red, 1, 140);
-        if (ev.dmg) { this.flash(P, C.red, 150); this.burst(target.x, target.y, 8, C.spark, 1.5); this.popup('player', `\u2212${ev.dmg} sniper`, 'heavy'); }
+        if (ev.dmg) { this.flash(P, C.red, 150); this.impact(P, { heavy: true }); this.popup('player', `\u2212${ev.dmg} sniper`, 'heavy'); }
         else { this.burst(target.x + 20, target.y, 8, C.spark, 1.5); this.popup('player', 'Sniper missed', 'info'); }
         this.setHp('player', ev.php);
         await this.wait(300);
@@ -608,7 +870,9 @@ export class Stage {
         const c = this.center(P);
         for (let i = 0; i < 6; i++) setTimeout(() => this.burst(c.x + (Math.random() * 80 - 40), c.y + 20, 4, C.smoke, 0.7, 1100, -0.02, 6), i * 70);
         await this.wait(300);
-        await this.tween(500, (p) => { P.alpha = 1 - p; });
+        // Only a clean getaway hides the operative. If they're still spotted, they stay put.
+        if (ev.ok !== false) await this.tween(500, (p) => { P.alpha = 1 - p; });
+        else { await this.wait(350); this.popup(P === this.partner ? 'partner' : 'player', 'Still spotted!', 'info'); await this.wait(250); }
         break;
       }
       case 'player:run':
@@ -624,7 +888,8 @@ export class Stage {
         P.setAnim('death', now());
         this.flash(P, C.red, 300);
         this.shake(5, 300);
-        await this.tween(800, (p) => { P.oy = 30 * ease(p); P.alpha = 1 - p; });
+        // The fall stays on screen. Art without a fall animation fades as it always did.
+        await this.tween(800, (p) => { if (P.sheet && P.sheet.anims.death) P.oy = 4 * ease(p); else { P.oy = 30 * ease(p); P.alpha = 1 - p; } });
         break;
 
       case 'enemy:attack':
@@ -638,6 +903,7 @@ export class Stage {
           await this.aim(E);
           const m = this.muzzle(E), target = ev.ally ? { x: 30, y: 160 } : this.center(P);
           this.burst(m.x, m.y, 6, C.red, 1.5, 120, 0);
+          if (!this.enemyTags.includes('droid')) this.casing(E);
           if (heavy) { this.bolt(m, target, C.red, 4, 200); await this.wait(70); this.bolt(m, { x: target.x + 8, y: target.y - 6 }, C.red, 2, 200); await this.wait(130); }
           else await this.bolt(m, target, C.red, 2, 190);
         }
@@ -701,14 +967,50 @@ export class Stage {
         break;
       }
       case 'enemy:phase': {
-        this.flash(E, C.red, 900);
-        this.shake(6, 600);
-        this.ring(this.center(E).x, this.center(E).y, 60, C.red, 600, 3);
-        this.popup('enemy', 'ENRAGED', 'heavy');
-        this.tween(700, (p) => { this.dim = 0.4 * Math.sin(p * Math.PI); });
-        await this.wait(900);
+        const big = ev.enraged !== false;
+        this.flash(E, C.red, big ? 900 : 500);
+        this.shake(big ? 6 : 4, big ? 600 : 350);
+        this.ring(this.center(E).x, this.center(E).y, big ? 60 : 44, C.red, big ? 600 : 400, 3);
+        this.popup('enemy', big ? 'ENRAGED' : ev.pct === 25 ? 'DESPERATE' : 'HURT', big ? 'heavy' : 'info');
+        this.tween(big ? 600 : 350, (p) => { this.dim = (big ? 0.4 : 0.25) * Math.sin(p * Math.PI); });
+        await this.wait(big ? 600 : 300);
         break;
       }
+      case 'enemy:say':
+        this.speak({ text: ev.text, kind: ev.kind, note: ev.note, n: ev.sayN });
+        await this.wait(160);
+        break;
+      case 'enemy:telegraph': {
+        const col = SIG_COLOR[ev.sig] || '#e6d36a', c = this.center(E);
+        this.flash(E, col, 260);
+        this.popup('enemy', ev.name, 'info');
+        play('heavyCharge');
+        if (E.sheet && E.sheet.anims.charge) E.setAnim('charge', now());
+        this.ring(c.x, c.y, 34, col, 320, 2);
+        if (this.bfx) { this.bfx.sig = ev.sig; this.bfx.left = 9; }
+        await this.wait(320);
+        break;
+      }
+      case 'enemy:charging': {
+        const col = SIG_COLOR[ev.sig] || '#e6d36a', c = this.center(E);
+        this.flash(E, col, 220);
+        play('heavyCharge');
+        this.popup('enemy', ev.sig === 'roll' ? 'Core flaring' : `${ev.left} more`, 'info');
+        this.burst(c.x, c.y, 10, col, 1.4, 320, 0);
+        await this.wait(260);
+        break;
+      }
+      case 'enemy:sigfail': {
+        const c = this.center(E);
+        if (this.bfx) this.bfx.sig = null;
+        this.popup('enemy', 'Stopped!', 'level');
+        play('block');
+        this.ring(c.x, c.y, 40, C.ion, 300, 2);
+        this.burst(c.x, c.y, 12, C.ion, 2, 320);
+        await this.wait(260);
+        break;
+      }
+      case 'enemy:sig': await this.playSig(ev, P, E); break;
       case 'status:tick':
       case 'status:undefined': {
         if (ev.pdmg) { play('bleed'); this.flash(P, C.red, 200); this.popup('player', `\u2212${ev.pdmg}`, 'st-bleed'); this.setHp('player', ev.php); }
@@ -737,13 +1039,205 @@ export class Stage {
       case 'enemy:down': {
         E.setAnim('death', now());
         const c = this.center(E);
-        if (E.id === 'probe' || E.id === 'loader' || E.id === 'sentinel' || E.id === 'crawler') this.burst(c.x, c.y, 24, C.spark, 2.5, 600, 0.08);
+        if (E.id === 'probe' || E.id === 'loader' || E.id === 'sentinel' || E.id === 'crawler' || this.enemyTags.includes('droid')) { this.burst(c.x, c.y, 24, C.spark, 2.5, 600, 0.08); this.spray(c.x, c.y, 1, 10, FLECK, 2.4, 700, 0.17, 2); }
         if (ev.boss) { this.shake(6, 900); this.burst(c.x, c.y, 50, C.spark, 3, 900, 0.05, 2); play('explosion'); }
         await this.tween(ev.boss ? 900 : 450, (p) => { E.alpha = Math.floor(p * 9) % 2 ? 0.3 : 1; });
         await this.tween(500, (p) => { E.oy = 14 * ease(p); E.alpha = 1 - p; });
         break;
       }
     }
+  }
+
+  // Each signature move's turn on the stage: the sprite's own animation (sig1, sig2, or the fallback), plus effects drawn in code.
+  async playSig(ev, P, E) {
+    const now = () => performance.now(), col = SIG_COLOR[ev.sig] || '#e6d36a', fx = this.bfx || (this.bfx = {}), side = P === this.partner ? 'partner' : 'player', anim = this.sigAnim(E, ev.n);
+    fx.sig = null;
+    this.sigLog.push({ sig: ev.sig, n: ev.n, anim });
+    E.setAnim(anim, now());
+    this.popup('enemy', ev.name, 'info');
+    const land = async (opts = {}) => {
+      if (ev.blocked) { const c = this.center(P); this.ring(c.x + 18, c.y - 10, 30, C.ion, 260, 2); play('block'); }
+      if (ev.dmg) { this.setHp('player', ev.php); await this.hit(P, ev.dmg, { note: ev.blocked ? '(blocked)' : '', ...opts }); }
+    };
+    const shot = async (w = 3, color = col) => { await this.aim(E); const m = this.muzzle(E); play('enemyShot'); this.burst(m.x, m.y, 10, color, 1.8, 170, 0); await this.bolt(m, this.center(P), color, w, 190); };
+    switch (ev.sig) {
+      case 'shutter':
+        play('heavy');
+        fx.shutter = 2;
+        this.drop = { kind: 'bars', p: 0 };
+        await this.tween(260, (p) => { if (this.drop) this.drop.p = p * p; });
+        this.drop = null;
+        this.shake(6, 260);
+        this.burst(232, 176, 16, '#8b949c', 2, 380, 0.03, 2);
+        await this.wait(120);
+        break;
+      case 'confiscate':
+        play('whoosh');
+        if (ev.text) { await this.bolt(this.center(P), this.center(E), C.heal, 2, 220); this.popup(side, `Took ${ev.text}`, 'heavy'); }
+        else { await shot(2); await land(); }
+        break;
+      case 'anchor': {
+        await this.move(E, 0, -16, 180);
+        await this.move(E, 0, 0, 80);
+        play('explosion');
+        this.shake(9, 340);
+        const a = this.anchor('enemy', E);
+        this.burst(a.x, a.y, 30, '#8b949c', 3, 520, 0.03, 3);
+        await land({ heavy: true });
+        break;
+      }
+      case 'siege':
+        await shot(5, '#ffb347');
+        play('explosion');
+        this.move(E, 14, 0, 70).then(() => this.move(E, 0, 0, 240));
+        this.shake(11, 460); this.screenFlash('#ffb347', 0.3, 120);
+        await land({ heavy: true });
+        break;
+      case 'roll': {
+        const c = this.center(E);
+        this.ring(c.x, c.y, 120, '#ff8a3c', 420, 4);
+        this.screenFlash('#ff8a3c', 0.32, 150);
+        play('explosion');
+        this.shake(7, 320);
+        await land({ heavy: true });
+        break;
+      }
+      case 'floor': {
+        const c = this.center(E);
+        play('burn');
+        fx.floor = 3;
+        for (let i = 0; i < 5; i++) { this.burst(c.x - 26, c.y + i * 10, 6, '#ff8a3c', 1, 300, 0.1, 2); await this.wait(50); }
+        break;
+      }
+      case 'overtime': {
+        const hits = ev.hits || [ev.dmg];
+        play('whoosh');
+        await this.move(E, -80, 50, 150);
+        for (const dmg of hits) { if (!dmg) continue; if (ev.blocked) { play('block'); } this.setHp('player', ev.php); await this.hit(P, dmg, { note: ev.blocked ? '(blocked)' : '' }); }
+        await this.move(E, 0, 0, 200);
+        if (ev.winded) { this.popup('enemy', 'WINDED', 'info'); await this.wait(120); }
+        break;
+      }
+      case 'front':
+        play('alarm');
+        fx.front = 2;
+        this.popup('enemy', 'Whistle', 'info');
+        await this.wait(260);
+        break;
+      case 'count': {
+        const c = this.center(E);
+        play('status');
+        this.ring(c.x, c.y, 54, '#e6d36a', 360, 2);
+        this.popup(side, 'Stand still', 'info');
+        await this.wait(240);
+        break;
+      }
+      case 'lights':
+        play('zap');
+        fx.lights = 2;
+        this.screenFlash('#000000', 0.7, 200);
+        await this.wait(240);
+        break;
+      case 'crane': {
+        const pc = this.center(P);
+        play('whoosh');
+        this.drop = { kind: 'box', p: 0, x: pc.x };
+        await this.tween(260, (p) => { if (this.drop) this.drop.p = p * p; });
+        this.drop = null;
+        play('explosion');
+        this.shake(11, 460);
+        this.burst(pc.x, pc.y + 30, 34, '#8b949c', 3.2, 560, 0.03, 3);
+        fx.wreck = 2;
+        await land({ heavy: true });
+        break;
+      }
+      case 'salute':
+        await this.wait(120);
+        await shot(3, C.crit);
+        await land({ crit: true });
+        break;
+      case 'redact': {
+        play('zap');
+        for (let i = 0; i < 16; i++) this.burst(70 + i * 15, 40 + i * 8, 1, '#efe7d6', 0.4, 300, 0, 2);
+        this.screenFlash('#efe7d6', 0.16, 90);
+        this.popup(side, `${ev.text || ''} cut`, 'heavy');
+        await this.wait(260);
+        break;
+      }
+      case 'audit': {
+        this.screenFlash('#ffffff', 0.34, 130);
+        if (ev.text) this.popup('enemy', ev.text, 'heavy');
+        await shot(4, '#ffffff');
+        this.shake(8, 340);
+        await land({ heavy: true });
+        break;
+      }
+      default: await this.wait(200);
+    }
+    for (const st of ev.statuses || []) { play('status'); this.popup(side, st.toUpperCase(), `st-${st}`); this.flash(P, col, 260); }
+    await this.wait(140);
+  }
+
+  // What a boss has left on the stage: bars, slag, workers, the dark. Drawn in code, so it works for every boss whatever art has arrived.
+  drawBossFx(g, t, E, stage) {
+    const f = this.bfx, D2 = this.drop;
+    if (!f && !D2) return;
+    const pulse = reduceMotion ? 0.5 : 0.5 + 0.5 * Math.sin(t / 170);
+    if (stage === 'under' && f) {
+      if (f.floor > 0) {
+        for (let i = 0; i < 16; i++) {
+          const x = i * 25, wob = reduceMotion ? 0 : Math.sin(t / 240 + i * 1.7) * 2;
+          g.fillStyle = i % 2 ? `rgba(255,120,40,${0.3 + 0.25 * pulse})` : `rgba(255,190,70,${0.22 + 0.2 * pulse})`;
+          g.fillRect(x, 186 + wob, 26, 30 - wob);
+        }
+      }
+      if (f.wreck > 0) {
+        g.fillStyle = '#5a3a26'; g.fillRect(146, 146, 58, 42);
+        g.fillStyle = '#3a261a'; for (let x = 150; x < 204; x += 9) g.fillRect(x, 146, 2, 42);
+        g.fillStyle = '#7d5335'; g.fillRect(146, 146, 58, 3);
+      }
+      if (f.sig === 'crane') {
+        const a = this.player ? this.center(this.player) : { x: 104 }, k = f.left <= 1 ? 1 : 0.6;
+        g.fillStyle = `rgba(0,0,0,${0.3 + 0.25 * k})`; g.beginPath(); g.ellipse(a.x, 204, 46 * k + 8, 9, 0, 0, Math.PI * 2); g.fill();
+        g.strokeStyle = `rgba(212,72,58,${0.5 + 0.4 * pulse})`; g.lineWidth = 1; g.beginPath(); g.ellipse(a.x, 204, 46 * k + 8, 9, 0, 0, Math.PI * 2); g.stroke();
+      }
+      return;
+    }
+    if (stage !== 'over') return;
+    if (f) {
+      const c = this.center(E);
+      if (f.front > 0) {
+        for (let i = 0; i < 3; i++) {
+          const x = 206 + i * 21, bob = reduceMotion ? 0 : Math.round(Math.sin(t / 420 + i * 2) * 1);
+          g.fillStyle = '#14171b'; g.fillRect(x - 6, 124 + bob, 12, 42); g.fillRect(x - 4, 166, 3, 16); g.fillRect(x + 1, 166, 3, 16);
+          g.fillStyle = '#1b1f24'; g.fillRect(x - 4, 113 + bob, 8, 10);
+          g.fillStyle = '#b08a35'; g.fillRect(x - 5, 111 + bob, 10, 3);
+        }
+      }
+      if (f.shutter > 0 && !(D2 && D2.kind === 'bars')) this.drawBars(g, 1);
+      if (f.sig === 'siege' || f.sig === 'roll' || f.sig === 'audit') {
+        const hot = f.sig === 'audit' ? '255,255,255' : '255,160,60', r = E.size * (f.sig === 'roll' ? 0.34 : 0.22) * (0.8 + 0.3 * pulse);
+        const p = f.sig === 'siege' ? this.muzzle(E) : c, rg = g.createRadialGradient(p.x, p.y, 1, p.x, p.y, r);
+        rg.addColorStop(0, `rgba(${hot},.85)`); rg.addColorStop(1, `rgba(${hot},0)`);
+        g.fillStyle = rg; g.fillRect(p.x - r, p.y - r, r * 2, r * 2);
+      }
+      if (f.lights > 0) {
+        g.fillStyle = 'rgba(4,5,7,.66)'; g.fillRect(0, 0, W, H);
+        g.fillStyle = `rgba(230,240,255,${0.5 + 0.5 * pulse})`; g.fillRect(Math.round(c.x - 10), Math.round(c.y - E.tall * 0.34), 3, 2);
+      }
+    }
+    if (D2 && D2.kind === 'bars') this.drawBars(g, D2.p);
+    if (D2 && D2.kind === 'box') {
+      const y = -46 + 200 * D2.p;
+      g.fillStyle = '#6d4a30'; g.fillRect(D2.x - 34, y, 68, 46);
+      g.fillStyle = '#3a261a'; for (let x = D2.x - 30; x < D2.x + 34; x += 10) g.fillRect(x, y, 2, 46);
+    }
+  }
+  drawBars(g, p) {
+    const bottom = 30 + 150 * p;
+    g.fillStyle = '#6a747e'; for (let x = 204; x < 262; x += 9) g.fillRect(x, 26, 3, bottom - 26); g.fillStyle = '#2a3036'; for (let x = 207; x < 262; x += 9) g.fillRect(x, 26, 1, bottom - 26);
+    g.fillStyle = '#8a949e'; g.fillRect(200, 22, 66, 5);
+    if (p >= 1) g.fillRect(200, bottom - 3, 66, 4);
   }
 
   // ---------- drawing ----------
@@ -863,6 +1357,17 @@ export class Stage {
     return (this.bgCache[key] = c);
   }
 
+  // A faint light behind the figure lifts dark clothes off the scene; a soft shadow grounds the feet.
+  groundShadow(x, y, rx, ry) {
+    const g = this.ctx;
+    const up = g.createRadialGradient(x, y - rx * 0.95, 4, x, y - rx * 0.95, rx * 1.55);
+    up.addColorStop(0, 'rgba(205,220,230,0.17)'); up.addColorStop(1, 'rgba(205,220,230,0)');
+    g.fillStyle = up; g.fillRect(x - rx * 1.6, y - rx * 2.6, rx * 3.2, rx * 3.2);
+    g.save(); g.translate(x, y + 2); g.scale(1, ry / rx);
+    const sh = g.createRadialGradient(0, 0, 2, 0, 0, rx * 0.8);
+    sh.addColorStop(0, 'rgba(0,0,0,0.62)'); sh.addColorStop(0.6, 'rgba(0,0,0,0.34)'); sh.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = sh; g.beginPath(); g.arc(0, 0, rx * 0.8, 0, Math.PI * 2); g.fill(); g.restore();
+  }
   pad(x, y, rx, ry) {
     const g = this.ctx;
     g.fillStyle = 'rgba(0,0,0,0.45)'; g.beginPath(); g.ellipse(x, y + 3, rx, ry, 0, 0, Math.PI * 2); g.fill();
@@ -875,6 +1380,7 @@ export class Stage {
   drawActor(actor, t) {
     if (!actor || actor.alpha <= 0) return;
     const g = this.ctx, a = this.anchor(actor.side, actor), f = actor.frame(t), s = actor.scale;
+    if (!f.img) return; // art still loading
     const w = Math.round(f.sw * s), h = Math.round(f.sh * s);
     let bob = 0;
     if (!reduceMotion) bob = actor.side === 'enemy' ? Math.sin(t / (HOVER.has(actor.id) ? 380 : 650)) * (HOVER.has(actor.id) ? 3 : 1) : Math.sin(t / 720) * 1.2;
@@ -895,23 +1401,33 @@ export class Stage {
 
   draw(t) {
     if (!this.el.isConnected || !this.enemy) return;
-    for (const tw of [...this.tweens]) {
+    const real = t;
+    // Hit-stop: while it lasts the scene's clock doesn't move. Only the shake carries on, which is what sells the blow.
+    const frozen = this.stopUntil > 0 && t < this.stopUntil;
+    if (frozen) t = this.stopAt;
+    else if (this.stopUntil > 0) this.endStop();
+    if (!frozen) for (const tw of [...this.tweens]) {
       const p = Math.max(0, Math.min(1, (t - tw.start) / tw.dur));
       tw.fn(p);
       if (p >= 1) { this.tweens.splice(this.tweens.indexOf(tw), 1); tw.done(); }
     }
     const g = this.ctx;
     g.save();
-    if (t < this.shakeUntil) g.translate(Math.round((Math.random() * 2 - 1) * this.shakeMag), Math.round((Math.random() * 2 - 1) * this.shakeMag));
-    const backdrop = this.background(this.sector, this.boss, this.theme);
-    g.drawImage(backdrop, 0, 0);
+    if (real < this.shakeUntil) { const m = this.shakeMag * Math.min(1, (this.shakeUntil - real) / this.shakeLen + 0.25); g.translate(Math.round((Math.random() * 2 - 1) * m), Math.round((Math.random() * 2 - 1) * m)); }
+    const Z = this.zoom;
+    if (Z) { g.fillStyle = '#000'; g.fillRect(0, 0, W, H); }
+    if (Z && Z.k > 1.001) { g.translate(Z.x, Z.y); g.scale(Z.k, Z.k); g.translate(-Z.x, -Z.y); }
+    const painted = paintedBackdrop(this.theme, this.sector, this.boss);
+    const backdrop = painted.canvas ? null : this.background(this.sector, this.boss, this.theme);
+    if (painted.canvas) g.drawImage(painted.canvas, 0, 0, W, H); else g.drawImage(backdrop, 0, 0);
+    const underRoof = painted.canvas ? !painted.open : backdrop.indoor;
     if (this.boss && !reduceMotion) { g.fillStyle = `rgba(212,72,58,${0.06 + 0.06 * Math.sin(t / 300)})`; g.fillRect(0, 0, W, H); }
     g.fillStyle = this.theme === 'foundry' ? 'rgba(255,150,70,0.35)' : 'rgba(160,180,200,0.22)';
     // Rain outdoors; in the foundry, sparks. Under a roof, neither.
-    if (!backdrop.indoor || this.theme === 'foundry') for (const d of reduceMotion ? [] : this.rain) { d.y += d.v; d.x -= d.v * 0.25; if (d.y > H) { d.y = -6; d.x = Math.random() * (W + 40); } g.fillRect(Math.round(d.x), Math.round(d.y), 1, 4); }
+    if (!underRoof || this.theme === 'foundry') for (const d of reduceMotion ? [] : this.rain) { if (!frozen) { d.y += d.v; d.x -= d.v * 0.25; if (d.y > H) { d.y = -6; d.x = Math.random() * (W + 40); } } g.fillRect(Math.round(d.x), Math.round(d.y), 1, 4); }
 
     const ea = this.anchor('enemy');
-    this.pad(ea.x, ea.y + 1, 58, 11);
+    if (painted.canvas) this.groundShadow(ea.x, ea.y + 1, Math.max(26, (this.enemy ? this.enemy.tall : 100) * 0.5), 11); else this.pad(ea.x, ea.y + 1, 58, 11);
     const E = this.enemy, ec = this.center(E);
     if ((this.intent === 'heavy' && !this.stun) || this.heavyBoost) {
       const pulse = this.heavyBoost ? 0.55 : 0.25 + 0.12 * Math.sin(t / 160);
@@ -928,14 +1444,16 @@ export class Stage {
       for (let i = 0; i < 3; i++) { const a = t / 300 + (i * Math.PI * 2) / 3; g.fillStyle = C.ion; g.fillRect(Math.round(ec.x + Math.cos(a) * 16), Math.round(ec.y - E.size * 0.45 + Math.sin(a) * 4), 2, 2); }
     }
 
+    this.drawBossFx(g, t, E, 'under');
     const pa = this.anchor('player');
-    this.pad(pa.x, this.player && this.player.sheet ? pa.y - 2 : pa.y - 16, 84, 16);
+    if (painted.canvas) this.groundShadow(pa.x, pa.y - 2, 84, 16); else this.pad(pa.x, this.player && this.player.sheet ? pa.y - 2 : pa.y - 16, 84, 16);
     if (this.allies && this.allyActors && this.allyActors.length && this.player && this.player.alpha > 0) {
       // Freed prisoners from the PixelLab sheet stand behind the player's left shoulder.
       this.allyActors.forEach((al, i) => {
         const f = al.frame(t), sc = al.scale, w = Math.round(f.sw * sc), h = Math.round(f.sh * sc);
         g.globalAlpha = this.player.alpha;
-        g.drawImage(f.img, f.sx, 0, f.sw, f.sh, Math.round(18 + i * 26 - w / 2), Math.round(184 - h + 8 * sc), w, h);
+        const hd = al.sheet && al.sheet.hd;
+        g.drawImage(f.img, f.sx, 0, f.sw, f.sh, Math.round(18 + i * 26 - w / 2), Math.round((hd ? 192 : 184) - h + (hd ? (f.pad || 0) : 8) * sc), w, h);
         g.globalAlpha = 1;
       });
     } else if (this.allies && this.allySprite && this.player && this.player.alpha > 0) {
@@ -960,6 +1478,7 @@ export class Stage {
       g.beginPath(); g.ellipse(pc.x + 10, pc.y, 56, 50, 0, -Math.PI * 0.55, Math.PI * 0.05); g.stroke();
     }
 
+    this.drawBossFx(g, t, E, 'over');
     for (const b of [...this.bolts]) {
       const p = Math.max(0, (t - b.born) / b.dur);
       if (p >= 1) { this.bolts.splice(this.bolts.indexOf(b), 1); continue; }
@@ -977,16 +1496,39 @@ export class Stage {
       if (p >= 1) { this.rings.splice(this.rings.indexOf(r), 1); continue; }
       g.strokeStyle = r.color; g.globalAlpha = 1 - p; g.lineWidth = r.w; g.beginPath(); g.ellipse(r.x, r.y, r.r1 * ease(p), r.r1 * ease(p) * 0.8, 0, 0, Math.PI * 2); g.stroke(); g.globalAlpha = 1;
     }
-    for (const pt of [...this.particles]) {
-      const age = Math.max(0, t - pt.born);
-      if (age > pt.life) { this.particles.splice(this.particles.indexOf(pt), 1); continue; }
-      pt.vy += pt.g; pt.x += pt.vx; pt.y += pt.vy;
-      g.globalAlpha = 1 - age / pt.life; g.fillStyle = pt.color;
+    // Backwards and in place: this runs every frame, with up to a few hundred of them.
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const pt = this.particles[i], age = Math.max(0, t - pt.born);
+      if (age > pt.life) { const last = this.particles.pop(); if (i < this.particles.length) this.particles[i] = last; continue; }
+      if (!frozen) {
+        pt.vy += pt.g; pt.x += pt.vx; pt.y += pt.vy;
+        if (pt.kind === 'casing' && pt.y > pt.floor) { pt.y = pt.floor; pt.vy *= pt.bounced ? 0 : -0.42; pt.vx *= 0.55; pt.g = pt.bounced ? 0 : pt.g; pt.bounced = 1; }
+      }
+      g.fillStyle = pt.color;
+      if (pt.kind === 'casing') {
+        // Long then end-on as it tumbles. Not rounded to the stage's grid: these are smaller than a stage pixel's worth of art.
+        const flat = pt.bounced && pt.vy === 0, turn = flat || Math.floor(age / 55) % 2 === 0, w = (turn ? 3.4 : 1.6) * pt.size, h = (turn ? 1.5 : 3) * pt.size;
+        g.globalAlpha = Math.min(1, (pt.life - age) / (pt.life * 0.3));
+        g.fillRect(pt.x - w / 2, pt.y - h / 2, w, h);
+        continue;
+      }
+      g.globalAlpha = 1 - age / pt.life;
       const sz = pt.size > 3 ? pt.size * (1 + age / pt.life) : pt.size;
       g.fillRect(Math.round(pt.x - sz / 2), Math.round(pt.y - sz / 2), Math.max(1, Math.round(sz)), Math.max(1, Math.round(sz)));
     }
     g.globalAlpha = 1;
     g.restore();
-    if (this.dim > 0) { g.fillStyle = `rgba(4,5,7,${this.dim})`; g.fillRect(0, 0, W, H); this.drawActor(E, t); }
+    if (this.dim > 0) {
+      g.fillStyle = `rgba(4,5,7,${this.dim})`; g.fillRect(0, 0, W, H);
+      g.save();
+      if (Z && Z.k > 1.001) { g.translate(Z.x, Z.y); g.scale(Z.k, Z.k); g.translate(-Z.x, -Z.y); }
+      this.drawActor(E, t);
+      g.restore();
+    }
+    const F = this.frameFlash;
+    if (F) {
+      if (real >= F.until) this.frameFlash = null;
+      else { g.globalAlpha = F.alpha * ((F.until - real) / F.ms); g.fillStyle = F.color; g.fillRect(0, 0, W, H); g.globalAlpha = 1; }
+    }
   }
 }

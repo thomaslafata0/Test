@@ -18,7 +18,7 @@ const saved = (p) => p.evaluate(() => JSON.parse(localStorage.getItem('cinder-ce
   await p.tap('button[data-a="draftdrone"][data-v="mender"]'); await p.waitForTimeout(100);
   assert.strictEqual(await p.getAttribute('button[data-a="draftdrone"][data-v="mender"]', 'aria-pressed'), 'true');
   await p.tap('button[data-a="step"][data-v="4"]'); await p.waitForTimeout(100);
-  await p.tap('button[data-a="create"]'); await p.waitForTimeout(400);
+  await p.tap('button[data-a="create"]'); await p.waitForTimeout(150); await p.click('button[data-a="scenenext"]', { timeout: 1500 }).catch(() => {}); await p.waitForTimeout(400);
   assert.strictEqual((await saved(p)).char.drone.type, 'mender', 'the choice sticks');
   console.log('PASS choosing a drone at creation');
   await ctx.close();
@@ -69,7 +69,7 @@ const saved = (p) => p.evaluate(() => JSON.parse(localStorage.getItem('cinder-ce
   await guest.click('button[data-a="step"][data-v="3"]'); await guest.waitForTimeout(100);
   await guest.click('button[data-a="draftdrone"][data-v="hornet"]');
   await guest.click('button[data-a="step"][data-v="4"]'); await guest.waitForTimeout(100);
-  await guest.click('button[data-a="create"]'); await guest.waitForTimeout(600);
+  await guest.click('button[data-a="create"]'); await guest.waitForTimeout(150); await guest.click('button[data-a="scenenext"]', { timeout: 1500 }).catch(() => {}); await guest.waitForTimeout(600);
   s = await saved(host);
   assert.strictEqual(s.char2.drone.type, 'hornet', 'the friend brings their drone');
   assert.strictEqual(s.char.drone.type, 'aegis');

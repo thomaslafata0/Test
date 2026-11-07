@@ -1,5 +1,6 @@
 // Pure game logic. No DOM access, so the balance simulator can run it in Node.
 import * as D from './data.js';
+import { BOSS_MOVES, bossLine, bossLines, mapIntro, areaBand, CODEX, codexUnlocked } from './lore.js';
 
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const randInt = (rng, a, b) => a + Math.floor(rng() * (b - a + 1));
@@ -42,12 +43,12 @@ export const hardTier = (sector) => (sector > 10 ? 2 : sector > 5 ? 1 : 0);
 export const hardAt = (sector) => HARD[hardTier(sector)];
 // In a raid the current sector sets the tier; in the yard, the deepest sector the cell has reached.
 export const hard = (s) => hardAt(s.run ? s.run.sector : (s.meta && s.meta.bestSector) || 0);
-export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.012, bossHp: 2.1, bossAtk: 1.4, enemyAtk: 1.74, enemyHp: 1.78, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 1.5, strAtk: 0.6, agiCrit: 0.05, agiDodge: 0.035, intOverload: 5, chaHesitate: 0.055, chaCredits: 0.05, wanted: 0.025, ambush: 1.5,
+export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.012, bossHp: 2.1, bossAtk: 1.4, enemyAtk: 1.74, enemyHp: 2.047, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 1.5, strAtk: 0.6, agiCrit: 0.05, agiDodge: 0.035, intOverload: 5, chaHesitate: 0.055, chaCredits: 0.05, wanted: 0.025, ambush: 1.5,
   upgradeCost: 60, eliteGear: 0.3, shopLegendary: 0.06, cover: 0.5, agiAtk: 1.2,
   // Enemy strength in sectors 1-5. Nobody levels up during a raid, so a first raid has to be winnable on level-1 stats.
   earlyCurve: [1, 0.95, 0.88, 0.84, 0.85, 0.95, 0.95, 0.95, 0.95, 0.95],
   // Rewards shrink once an operative is more than overFree levels above the sector. reinforce: enemy strength by districts already freed.
-  extractFail: 0.15, droneAtk: 1, droneShield: 1, droneHeal: 1, droneTech: 1, overFree: 2, overStep: 0.2, overMin: 0.25, defendHeavy: 0.35, smokeEscape: 0.7, priceAll: 1.15, trainBase: 3, trainStep: 1, fightDrop: FIGHT_DROP, eliteDrop: ELITE_DROP, coopCr: 1, repeatPay: 2, reinforce: [0, 0.5, 0.5, 0.35], bossRepeatXp: 0.5, bossRepeatResolve: 1,
+  extractFail: 0.15, droneAtk: 1, droneShield: 1, droneHeal: 1, droneTech: 1, overFree: 2, overStep: 0.2, overMin: 0.25, defendHeavy: 0.35, smokeEscape: 0.7, priceAll: 1.265, trainBase: 3, trainStep: 1, fightDrop: FIGHT_DROP, eliteDrop: ELITE_DROP, coopCr: 1, repeatPay: 2, reinforce: [0, 0.5, 0.5, 0.35], bossRepeatXp: 0.5, bossRepeatResolve: 1,
   rangedSpread: 0.15, meleeSpread: 0.3, shootGuard: 0.15, momentum: 0.15, coopHp: 2.1, coopAtk: 1.4, coopExtra: 3, reviveHp: 0.2, reviveAfter: 0.15, downsPerRaid: 1, bleedRounds: 3,
   // Share of unsecured credits and XP lost, by position in the five-sector run to the next boss. Beating the boss secures everything.
   extractRates: [0.8, 0.65, 0.5, 0.4, 0], escapeRates: [0.9, 0.85, 0.75, 0.65, 0.6],
@@ -63,7 +64,7 @@ export const sectorName = (n, mapId = 'garrison') => {
   const base = list[(n - 1) % len];
   return n > len ? `Sublevel ${Math.ceil(n / len) - 1}: ${base}` : base;
 };
-export const trainingCost = (level) => TUNE.trainBase + Math.round(TUNE.trainStep * level);
+export const trainingCost = (level) => Math.ceil((TUNE.trainBase + Math.round(TUNE.trainStep * level)) * 1.1 - 1e-9);
 export const xpToNext = (level) => Math.round(20 * Math.pow(1.35, level - 1));
 // Armour scales damage down proportionally, so it never makes anyone immune.
 export const mitigate = (raw, def) => Math.max(1, Math.round((raw * raw) / (raw + def)));
@@ -759,7 +760,7 @@ export function markSum(c) {
   for (const id of c.marks || []) { const m = D.MARKS[id]; if (m) for (const k of Object.keys(t)) t[k] += m[k] || 0; }
   return t;
 }
-export const price = (s, cost) => Math.round(cost * hard(s).price * TUNE.priceAll * Math.max(0.6, 1 - 0.04 * (attr(s.char, 'cha') - 1)) * (s.char.background === 'preacher' ? 0.9 : 1) * (has(s.char, 'favour') ? 0.9 : 1));
+export const price = (s, cost) => Math.ceil(cost * hard(s).price * TUNE.priceAll * Math.max(0.6, 1 - 0.04 * (attr(s.char, 'cha') - 1)) * (s.char.background === 'preacher' ? 0.9 : 1) * (has(s.char, 'favour') ? 0.9 : 1));
 export const meetsReq = (c, req) => !req || Object.entries(req).every(([k, v]) => attr(c, k) >= v);
 export const reqText = (req) => req ? Object.entries(req).map(([k, v]) => `${D.ATTRS[k].short} ${v}`).join(', ') : '';
 
@@ -861,7 +862,7 @@ export function spendAttr(s, k) {
 
 // Reset the attribute points earned from levelling. Expensive, and dearer each time and each level.
 export const respecPoints = (c) => Object.values(c.spent || {}).reduce((t, v) => t + v, 0);
-export const respecCost = (c) => Math.round(80 * c.level * (1 + 0.5 * (c.respecs || 0)));
+export const respecCost = (c) => Math.ceil(88 * c.level * (1 + 0.5 * (c.respecs || 0)));
 export function respec(s) {
   const c = s.char, n = respecPoints(c), cost = price(s, respecCost(c));
   if (!n || c.credits < cost) return false;
@@ -874,7 +875,7 @@ export function respec(s) {
 }
 
 // Noodles: a hot meal before the raid. +5% XP until you're next back in town.
-export const noodleCost = (s) => Math.round(2 * consumableScale(s.char));
+export const noodleCost = (s) => Math.ceil(2.2 * consumableScale(s.char));
 export function buyNoodles(s) {
   const c = s.char;
   if (c.fed || c.credits < noodleCost(s)) return false;
@@ -1162,6 +1163,13 @@ function beginSector(s, rng) {
   const r = s.run;
   s.meta.bestSector = Math.max(s.meta.bestSector || 0, r.sector); // reached counts for the record; cleared still drives contracts and insertions
   r.room = 0; r.fightsDone = 0; r.cooldowns = {}; r.usedThisFight = []; r.sectorCredits = 0;
+  // The story of the place: a line on arrival and on reaching each of a map's three areas. Kept in the run, so both co-op screens show it.
+  { const band = areaBand(r.sector), first = r.band === undefined;
+    if (first || band !== r.band) {
+      r.band = band;
+      r.areaLine = { sector: r.sector, text: `${first ? `${mapIntro(r.map)} ` : ''}${mapIntro(r.map, r.sector)}` };
+      log(s, r.areaLine.text, 'sys');
+    } }
   // Boss sectors and the opening sector stay clear; everything else rolls a condition.
   r.cond = r.sector === 1 || isBossSector(r.sector) ? 'none' : pickWeighted(rng, D.SECTOR_CONDS.map((x) => [x.id, x.weight]));
   if (r.cond !== 'none') log(s, `${condOf(r).name}: ${condOf(r).desc}`, 'info');
@@ -1335,7 +1343,8 @@ function startFight(s, rng, kind) {
   if (hasPerk(c, 'warpaint')) addStatus(e.st, e.fresh, { shaken: pv(c, 'warpaint'), exposed: pv(c, 'warpaint') });
   e.fresh = [];
   if (hasPerk(c, 'dressing')) { const st = stats(s); c.hp = Math.min(st.maxHp, c.hp + Math.round(st.maxHp * pv(c, 'dressing') / 100)); }
-  log(s, e.line, boss ? 'boss' : 'sys');
+  if (boss) bossMeet(s, e, rng);
+  log(s, boss ? e.intro.beats[e.intro.beats.length - 1] : e.line, boss ? 'boss' : 'sys');
   if (e.quirk) log(s, `${e.bark} (${quirkById(e.quirk).name}: ${quirkById(e.quirk).desc})`, 'info');
   if (e.affix) log(s, `${D.AFFIXES[e.affix].name}: ${D.AFFIXES[e.affix].desc}`, 'bad');
   s.screen = 'combat';
@@ -1393,7 +1402,7 @@ export function makeEnemy(sector, boss, rng, mapId = 'garrison', threat = 0, rei
   }
   const base = D.ENEMIES[id];
   const tm = (1 + 0.12 * threat) * (1 + (TUNE.reinforce[reinforced] || 0)) * (reinforced ? 1 : TUNE.earlyCurve[sector - 1] || 1);
-  const hp = Math.round(base.hp * TUNE.enemyHp * hardAt(sector).hp * tm * growth(lvl, TUNE.hpLin, TUNE.hpQuad) * (boss ? TUNE.bossHp : 1));
+  const hp = Math.ceil(base.hp * TUNE.enemyHp * hardAt(sector).hp * tm * growth(lvl, TUNE.hpLin, TUNE.hpQuad) * (boss ? TUNE.bossHp : 1));
   const e = {
     id, name: base.name, tags: base.tags || [], line: base.line, portrait: base.portrait || null, boss,
     hp, maxHp: hp,
@@ -1405,6 +1414,15 @@ export function makeEnemy(sector, boss, rng, mapId = 'garrison', threat = 0, rei
     intents: D.SPECIALS[id] ? { ...base.intents, special: Math.round(2 * TUNE.statusRate) } : base.intents,
     intent: 'attack', lastIntent: null, stun: 0, shaken: false, st: {}, fresh: [], phase2: false,
   };
+  const mv = !boss && D.MAP_VARIANT_IDS.includes(id) && D.MAP_VARIANT[map.id];
+  if (mv) {
+    e.name = `${mv.prefix} ${e.name}`; e.variant = map.id;
+    if (mv.hp) e.hp = e.maxHp = Math.round(e.hp * mv.hp);
+    if (mv.atk) e.atk = Math.round(e.atk * mv.atk);
+    if (mv.def) e.def += mv.def;
+    if (mv.spd) e.spd = Math.max(1, e.spd + mv.spd);
+  }
+  if (boss) e.bs = bossState(e);
   e.intent = chooseIntent(e, rng);
   return e;
 }
@@ -1419,6 +1437,7 @@ function rollIntent(e, rng, last) {
 }
 // The enemy's next move is rolled one turn ahead, so a scanner can show it.
 function chooseIntent(e, rng) {
+  if (e.boss) return bossChoose(e, rng);
   let i = e.next || rollIntent(e, rng, e.lastIntent);
   if (!e.intents[i] && i !== 'attack') i = rollIntent(e, rng, e.lastIntent);
   if (i === 'repair' && e.hp > e.maxHp * 0.6) i = 'attack';
@@ -1440,9 +1459,18 @@ export function bestAttack(s) {
 // What the enemy's telegraphed attack can do, by the same sums as the attack itself. Null when the next move isn't a plain attack.
 export function incomingRange(s) {
   const r = s.run, e = r.enemy, c = s.char;
-  if (!e || e.stun > 0 || (e.intent !== 'attack' && e.intent !== 'heavy')) return null;
+  if (!e || e.stun > 0) return null;
+  if (e.boss && intentHidden(s)) return null;
+  if (e.intent === 'sig') return sigRange(s);
+  if (e.intent !== 'attack' && e.intent !== 'heavy') return null;
   const st = stats(s), heavy = e.intent === 'heavy', q = e.quirk ? quirkById(e.quirk) : null;
-  const base = e.atk * (heavy ? 2.2 : 1) * outMult(e.st, r.pst);
+  const twice = !heavy && e.bs && e.bs.twice; // Vane with his coat off: two lighter shots
+  const base = e.atk * (heavy ? 2.2 : twice ? TWICE_MULT : 1) * outMult(e.st, r.pst);
+  if (twice) {
+    const lo = mitigate(base * 0.85, st.def), hi = mitigate(base * 1.15, st.def), g = (n) => droneShield(c, Math.max(1, Math.round(n * 0.5 * (hasTrait(c, 'bulwark') ? 0.7 : 1))));
+    const hiNow = droneShield(c, hi) * 2;
+    return { min: droneShield(c, lo) * 2, max: hiNow, defMin: g(lo) * 2, defMax: g(hi) * 2, lethal: hiNow >= c.hp };
+  }
   const min = mitigate(base * 0.85 * (q && q.gamble ? 0.5 : 1), st.def), max = mitigate(base * 1.15 * (q && q.gamble ? 1.8 : 1), st.def);
   const guarded = (n) => droneShield(c, Math.max(1, Math.round(n * (heavy ? TUNE.defendHeavy : 0.5) * (hasTrait(c, 'bulwark') ? 0.7 : 1))));
   const hiNow = droneShield(c, max);
@@ -1454,15 +1482,18 @@ export function autoAction(s) {
   if (canUse(s, 'revive')) return 'revive';
   if (c.hp < st.maxHp * 0.35 && c.items.stim > 0) return 'stim';
   if (!free && mechanicOf(r) === 'vents' && r.vent === 1) return 'defend';
-  if (!free && (e.intent === 'heavy' || (e.intent === 'special' && D.SPECIALS[e.id] && D.SPECIALS[e.id].status))) return 'defend';
+  const adv = sigAdvice(s), blind = intentHidden(s);
+  if (!free && adv.act) return adv.act;
+  if (!free && !blind && (e.intent === 'heavy' || (e.intent === 'special' && D.SPECIALS[e.id] && D.SPECIALS[e.id].status))) return 'defend';
   if ((e.boss || e.elite) && c.items.thermal > 0 && e.hp > e.maxHp * 0.3) return 'thermal';
   if (e.tags.includes('droid') && c.items.ion > 0 && !free && e.hp > e.maxHp * 0.5) return 'ion';
   if (canUse(s, 'intimidate') && intimidateChance(s) > 0.5) return 'intimidate';
-  const hit = bestAttack(s);
-  if (!free && e.intent === 'guard' && hit === 'shoot') return 'defend';
+  const hit = adv.hit || bestAttack(s);
+  if (!free && !blind && e.intent === 'guard' && hit === 'shoot') return 'defend';
   for (const k of ['overload', 'smash', 'aimed', 'blast', 'burst', 'suppress']) {
     if (!canUse(s, k) || !skillsOf(c).includes(k)) continue;
     if (k === 'smash' && D.MELEE_COUNTER[e.id] && !free) continue;
+    if (!skillFits(k, adv.hit)) continue;
     return k;
   }
   return hit;
@@ -1485,8 +1516,9 @@ export function intimidateChance(s) {
 export const partnerDown = (s) => { const pc = isCoop(s) ? charAt(s, 1 - actorIdx(s)) : null; return pc && pc.downed > 0 ? pc : null; };
 export function canUse(s, act) {
   if (act === 'revive') return !!partnerDown(s);
-  if (['attack', 'shoot', 'strike', 'defend', 'run'].includes(act)) return true;
-  if (D.SKILLS[act]) return skillsOf(s.char).includes(act) && !(s.run.cooldowns[act] > 0);
+  if (act === 'run') return !runBlocked(s);
+  if (['attack', 'shoot', 'strike', 'defend'].includes(act)) return true;
+  if (D.SKILLS[act]) return skillsOf(s.char).includes(act) && !(s.run.cooldowns[act] > 0) && !redactedSkill(s, act);
   return (s.char.items[act] || 0) > 0;
 }
 
@@ -1510,12 +1542,13 @@ function hitMult(s, melee, { mult = 1, unarmoredBonus = 1 } = {}) {
   if (hasPerk(c, 'grudge') && (e.elite || e.boss)) mult *= 1 + pv(c, 'grudge') / 100;
   if (hasPerk(c, 'adrenal') && c.hp < stats(s).maxHp * 0.35) mult *= 1 + pv(c, 'adrenal') / 100;
   if (hasPerk(c, 'coupdegrace') && e.hp < e.maxHp * 0.3) mult *= 1 + pv(c, 'coupdegrace') / 100;
+  if (e.bs) mult *= bossTakes(e, melee);
   return mult * outMult(r.pst, e.st);
 }
 const spreadOf = (melee) => (melee ? TUNE.meleeSpread : TUNE.rangedSpread);
 // Damage range of a basic Shoot or Strike against the current enemy, before crits.
 export function attackRange(s, melee) {
-  const r = s.run, e = r.enemy, st = stats(s), sp = spreadOf(melee), m = hitMult(s, melee);
+  const r = s.run, e = r.enemy, st = stats(s), sp = spreadOf(melee), m = hitMult(s, melee, { mult: redactMult(s, melee ? 'strike' : 'shoot') });
   const pierce = !melee && weaponOf(s.char).type === 'tech' ? 0.5 : 0, cover = !melee && e.intent === 'guard' && e.stun === 0 ? TUNE.cover : 1;
   const hit = (k) => Math.max(1, Math.round(mitigate((melee ? st.atkM : st.atk) * k * m, e.def * (1 - pierce)) * cover));
   return [hit(1 - sp), hit(1 + sp)];
@@ -1525,7 +1558,9 @@ function strike(s, rng, { mult = 1, critBonus = 0, pierce = 0, unarmoredBonus = 
   const first = !r.struck;
   mult = hitMult(s, melee, { mult, unarmoredBonus });
   r.momentum = false;
-  const crit = forceCrit || (first && hasUnique(c, 'ostrane')) || rng() < critChance(st, e, melee) + critBonus;
+  // Lights Out: a shot in the dark can go anywhere. A swing can't.
+  if (!melee && e.bs && e.bs.lights > 0 && rng() < D.BOSS_KIT.kell.moves.lights.miss) { r.struck = true; feat(s, 'shots'); return { dmg: 0, crit: false, missed: true }; }
+  const crit = forceCrit || (!melee && e.sig && e.sig.id === 'salute') || (first && hasUnique(c, 'ostrane')) || rng() < critChance(st, e, melee) + critBonus;
   if (crit) mult *= hasPerk(c, 'hollow') ? pv(c, 'hollow') : 1.6;
   if (w.type === 'tech') pierce = Math.max(pierce, 0.5);
   r.struck = true;
@@ -1563,7 +1598,7 @@ function meleeCounter(s, rng) {
   if (!mc || e.hp <= 0 || e.stun > 0) return;
   let dmg = 0;
   if (mc.mult) { dmg = mitigate(e.atk * mc.mult, stats(s).def); c.hp -= dmg; }
-  const added = mc.status ? addPlayerStatus(s, mc.status, rng) : [];
+  const added = mc.status ? addPlayerStatus(s, e.bs && e.bs.glow ? { burn: 3 } : mc.status, rng) : [];
   fx(s, { who: 'enemy', type: 'counter', dmg, text: mc.name, statuses: added });
   log(s, `${mc.name}: ${dmg ? `you take ${dmg}` : 'it bites back'}${added.length ? ` and you are ${added.map((k) => D.STATUSES[k].name).join(' and ')}` : ''}.`, 'bad');
 }
@@ -1603,14 +1638,15 @@ function playerActInner(s, act, rng, who) {
 
   switch (act) {
     case 'shoot': {
-      const { dmg, crit } = strike(s, rng);
+      const { dmg, crit, missed } = strike(s, rng, { mult: redactMult(s, 'shoot') });
       r.ready = false; r.keepDistance = true;
       fx(s, { who: 'player', type: 'shoot', dmg, crit, guarded, ready: wasReady });
+      if (missed) { log(s, 'You fire into the dark and hit nothing.', 'info'); break; }
       log(s, `${wasReady ? 'Steadied shot. ' : ''}${crit ? 'Critical! ' : ''}You hit ${e.name} for ${dmg}${guarded ? ' through cover' : ''}.`, crit ? 'crit' : 'hit');
       break;
     }
     case 'strike': {
-      const { dmg, crit } = strike(s, rng, { melee: true });
+      const { dmg, crit } = strike(s, rng, { melee: true, mult: redactMult(s, 'strike') });
       r.ready = false; r.momentum = true;
       fx(s, { who: 'player', type: 'strike', dmg, crit, ready: wasReady });
       log(s, `${wasReady ? 'Braced. ' : ''}${crit ? 'Critical! ' : ''}You strike ${e.name} with the ${meleeOf(c).name} for ${dmg}${guarded ? ', straight past their cover' : ''}.`, crit ? 'crit' : 'hit');
@@ -1650,7 +1686,7 @@ function playerActInner(s, act, rng, who) {
     }
     case 'overload': {
       const droid = e.tags.includes('droid');
-      const dmg = Math.round((6 + attr(c, 'int') * TUNE.intOverload + r.sector * 2) * (droid ? 2 : 1) * (1 + pv(c, 'capacitor') / 100) * (1 + ((baseOf(gearIn(c, 'gadget')) || {}).overload || 0)) * outMult(r.pst, e.st));
+      const dmg = Math.round((6 + attr(c, 'int') * TUNE.intOverload + r.sector * 2) * (droid ? 2 : 1) * (1 + pv(c, 'capacitor') / 100) * (1 + ((baseOf(gearIn(c, 'gadget')) || {}).overload || 0)) * outMult(r.pst, e.st) * bossOpen(e));
       e.hp -= dmg;
       if (droid) e.stun = Math.max(e.stun, 1);
       fx(s, { who: 'player', type: 'overload', dmg, droid });
@@ -1691,7 +1727,7 @@ function playerActInner(s, act, rng, who) {
     }
     case 'thermal': {
       c.items.thermal -= 1;
-      const dmg = Math.round((20 + r.sector * 4) * st.tech * outMult(r.pst, e.st));
+      const dmg = Math.round((20 + r.sector * 4) * st.tech * outMult(r.pst, e.st) * bossOpen(e));
       e.hp -= dmg;
       if (hasPerk(c, 'incendiary') && e.hp > 0) addStatus(e.st, e.fresh, { burn: pv(c, 'incendiary') });
       fx(s, { who: 'player', type: 'thermal', dmg });
@@ -1717,10 +1753,8 @@ function playerActInner(s, act, rng, who) {
     }
     case 'smoke':
       c.items.smoke -= 1;
-      fx(s, { who: 'player', type: 'smoke' });
-      if (rng() >= TUNE.smokeEscape) { log(s, 'The smoke thins too fast. They still have you in sight.', 'bad'); break; }
-      log(s, 'Smoke fills the corridor. You\u2019re gone before it clears.', 'sys');
-      return endRun(s, 'escaped', rng);
+      { const away = rng() < TUNE.smokeEscape; fx(s, { who: 'player', type: 'smoke', ok: away }); if (away) { log(s, 'Smoke fills the corridor. You\u2019re gone before it clears.', 'sys'); return endRun(s, 'escaped', rng); } }
+      { log(s, 'The smoke thins too fast. They still have you in sight.', 'bad'); break; }
     case 'run': {
       const ok = rng() < runChance(s);
       fx(s, { who: 'player', type: 'run', ok });
@@ -1730,8 +1764,10 @@ function playerActInner(s, act, rng, who) {
       break;
     }
   }
+  if (e.bs) bossAfterAct(s, act, who, rng);
   tick(r);
   r.dealt[who] = (r.dealt[who] || 0) + Math.max(0, hpBefore - e.hp);
+  r.dmgDone = (r.dmgDone || 0) + Math.max(0, hpBefore - e.hp); // for the payout tally only
   if (c.hp <= 0 && !lethalSave(s)) return die(s, e);
   if (e.hp <= 0) return winFight(s, rng);
   if (e.quirk && quirkById(e.quirk).flee && e.hp < e.maxHp * 0.4) {
@@ -1749,7 +1785,7 @@ function playerActInner(s, act, rng, who) {
     if (other !== undefined) { r.actor = other; fx(s, { who: 'player', type: 'handoff', actor: other }); return; }
     r.acted = {};
   }
-  if (r.allies > 0) {
+  if (r.allies > 0 && !(e.bs && e.bs.count > 0)) {
     for (let i = 0; i < r.allies && e.hp > 0; i++) {
       const dmg = mitigate(st.atk * 0.3 * (0.85 + rng() * 0.3), e.def);
       e.hp -= dmg;
@@ -1766,6 +1802,7 @@ const fighting = (s) => s.screen === 'combat' && s.run && s.run.enemy && !s.run.
 function enemyRound(s, rng) {
   const r = s.run;
   r.round += 1;
+  if (r.enemy && r.enemy.bs) bossTick(s);
   const coop = isCoop(s), actions = coop && !r.fallen && r.round % TUNE.coopExtra === 0 ? 2 : 1;
   for (let n = 0; n < actions && fighting(s); n++) {
     const t = coop ? pickTarget(s, rng) : 0;
@@ -1794,18 +1831,7 @@ function bleedTick(s) {
   }
 }
 
-// Bosses get angrier at half health.
-function checkPhase(s) {
-  const e = s.run.enemy;
-  if (!e || !e.boss || e.phase2 || e.hp <= 0 || e.hp > e.maxHp * 0.5) return;
-  e.phase2 = true;
-  e.atk = Math.round(e.atk * 1.2);
-  e.intents = { ...e.intents, heavy: (e.intents.heavy || 0) + 1, special: (e.intents.special || 0) + 1, guard: 0 };
-  const line = (D.BOSS_INFO[e.id] || {}).phase2 || `${e.name} is enraged.`;
-  fx(s, { who: 'enemy', type: 'phase', text: line });
-  log(s, `${line} ATK +20%.`, 'boss');
-}
-
+// Bosses change at 75%, 50% and 25% health: see the boss section below.
 // Survive a killing blow once per raid with Dead Man's Switch.
 function lethalSave(s) {
   const r = s.run, c = s.char;
@@ -1872,7 +1898,7 @@ function envTurn(s, rng, enemyToo = true) {
       if (e.hp <= 0) return winFight(s, rng);
       checkPhase(s);
     }
-  } else if (mech === 'snipers' && rng() < 0.2) {
+  } else if (mech === 'snipers' && rng() < sniperChance(r)) {
     const dmg = r.defending ? 0 : Math.round(st.maxHp * 0.08 * (hasUnique(c, 'crawler') ? 0.5 : 1));
     c.hp -= dmg;
     fx(s, { who: 'env', type: 'sniper', dmg, blocked: r.defending });
@@ -1894,13 +1920,13 @@ function enemyTurn(s, rng) {
     const what = pick(rng, lines);
     fx(s, { who: 'enemy', type: 'quirk', text: 'Glitch!' });
     log(s, `${e.name} ${what}.`, 'good');
-    e.intent = chooseIntent(e, rng);
+    nextIntent(s, e, rng);
     return;
   }
   if (e.stun === 0 && !e.tags.includes('droid') && (e.intent === 'attack' || e.intent === 'heavy' || e.intent === 'special') && rng() < Math.min(0.35, TUNE.chaHesitate * attr(c, 'cha')) * (e.boss ? 0.5 : 1)) {
     fx(s, { who: 'enemy', type: 'quirk', text: 'Hesitates' });
     log(s, `${e.name} hesitates. Something in your voice made them think twice.`, 'good');
-    e.intent = chooseIntent(e, rng);
+    nextIntent(s, e, rng);
     return;
   }
   if (e.stun > 0) {
@@ -1908,8 +1934,12 @@ function enemyTurn(s, rng) {
     fx(s, { who: 'enemy', type: 'stunned' });
     log(s, `${e.name} is stunned and can\u2019t act.`, 'good');
   } else if (e.intent === 'attack' || e.intent === 'heavy') {
-    const heavy = e.intent === 'heavy';
-    if (r.allies > 0 && rng() < 0.25) {
+    const heavy = e.intent === 'heavy', twice = !heavy && e.bs && e.bs.twice;
+    for (let shot = 0; shot < (twice ? 2 : 1) && c.hp > 0; shot++) {
+    if (e.bs && e.bs.wide && !heavy && rng() < e.bs.wide) {
+      fx(s, { who: 'enemy', type: e.intent, dodged: true, missed: true, dmg: 0 });
+      log(s, `The shot goes wide. Someone in there is panicking.`, 'good');
+    } else if (r.allies > 0 && rng() < 0.25) {
       // A freed prisoner soaks the shot. It takes a few to put one down.
       r.allyHits = (r.allyHits || 0) + 1;
       fx(s, { who: 'enemy', type: e.intent, ally: true, allyDown: r.allyHits >= TUNE.allyGrit, dmg: 0 });
@@ -1929,7 +1959,7 @@ function enemyTurn(s, rng) {
       log(s, `${e.name} ${heavy ? 'unleashes a heavy strike' : 'fires'}, and you dodge.`, 'good');
     } else {
       const luck = q && q.gamble ? (rng() < 0.5 ? 0.5 : 1.8) : 1;
-      let dmg = mitigate(e.atk * (0.85 + rng() * 0.3) * (heavy ? 2.2 : 1) * luck * outMult(e.st, r.pst) * (r.keepDistance ? 1 - TUNE.shootGuard : 1), st.def);
+      let dmg = mitigate(e.atk * (0.85 + rng() * 0.3) * (heavy ? 2.2 : twice ? TWICE_MULT : 1) * luck * outMult(e.st, r.pst) * (r.keepDistance ? 1 - TUNE.shootGuard : 1), st.def);
       if (r.defending) dmg = Math.max(1, Math.round(dmg * (heavy ? TUNE.defendHeavy : 0.5) * (hasTrait(c, 'bulwark') ? 0.7 : 1)));
       dmg = droneShield(c, dmg);
       c.hp -= dmg; vamp(dmg); reflect(dmg);
@@ -1938,6 +1968,10 @@ function enemyTurn(s, rng) {
       fx(s, { who: 'enemy', type: e.intent, dmg, blocked: r.defending });
       log(s, `${e.name} ${heavy ? 'lands a heavy strike' : 'hits you'} for ${dmg}${r.defending ? ' (blocked)' : ''}.`, heavy ? 'bad' : 'hurt');
     }
+    }
+  } else if (e.intent === 'sig') {
+    sigTurn(s, rng, vamp, reflect);
+    if (s.run !== r || r.enemy !== e) return;
   } else if (e.intent === 'special') {
     const sp = D.SPECIALS[e.id];
     let dmg = sp.mult > 0 ? mitigate(e.atk * (0.85 + rng() * 0.3) * sp.mult * outMult(e.st, r.pst) * (r.keepDistance ? 1 - TUNE.shootGuard : 1), st.def) : 0;
@@ -1965,7 +1999,427 @@ function enemyTurn(s, rng) {
   }
   if (c.hp <= 0 && !lethalSave(s)) return die(s, e);
   if (e.hp <= 0) return winFight(s, rng);
+  nextIntent(s, e, rng);
+  if (e.bs) bossTaunt(s);
+}
+
+// ---------- bosses: signature moves, phases and lines ----------
+// Everything lives on the enemy (e.bs, e.sig, e.say) or the operative (c.bossMet, c.bossBeat), so it saves and reaches a co-op friend with the rest of the state.
+// Rules and numbers are D.BOSS_KIT. e.sig is a move on its way: { id, n, left, startHp }. Dialogue picks lines without touching the game's rng, so it can't shift a fight.
+const TWICE_MULT = 0.7;
+const firstName = (c) => String((c && c.name) || 'operative').split(' ')[0];
+const bossKey = (r, e) => `${e.id}:${r.map}`;
+const bossState = (e) => ({ phase: e.phase2 ? 50 : 100, cd: 1, last: null, since: 0, every: null, says: 0, shutter: 0, floor: 0, front: 0, lights: 0, count: 0, wreck: 0, redact: null, noRun: false,
+  frontFired: false, frontHeld: false, taken: [], lastAtk: {}, used: {}, taunts: 0, lastTaunt: -9, wide: 0, glow: false, brittle: false, twice: false, snipers: 0, floorTurns: 3, auditCount: 2, late: false });
+const kitOf = (e) => D.BOSS_KIT[e.id] || { rate: 0, cd: 99, moves: {}, notes: {} };
+const bsOf = (e) => (e.bs || (e.bs = bossState(e))); // a boss fight saved before these rules existed picks them up here
+
+function moveOpen(e, id) {
+  const m = kitOf(e).moves[id], b = e.bs;
+  if (!m || b.phase > m.from || (m.until && b.phase <= m.until)) return false;
+  if (id === 'shutter') return !b.shutter && !b.noRun;
+  return !(id === 'floor' ? b.floor : id === 'front' ? b.front : id === 'lights' ? b.lights : id === 'count' ? b.count : id === 'redact' ? b.redact : 0);
+}
+// One turn ahead, like every other intent, so a scanner can show it. 'sig:<move>' or a plain intent.
+function bossPlan(e, rng) {
+  const b = e.bs, kit = kitOf(e);
+  if (b.every) { b.since += 1; if (b.since >= b.every.n) { b.since = 0; return b.every.act === 'special' ? 'special' : `sig:${b.every.act}`; } }
+  if (b.cd > 0) b.cd -= 1;
+  else {
+    const open = Object.keys(kit.moves).filter((id) => moveOpen(e, id)), fresh = open.filter((id) => id !== b.last), list = fresh.length ? fresh : open;
+    if (list.length && rng() < kit.rate) { const id = pick(rng, list); b.cd = kit.cd; b.last = id; return `sig:${id}`; }
+  }
+  return rollIntent(e, rng, e.lastIntent);
+}
+function bossChoose(e, rng) {
+  const b = bsOf(e);
+  if (e.sig) return 'sig'; // still on its way: being stunned or pinned behind cover only delays it
+  let k = e.next || bossPlan(e, rng);
+  if (k.startsWith('sig:') && !moveOpen(e, k.slice(4))) k = 'attack'; // the plan was overtaken by a phase
+  if (k !== 'attack' && !k.startsWith('sig:') && !e.intents[k]) k = 'attack';
+  if (k === 'repair' && e.hp > e.maxHp * 0.6) k = 'attack';
+  e.next = null;
+  if (k.startsWith('sig:')) {
+    const id = k.slice(4), m = kitOf(e).moves[id], n = Object.keys(BOSS_MOVES[e.id] || {}).indexOf(id) + 1;
+    e.sig = { id, n: n || 1, left: id === 'audit' ? b.auditCount : m.count, startHp: e.hp };
+    k = 'sig';
+  }
+  e.lastIntent = k;
+  e.next = bossPlan(e, rng);
+  return k;
+}
+function nextIntent(s, e, rng) {
   e.intent = chooseIntent(e, rng);
+  if (e.boss) sigAnnounce(s);
+}
+function sigAnnounce(s) {
+  const r = s.run, e = r.enemy, g = e.sig;
+  if (!g || g.said) return;
+  g.said = true;
+  if (g.id === 'redact') { g.who = r.lastAttacker || 0; g.act = e.bs.lastAtk[g.who] || 'shoot'; }
+  const name = BOSS_MOVES[e.id][g.id].name;
+  fx(s, { who: 'enemy', type: 'telegraph', sig: g.id, n: g.n, name });
+  log(s, `${e.name}: ${name}.`, 'bad');
+  // A phase line has just gone up, with what changed under it: leave it to be read. The intent line already names the move.
+  if (r.round - (e.bs.phaseRound ?? -9) > 1) bossSay(s, `signature.${g.id}`);
+}
+// A boss's line goes in the saved state as well as the event stream, so a friend who misses the event still reads it.
+function bossSay(s, key, kind = 'boss', note = '') {
+  const r = s.run, e = r.enemy, b = e.bs, n = (b.says += 1);
+  const x = n * 0.6180339887 + e.hp * 0.0137;
+  const text = bossLine(e.id, key, { map: r.map, name: firstName(s.char), rng: () => x - Math.floor(x) });
+  if (!text) return '';
+  e.say = { n, text, kind, note };
+  fx(s, { who: 'enemy', type: 'say', text, kind, note, sayN: n });
+  log(s, text, kind === 'boss' ? 'boss' : 'info');
+  return text;
+}
+// The boss when the operative is nearly gone, and then the operative's own head. Twice a fight at most.
+function bossTaunt(s) {
+  const r = s.run, e = r.enemy, c = s.char, b = e && e.bs;
+  if (!b || e.sig || c.hp <= 0 || c.hp >= stats(s).maxHp * 0.3 || b.taunts >= 2 || r.round - b.lastTaunt < 4) return;
+  b.taunts += 1; b.lastTaunt = r.round;
+  if (b.taunts === 1) bossSay(s, 'taunt'); else bossSay(s, 'playerLow', 'narration');
+}
+
+function bossPhase(s, t) {
+  const e = s.run.enemy, b = e.bs, kit = kitOf(e);
+  if (t === 50) {
+    e.phase2 = true;
+    e.atk = Math.round(e.atk * 1.2);
+    e.intents = { ...e.intents, heavy: (e.intents.heavy || 0) + 1, special: (e.intents.special || 0) + 1, guard: 0 };
+  }
+  const every = (act, n) => { b.every = { act, n }; b.since = 0; };
+  if (e.id === 'halvek' && t === 25) { b.noRun = true; every('special', 3); }
+  if (e.id === 'crawler') {
+    if (t === 75) e.def = Math.max(0, e.def - 1);
+    if (t === 50) e.intents = { ...e.intents, repair: 0 };
+    if (t === 25) { e.intents = { ...e.intents, repair: 0, guard: 0 }; b.wide = 0.25; }
+  }
+  if (e.id === 'ostrane') {
+    if (t === 50) e.spd += 2;
+    if (t === 25) { b.auditCount = 1; every('audit', 3); }
+  }
+  if (e.id === 'brask' && t === 25) { b.late = true; every('overtime', 2); }
+  if (e.id === 'crucible') {
+    if (t === 75) b.glow = true;
+    if (t === 50) b.floorTurns = 4;
+    if (t === 25) { e.intents = { ...e.intents, repair: 0 }; b.brittle = true; every('roll', 2); }
+  }
+  if (e.id === 'kell' && t === 25) { b.noRun = true; e.intents = { ...e.intents, special: (e.intents.special || 0) * 2 }; }
+  if (e.id === 'vane') {
+    if (t === 50) b.snipers = 0.4;
+    if (t === 25) { b.twice = true; every('crane', 3); }
+  }
+  // A move that has just opened comes next, so the change is felt.
+  for (const [id, m] of Object.entries(kit.moves)) if (m.from === t && moveOpen(e, id)) { e.next = `sig:${id}`; b.last = id; b.cd = kit.cd; break; }
+  return kit.notes[t] || '';
+}
+export function checkPhase(s) {
+  const e = s.run && s.run.enemy;
+  if (!e || !e.boss || e.hp <= 0) return;
+  const b = bsOf(e), share = (e.hp / e.maxHp) * 100;
+  let crossed = 0, note = '';
+  for (const t of [75, 50, 25]) if (b.phase > t && share <= t) { b.phase = t; note = bossPhase(s, t); crossed = t; }
+  if (!crossed) return;
+  b.phaseRound = s.run.round;
+  fx(s, { who: 'enemy', type: 'phase', pct: crossed, enraged: crossed === 50 });
+  if (!bossSay(s, `phase.${crossed}`, 'boss', note)) { const line = (D.BOSS_INFO[e.id] || {}).phase2; if (line) log(s, line, 'boss'); }
+  if (note) log(s, note, 'bad');
+}
+
+function bossTick(s) {
+  const b = s.run.enemy.bs;
+  for (const k of ['shutter', 'floor', 'front', 'lights', 'count', 'wreck']) if (b[k] > 0) {
+    b[k] -= 1;
+    if (k === 'front' && !b.front && b.frontWatch) { b.frontWatch = false; if (!b.frontFired) b.frontHeld = true; }
+  }
+  if (b.redact) { b.redact.t -= 1; if (b.redact.t <= 0) b.redact = null; }
+}
+// What the boss takes from a weapon hit right now.
+function bossTakes(e, melee) {
+  const b = e.bs, g = e.sig, kit = kitOf(e).moves;
+  let m = bossOpen(e);
+  if (!melee && (b.shutter > 0 || b.front > 0)) m *= 0.5;
+  if (g && g.id === 'salute' && melee) m *= kit.salute.parry;
+  if (g && g.id === 'anchor' && melee) m *= kit.anchor.belly;
+  return m;
+}
+// The same for anything that isn't a weapon: an open core and a failing hull take it all.
+function bossOpen(e) {
+  const b = e.bs; if (!b) return 1;
+  return (e.sig && e.sig.id === 'roll' && e.sig.left === 2 ? kitOf(e).moves.roll.open : 1) * (b.brittle ? 1.15 : 1);
+}
+function redactMult(s, act) {
+  const e = s.run.enemy, x = e && e.bs && e.bs.redact;
+  return x && x.who === actorIdx(s) && x.act === act ? kitOf(e).moves.redact.cut : 1;
+}
+function redactedSkill(s, act) {
+  const e = s.run && s.run.enemy, x = e && e.bs && e.bs.redact;
+  return !!x && x.who === actorIdx(s) && x.act === act;
+}
+// Null when the way out is open, or why it isn't.
+export function runBlocked(s) {
+  const r = s.run, e = r && r.enemy, b = e && e.bs;
+  if (r && r.pst && r.pst.pinned) return 'Pinned';
+  if (!b) return null;
+  if (b.noRun) return e.id === 'kell' ? 'She threw away the keys' : 'The shutter is down';
+  return b.shutter > 0 ? 'The shutter is down' : null;
+}
+export const sniperChance = (r) => { const b = r && r.enemy && r.enemy.bs; return b && b.wreck > 0 ? 0 : (b && b.snipers) || 0.2; };
+// Lights Out hides her moves, unless you have a scanner.
+export function intentHidden(s) {
+  const e = s.run && s.run.enemy;
+  return !!(e && e.bs && e.bs.lights > 0 && !stats(s).scan);
+}
+const WEAPON_ACTS = new Set(['shoot', 'strike', 'aimed', 'burst', 'blast', 'smash', 'suppress', 'overload']);
+const MELEE_ACTS = new Set(['strike', 'smash']);
+const RANGED_ACTS = new Set(['shoot', 'aimed', 'burst', 'blast', 'suppress']);
+const skillFits = (k, hit) => !hit || (hit === 'strike' ? !RANGED_ACTS.has(k) : !MELEE_ACTS.has(k));
+// After each operative's action: the counters that belong to what they just did.
+function bossAfterAct(s, act, who, rng) {
+  const r = s.run, e = r.enemy, c = s.char, b = bsOf(e), g = e.sig, st = stats(s), kit = kitOf(e).moves;
+  if (WEAPON_ACTS.has(act)) b.lastAtk[who] = act;
+  if (D.ITEMS[act]) b.used[who] = (b.used[who] || 0) + 1;
+  const cancel = (type, text) => { e.sig = null; fx(s, { who: 'enemy', type: 'sigfail', sig: g.id, text }); log(s, text, 'good'); };
+  if (g && g.id === 'confiscate' && MELEE_ACTS.has(act)) cancel('sigfail', 'You knock his hand away. No receipt today.');
+  else if (g && g.id === 'siege' && act === 'ion') cancel('sigfail', 'The ion pulse jams the breech. The Siege Round doesn\u2019t fire.');
+  else if (g && g.id === 'count' && act === 'intimidate') cancel('sigfail', 'You shout over the count. Nobody is listening to her now.');
+  else if (g && g.id === 'crane' && act === 'smoke') { cancel('sigfail', 'The container lands where you were, in the smoke. The wreck blocks the tower\u2019s view.'); b.wreck = kit.crane.wreck; }
+  if (act === 'intimidate') { if (b.count > 0) { b.count = 0; log(s, 'The count breaks. The prisoners move.', 'good'); } if (b.front > 0) { b.front = 0; b.frontWatch = false; log(s, 'The workers scatter. Brask can\u2019t stop them all.', 'good'); } }
+  if (b.front > 0 && RANGED_ACTS.has(act)) b.frontFired = true;
+  if (b.floor > 0 && MELEE_ACTS.has(act)) {
+    const cost = Math.max(1, Math.round(st.maxHp * kit.floor.cost));
+    c.hp -= cost;
+    const added = addPlayerStatus(s, { burn: 1 }, rng);
+    fx(s, { who: 'enemy', type: 'counter', dmg: cost, text: 'Slag Floor', statuses: added });
+    log(s, `The slag floor costs you ${cost}.`, 'bad');
+  }
+}
+// Confiscated items come back when the boss goes down. Run away and they stay gone.
+function bossGiveBack(s) {
+  const r = s.run, b = r.enemy.bs;
+  for (const t of b.taken || []) { const pc = charAt(s, t.who); if (pc && !pc.dead) { pc.items[t.item] = (pc.items[t.item] || 0) + 1; log(s, `You take back your ${D.ITEMS[t.item].name}.`, 'good'); } }
+  b.taken = [];
+  // Being pinned belongs to this fight: it must not block Run in the next room.
+  delete r.pst.pinned;
+  for (const bag of Object.values(r.cb || {})) if (bag && bag.pst) delete bag.pst.pinned;
+}
+// Multiplier a move will hit for, for the intent line and the hit itself.
+function sigMult(s, g, e) {
+  const m = kitOf(e).moves[g.id];
+  if (g.id !== 'audit') return m.mult || 0;
+  return Math.min(m.max, m.base + m.per * (e.bs.used[actorIdx(s)] || 0));
+}
+function sigRange(s) {
+  const r = s.run, e = r.enemy, c = s.char, st = stats(s), g = e.sig;
+  if (!g || g.left !== 1) return null;
+  const m = kitOf(e).moves[g.id], mult = sigMult(s, g, e);
+  if (!mult || (g.id === 'confiscate' && Object.values(c.items).some((n) => n > 0))) return null;
+  const hits = m.hits || 1, base = e.atk * mult * outMult(e.st, r.pst), guard = m.guard || 0.5;
+  const lo = mitigate(base * 0.85, st.def), hi = mitigate(base * 1.15, st.def);
+  const g2 = (n) => droneShield(c, Math.max(1, Math.round(n * guard * (hasTrait(c, 'bulwark') ? 0.7 : 1))));
+  const hiNow = droneShield(c, hi) * hits;
+  return { min: droneShield(c, lo) * hits, max: hiNow, defMin: g2(lo) * hits, defMax: g2(hi) * hits, lethal: hiNow >= c.hp };
+}
+// What the intent line says about a move on its way.
+export function sigInfo(s) {
+  const e = s.run.enemy, g = e.sig;
+  if (!g) return null;
+  const mv = BOSS_MOVES[e.id][g.id], name = g.id === 'redact' ? `${mv.name}: ${actName(g.act)}` : mv.name;
+  let tip = (g.id === 'roll' && g.left === 1 && mv.tipNext) || (e.bs.late && mv.tipLate) || mv.tip;
+  tip = tip.split('{t}').join(String(g.id === 'floor' ? e.bs.floorTurns : kitOf(e).moves[g.id].turns || 0))
+    .split('{x}').join(sigMult(s, g, e).toFixed(1).replace(/\.0$/, ''))
+    .split('{act}').join(actName(g.act));
+  const label = g.id === 'roll' && g.left === 1 ? 'Heat blast' : g.left > 1 && g.id !== 'roll' ? `${name} \u00B7 ${g.left} turns` : name;
+  return { label, tip, tone: 'danger', id: g.id, n: g.n, left: g.left };
+}
+const actName = (a) => (!a ? 'Shoot' : a === 'shoot' ? 'Shoot' : a === 'strike' ? 'Strike' : (D.SKILLS[a] && D.SKILLS[a].name) || a);
+// Lasting effects, as chips beside the intent.
+export function bossEffects(s) {
+  const e = s.run.enemy, b = e && e.bs;
+  if (!b) return [];
+  const out = [], add = (label, tip) => out.push({ label, tip });
+  if (b.shutter > 0) add(`Shutter ${b.shutter}`, 'Gatehouse Shutter: shots deal half, and you can\u2019t Run.');
+  if (b.noRun && !(b.shutter > 0)) add('No Run', e.id === 'kell' ? 'She threw away her keys. No Run for the rest of the fight.' : 'The shutter stays down. No Run for the rest of the fight.');
+  if (b.floor > 0) add(`Slag ${b.floor}`, 'Slag Floor: each Strike costs 5% of your max HP and burns. Shoot is safe.');
+  if (b.front > 0) add(`Workers ${b.front}`, `Shift in Front: shots deal half.${b.frontFired ? '' : ' Hold your fire throughout for +1 Resolve on the kill.'} Intimidate clears them.`);
+  if (b.frontHeld) add('+1 Resolve', 'You held your fire. +1 Resolve when Brask goes down.');
+  if (b.count > 0) add(`Count ${b.count}`, 'Count Time: freed prisoners do nothing. Intimidate breaks it.');
+  if (b.lights > 0) add(`Dark ${b.lights}`, 'Lights Out: her moves are hidden unless you have a scanner, and shots miss 25% of the time. Strike can\u2019t miss.');
+  if (b.wreck > 0) add(`Wreck ${b.wreck}`, 'The wrecked container blocks the tower snipers.');
+  if (b.redact && b.redact.who === actorIdx(s)) add(`${actName(b.redact.act)} cut ${b.redact.t}`, `Redact: ${actName(b.redact.act)} ${D.SKILLS[b.redact.act] ? 'is locked' : 'deals half'} for ${b.redact.t} more turn${b.redact.t > 1 ? 's' : ''}.`);
+  for (const t of b.taken || []) if (t.who === actorIdx(s)) add(`Took ${D.ITEMS[t.item].name}`, 'Confiscated. You get it back when he goes down.');
+  return out;
+}
+// The sensible answer to what the boss is doing: act = a specific action, hit = the weapon to use. Auto battle and the simulator bots read this.
+export function sigAdvice(s) {
+  const r = s.run, e = r.enemy, c = s.char, out = { act: null, hit: null };
+  const b = e && e.bs;
+  if (!b) return out;
+  const g = e.sig, st = stats(s), low = c.hp < st.maxHp * 0.5, can = (a) => canUse(s, a), kit = kitOf(e).moves;
+  if (b.shutter > 0 || b.front > 0 || b.lights > 0) out.hit = 'strike';
+  if (b.floor > 0) out.hit = 'shoot';
+  if (b.redact && b.redact.who === actorIdx(s)) { if (b.redact.act === 'shoot') out.hit = 'strike'; if (b.redact.act === 'strike') out.hit = 'shoot'; }
+  if (b.front > 0 && can('intimidate')) out.act = 'intimidate';
+  if (b.count > 0 && r.allies > 0 && can('intimidate')) out.act = 'intimidate';
+  if (!g || e.stun > 0) return out;
+  const needs = (share) => {
+    const [a, z] = attackRange(s, out.hit === 'strike' || (!out.hit && bestAttack(s) === 'strike'));
+    return g.startHp - e.hp + (a + z) / 2 >= e.maxHp * share;
+  };
+  switch (g.id) {
+    case 'confiscate': if (!out.hit || out.hit === 'strike') out.hit = 'strike'; break;
+    case 'anchor': if (low) out.act = 'defend'; else out.hit = 'strike'; break;
+    case 'siege':
+      if (e.tags.includes('droid') && can('ion')) out.act = 'ion';
+      else if (g.left === 1 && !needs(kit.siege.jam)) out.act = 'defend';
+      break;
+    case 'roll': if (g.left === 1) out.act = 'defend'; break;
+    case 'overtime': out.act = 'defend'; break;
+    case 'count': if (can('intimidate') && r.allies > 0) out.act = 'intimidate'; else if (!r.allies) out.act = 'defend'; break;
+    case 'crane': if (g.left === 1) out.act = 'defend'; break;
+    case 'salute': if (low) out.act = 'defend'; else if (!out.hit) out.hit = 'shoot'; break;
+    case 'audit': if (g.left === 1) out.act = 'defend'; break;
+    default: break;
+  }
+  return out;
+}
+// A signature move's turn: it charges, it fails, or it goes off.
+function sigTurn(s, rng, vamp, reflect) {
+  const r = s.run, e = r.enemy, c = s.char, st = stats(s), b = e.bs, g = e.sig;
+  if (!g) return; // the operative stopped it this turn: the boss has lost its move
+  const kit = kitOf(e).moves[g.id], name = BOSS_MOVES[e.id][g.id].name, dealt = g.startHp - e.hp;
+  const fail = (text) => { e.sig = null; fx(s, { who: 'enemy', type: 'sigfail', sig: g.id, text }); log(s, text, 'good'); };
+  if (g.id === 'siege' && dealt >= e.maxHp * kit.jam) return fail('Your fire knocks the turret off its line. The Siege Round jams in the breech.');
+  if (g.id === 'roll' && g.left === 2 && dealt >= e.maxHp * kit.choke) { e.stun = Math.max(e.stun, 1); return fail('You choke the open core. The blast dies and the Crucible staggers.'); }
+  g.left -= 1;
+  if (g.left > 0) {
+    fx(s, { who: 'enemy', type: 'charging', sig: g.id, n: g.n, name, left: g.left });
+    log(s, g.id === 'roll' ? 'The core flares. A blast is coming.' : `${name}: ${g.left} more turn${g.left > 1 ? 's' : ''}.`, 'bad');
+    return;
+  }
+  e.sig = null;
+  const hit = (mult, guard = 0.5) => {
+    let dmg = mitigate(e.atk * (0.85 + rng() * 0.3) * mult * outMult(e.st, r.pst) * (r.keepDistance ? 1 - TUNE.shootGuard : 1), st.def);
+    if (r.defending) dmg = Math.max(1, Math.round(dmg * guard * (hasTrait(c, 'bulwark') ? 0.7 : 1)));
+    dmg = droneShield(c, dmg);
+    c.hp -= dmg; vamp(dmg); reflect(dmg);
+    return dmg;
+  };
+  const go = (ev) => fx(s, { who: 'enemy', type: 'sig', sig: g.id, n: g.n, name, blocked: r.defending, ...ev });
+  const said = (text, kind = 'bad') => log(s, text, kind);
+  switch (g.id) {
+    case 'shutter': b.shutter = kit.turns; go({}); said(`${name}: for ${kit.turns} turns your shots deal half and there\u2019s no Run.`); break;
+    case 'confiscate': {
+      const item = c.items.stim > 0 ? 'stim' : ['thermal', 'ion', 'smoke'].find((k) => c.items[k] > 0);
+      if (item) { c.items[item] -= 1; b.taken.push({ who: actorIdx(s), item }); go({ text: D.ITEMS[item].name }); said(`${e.name} takes your ${D.ITEMS[item].name}. You get it back if he goes down.`); }
+      else { const dmg = hit(kit.mult, kit.guard); go({ dmg }); said(`Nothing to take, so he hits you instead: ${dmg}.`); }
+      break;
+    }
+    case 'anchor': {
+      const dmg = hit(kit.mult, kit.guard), added = r.defending ? [] : addPlayerStatus(s, { pinned: kit.pin }, rng);
+      go({ dmg, statuses: added }); said(`${name} for ${dmg}${added.length ? `. You are Pinned for ${kit.pin} turns: no Run` : ''}.`);
+      break;
+    }
+    case 'siege': { const dmg = hit(kit.mult, kit.guard); go({ dmg }); said(`${name}: ${dmg}${r.defending ? ', behind cover' : ''}.`); break; }
+    case 'roll': { const dmg = hit(kit.mult, kit.guard); go({ dmg, blast: true }); said(`Heat blast: ${dmg}${r.defending ? ', behind cover' : ''}.`); break; }
+    case 'floor': b.floor = b.floorTurns; go({}); said(`${name}: for ${b.floorTurns} turns each Strike costs 5% of your max HP.`); break;
+    case 'overtime': {
+      const a = hit(kit.mult, kit.guard); let z = 0;
+      if (c.hp > 0) z = hit(kit.mult, kit.guard);
+      if (b.late) e.hp -= Math.max(1, Math.round(e.maxHp * kit.self));
+      else addStatus(e.st, e.fresh, { exposed: kit.winded });
+      go({ dmg: a + z, hits: [a, z], winded: !b.late }); said(`${name}: ${a} and ${z}. ${b.late ? 'It tears something in him.' : 'He stands there heaving: Exposed.'}`);
+      break;
+    }
+    case 'front': b.front = kit.turns; b.frontFired = false; b.frontWatch = true; go({}); said(`${name}: for ${kit.turns} turns your shots deal half.`); break;
+    case 'count': {
+      let added = [];
+      if (r.allies > 0) { b.count = kit.turns; said(`${name}: the freed prisoners stand to attention for ${kit.turns} turns.`); }
+      else if (!r.defending) { added = addPlayerStatus(s, { shaken: kit.shaken }, rng); said(`${name}: ${added.length ? 'you are Shaken' : 'it doesn\u2019t get to you'}.`); }
+      else said(`${name}: you keep your head down and don\u2019t answer.`, 'info');
+      go({ statuses: added });
+      break;
+    }
+    case 'lights': b.lights = kit.turns; go({}); said(`${name}: for ${kit.turns} turns her moves are hidden and shots miss 25% of the time.`); break;
+    case 'crane': { const dmg = hit(kit.mult, kit.guard); b.wreck = kit.wreck; go({ dmg }); said(`${name}: ${dmg}${r.defending ? ', behind cover' : ''}. The wreck blocks the tower snipers for ${kit.wreck} turns.`); break; }
+    case 'salute': { const dmg = hit(kit.mult, kit.guard); go({ dmg, crit: true }); said(`${name}: a clean hit for ${dmg}.`); break; }
+    case 'redact': b.redact = { act: g.act, who: g.who || 0, t: kit.turns }; go({ text: actName(g.act) }); said(`${name}: ${actName(g.act)} ${D.SKILLS[g.act] ? 'is locked' : 'deals half'} for ${kit.turns} turns.`); break;
+    case 'audit': { const x = sigMult(s, g, e), dmg = hit(x, kit.guard); go({ dmg, text: `x${x.toFixed(1)}` }); said(`${name}, x${x.toFixed(1)}: ${dmg}${r.defending ? ', behind cover' : ''}.`); break; }
+    default: break;
+  }
+}
+// First meetings: which operatives have stood in front of this boss, on this map. The opening scene is chosen here so both co-op screens get the same one.
+function bossMeet(s, e, rng) {
+  const r = s.run, m = s.meta, key = bossKey(r, e), who = livingActors(s).map((i) => charAt(s, i)).filter(Boolean);
+  const first = who.some((c) => !(c.bossMet && c.bossMet[key]));
+  for (const c of who) (c.bossMet = c.bossMet || {})[key] = 1;
+  const opts = { map: r.map, name: firstName(s.char), rng }, sceneKey = `intro:${key}`;
+  let beats;
+  if (first) {
+    beats = bossLines(e.id, 'firstIntro', opts);
+    const own = bossLine(e.id, `byBackground.${s.char.background}`, opts);
+    if (own) beats.splice(Math.max(0, beats.length - 1), 0, own);
+    if ((m.sceneSeen || {})[sceneKey]) beats = beats.slice(-1); // the cell has watched this one through: a later operative gets its last beat
+  } else {
+    const one = bossLine(e.id, 'intro', opts);
+    beats = one ? [one] : [];
+  }
+  if (!beats.length) beats = [e.line];
+  e.intro = { first, key: sceneKey, beats };
+}
+export function markSceneSeen(s, key) { if (s.meta && key) (s.meta.sceneSeen = s.meta.sceneSeen || {})[key] = 1; }
+// A boss down: the record, the Resolve for holding fire, and on a first win the scene. It goes in the state, so a co-op friend sees it too.
+function bossBeaten(s, e, out, rng) {
+  const r = s.run, m = s.meta, key = bossKey(r, e), b = bsOf(e), who = livingActors(s).map((i) => charAt(s, i)).filter(Boolean);
+  const first = who.some((c) => !(c.bossBeat && c.bossBeat[key]));
+  for (const c of who) (c.bossBeat = c.bossBeat || {})[key] = 1;
+  (m.bossWins = m.bossWins || {})[key] = (m.bossWins[key] || 0) + 1;
+  // Shift in Front: hold your fire and the workers go home.
+  if (b.frontHeld && !out.fled) { m.resolve += 1; m.totalResolve += 1; out.resolve = (out.resolve || 0) + 1; out.notes.push('You held your fire on the workers: +1 Resolve'); }
+  const opts = { map: r.map, name: firstName(s.char), rng }, sceneKey = `defeat:${key}`;
+  if (first) {
+    const seen = !!(m.sceneSeen || {})[sceneKey], all = bossLines(e.id, 'firstDefeat', opts);
+    const beats = seen ? all.slice(-1) : all;
+    m.sceneN = (m.sceneN || 0) + 1;
+    if (beats.length) s.scene = { id: m.sceneN, kind: 'defeat', key: sceneKey, boss: e.id, name: e.name, beats, note: bossLine(e.id, 'victoryNote', opts) };
+    if (s.scene) journal(s, `${e.name}: ${s.scene.note || beats[beats.length - 1]}`, 'boss');
+  } else {
+    const line = bossLine(e.id, 'defeat', opts);
+    if (line) { out.defeatLine = line; log(s, line, 'boss'); fx(s, { who: 'enemy', type: 'say', text: line, kind: 'boss', sayN: (b.says += 1) }); }
+  }
+}
+// Operatives dead so far. The feat counter is the real number; meta.fallen stops at 12. A cell older than the counter falls back on how many it has hired, less those still alive,
+// which reads a little high for cells that had operatives retired by an old migration.
+export function fallenCount(s) {
+  const m = s.meta, counted = m.feats && m.feats.counters ? m.feats.counters.fallen : undefined, wall = (m.fallen || []).length;
+  if (counted !== undefined) return Math.max(counted, wall);
+  const living = (s.char ? 1 : 0) + (s.char2 ? 1 : 0);
+  return Math.max(wall, (m.operatives || 0) - living);
+}
+// ---------- codex ----------
+// What a cell knows. Old cells have no bossWins, so kills and liberated districts stand in.
+export function codexContext(s, extra = null) {
+  const out = { fallen: 0, beaten: [], bossRepeat: 0, ending: false };
+  for (const m of [s.meta, extra].filter(Boolean)) {
+    const c = (m.feats && m.feats.counters) || {};
+    for (const [k, n] of Object.entries(m.bossWins || {})) { out.beaten.push(k); out.bossRepeat = Math.max(out.bossRepeat, n); }
+    for (const id of Object.keys(D.BOSS_INFO)) if (c[`kill:${id}`] > 0) { out.beaten.push(id); out.bossRepeat = Math.max(out.bossRepeat, c[`kill:${id}`]); }
+    for (const map of D.MAPS) if ((m.liberated || {})[map.id]) out.beaten.push(`${map.bosses[map.bosses.length - 1]}:${map.id}`);
+    if (m.endingSeen) out.ending = true;
+  }
+  out.fallen = Math.max(fallenCount(s), extra ? fallenCount({ meta: extra, char: 1 }) : 0);
+  return out;
+}
+export const codexEntries = (s, extra = null) => { const ctx = codexContext(s, extra); return CODEX.map((entry) => ({ entry, open: codexUnlocked(entry, ctx) })); };
+// Entries that have just opened, marked as seen. A cell's first look stays quiet: only what opens after that gets a notice.
+export function codexFresh(s) {
+  const m = s.meta, open = codexEntries(s).filter((x) => x.open).map((x) => x.entry);
+  if (!m.codexSeen) { m.codexSeen = open.map((x) => x.id); m.codexNew = []; return []; }
+  const fresh = open.filter((x) => !m.codexSeen.includes(x.id));
+  for (const x of fresh) { m.codexSeen.push(x.id); (m.codexNew = m.codexNew || []).push(x.id); }
+  return fresh;
 }
 
 // XP earned on a raid waits in the bank. It turns into levels only when a boss secures it or you get out (settle).
@@ -1981,6 +2435,9 @@ const ROUTE_CUT = 0.85; // Smuggler's Route
 function settle(s, kind, rate, exact = false) {
   const r = s.run, me = actorIdx(s);
   let mine = 0;
+  // The team's numbers since the last payout, for the tally on the payout screen. Saves from before this have no mark, so they count from the raid's start.
+  const mark = r.tallyMark || {}, tally = { kills: (r.kills || 0) - (mark.kills || 0), sectors: (r.cleared || 0) - (mark.sectors || 0), dmg: (r.dmgDone || 0) - (mark.dmg || 0) };
+  r.tallyMark = { kills: r.kills || 0, sectors: r.cleared || 0, dmg: r.dmgDone || 0 };
   forEachActor(s, (a, i) => {
     const safe = a.safeCredits ?? a.startCredits ?? r.startCredits ?? 0, haul = Math.max(0, a.credits - safe), bank = a.xpBank || 0;
     if (!haul && !bank) return;
@@ -1997,7 +2454,7 @@ function settle(s, kind, rate, exact = false) {
     }
     a.xpBank = 0; a.safeCredits = a.credits;
     s.meta.payouts = (s.meta.payouts || 0) + 1;
-    a.payout = { id: s.meta.payouts, kind, rate: cut, credits: haul - lostCredits, lostCredits, xp: gain, lostXp, fromLevel, toLevel: a.level, fromPct: fromXp / fromNext, toPct: a.xp / xpToNext(a.level), points };
+    a.payout = { id: s.meta.payouts, kind, rate: cut, credits: haul - lostCredits, lostCredits, xp: gain, lostXp, fromLevel, toLevel: a.level, fromPct: fromXp / fromNext, toPct: a.xp / xpToNext(a.level), points, tally };
   });
   return mine;
 }
@@ -2026,6 +2483,7 @@ function winFight(s, rng, fled = false) {
     const d = droneOf(s.char);
     if (d && d.type === 'magpie' && droneHas(d, 3) && rng() < 0.15) { const it = pick(rng, ['stim', 'thermal', 'ion', 'smoke']); if (s.char.items[it] < stats(s).carry) { s.char.items[it] += 1; log(s, `${D.DRONES[d.type].name} comes back with a ${D.ITEMS[it].name}.`, 'good'); } }
   });
+  if (e.bs) bossGiveBack(s);
   const easy = payScale(c, r.sector);
   const credits = Math.round(randInt(rng, e.cr[0], e.cr[1]) * creditMult(s) * (fled ? 0.5 : 1) * easy);
   // A boss this operative has already beaten is worth less the second time round.
@@ -2086,6 +2544,7 @@ function winFight(s, rng, fled = false) {
     r.lootOffer = fled ? null : rollLoot(s, rng, e);
   });
   if (r.lootOffer) out.loot = itemName(r.lootOffer);
+  if (e.boss) bossBeaten(s, e, out, rng);
   r.enemy = null;
   s.outcome = out;
   s.screen = 'victory';
@@ -2395,6 +2854,9 @@ function reallyDie(s, foe) {
   record.perks = (c.perks || []).length;
   record.boardId = recordCareer(s, c, 'died', foe);
   record.score = careerScore(c);
+  // The death screen's record of this operative's life.
+  record.kills = (c.career && c.career.kills) || 0;
+  record.deepest = Math.max(r.sector || 0, ...careerProgress(c).map((x) => x.best));
   if (isCoop(s) && !r.orbit) {
     autoHeirloom(s);
     c.dead = true; c.downed = 0;
@@ -2478,7 +2940,7 @@ export function buyDrink(s, id) {
   journal(s, `${c.name} orders a ${d.name} at the Lantern.`);
   return true;
 }
-export const drinkCost = (s, id) => Math.round(((D.BAR.menu.find((x) => x.id === id) || D.BAR.menu[0]).cost) * hard(s).price * consumableScale(s.char));
+export const drinkCost = (s, id) => Math.ceil(((D.BAR.menu.find((x) => x.id === id) || D.BAR.menu[0]).cost) * 1.1 * hard(s).price * consumableScale(s.char));
 // The Wheel: European roulette, one bet per spin.
 export const ROULETTE_RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
 export const WHEEL_ORDER = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
@@ -2554,7 +3016,7 @@ export function shipStats(m) {
   const sh = m.ship, P = D.SHIP_PARTS;
   return { hull: P.hull.base + P.hull.per * sh.hull, atk: P.guns.base + P.guns.per * sh.guns, shield: P.shields.base + P.shields.per * sh.shields, evade: P.engines.base + P.engines.per * sh.engines, crit: sh.cell.includes('targeting') ? 0.2 : 0 };
 }
-export const shipPartCost = (s, part) => { const lvl = s.meta.ship[part]; return lvl >= 3 ? 0 : Math.round(D.SHIP_PARTS[part].cost[lvl] * hard(s).price); };
+export const shipPartCost = (s, part) => { const lvl = s.meta.ship[part]; return lvl >= 3 ? 0 : Math.ceil(D.SHIP_PARTS[part].cost[lvl] * 1.1 * hard(s).price); };
 export function buyShipPart(s, part) {
   const cost = shipPartCost(s, part);
   if (!inTown(s) || !cost || s.char.credits < cost) return false;

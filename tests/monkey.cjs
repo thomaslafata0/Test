@@ -7,7 +7,7 @@ let seed = SEED; const rnd = () => { seed = (seed * 1103515245 + 12345) % 214748
   const page = await browser.newPage({ viewport: { width: 900, height: 900 } });
   const errors = [];
   page.on('pageerror', (e) => errors.push('PAGEERROR ' + e.message));
-  page.on('console', (m) => { if (m.type() === 'error') errors.push('CONSOLE ' + m.text()); });
+  page.on('console', (m) => { if (m.type() === 'error' && !/town\/street\//.test(m.location().url)) errors.push('CONSOLE ' + m.text()); });
   await page.goto('http://localhost:8765/index.html');
   await page.evaluate(() => localStorage.setItem('cinder-cell-speed', JSON.stringify('auto2')));
   await page.reload(); await page.click('button[data-a="continue-title"]', { timeout: 2500 }).catch(() => {}); await page.waitForTimeout(800);

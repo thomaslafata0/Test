@@ -6,6 +6,12 @@ const ok = (name, v, extra = '') => { console.log(`${v ? 'PASS' : 'FAIL'} ${name
 function game(seed = 7) { const rng = E.seededRng(seed), s = E.newGame(rng); E.createChar(s, rng); return { s, rng }; }
 function fight(s, rng) { s.run.room = 0; s.run.choices = ['fight', 'fight']; E.enterRoom(s, 0, rng); return s.run.enemy; }
 function win(s, rng) { const e = s.run.enemy; for (let i = 0; i < 40 && s.screen === 'combat'; i++) { e.hp = 1; e.def = 0; s.char.hp = 500; E.playerAct(s, 'shoot', rng, 0); } }
+{ // A failed smoke escape tells the stage, so the operative isn't left invisible
+  const { s, rng } = game(); E.deploy(s, 'garrison', 1, rng); fight(s, rng); s.char.items.smoke = 1; s.events = []; s.char.hp = 500;
+  E.playerAct(s, 'smoke', () => 0.999, 0);
+  const ev = s.events.find((f) => f.type === 'smoke');
+  ok('failed smoke keeps the fight going and says so', s.screen === 'combat' && ev && ev.ok === false, JSON.stringify(ev));
+}
 { // XP banks in a raid; extract rates by position; walking-in money kept
   const { s, rng } = game(); s.meta.contracts = []; s.char.credits = 1000; s.char.xp = 0;
   E.deploy(s, 'garrison', 1, rng); fight(s, rng);

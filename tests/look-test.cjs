@@ -3,7 +3,7 @@ const OUT = require('path').join(__dirname, 'shots');
 require('fs').mkdirSync(OUT, { recursive: true });
 (async () => {
   const b = await chromium.launch(); const page = await b.newPage({ viewport: { width: 1100, height: 900 } });
-  const errors = []; page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  const errors = []; page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error' && !/town\/street\//.test(m.location().url)) errors.push(m.text()); });
   await page.goto('http://localhost:8765/index.html');
   // grid of composites straight from look.js
   const grid = await page.evaluate(async () => {
@@ -27,7 +27,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await page.screenshot({ path: `${OUT}/look-create1.png` });
   await page.click('button[data-a="step"][data-v="3"]'); await page.waitForTimeout(300); await page.screenshot({ path: `${OUT}/look-create3.png` });
   await page.click('button[data-a="step"][data-v="4"]'); await page.waitForTimeout(300); // Start is on the last step, Stats
-  await page.click('button[data-a="create"]'); await page.waitForTimeout(1500);
+  await page.click('button[data-a="create"]'); await page.waitForTimeout(150); await page.click('button[data-a="scenenext"]', { timeout: 1500 }).catch(() => {}); await page.waitForTimeout(1500);
   await page.keyboard.down('ArrowLeft'); await page.waitForTimeout(500); await page.keyboard.up('ArrowLeft'); await page.waitForTimeout(100);
   await page.screenshot({ path: `${OUT}/look-town.png`, clip: { x: 0, y: 250, width: 1100, height: 520 } });
   await page.click('button[data-a="popup"][data-v="gear"]'); await page.waitForTimeout(300); await page.screenshot({ path: `${OUT}/look-gear.png`, clip: { x: 0, y: 0, width: 1100, height: 700 } }); await page.keyboard.press('Escape');

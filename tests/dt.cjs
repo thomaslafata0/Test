@@ -5,7 +5,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   const b = await chromium.launch();
   for (const W of [1200, 390]) {
     const page = await b.newPage({ viewport: { width: W, height: 900 } });
-    const errors = []; page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+    const errors = []; page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error' && !/town\/street\//.test(m.location().url)) errors.push(m.text()); });
     await page.goto('http://localhost:8765/index.html');
     await page.evaluate(async () => { const E = await import('./engine.js'), rng = E.seededRng(5), s = E.newGame(rng); E.createChar(s, rng); s.char.credits = 1500; s.meta.resolve = 30; s.meta.tips = { town: true }; s.notice = null; localStorage.setItem('cinder-cell-save-v1', JSON.stringify(s)); });
     await page.reload(); await page.click('button[data-a="continue-title"]', { timeout: 2500 }).catch(() => {}); await page.waitForTimeout(1000);

@@ -61,8 +61,8 @@ const ART = {
   ],
 };
 export const DRONE_W = 16, DRONE_H = 12;
-const hi = {};
-export function setDroneArt(type, sheet) { hi[type] = sheet && sheet.anims.idle ? sheet.anims.idle : null; for (const k of Object.keys(icons)) if (k.startsWith(`${type}:`)) delete icons[k]; }
+const hi = {}, hiMove = {};
+export function setDroneArt(type, sheet) { hi[type] = sheet && sheet.anims.idle ? sheet.anims.idle : null; hiMove[type] = sheet && sheet.anims.special ? sheet.anims.special : null; for (const k of Object.keys(icons)) if (k.startsWith(`${type}:`)) delete icons[k]; }
 // A powered-down copy: the same drone in grey.
 const greyed = new WeakMap();
 function greyOf(img) {
@@ -76,11 +76,17 @@ function greyOf(img) {
   return c;
 }
 // The current high-resolution frame, or null. { img, sx, sw, sh }
-export function droneHiFrame(type, t, off = false) {
+// moveStart: when the drone's ability began; it plays once, then the idle loop returns.
+export function droneHiFrame(type, t, off = false, moveStart = 0) {
   const a = hi[type];
   if (!a) return null;
-  const fw = a.img.width / a.frames, f = off ? 0 : Math.floor(t / 1000 * a.fps) % a.frames;
-  return { img: off ? greyOf(a.img) : a.img, sx: f * fw, sw: fw, sh: a.img.height };
+  const idleW = a.img.width / a.frames, idleH = a.img.height, mv = hiMove[type];
+  if (mv && moveStart && !off) {
+    const f = Math.floor((t - moveStart) / 1000 * mv.fps);
+    if (f >= 0 && f < mv.frames) { const fw = mv.img.width / mv.frames; return { img: mv.img, sx: f * fw, sw: fw, sh: mv.img.height, idleW, idleH, acting: true }; }
+  }
+  const f = off ? 0 : Math.floor(t / 1000 * a.fps) % a.frames;
+  return { img: off ? greyOf(a.img) : a.img, sx: f * idleW, sw: idleW, sh: idleH, idleW, idleH };
 }
 const cache = {};
 // A canvas for one frame. Frame 0 and 1 are the rotors; 'off' is a powered-down copy with stopped rotors.

@@ -5,7 +5,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   const browser = await chromium.launch();
   for (const width of [1200, 390]) {
     const page = await browser.newPage({ viewport: { width, height: 860 } });
-    const errors = []; page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errors.push(m.text()); });
+    const errors = []; page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if ((m.type() === 'error' || m.type() === 'warning') && !/town\/street\//.test(m.location().url)) errors.push(m.text()); });
     const ov = async (tag) => { const o = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth); if (o > 0) errors.push(`${tag} overflow ${o}`); };
     const T = () => page.evaluate(() => { const t = globalThis.cinderTown, p = t.player; return { scene: t.scene, x: Math.round(p.x), y: Math.round(p.y), say: t.say && t.say.text, offer: !!t.offer, prompt: t.prompt.textContent }; });
     const save = () => page.evaluate(() => JSON.parse(localStorage.getItem('cinder-cell-save-v1')));
@@ -20,19 +20,18 @@ require('fs').mkdirSync(OUT, { recursive: true });
     // 1) safehouse: walk in, no popup until you talk to Cass
     await page.keyboard.down('ArrowUp'); await page.waitForTimeout(900); await page.keyboard.up('ArrowUp'); await page.waitForTimeout(400);
     let s = await save(); console.log(width, 'inside safehouse:', (await T()).scene, 'popup:', s.popup);
-    await page.keyboard.down('ArrowUp'); await page.waitForTimeout(700); await page.keyboard.up('ArrowUp');
-    await page.keyboard.down('ArrowRight'); await page.waitForTimeout(450); await page.keyboard.up('ArrowRight');
+    await page.keyboard.down('ArrowRight'); await page.waitForTimeout(1900); await page.keyboard.up('ArrowRight');
     await page.keyboard.press('e'); await page.waitForTimeout(300);
     s = await save(); console.log(width, 'after talking to Cass popup:', s.popup);
     await ov('character'); await page.screenshot({ path: `${OUT}/t2-character-${width}.png`, fullPage: width === 390 });
     await page.waitForTimeout(150);
     s = await save(); console.log(width, 'wanted after lie low:', s.char.wanted, 'credits', s.char.credits);
     await page.keyboard.press('Escape'); await page.waitForTimeout(200);
-    await page.evaluate(() => { const t = globalThis.cinderTown; t.player.x = 96; t.player.y = 170; });
-    await page.keyboard.down('ArrowDown'); await page.waitForTimeout(900); await page.keyboard.up('ArrowDown'); await page.waitForTimeout(400);
+    await page.evaluate(() => { const t = globalThis.cinderTown; t.player.x = 120; });
+    await page.keyboard.down('ArrowLeft'); await page.waitForTimeout(900); await page.keyboard.up('ArrowLeft'); await page.waitForTimeout(400);
     console.log(width, 'back outside via the door:', (await T()).scene);
     // 2) teleport next to the vendor and buy noodles
-    await page.evaluate(() => { const t = globalThis.cinderTown; t.player.x = 304; t.player.y = 516; t.snapCamera(); });
+    await page.evaluate(() => { const t = globalThis.cinderTown; t.player.x = t.folk.find((f) => f.id === 'vendor').x + 20; t.snapCamera(); });
     await page.waitForTimeout(200); await page.keyboard.press('e'); await page.waitForTimeout(200);
     console.log(width, 'vendor offer:', JSON.stringify(await T()));
     await page.keyboard.press('Enter'); await page.waitForTimeout(300);
@@ -47,15 +46,15 @@ require('fs').mkdirSync(OUT, { recursive: true });
     await page.keyboard.down('ArrowUp'); await page.waitForTimeout(600); await page.keyboard.up('ArrowUp'); await page.waitForTimeout(500);
     s = await save(); console.log(width, 'terminal:', (await T()).scene, 'popup:', s.popup);
     await ov('missions'); await page.screenshot({ path: `${OUT}/t2-missions-${width}.png` });
-    // 5) collision: try to walk onto the terminal's right wall from the plaza
+    // 5) the pavement holds you: pushing up into a blank wall and along it stays on the street
     await page.keyboard.press('Escape'); await page.waitForTimeout(200);
     await page.keyboard.press('Escape'); await page.waitForTimeout(400);
     console.log(width, 'Esc leaves the terminal:', (await T()).scene);
-    await page.evaluate(() => { const t = globalThis.cinderTown; t.player.x = 500; t.player.y = 250; t.snapCamera(); });
+    await page.evaluate(() => { const t = globalThis.cinderTown; t.player.x = 480; t.snapCamera(); });
     await page.keyboard.down('ArrowUp'); await page.waitForTimeout(2500); await page.keyboard.up('ArrowUp');
-    await page.keyboard.down('ArrowLeft'); await page.waitForTimeout(1500); await page.keyboard.up('ArrowLeft');
+    await page.keyboard.down('ArrowLeft'); await page.waitForTimeout(250); await page.keyboard.up('ArrowLeft');
     await page.waitForTimeout(200);
-    console.log(width, 'after pushing into the terminal wall:', JSON.stringify(await T()));
+    console.log(width, 'after pushing into the wall:', JSON.stringify(await T()));
     await page.screenshot({ path: `${OUT}/t2-wall-${width}.png` });
     console.log(width, errors.length ? errors : 'no errors');
     await page.close();

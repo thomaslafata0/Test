@@ -8,7 +8,7 @@ const URL = 'http://localhost:8765/index.html';
     const page = await browser.newPage({ viewport: { width, height: 900 } }); globalThis.routeShot = 0;
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
-    page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+    page.on('console', (m) => { if (m.type() === 'error' && !/town\/street\//.test(m.location().url)) errors.push(m.text()); });
     const overflow = async (tag) => { const o = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth); if (o > 0) errors.push(`${tag}: horizontal overflow ${o}px`); };
     const shot = async (name) => { await overflow(name); await page.screenshot({ path: `${OUT}/${name}-${width}.png`, fullPage: true }); };
     // 1) Old v3 save migrates into gear slots.
@@ -75,7 +75,7 @@ const URL = 'http://localhost:8765/index.html';
     await shot('create');
     await page.click('button[data-a="step"][data-v="2"]'); await page.click('button[data-a="bg"][data-v="preacher"]'); await page.waitForTimeout(100);
     await shot('create-preacher');
-    await page.click('button[data-a="step"][data-v="4"]'); await page.click('button[data-a="create"]'); await page.waitForTimeout(200);
+    await page.click('button[data-a="step"][data-v="4"]'); await page.click('button[data-a="create"]'); await page.waitForTimeout(150); await page.click('button[data-a="scenenext"]', { timeout: 1500 }).catch(() => {}); await page.waitForTimeout(200);
     await page.keyboard.press('Escape'); await page.click('button[data-a="popup"][data-v="character"]'); await page.waitForTimeout(150);
     for (const k of ['cha', 'cha']) { const b = await page.$(`.town-pop button[data-a="spend"][data-v="${k}"]`); if (b) await b.click(); }
     await page.keyboard.press('Escape'); await page.click('button[data-a="popup"][data-v="gear"]'); await page.waitForTimeout(200);

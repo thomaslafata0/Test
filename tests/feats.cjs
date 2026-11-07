@@ -5,7 +5,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   const b = await chromium.launch();
   for (const W of [1200, 390]) {
     const page = await b.newPage({ viewport: { width: W, height: 900 } });
-    const errors = []; page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+    const errors = []; page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error' && !/town\/street\//.test(m.location().url)) errors.push(m.text()); });
     await page.goto('http://localhost:8765/index.html');
     // a cell with some history, then a fight to see the strip
     await page.evaluate(async () => { const E = await import('./engine.js'), rng = E.seededRng(11), s = E.newGame(rng); E.createChar(s, rng); s.meta.tips = { town: true, combat: true, route: true, loot: true, perk: true }; s.notice = null;

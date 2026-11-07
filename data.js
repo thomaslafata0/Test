@@ -270,7 +270,7 @@ export const DRONES = {
 };
 export const DRONE_ORDER = ['hornet', 'aegis', 'mender', 'magpie'];
 export const DRONE_MAX_RANK = 5;
-export const DRONE_UPGRADE = [4, 7, 11, 16]; // Resolve to reach rank 2, 3, 4 and 5
+export const DRONE_UPGRADE = [5, 8, 13, 18]; // Resolve to reach rank 2, 3, 4 and 5
 export const DRONE_DAMAGE = 0.1; // chance of being knocked out each time a sector is cleared
 export const TRAINING = {
   hp:  { label: 'Endurance',    stat: 'Max HP', per: 8, max: 20, note: 'Scar tissue and stubbornness.' },
@@ -281,21 +281,21 @@ export const TRAINING = {
 // Upgrades for the whole cell. Each level costs its own Resolve and lifts the benefit; `v` is what the rules read.
 export const CELL = [
   { id: 'stash', name: 'Hidden Stash', levels: [
-    { cost: 3, v: 30, desc: 'New operatives start with +30 credits.' }, { cost: 5, v: 60, desc: 'New operatives start with +60 credits.' },
-    { cost: 9, v: 120, desc: 'New operatives start with +120 credits.' }, { cost: 14, v: 240, desc: 'New operatives start with +240 credits.' }] },
+    { cost: 4, v: 30, desc: 'New operatives start with +30 credits.' }, { cost: 6, v: 60, desc: 'New operatives start with +60 credits.' },
+    { cost: 10, v: 120, desc: 'New operatives start with +120 credits.' }, { cost: 16, v: 240, desc: 'New operatives start with +240 credits.' }] },
   { id: 'kit', name: 'Field Kit', levels: [
-    { cost: 3, v: [1, 0], desc: 'New operatives start with +1 Med Stim.' }, { cost: 5, v: [1, 1], desc: 'New operatives start with +1 Med Stim and +1 Thermal Charge.' },
-    { cost: 8, v: [2, 1], desc: 'New operatives start with +2 Med Stims and +1 Thermal Charge.' }, { cost: 12, v: [2, 2], desc: 'New operatives start with +2 Med Stims and +2 Thermal Charges.' }] },
+    { cost: 4, v: [1, 0], desc: 'New operatives start with +1 Med Stim.' }, { cost: 6, v: [1, 1], desc: 'New operatives start with +1 Med Stim and +1 Thermal Charge.' },
+    { cost: 9, v: [2, 1], desc: 'New operatives start with +2 Med Stims and +1 Thermal Charge.' }, { cost: 14, v: [2, 2], desc: 'New operatives start with +2 Med Stims and +2 Thermal Charges.' }] },
   { id: 'cache', name: 'Weapons Cache', levels: [
-    { cost: 4, v: 1, desc: 'New operatives start with a Shock Baton.' }, { cost: 6, v: 2, desc: 'New operatives start with a Shock Baton and a Salvaged Carbine.' }] },
+    { cost: 5, v: 1, desc: 'New operatives start with a Shock Baton.' }, { cost: 7, v: 2, desc: 'New operatives start with a Shock Baton and a Salvaged Carbine.' }] },
   { id: 'ledger', name: 'Doc\u2019s Ledger', levels: [
-    { cost: 3, v: 0.15, desc: 'Clinic treatment costs 15% less.' }, { cost: 5, v: 0.3, desc: 'Clinic treatment costs 30% less.' },
-    { cost: 8, v: 0.5, desc: 'Clinic treatment costs half.' }, { cost: 12, v: 0.65, desc: 'Clinic treatment costs 65% less.' }] },
+    { cost: 4, v: 0.15, desc: 'Clinic treatment costs 15% less.' }, { cost: 6, v: 0.3, desc: 'Clinic treatment costs 30% less.' },
+    { cost: 9, v: 0.5, desc: 'Clinic treatment costs half.' }, { cost: 14, v: 0.65, desc: 'Clinic treatment costs 65% less.' }] },
   { id: 'mentor', name: 'Old Hand', levels: [
-    { cost: 6, v: 1, desc: 'New operatives get +1 attribute point at creation.' }, { cost: 12, v: 2, desc: 'New operatives get +2 attribute points at creation.' }, { cost: 20, v: 3, desc: 'New operatives get +3 attribute points at creation.' }] },
-  { id: 'heirloom', name: 'Heirloom', levels: [{ cost: 10, v: 1, desc: 'When an operative dies, choose one piece of their gear to pass on to the next.' }] },
-  { id: 'lockup1', name: 'Lockup Shelving', levels: [{ cost: 6, v: 1, desc: 'The Lockup holds 2 more pieces.' }] },
-  { id: 'lockup2', name: 'False Floor', levels: [{ cost: 12, v: 1, desc: 'The Lockup holds 2 more pieces again.' }] },
+    { cost: 7, v: 1, desc: 'New operatives get +1 attribute point at creation.' }, { cost: 14, v: 2, desc: 'New operatives get +2 attribute points at creation.' }, { cost: 22, v: 3, desc: 'New operatives get +3 attribute points at creation.' }] },
+  { id: 'heirloom', name: 'Heirloom', levels: [{ cost: 11, v: 1, desc: 'When an operative dies, choose one piece of their gear to pass on to the next.' }] },
+  { id: 'lockup1', name: 'Lockup Shelving', levels: [{ cost: 7, v: 1, desc: 'The Lockup holds 2 more pieces.' }] },
+  { id: 'lockup2', name: 'False Floor', levels: [{ cost: 14, v: 1, desc: 'The Lockup holds 2 more pieces again.' }] },
 ];
 // What an upgrade bought before levels existed is worth this level.
 export const CELL_LEGACY = { stash: 2, kit: 2, cache: 2, ledger: 3, mentor: 1 };
@@ -337,6 +337,24 @@ export const ENEMIES = {
     intents: { attack: 4, guard: 2, heavy: 1 }, line: 'A dock sentry in vacuum-rated armour brings a carbine to bear.' },
   gunner:  { name: 'Turret Gunner', tags: ['human'], hp: 24, atk: 14, def: 3, spd: 3, cr: [18, 26], xp: 14,
     intents: { attack: 3, heavy: 3, guard: 1 }, line: 'A gunner swings the emplaced cannon around. It\u2019s already spinning up.' },
+
+  // small ground bots: cheap to build, cheap to field, sent ahead of the real troops
+  smallbot: { name: 'Sentry Walker', tags: ['droid'], hp: 11, atk: 5, def: 0, spd: 6, cr: [4, 7], xp: 4,
+    intents: { attack: 6, heavy: 1 }, line: 'A knee-high walker stomps out of a side door, gun arm twitching.' },
+  bulwark: { name: 'Bulwark Bot', tags: ['droid', 'armored'], hp: 16, atk: 5, def: 3, spd: 3, cr: [6, 10], xp: 6,
+    intents: { attack: 4, guard: 3, heavy: 1 }, line: 'A squat bot shuffles forward behind a dented shield.' },
+  spotweld: { name: 'Spot Welder', tags: ['droid'], hp: 12, atk: 6, def: 1, spd: 6, cr: [5, 8], xp: 5,
+    intents: { attack: 5, heavy: 1 }, line: 'A foundry walker trundles at you, its welding tip already white.' },
+  slagrunt: { name: 'Slag Runt', tags: ['droid', 'armored'], hp: 18, atk: 7, def: 2, spd: 3, cr: [6, 10], xp: 7,
+    intents: { attack: 4, heavy: 2 }, line: 'A hunched little furnace on legs. Its grate glows brighter as it nears.' },
+  cuffbot: { name: 'Cuff Bot', tags: ['droid'], hp: 14, atk: 6, def: 1, spd: 6, cr: [5, 8], xp: 6,
+    intents: { attack: 5, heavy: 1 }, line: 'A restraint bot clicks up the corridor, cuffs snapping open and shut.' },
+  gasbot: { name: 'Gas Bot', tags: ['droid'], hp: 13, atk: 5, def: 0, spd: 5, cr: [6, 9], xp: 6,
+    intents: { attack: 5, heavy: 1 }, line: 'A small tank on legs wheezes green vapour from its nozzle.' },
+  mortarbot: { name: 'Mortar Bot', tags: ['droid'], hp: 15, atk: 9, def: 1, spd: 2, cr: [10, 14], xp: 8,
+    intents: { attack: 3, heavy: 3 }, line: 'A stubby walker plants its feet and tilts the tube on its back.' },
+  deckbot: { name: 'Deck Bot', tags: ['droid'], hp: 13, atk: 7, def: 1, spd: 8, cr: [8, 12], xp: 6,
+    intents: { attack: 6, heavy: 1 }, line: 'A white maintenance bot scuttles along the deck with a rivet gun raised.' },
 
   // bosses
   halvek:  { name: 'Sector Warden Halvek', tags: ['boss', 'human'], hp: 75, atk: 9, def: 3, spd: 5, cr: [70, 90], xp: 35,
@@ -399,6 +417,13 @@ export const SECTOR_CONDS = [
 // ---------- maps ----------
 // pool: [enemy id, sector it first appears]. unlock: deepest sector reached anywhere.
 // level: extra enemy levels. events: chance of an event after a fight. theme: stage backdrop.
+// Enemies from the Garrison's roster picked up the habits of whichever district they were sent to.
+export const MAP_VARIANT_IDS = ['probe', 'officer', 'hound', 'riot', 'marksman', 'interrogator', 'shock', 'sentinel'];
+export const MAP_VARIANT = {
+  foundry: { prefix: 'Soot-Caked', atk: 1.06, hp: 0.95 },
+  detention: { prefix: 'Block', def: 1, hp: 0.95 },
+  port: { prefix: 'Vacuum-Rated', hp: 1.08, spd: -1 },
+};
 export const MAPS = [
   { id: 'garrison', name: 'Directorate Garrison', unlock: 0, level: 0, credits: 1, xp: 1, events: 0.3, theme: 'garrison',
     mechanic: { id: 'alarm', name: 'Alarm', desc: 'Long fights and botched checks raise it. Each level: enemies +6% ATK, you +5% credits. Rest rooms lower it.' },
@@ -406,7 +431,7 @@ export const MAPS = [
     roomNames: { fight: 'Guard Post', elite: 'Armoury', event: 'Side Corridor', supply: 'Quartermaster', rest: 'Abandoned Bunk' },
     desc: 'Checkpoints, barracks and the regime\u2019s soldiers. The straight fight.',
     sectors: ['Outer Checkpoint', 'Barracks Ring', 'Motor Pool', 'Comms Spire', 'Warden\u2019s Gate', 'Ration Depot', 'Armoury Row', 'Reactor Annex', 'Archive Vault', 'Siege Hangar', 'Officers\u2019 Deck', 'Signal Core', 'Chancery Halls', 'Inner Keep', 'Supervisor\u2019s Spire'],
-    pool: [['patrol', 1], ['probe', 1], ['officer', 1], ['hound', 2], ['riot', 3], ['marksman', 6], ['interrogator', 7], ['shock', 8], ['sentinel', 11]],
+    pool: [['patrol', 1], ['probe', 1], ['officer', 1], ['smallbot', 1], ['hound', 2], ['bulwark', 2], ['riot', 3], ['marksman', 6], ['interrogator', 7], ['shock', 8], ['sentinel', 11]],
     bosses: ['halvek', 'crawler', 'ostrane'] },
   { id: 'foundry', name: 'Foundry Works', unlock: 0, level: 0, credits: 1.25, xp: 0.9, events: 0.3, theme: 'foundry',
     mechanic: { id: 'vents', name: 'Furnace vents', desc: 'Every 3 turns the vents blast the floor: 10% of your max HP, 12% of the enemy\u2019s (6% for droids). Defend on vent turns to take none.' },
@@ -414,7 +439,7 @@ export const MAPS = [
     roomNames: { fight: 'Assembly Line', elite: 'Heavy Press', event: 'Catwalks', supply: 'Scrap Heap', rest: 'Cooling Room' },
     desc: 'The occupied foundry. Heat, machines and overtime. More droids, more credits.',
     sectors: ['Slag Yard', 'Conveyor Hall', 'Casting Floor', 'Smelter Gantry', 'Foreman\u2019s Office', 'Coolant Tunnels', 'Ore Crusher', 'Pattern Shop', 'Shipping Bay', 'Furnace Core', 'Rolling Mill', 'Quench Pits', 'Tapping Floor', 'Blast Furnace', 'Control Booth'],
-    pool: [['welder', 1], ['probe', 1], ['foreman', 1], ['hound', 2], ['loader', 3], ['riot', 5], ['slagger', 6], ['shock', 9], ['sentinel', 10]],
+    pool: [['welder', 1], ['probe', 1], ['foreman', 1], ['spotweld', 1], ['hound', 2], ['slagrunt', 2], ['loader', 3], ['riot', 5], ['slagger', 6], ['shock', 9], ['sentinel', 10]],
     bosses: ['brask', 'crucible', 'crawler'] },
   { id: 'detention', name: 'Detention Complex', unlock: 5, level: 1, credits: 1, xp: 1.15, events: 0.5, theme: 'detention',
     mechanic: { id: 'allies', name: 'Prisoners', desc: 'Freed prisoners fight beside you (up to 2), hitting for 30% of your ATK each turn. Enemies sometimes shoot them instead of you. Bring them home for +1 Resolve each.' },
@@ -422,7 +447,7 @@ export const MAPS = [
     roomNames: { fight: 'Guard Station', elite: 'Interrogation Room', event: 'Corridor', cells: 'Cell Block', rest: 'Laundry' },
     desc: 'Where the yard\u2019s people disappear. More prisoners, more choices, more Resolve.',
     sectors: ['Intake', 'Holding Pens', 'Processing', 'Cell Block A', 'Warden\u2019s Office', 'Isolation Wing', 'Infirmary', 'Cell Block C', 'Records Room', 'Interrogation Suite', 'Yard Gallery', 'Solitary', 'Transfer Dock', 'Deep Cells', 'Warden\u2019s Tower'],
-    pool: [['jailer', 1], ['officer', 1], ['hound', 1], ['sedation', 2], ['riot', 3], ['interrogator', 4], ['marksman', 6], ['shock', 8], ['sentinel', 11]],
+    pool: [['jailer', 1], ['officer', 1], ['hound', 1], ['cuffbot', 1], ['sedation', 2], ['gasbot', 2], ['riot', 3], ['interrogator', 4], ['marksman', 6], ['shock', 8], ['sentinel', 11]],
     bosses: ['kell', 'crawler', 'ostrane'] },
   { id: 'port', name: 'Orbital Lift Port', unlock: 10, level: 0, credits: 1.5, xp: 1.2, events: 0.25, theme: 'port',
     mechanic: { id: 'snipers', name: 'Tower snipers', desc: 'Open landing pads. Each turn there is a 20% chance a tower sniper hits you for 8% of max HP unless you Defend.' },
@@ -430,7 +455,7 @@ export const MAPS = [
     roomNames: { fight: 'Checkpoint', elite: 'Security Office', event: 'Crew Lounge', cargo: 'Cargo Stack', rest: 'Maintenance Bay' },
     desc: 'The regime\u2019s lifeline off-world. Elite guards and rich cargo.',
     sectors: ['Cargo Gate', 'Customs Hall', 'Fuel Depot', 'Landing Pad 3', 'Tower Base', 'Container Stacks', 'Lift Shaft', 'Hangar Deck', 'Crew Quarters', 'Control Tower', 'Tether Anchor', 'Gantry Ring', 'Flight Ops', 'Command Deck', 'The Lift'],
-    pool: [['dockguard', 1], ['probe', 1], ['gunner', 2], ['marksman', 3], ['shock', 4], ['sentinel', 6]],
+    pool: [['dockguard', 1], ['probe', 1], ['deckbot', 1], ['gunner', 2], ['mortarbot', 2], ['marksman', 3], ['shock', 4], ['sentinel', 6]],
     bosses: ['vane', 'crawler', 'ostrane'] },
 ];
 
@@ -526,7 +551,7 @@ export const EVENTS = [
     ] },
   { id: 'smuggler', maps: 'any', text: 'A smuggler in a stolen maintenance uniform leans out of a vent. \u201CBuying or selling?\u201D',
     options: [
-      { label: 'Buy two stims (30 cr)', cost: { credits: 30 }, win: { items: { stim: 2 }, text: '\u201CPleasure doing business.\u201D' } },
+      { label: 'Buy two stims (30 cr)', cost: { credits: 33 }, win: { items: { stim: 2 }, text: '\u201CPleasure doing business.\u201D' } },
       { label: 'Talk them into a discount', check: { attr: 'cha', base: 0.3, per: 0.1 },
         win: { items: { stim: 1, ion: 1 }, text: '\u201CFor the yard, then. Just this once.\u201D' }, lose: { text: '\u201CNice try.\u201D The vent cover slides shut.' } },
       { label: 'Wave them off', win: { text: 'You don\u2019t need more friends like that.' } },
@@ -541,7 +566,7 @@ export const EVENTS = [
     ] },
   { id: 'informant', maps: 'any', text: 'A nervous clerk in a Directorate jacket waves you into a supply closet. \u201CI can tell you what\u2019s ahead. For a price.\u201D',
     options: [
-      { label: 'Pay for the tip', cost: { credits: 25 }, win: { next: 'weakened', text: '\u201CThe next one\u2019s running a fever. Sloppy.\u201D They\u2019re right: the next enemy starts hurt.' } },
+      { label: 'Pay for the tip', cost: { credits: 28 }, win: { next: 'weakened', text: '\u201CThe next one\u2019s running a fever. Sloppy.\u201D They\u2019re right: the next enemy starts hurt.' } },
       { label: 'Lean on them', check: { attr: 'str', base: 0.35, per: 0.1 },
         win: { next: 'weakened', resolve: 1, text: 'They talk fast. Then they offer to keep talking, to the cell.' }, lose: { next: 'alerted', text: 'They hit a panic button under the shelf.' } },
       { label: 'Decline', win: { text: 'Informants inform on everyone.' } },
@@ -565,7 +590,7 @@ export const EVENTS = [
   { id: 'chapel', maps: 'any', text: 'A forgotten prayer niche, scratched into a wall. Someone keeps candles burning here.',
     options: [
       { label: 'Sit for a moment', win: { hp: 0.15, text: 'Quiet. The candles smell of tallow and home.' } },
-      { label: 'Leave an offering', cost: { credits: 15 }, win: { resolve: 1, hp: 0.1, text: 'A note tucked behind the candle reads: \u201CThey know about you. Keep going.\u201D' } },
+      { label: 'Leave an offering', cost: { credits: 17 }, win: { resolve: 1, hp: 0.1, text: 'A note tucked behind the candle reads: \u201CThey know about you. Keep going.\u201D' } },
       { label: 'Move on', win: { text: 'Faith is for later.' } },
     ] },
   { id: 'rival', maps: 'any', text: 'Another resistance runner, from a cell you don\u2019t know, is looting the same corridor. They freeze.',
@@ -605,7 +630,7 @@ export const EVENTS = [
     ] },
   { id: 'gambler', maps: 'any', text: 'A bored guard flips a coin over and over. \u201CCall it,\u201D they say, not looking up. \u201CDouble or nothing.\u201D',
     options: [
-      { label: 'Call it (25 credits)', cost: { credits: 25 }, check: { attr: 'cha', base: 0.5, per: 0 },
+      { label: 'Call it (25 credits)', cost: { credits: 28 }, check: { attr: 'cha', base: 0.5, per: 0 },
         win: { cash: 50, text: 'Heads. They pay up and wave you through.' }, lose: { text: 'Tails. They pocket it and laugh.' } },
       { label: 'Knock them out', check: { attr: 'str', base: 0.45, per: 0.08 },
         win: { credits: [6, 10], text: 'Down they go, and so does the coin.' }, lose: { next: 'alerted', text: 'They dodge and reach for the radio.' } },
@@ -613,7 +638,7 @@ export const EVENTS = [
     ] },
   { id: 'surgeon', maps: ['detention', 'garrison'], text: 'A surgeon in a blood-flecked Directorate coat is drinking alone. \u201CI patch up whoever comes through that door,\u201D she says.',
     options: [
-      { label: 'Let her patch you up', cost: { credits: 30 }, win: { heal: 'full', text: 'She works fast and doesn\u2019t ask questions.' } },
+      { label: 'Let her patch you up', cost: { credits: 33 }, win: { heal: 'full', text: 'She works fast and doesn\u2019t ask questions.' } },
       { label: 'Ask about the implants', check: { attr: 'int', base: 0.35, per: 0.1 },
         win: { attrs: { int: 1 }, hp: 0.1, text: 'She shows you a trick with a nerve block. Useful.' }, lose: { text: '\u201CNot for you.\u201D' } },
       { label: 'Leave', win: { text: 'Some doctors are better avoided.' } },
@@ -626,11 +651,17 @@ export const STATUSES = {
   burn:    { name: 'Burning',  short: 'BURN',  desc: 'Loses 8% of max HP at the end of each round.', bad: true },
   shaken:  { name: 'Shaken',   short: 'SHAKEN', desc: 'Deals 25% less damage.', bad: true },
   exposed: { name: 'Exposed',  short: 'EXPOSED', desc: 'Takes 25% more damage.', bad: true },
+  pinned:  { name: 'Pinned',   short: 'PINNED', desc: 'Can\u2019t Run.', bad: true },
 };
 
 // ---------- enemy signature moves ----------
 // Shown as the enemy's intent before it happens. Defending halves the damage and blocks the status.
 export const SPECIALS = {
+  spotweld: { name: 'Weld burn',      mult: 0.5, status: { burn: 2 }, tip: 'Sets you Burning. Defend to block it.' },
+  slagrunt: { name: 'Slag spit',      mult: 0.6, status: { burn: 2 }, tip: 'Sets you Burning. Defend to block it.' },
+  cuffbot:  { name: 'Restraints',     mult: 0.4, status: { shaken: 2 }, tip: 'Leaves you Shaken. Defend to block it.' },
+  gasbot:   { name: 'Sedative gas',   mult: 0.3, status: { exposed: 2 }, tip: 'Leaves you Exposed. Defend to block it.' },
+  deckbot:  { name: 'Rivet burst',    mult: 0.5, status: { bleed: 2 }, tip: 'Leaves you Bleeding. Defend to block it.' },
   patrol:   { name: 'Flashbang',      mult: 0.6, status: { exposed: 2 }, tip: 'Light damage and leaves you Exposed. Defend to block it.' },
   probe:    { name: 'Target lock',    mult: 0.3, status: { exposed: 2 }, tip: 'Marks you: Exposed for 2 turns. Defend to block it.' },
   officer:  { name: 'Citation',       mult: 0.4, status: { shaken: 2 }, tip: '\u201CYou\u2019re under arrest.\u201D Leaves you Shaken. Defend to block it.' },
@@ -676,6 +707,36 @@ export const BOSS_INFO = {
   crucible: { epithet: 'The Furnace Walks',          phase2: 'The Crucible\u2019s core goes white-hot.' },
   kell:     { epithet: 'Warden of the Deep Cells',   phase2: 'Kell takes off her glasses. Her eyes are worse.' },
   vane:     { epithet: 'Master of the Lift',         phase2: 'Vane calls in the tower guns.' },
+};
+
+// Rules for the bosses' signature moves. Names, tips and lines are in lore.js; docs/LORE.md has the design.
+// Moves in order: the first plays animation sig1, the second sig2. Numbers stated in lore.js tips must match these.
+// from: the HP mark at which a move opens (100 = from the start). until: the mark at which it stops.
+// count: enemy turns from the telegraph to it going off. turns: how long it then lasts. mult: damage. guard: what Defend leaves.
+// rate: chance of starting a move when one is open and off cooldown. cd: planned turns between moves.
+// notes: what changes at each HP mark, shown under the boss's line.
+export const BOSS_KIT = {
+  halvek: { rate: 0.4, cd: 2,
+    moves: { shutter: { from: 75, count: 1, turns: 2 }, confiscate: { from: 100, until: 50, count: 1, mult: 1, guard: 0.5 } },
+    notes: { 75: 'Gatehouse Shutter opens up.', 50: 'ATK +20%. No more Confiscation.', 25: 'The shutter stays down: no Run. Execution order every third turn.' } },
+  crawler: { rate: 0.4, cd: 2,
+    moves: { anchor: { from: 75, count: 1, mult: 1.6, guard: 0.5, pin: 2, belly: 1.3 }, siege: { from: 50, count: 2, mult: 2.8, guard: 0.35, jam: 0.1 } },
+    notes: { 75: 'Hull breached: DEF \u22121. Anchor Stomp opens up.', 50: 'ATK +20%. Siege Round opens up. No more self-repair.', 25: 'The key-holder panics: fires every turn, but 25% of plain shots go wide.' } },
+  crucible: { rate: 0.4, cd: 2,
+    moves: { roll: { from: 75, count: 2, mult: 2, guard: 0.5, open: 1.5, choke: 0.12 }, floor: { from: 100, count: 1, turns: 3, cost: 0.05 } },
+    notes: { 75: 'Glowing: Strikes burn for 3 turns. Roll Call opens up.', 50: 'ATK +20%. Slag Floor lasts 4 turns.', 25: 'Roll Call every other turn. No more self-repair. It takes +15% damage.' } },
+  brask: { rate: 0.4, cd: 2,
+    moves: { overtime: { from: 75, count: 1, mult: 0.7, hits: 2, guard: 0.5, winded: 2, self: 0.03 }, front: { from: 100, until: 50, count: 1, turns: 2 } },
+    notes: { 75: 'Overtime opens up.', 50: 'ATK +20%. No more workers in front.', 25: 'Overtime every other turn, and he no longer gets winded. It costs him 3% HP a time.' } },
+  kell: { rate: 0.4, cd: 2,
+    moves: { count: { from: 75, count: 1, turns: 2, shaken: 2 }, lights: { from: 50, count: 1, turns: 2, miss: 0.25 } },
+    notes: { 75: 'Count Time opens up.', 50: 'ATK +20%. Lights Out opens up.', 25: 'She throws away her keys: no Run. Solitary twice as often.' } },
+  vane: { rate: 0.4, cd: 2,
+    moves: { crane: { from: 100, count: 2, mult: 2.5, guard: 0.5, wreck: 2 }, salute: { from: 75, until: 25, count: 1, mult: 1.6, guard: 0.5, parry: 0.5 } },
+    notes: { 75: 'Officer\u2019s Salute opens up.', 50: 'ATK +20%. Tower snipers: 40% per turn.', 25: 'Coat off: no more Salute. Container Drop every third turn. Plain fire is two shots at x0.7.' } },
+  ostrane: { rate: 0.4, cd: 2,
+    moves: { redact: { from: 75, count: 1, turns: 2, cut: 0.5 }, audit: { from: 50, count: 2, base: 1, per: 0.4, max: 3, guard: 0.5 } },
+    notes: { 75: 'Redact opens up.', 50: 'ATK +20%, SPD +2. Final Audit opens up.', 25: 'Final Audit on a 1-turn count, every third turn.' } },
 };
 
 // ---------- contraband: run perks drafted after fights. Kept until the operative dies. ----------
@@ -810,9 +871,9 @@ export const SHIP_PARTS = {
   engines: { name: 'Drive tuning', per: 0.08, base: 0.1, desc: 'Evade chance and jump odds, per level.', cost: [130, 280, 500] },
 };
 export const SHIP_CELL = [
-  { id: 'ejector', name: 'Ejection pod', cost: 10, desc: 'When the shuttle is destroyed, the pilot has a 50% chance to drift home alive. Once per operative.' },
-  { id: 'targeting', name: 'Targeting array', cost: 8, desc: 'Rail cannons crit (x1.6) 20% of the time.' },
-  { id: 'salvager', name: 'Salvage claw', cost: 6, desc: 'Orbit wins pay 25% more credits.' },
+  { id: 'ejector', name: 'Ejection pod', cost: 11, desc: 'When the shuttle is destroyed, the pilot has a 50% chance to drift home alive. Once per operative.' },
+  { id: 'targeting', name: 'Targeting array', cost: 9, desc: 'Rail cannons crit (x1.6) 20% of the time.' },
+  { id: 'salvager', name: 'Salvage claw', cost: 7, desc: 'Orbit wins pay 25% more credits.' },
 ];
 // Enemy ships by run tier. mark: chance a win grants a Mark.
 export const ORBIT_TIERS = [

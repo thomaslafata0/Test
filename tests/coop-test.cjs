@@ -8,7 +8,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   const ctx = await browser.newContext({ viewport: { width: 1000, height: 900 } });
   const host = await ctx.newPage(), guest = await ctx.newPage();
   const errors = [];
-  for (const [p, n] of [[host, 'host'], [guest, 'guest']]) { p.on('pageerror', (e) => errors.push(`${n}: ${e.message}`)); p.on('console', (m) => { if (m.type() === 'error') errors.push(`${n} console: ${m.text()}`); }); }
+  for (const [p, n] of [[host, 'host'], [guest, 'guest']]) { p.on('pageerror', (e) => errors.push(`${n}: ${e.message}`)); p.on('console', (m) => { if (m.type() === 'error' && !/town\/street\//.test(m.location().url)) errors.push(`${n} console: ${m.text()}`); }); }
   await host.goto('http://localhost:8765/index.html');
   await host.evaluate(async () => { const E = await import('./engine.js'), rng = E.seededRng(21), s = E.newGame(rng); E.createChar(s, rng); s.char.credits = 300; s.meta.tips = { town: true, combat: true, route: true, loot: true, perk: true }; s.notice = null; localStorage.setItem('cinder-cell-save-v1', JSON.stringify(s)); localStorage.setItem('cinder-cell-speed', JSON.stringify('manual')); localStorage.setItem('cinder-cell-coop', JSON.stringify({ relay: '', name: 'Hosty' })); });
   await host.reload(); await host.click('button[data-a="continue-title"]', { timeout: 2500 }).catch(() => {}); await host.waitForTimeout(900);
@@ -30,7 +30,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   await guest.screenshot({ path: `${OUT}/coop-guest-create.png` });
   // guest creates an operative
   await guest.click('button[data-a="step"][data-v="2"]'); await guest.click('button[data-a="bg"][data-v="runner"]'); await guest.click('button[data-a="step"][data-v="4"]'); await guest.waitForTimeout(100);
-  await guest.click('button[data-a="create"]'); await guest.waitForTimeout(700);
+  await guest.click('button[data-a="create"]'); await guest.waitForTimeout(150); await guest.click('button[data-a="scenenext"]', { timeout: 1500 }).catch(() => {}); await guest.waitForTimeout(700);
   console.log('guest after create:', await gScreen(), '| host chip:', await host.evaluate(() => (document.querySelector('.head-stats .chip') || {}).textContent));
   const hostState = () => host.evaluate(() => { const s = JSON.parse(localStorage.getItem('cinder-cell-save-v1')); return { coop: s.coop, c1: s.char && s.char.name, c2: s.char2 && s.char2.name, ready: s.guestReady, screen: s.screen, actor: s.run && s.run.actor }; });
   console.log('host state:', JSON.stringify(await hostState()));

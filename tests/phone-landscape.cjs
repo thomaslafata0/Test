@@ -39,6 +39,9 @@ const SCREENS = {
       await p.reload(); await p.waitForTimeout(350); await p.tap('button[data-a="continue-title"]', { timeout: 2000 }).catch(() => {}); await p.waitForTimeout(650);
       bad = await fits(); check(`${w}x${h}${notch ? ' notch' : ''} ${name}`, !bad.length, bad.join('; '));
       // The way forward has to be on screen without scrolling.
+      // The death screen holds its buttons back while the record reveals; a tap skips to the end. Measure the finished screen.
+      await p.evaluate(() => { const g = globalThis.cinderGame; if (g && g.death.playing) document.querySelector('.screen-death').click(); });
+      await p.waitForTimeout(650);
       const hidden = await p.evaluate(() => [...document.querySelectorAll('.btn.big, .btn.primary')].filter((e) => { const r = e.getBoundingClientRect(); if (!r.width || e.closest('.rows')) return false; const x = r.x + r.width / 2, y = r.y + r.height / 2; if (y > innerHeight || y < 0) return true; const hit = document.elementFromPoint(x, y); return !hit || !(hit === e || e.contains(hit)); }).map((e) => e.textContent.trim().slice(0, 24)));
       check(`${w}x${h}${notch ? ' notch' : ''} ${name} buttons on screen`, !hidden.length, hidden.join(', '));
       await p.screenshot({ path: `${OUT}/ph-${name}-${w}${notch ? 'n' : ''}.png` });

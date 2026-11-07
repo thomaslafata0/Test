@@ -4,6 +4,8 @@ import * as E from './engine.js';
 import * as D from './data.js';
 import * as G from './sim-gear.mjs';
 Object.assign(E.TUNE, JSON.parse(process.env.TUNE || '{}'));
+// KIT='{"ostrane":{"rate":0.3}}' overrides a boss's numbers in D.BOSS_KIT for a test run.
+for (const [id, v] of Object.entries(JSON.parse(process.env.KIT || '{}'))) Object.assign(D.BOSS_KIT[id], v);
 const CAMP = +process.env.CAMP || 60, OPS = +process.env.OPS || 300, LIVES = +process.env.LIVES || 40;
 const STACK = +process.env.STACK || 3;
 const SECTIONS = (process.env.SECTIONS || 'builds,styles,coop,maps,items,early,econ').split(',');
@@ -65,17 +67,19 @@ function act(s, st, b, who = 0) {
   if (E.canUse(s, 'revive')) return 'revive';
   if (st.smokeAt && c.hp < hp * st.smokeAt && c.items.smoke) return 'smoke';
   if (c.hp < hp * 0.35 && c.items.stim) return 'stim';
-  if (r.fallen && !e.boss && E.runChance(s) > 0.3) return 'run'; // a partner just died: get out
-  if (st.flee && !e.boss && !E.isCoop(s) && c.hp < hp * st.flee && E.runChance(s) > 0.3) return 'run';
+  if (r.fallen && !e.boss && E.canUse(s, 'run') && E.runChance(s) > 0.3) return 'run'; // a partner just died: get out
+  if (st.flee && !e.boss && !E.isCoop(s) && c.hp < hp * st.flee && E.canUse(s, 'run') && E.runChance(s) > 0.3) return 'run';
   if (!free && E.mechanicOf(r) === 'vents' && r.vent === 1) return 'defend';
-  const danger = !free && (e.intent === 'heavy' || (e.intent === 'special' && D.SPECIALS[e.id] && D.SPECIALS[e.id].status));
+  const adv = E.sigAdvice(s), blind = E.intentHidden(s); // boss signature moves: see sigAdvice in engine.js
+  if (!free && adv.act && (adv.act !== 'defend' || !E.isCoop(s) || r.lastAttacker === who)) return adv.act;
+  const danger = !free && !blind && (e.intent === 'heavy' || (e.intent === 'special' && D.SPECIALS[e.id] && D.SPECIALS[e.id].status));
   if (danger && (!E.isCoop(s) || r.lastAttacker === who)) return 'defend';
   if ((e.boss || e.elite) && c.items.thermal) return 'thermal';
   if (e.tags.includes('droid') && c.items.ion && !free && e.hp > e.maxHp * 0.5) return 'ion';
   if (E.canUse(s, 'intimidate') && E.intimidateChance(s) > 0.45) return 'intimidate';
-  const hit = G.attackChoice(s, b.style);
-  if (!free && e.intent === 'guard' && hit !== 'strike') return 'defend';
-  for (const k of ['overload', 'smash', 'aimed', 'blast', 'burst', 'suppress']) if (E.canUse(s, k) && G.skillAllowed(b.style, k) && !(k === 'smash' && D.MELEE_COUNTER[e.id] && !free)) return k;
+  const hit = adv.hit || G.attackChoice(s, b.style);
+  if (!free && !blind && e.intent === 'guard' && hit !== 'strike') return 'defend';
+  for (const k of ['overload', 'smash', 'aimed', 'blast', 'burst', 'suppress']) if (E.canUse(s, k) && G.skillAllowed(b.style, k) && !(k === 'smash' && D.MELEE_COUNTER[e.id] && !free) && !(adv.hit === 'strike' && k !== 'smash' && k !== 'overload') && !(adv.hit === 'shoot' && k === 'smash')) return k;
   return hit;
 }
 // Stacks what it already carries when it can, as a player chasing a build would.

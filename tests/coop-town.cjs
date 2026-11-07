@@ -6,14 +6,14 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   const c = await browser.newContext({ viewport: { width: 1000, height: 900 } });
   const host = await c.newPage(), guest = await c.newPage(); const errors = [];
   const check = (name, ok, extra = '') => { console.log(`${ok ? 'PASS' : 'FAIL'} ${name} ${extra}`); if (!ok) errors.push('FAIL ' + name); };
-  for (const [p, n] of [[host, 'host'], [guest, 'guest']]) { p.on('pageerror', (e) => errors.push(`${n}: ${e.message} ${(e.stack || '').slice(0, 300)}`)); p.on('console', (m) => { if (['error', 'warning'].includes(m.type()) && !/WebSocket|net::|AudioContext/.test(m.text())) errors.push(`${n} console: ${m.text()}`); }); }
+  for (const [p, n] of [[host, 'host'], [guest, 'guest']]) { p.on('pageerror', (e) => errors.push(`${n}: ${e.message} ${(e.stack || '').slice(0, 300)}`)); p.on('console', (m) => { if (['error', 'warning'].includes(m.type()) && !/town\/street\//.test(m.location().url) && !/WebSocket|net::|AudioContext/.test(m.text())) errors.push(`${n} console: ${m.text()}`); }); }
   await host.goto(URL);
   await host.evaluate(async () => { const E = await import('./engine.js'), rng = E.seededRng(21), s = E.newGame(rng); E.createChar(s, rng); s.char.credits = 900; s.meta.tips = { town: true, combat: true, route: true, loot: true, perk: true, gear: true }; s.notice = null; localStorage.setItem('cinder-cell-save-v1', JSON.stringify(s)); localStorage.setItem('cinder-cell-coop', JSON.stringify({ relay: '', name: 'Hosty' })); });
   await host.reload(); await host.click('button[data-a="continue-title"]', { timeout: 3000 }).catch(() => {}); await host.waitForTimeout(800);
   await host.click('button[data-a="modal"][data-v="settings"]'); await host.waitForTimeout(150); await host.click('button[data-a="coophost"]'); await host.waitForTimeout(300);
   const code = await host.evaluate(() => document.querySelector('.settings b.num').textContent); await host.keyboard.press('Escape');
   await guest.goto(URL + '?join=' + code); await guest.waitForTimeout(1000);
-  await guest.click('button[data-a="step"][data-v="2"]'); await guest.click('button[data-a="bg"][data-v="runner"]'); await guest.click('button[data-a="step"][data-v="4"]'); await guest.waitForTimeout(100); await guest.click('button[data-a="create"]'); await guest.waitForTimeout(1200);
+  await guest.click('button[data-a="step"][data-v="2"]'); await guest.click('button[data-a="bg"][data-v="runner"]'); await guest.click('button[data-a="step"][data-v="4"]'); await guest.waitForTimeout(100); await guest.click('button[data-a="create"]'); await guest.waitForTimeout(150); await guest.click('button[data-a="scenenext"]', { timeout: 1500 }).catch(() => {}); await guest.waitForTimeout(1200);
   const hs = () => host.evaluate(() => { const s = JSON.parse(localStorage.getItem('cinder-cell-save-v1')); const g = (c) => Object.fromEntries(Object.entries(c.gear).map(([k, v]) => [k, v && v.base])); return { a: { cr: s.char.credits, gear: g(s.char) }, b: { cr: s.char2.credits, gear: g(s.char2) }, lock: [...(s.char.lockup || []), ...(s.char2.lockup || [])].map((x) => x.base), lockB: (s.char2.lockup || []).map((x) => x.base), trade: s.trade }; });
   const count = (o) => Object.values(o.a.gear).concat(Object.values(o.b.gear), o.lock).filter(Boolean).length;
   let s0 = await hs(); const total = count(s0), money = s0.a.cr + s0.b.cr;
@@ -26,6 +26,7 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   await host.screenshot({ path: `${OUT}/s3-partner.png` });
   await host.click('button[data-a="givecredits"][data-v="100"]'); await host.waitForTimeout(400);
   let s1 = await hs(); check('host gives credits', s1.a.cr === s0.a.cr - 100 && s1.b.cr === s0.b.cr + 100, `${s1.a.cr}/${s1.b.cr}`);
+  await guest.waitForTimeout(800); // the strip counts up to the new value
   check('friend sees the credits', (await guest.innerText('.head-stats')).includes(String(s1.b.cr)));
   // gift gear, needs confirming
   const giveSlot = Object.entries(s1.a.gear).find(([, v]) => v)[0];

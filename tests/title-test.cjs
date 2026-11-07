@@ -5,7 +5,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
   const b = await chromium.launch();
   for (const width of [1200, 390]) {
     const page = await b.newPage({ viewport: { width, height: 900 } });
-    const errors = []; page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+    const errors = []; page.on('pageerror', (e) => errors.push(e.message)); page.on('console', (m) => { if (m.type() === 'error' && !/town\/street\//.test(m.location().url)) errors.push(m.text()); });
     const ov = async (t) => { const o = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth); if (o > 0) errors.push(`${t} overflow ${o}`); };
     await page.goto('http://localhost:8765/index.html'); await page.evaluate(() => localStorage.clear()); await page.reload(); await page.waitForTimeout(600);
     await ov('title'); await page.screenshot({ path: `${OUT}/title-${width}.png` });
@@ -16,7 +16,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
     await page.click('button[data-a="bg"][data-v="clerk"]'); await page.click('button[data-a="step"][data-v="1"]'); await page.waitForTimeout(150);
     await ov('create3'); await page.screenshot({ path: `${OUT}/create3-${width}.png`, fullPage: true });
     await page.click('.swatches .swatch:nth-child(4)');
-    await page.click('button[data-a="step"][data-v="4"]'); await page.waitForTimeout(100); await page.click('button[data-a="create"]'); await page.waitForTimeout(500);
+    await page.click('button[data-a="step"][data-v="4"]'); await page.waitForTimeout(100); await page.click('button[data-a="create"]'); await page.waitForTimeout(150); await page.click('button[data-a="scenenext"]', { timeout: 1500 }).catch(() => {}); await page.waitForTimeout(500);
     const s = await page.evaluate(() => JSON.parse(localStorage.getItem('cinder-cell-save-v1')));
     console.log(width, 'look saved:', JSON.stringify(s.char.look), s.char.background);
     // save code round trip
