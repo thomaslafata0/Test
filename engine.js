@@ -67,7 +67,8 @@ export const isBossSector = (n) => n % 5 === 0;
 // Optional credit accounting for the simulators: set s.ledger = {} and every credit gain or spend is tallied by source.
 // Credits earned in town go to a debt first. In a raid nothing is taken until the haul is secured (settle), so a debt is never
 // paid with money that an extraction would have lost.
-const ledger = (s, k, n) => { if (s.ledger && n) s.ledger[k] = (s.ledger[k] || 0) + n; if (n > 0 && !s.run && !String(k).startsWith('spend')) { settleDebt(s.char); settleDebt(s.char2); } };
+// Money earned in town pays the earner's own debt first; a partner's purse is never touched.
+const ledger = (s, k, n) => { if (s.ledger && n) s.ledger[k] = (s.ledger[k] || 0) + n; if (n > 0 && !s.run && !String(k).startsWith('spend')) settleDebt(s.char); };
 export const mapById = (id) => D.MAPS.find((m) => m.id === id) || D.MAPS[0];
 export const sectorName = (n, mapId = 'garrison') => {
   const list = mapById(mapId).sectors, len = list.length;

@@ -625,21 +625,8 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .duel-log { margin: 10px 0; padding: 8px 12px; border-left: 2px solid var(--sodium); background: #0003; font-size: .9rem; }
 .duel-log p { margin: 2px 0; }
 .duel-moves .btn { min-width: 6.5em; }
-.duel-arena { position: fixed; inset: 0; z-index: 60; background: #07090ce8; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 16px; overflow: auto; }
-.duel-arena .duel-top { width: min(960px, 100%); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-.duel-arena .stage { width: min(960px, 100%, calc((100dvh - 190px) * 384 / 216)); flex: none; }
-.duel-arena .stage .speed { display: none; }
-.duel-ctl { width: min(960px, 100%); display: grid; gap: 8px; justify-items: center; text-align: center; }
-.duel-ctl .duel-moves { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; width: 100%; }
-.duel-ctl .notice { width: 100%; }
-.duel-line { margin: 0; font-size: .95rem; color: var(--muted, #aaa); }
-@media (orientation: landscape) and (max-height: 600px), (orientation: landscape) and (pointer: coarse) and (max-height: 820px) {
-  .duel-arena { flex-direction: row; flex-wrap: wrap; justify-content: center; padding: 6px 16px; gap: 6px; }
-  .duel-arena .duel-top { width: 100%; }
-  .duel-arena .stage { width: min(62vw, calc((100dvh - 50px) * 384 / 216)); }
-  .duel-ctl { width: min(34vw, 300px); align-self: center; }
-  .duel-ctl .duel-moves { grid-template-columns: 1fr 1fr; }
-}
+.duel-fight .stage .speed { display: none; }
+.duel-who { margin: 0; font-size: .85rem; color: var(--muted); }
 @media (orientation: landscape) and (max-height: 600px), (orientation: landscape) and (pointer: coarse) and (max-height: 820px) {
   .hostess-card { padding: 6px; } .hostess-card p { display: none; } .hostess, .hostess.ph { zoom: .62; }
   .duel-build .muted { display: none; }
@@ -1398,9 +1385,11 @@ html.calm .btn:active, html.calm .door:active, html.calm .tab:active, html.calm 
   .has-mate .head-stats { flex-wrap: wrap; gap: 0 12px; height: 38px; align-content: flex-start; flex: 1 1 auto; }
   .has-mate .stat { height: 38px; align-content: center; }
   .has-mate .stat.hp { width: auto; min-width: 66px; }
-  .has-mate .cred-stat { order: 3; }
+  .has-mate .cred-stat { order: 1; } /* your credits right after the two HP bars: the last thing to drop */
   .has-mate .unsec-stat { order: 2; }
-  .has-mate .res-stat { order: 1; }
+  .has-mate .res-stat { order: 3; }
+  .has-mate .resolve-link { order: 4; }
+  .has-mate .num-stat { order: 5; }
   .look-step { grid-template-columns: minmax(0, 32%) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 12px; min-height: 0; overflow: hidden; }
   .look-big { position: relative; width: 100%; height: 100%; aspect-ratio: auto; overflow: hidden; min-height: 0; }
   .look-big img { position: absolute; inset: 4px; width: calc(100% - 8px); height: calc(100% - 8px); object-fit: contain; }
@@ -2035,8 +2024,14 @@ async function playHostFx(ev) {
   busy = true; document.getElementById('app').classList.add('busy');
   try { await stage.play(ev); } finally { busy = false; document.getElementById('app').classList.remove('busy'); }
 }
+// The host sends the game after every redraw of its own screen, menus included. An update that's the same as the last one
+// changes nothing here, so it doesn't rebuild the page (that rebuild was the flash when a partner opened a menu).
+let lastHostState = null;
 function applyHostState(m) {
   if (!isGuest()) return;
+  const same = m.s.replace(/"savedAt":\d+/g, ''); // every save stamps the time; that alone isn't news
+  if (same === lastHostState && !m.toast && hostSynced && state) { setAwaiting(false); return; }
+  lastHostState = same;
   const incoming = JSON.parse(m.s), keep = {};
   const prevRun = state && state.run, prevEnemy = prevRun && prevRun.enemy;
   for (const k of GUEST_LOCAL) keep[k] = state[k];
@@ -2064,6 +2059,7 @@ function startCoop(role, code, local) {
   const prefs = getCoopPrefs();
   if (net) net.close();
   guestView = {}; guestQueue = []; inbox = []; hostSynced = false; awaitingHost = false; pendingGuest = null; lastHostResolve = null;
+  lastHostState = null;
   if (role === 'guest') {
     // Two tabs in one browser share storage, so the test transport gets a throwaway home.
     home = local ? E.newGame(rng) : state;
@@ -2095,7 +2091,7 @@ function startCoop(role, code, local) {
   net.on('bye', () => {
     if (isGuest()) { leaveCoop('The host closed the room.'); return; }
     if (state.run) { E.partnerGone(state); state.coop = false; if (['loot', 'perk'].includes(state.screen) && !E.rewardsPending(state)) E.continueAfterVictory(state, rng); }
-    state.guestReady = false; state.trade = null; state.duel = null; state.char2 = null; state.char2Held = false; pendingGuest = null;
+    state.guestReady = false; state.trade = null; state.duel = null; state.hostWants = null; state.char2 = null; state.char2Held = false; pendingGuest = null;
     toast = `${net.peerName || 'Your friend'} left the room.`;
     render();
   });
@@ -2129,7 +2125,9 @@ function startCoop(role, code, local) {
     });
     net.on('home', (m) => { if (state.char2) state.char2.home = m.home; render(); });
     net.on('recruit', () => { E.recruit(state, rng, 'char2'); state.coopFallen = null; state.guestHeirloom = null; render(); });
-    net.on('ready', (m) => { state.guestReady = !!m.on; if (m.on) { toast = `${net.peerName || state.guestName || 'Your friend'} is ready.`; A.play('click'); } render(); });
+    net.on('ready', (m) => { state.guestReady = !!m.on; state.guestReadyAuto = !!(m.on && m.auto); if (!m.on) state.hostWants = null;
+      if (m.on && state.hostWants && !state.run && state.screen === 'town') { const v = state.hostWants; state.hostWants = null; setTimeout(() => act('deploy', v), 0); }
+      if (m.on) { toast = `${net.peerName || state.guestName || 'Your friend'} is ready.`; A.play('click'); } render(); });
   } else {
     net.on('state', (m) => { inbox.push(m); pumpInbox(); });
     net.on('fx', (m) => { inbox.push(m); pumpInbox(); });
@@ -2145,7 +2143,7 @@ function leaveCoop(why) {
   net.close(); net = null; coopStatus = ''; setRoom(null); setLastRoom(null); inbox = []; guestQueue = []; setAwaiting(false); home = null; pendingGuest = null;
   // The friend's operative was theirs all along: they go back to their own game with it, in the yard.
   if (wasGuest) { state = wasLocal ? E.migrate(load(), rng) : mineHome; if (!state.char && !state.draft) state.draft = E.newDraft(state.meta, rng); if (!state.char && state.meta.operatives) state.screen = 'create'; state.popup = null; }
-  else { if (state.run) { E.partnerGone(state); if (['loot', 'perk'].includes(state.screen) && !E.rewardsPending(state)) { state.coop = false; E.continueAfterVictory(state, rng); } } state.coop = false; state.guestReady = false; state.trade = null; state.duel = null; state.char2 = null; state.char2Held = false; }
+  else { if (state.run) { E.partnerGone(state); if (['loot', 'perk'].includes(state.screen) && !E.rewardsPending(state)) { state.coop = false; E.continueAfterVictory(state, rng); } } state.coop = false; state.guestReady = false; state.trade = null; state.duel = null; state.hostWants = null; state.char2 = null; state.char2Held = false; }
   if (why) toast = why;
   render();
 }
@@ -2877,7 +2875,7 @@ function gate() {
   const tabBtn = (k, label) => `<button class="tab" aria-selected="${tab === k}" data-a="missiontab" data-v="${k}">${label}</button>`;
   const gin = E.drinkOf(c), prep = `<div class="prep-sum" aria-label="What you're bringing"><span><b>${c.hp}/${st.maxHp}</b> HP</span><span><b>${c.items.stim}/${st.carry}</b> stims</span><span><b>${st.atk}</b> shoot \u00b7 <b>${st.atkM}</b> strike</span><span><b>${st.def}</b> DEF</span>${gin ? `<span>${esc(gin.name)}: ${esc(gin.effect)}</span>` : ''}</div>`;
   const go = isGuest() ? `<div class="deploy-go">${prep}${warn}<span class="muted">The host picks the target.</span><button class="btn big ${state.guestReady ? 'primary' : ''}" data-a="coopready" aria-pressed="${!!state.guestReady}">${state.guestReady ? 'Ready \u00B7 waiting for the host' : 'Ready for the raid'}</button></div>`
-    : `<div class="deploy-go ${hurt && canHeal ? 'hurt' : ''}">${prep}${warn}${E.isCoop(state) ? `<span class="muted" style="font-size:.84rem">${state.guestReady ? `${esc(state.guestName || 'Your friend')} is ready.` : `Waiting for ${esc(state.guestName || 'your friend')} to press Ready.`}</span>` : ''}<span class="label">${ins.length > 1 ? 'Deploy \u00B7 pick where to start' : 'Deploy'}</span><div class="ins">${ins.map((n) => `<button class="btn big ${n === ins[ins.length - 1] ? 'primary' : ''}" data-a="deploy" data-v="${n}" ${E.isCoop(state) && !state.guestReady ? 'disabled' : ''}><span class="ins-n">Sector ${n}</span> <span class="ins-name">${esc(E.sectorName(n, sel.id))}</span></button>`).join('')}</div>${ins.length === 1 ? '<span class="muted ins-hint">Beat a boss to start deeper next time.</span>' : ''}</div>`;
+    : `<div class="deploy-go ${hurt && canHeal ? 'hurt' : ''}">${prep}${warn}${E.isCoop(state) ? `<span class="muted" style="font-size:.84rem">${state.guestReady ? `${esc(state.guestName || 'Your friend')} is ready.` : state.hostWants ? `Deploying as soon as ${esc(state.guestName || 'your friend')} is ready\u2026` : peerAuto ? `${esc(state.guestName || 'Your friend')} has auto-accept on: press Deploy and they\u2019ll follow.` : `Waiting for ${esc(state.guestName || 'your friend')} to press Ready.`}</span>` : ''}<span class="label">${ins.length > 1 ? 'Deploy \u00B7 pick where to start' : 'Deploy'}</span><div class="ins">${ins.map((n) => `<button class="btn big ${n === ins[ins.length - 1] ? 'primary' : ''}" data-a="deploy" data-v="${n}" ${E.isCoop(state) && !state.guestReady && !peerAuto ? 'disabled' : ''}><span class="ins-n">Sector ${n}</span> <span class="ins-name">${esc(E.sectorName(n, sel.id))}</span></button>`).join('')}</div>${ins.length === 1 ? '<span class="muted ins-hint">Beat a boss to start deeper next time.</span>' : ''}</div>`;
   return `<nav class="tabs pop-tabs">${tabBtn('deploy', 'Deploy')}${tabBtn('contracts', `Contracts ${(m.contracts || []).length}`)}</nav>
     ${tab === 'contracts' ? `<div class="contracts">${contracts || '<p class="muted">No jobs right now.</p>'}</div>` : `<div class="gate">
       <div class="gate-maps"><div class="maps">${cards}</div>${locked.length ? `<p class="muted maps-locked">Locked: ${locked.map((mp) => `${esc(mp.name)} (clear ${Object.entries(mp.unlock).map(([id, n]) => `${esc(E.mapById(id).name)} ${n}`).join(', ')})`).join(', ')}</p>` : ''}</div>
@@ -3455,21 +3453,35 @@ function duelView() {
     return wrap(`<p>${pick ? `You\u2019re the <b>${esc(E.DUEL_BUILDS[pick].name)}</b>. Waiting for ${esc(n[them])} to pick\u2026` : 'Pick your loadout.'}</p>
       <div class="duel-builds">${Object.entries(E.DUEL_BUILDS).map(([id, b]) => `<button class="duel-build ${pick === id ? 'on' : ''}" data-a="duel" data-v="pick" data-k="${id}" ${pick ? 'disabled' : ''}><b>${esc(b.name)}</b><span class="num small">${b.hp} HP \u00b7 Shoot ${b.shoot} \u00b7 Strike ${b.strike} \u00b7 DEF ${b.def}</span><span class="muted small">${esc(b.desc)}</span></button>`).join('')}</div>`);
   }
-  // The fight itself: the battle stage, both operatives in their own art, moves underneath like a raid fight.
-  const B = (i) => E.DUEL_BUILDS[d.build[i]], playing = stage.duelBusy || (d.last && duelPlayed !== `${d.id}:${d.last.round}`);
-  const log = d.log.length ? `<p class="duel-line">${esc(d.log[d.log.length - 1])}</p>` : '';
-  let ctl;
-  if (playing) ctl = '<p class="muted duel-wait">\u2026</p>';
-  else if (d.phase === 'fight') {
-    const cd = d.cd[me], b = B(me);
-    ctl = d.move[me] ? `<p class="muted duel-wait">Locked in. Waiting for ${esc(n[them])}\u2026</p>`
-      : `<div class="actions duel-moves">${[['strike', `Strike \u00b7 ${b.strike}`, 'Breaks a Guard'], ['shoot', `Shoot \u00b7 ${b.shoot}`, 'Catches a Strike'], ['guard', 'Guard', 'Soaks a Shot']].map(([m, l, t]) => `<button class="btn primary" data-a="duel" data-v="move" data-k="${m}" title="${t}">${l}</button>`).join('')}<button class="btn" data-a="duel" data-v="move" data-k="special" ${cd ? 'disabled' : ''} title="${esc(b.desc)}">${esc(b.special)}${cd ? ` \u00b7 ${cd}` : ''}</button></div>`;
-  } else {
+  return ''; // the fight itself is a screen of its own: duelScreen()
+}
+// The ring's fight, laid out exactly like a raid fight: the stage on the left, moves on the right.
+const duelOnScreen = () => modal === 'duel' && state && !state.run && state.duel && ['fight', 'done'].includes(state.duel.phase) && state.duel.build[0] && state.duel.build[1] && net && net.peer;
+function duelScreen() {
+  const d = state.duel, me = E.actorIdx(state), them = 1 - me, n = d.names, B = (i) => E.DUEL_BUILDS[d.build[i]], b = B(me), f = B(them);
+  const playing = stage.duelBusy || (d.last && duelPlayed !== `${d.id}:${d.last.round}`), cd = d.cd[me];
+  const last = d.log.length ? d.log[d.log.length - 1] : '';
+  const mv = (k, cls, label, key, note, dis = false) => `<button class="btn twoline ${cls}" data-a="duel" data-v="move" data-k="${k}" ${dis || playing || d.move[me] || d.phase !== 'fight' ? 'disabled' : ''}><span class="bt">${label}<span class="k" aria-hidden="true">${key}</span></span><span class="bs">${note}</span></button>`;
+  let side;
+  if (d.phase === 'done' && !playing) {
     const prize = d.prize ? E.perkById(d.prize).name : null, won = d.winner === me;
-    ctl = `<div class="notice ${d.winner === null ? '' : won ? 'good' : 'bad'}"><b>${d.winner === null ? 'Draw.' : won ? 'You win.' : 'You lose.'}</b> ${d.winner === null ? 'Everybody keeps their contraband.' : won ? `You take ${esc(n[them])}\u2019s <b>${esc(prize || 'nothing')}</b>.` : `${esc(n[d.winner])} takes your <b>${esc(prize || 'nothing')}</b>.`}</div><button class="btn primary" data-a="duel" data-v="close">Leave the ring</button>`;
+    side = `<div class="notice ${d.winner === null ? '' : won ? 'good' : 'bad'}"><b>${d.winner === null ? 'Draw.' : won ? 'You win.' : 'You lose.'}</b> ${d.winner === null ? 'Everybody keeps their contraband.' : won ? `You take ${esc(n[them])}\u2019s <b>${esc(prize || 'nothing')}</b>.` : `${esc(n[d.winner])} takes your <b>${esc(prize || 'nothing')}</b>.`}</div>
+      <button class="btn primary big" data-a="duel" data-v="close">Leave the ring</button>`;
+  } else {
+    side = `<p class="duel-who">Your <b>${esc(b.name)}</b> vs ${esc(n[them])}\u2019s <b>${esc(f.name)}</b>. You both pick; the moves land together.</p>
+      ${d.move[me] && !playing ? `<p class="muted">Locked in. Waiting for ${esc(n[them])}\u2026</p>` : ''}
+      <div class="actions">
+        ${mv('shoot', 'primary atk', 'Shoot', 'A', `<b class="rng">~${b.shoot}</b> dmg \u00b7 catches a Strike`)}
+        ${mv('strike', 'atk', 'Strike', 'F', `<b class="rng">~${b.strike}</b> dmg \u00b7 breaks a Guard`)}
+        ${mv('guard', '', 'Guard', 'D', 'Soaks most of a Shot')}
+        ${mv('special', '', esc(b.special), 'S', cd ? `Back in ${cd}` : esc(b.desc.split(': ')[1] || ''), cd > 0)}
+      </div>`;
   }
-  return `<div class="duel-arena" role="dialog" aria-modal="true" aria-label="Barracks ring"><div class="duel-top"><span class="label">Barracks ring \u00b7 ${esc(B(me).name)} vs ${esc(B(them).name)} \u00b7 round ${Math.min(d.round, 12)} of 12</span>${d.phase === 'done' ? '<button class="tool" data-a="closemodal" aria-label="Close">Close</button>' : ''}</div>
-    <div id="duel-slot"></div><div class="duel-ctl">${log}${ctl}</div></div>`;
+  return `<div class="columns fight duel-fight"><section class="panel combat"><div class="c-left">
+    <div class="combat-head"><span class="label">Barracks ring \u00b7 round ${Math.min(d.round, 12)} of 12 \u00b7 no stims, no items, even stats</span></div>
+    <div class="stage-box"><div id="duel-slot"></div></div>
+    <div class="intent"><span class="dot"></span><b>${d.phase === 'done' ? 'Final bell' : 'Last round'}</b><span class="tip">${esc(last)}</span></div>
+    </div><div class="c-right">${side}</div></section></div>`;
 }
 let wheel = null, wheelBusy = false, guestWheelSeen = null;
 function wheelView() {
@@ -3754,6 +3766,7 @@ function trapTab(ev) {
 function render() {
   if (!appReadySent) { appReadySent = true; const r = appBridge('ready'); if (r) requestAnimationFrame(() => setTimeout(() => { try { r.postMessage(1); } catch (e) {} }, 80)); }
   if (isGuest() && (!hostSynced || (!state.char && home && home.char))) {
+    lastHtml = '';
     document.getElementById('app').innerHTML = coopBanner() + joiningScreen() + modalView() + (toast ? `<div class="toast" role="status">${esc(toast)}</div>` : '');
     toast = null;
     return;
@@ -3809,8 +3822,13 @@ function render() {
   const kept = [...app.querySelectorAll('.modal, .log')].map((el) => ({ cls: el.className, top: el.scrollTop })).filter((k) => k.top > 0);
   const pageY = window.scrollY, fo = document.activeElement, foKey = fo && fo.dataset && fo.dataset.a ? [fo.dataset.a, fo.dataset.v || '', fo.dataset.k || ''].join('|') : null;
   const sameView = lastView === [state.screen, state.popup || '', modal || '', state.compare == null ? '' : state.compare].join('|');
-  app.innerHTML = stimPromptView() + autoBar() + coopBanner() + (titleOpen && !isGuest() ? titleScreen() : (showStatus ? statusStrip() : '') + screens[state.screen]()) + modalView() + payoutView() + sceneView() +
+  // A redraw that would come out exactly the same leaves the page alone: no rebuilt images, no restarted animations.
+  const html = stimPromptView() + autoBar() + coopBanner() + (titleOpen && !isGuest() ? titleScreen() : (showStatus ? statusStrip() : '') + (duelOnScreen() ? duelScreen() : screens[state.screen]())) + modalView() + payoutView() + sceneView() +
     (toast ? `<div class="toast" role="status">${esc(toast)}</div>` : '');
+  // Where your partner is (\u201Cin Missions\u201D) changes as they open menus: that one line is updated in place, not the page.
+  const where = /id="coop-where">([^<]*)/.exec(html), bare = html.replace(/(id="coop-where">)[^<]*/, '$1');
+  if (bare !== lastHtml || state.run || !app.firstElementChild) { app.innerHTML = html; lastHtml = bare; } // in a raid the stage needs every rebuild
+  else if (where) { const w = document.getElementById('coop-where'); if (w && w.textContent !== where[1]) w.innerHTML = where[1]; }
   toast = null;
   mountTitle();
   animatePayout();
@@ -3958,6 +3976,7 @@ function coopAutoSync() {
 }
 const doorRank = (k, hurt) => (hurt ? ['medbay', 'rest', 'supply', 'cargo', 'event', 'locker', 'cells', 'bench', 'vault', 'fence', 'fight', 'bounty', 'elite', 'boss'] : ['supply', 'cargo', 'locker', 'bench', 'vault', 'cells', 'event', 'fight', 'medbay', 'rest', 'fence', 'bounty', 'elite', 'boss']).indexOf(k);
 const lowestHp = () => Math.min(...[0, 1].map((i) => { const pc = E.charAt(state, i); return pc && !pc.dead ? pc.hp / E.statsOf(state.meta, pc).maxHp : 1; }));
+let coopReadyAuto = false;
 function coopAct(key, a, v, k) { const now = Date.now(); if (key === coopLast && now - coopLastAt < 2500) return; coopLast = key; coopLastAt = now; act(a, v, k); }
 const lootWorthIt = (r) => { const o = r.lootOffer, def = o && D.GEAR && D.GEAR[o.base], cur = def && state.char.gear[def.slot], rank = ['common', 'rare', 'elite', 'legendary', 'unique']; return !cur || rank.indexOf(o.rarity) > rank.indexOf(cur.rarity); };
 function coopAutoTick() {
@@ -3969,15 +3988,13 @@ function coopAutoTick() {
   const scr = state.screen;
   if (scr === 'town') {
     if (host && state.popup && !both) return;
-    if (isGuest()) { if (!state.guestReady) coopAct('ready', 'coopready'); }
+    // Auto-accept never starts a raid by itself: it only answers a partner who has. The friend readies once the host has
+    // pressed Deploy; the host deploys once the friend has pressed Ready with their own hand.
+    if (isGuest() && !state.guestReady && state.hostWants) { coopReadyAuto = true; try { coopAct('ready', 'coopready'); } finally { coopReadyAuto = false; } }
     if (both && c.hp < E.statsOf(state.meta, c).maxHp * 0.8 && c.credits >= E.healCost(state)) return coopAct('heal', 'heal');
-    if (host && state.guestReady && !state.popup) {
-      if (both && !coopDeployAt) { coopDeployAt = Date.now() + 6000; hint('Deploying in 6 seconds. Turn auto-accept off to stay and shop.'); }
-      if (!both || Date.now() >= coopDeployAt) {
-        const mp = state.gateMap || 'garrison', ins = E.insertionsAt(c, mp, state.meta.threat || 0);
-        coopDeployAt = 0;
-        return coopAct('deploy', 'deploy', String(Math.max(...ins)));
-      }
+    if (host && state.guestReady && !state.guestReadyAuto && !state.popup) {
+      const mp = state.gateMap || 'garrison', ins = E.insertionsAt(c, mp, state.meta.threat || 0);
+      return coopAct('deploy', 'deploy', String(Math.max(...ins)));
     }
     if (both) coopAutoKick();
     return;
@@ -4033,7 +4050,7 @@ town.onMove = (p) => {
 };
 globalThis.cinderTown = town; // handy for debugging in the console
 globalThis.cinderGame = { state: () => state, rng: () => rng, after: () => { save(); if (isHost()) broadcast(); render(); }, stage, juice, audio: A, death: deathReveal }; // for tests/coop-wipe.cjs, tests/juice.cjs
-let lastScreen = null, lastView = '';
+let lastScreen = null, lastView = '', lastHtml = '';
 // Walking into a building (or talking to its NPC) opens that building's menu.
 town.onOpen = (id) => { if (state.screen !== 'town' || modal) return; if (id === 'bar' || id === 'wheel') { modal = id; state.notice = null; A.play('click'); render(); return; } state.popup = id; state.notice = null; A.play('click'); render(); };
 // Things in the yard that touch the game: the vending terminal, doors with no inside.
@@ -4220,7 +4237,7 @@ function applyAct(a, v, k) {
     case 'emote': { const t = EMOTES[+v]; if (t && net && net.peer) { net.send({ t: 'say', text: t }); town.speak('me', t, town.player.x, town.player.y); } sfx('click'); return; }
     case 'coopjoin': { setCoopPrefs({ name: (document.getElementById('coop-name') || {}).value || '', relay: ((document.getElementById('coop-relay') || {}).value || '').trim() }); const code = ((document.getElementById('coop-code') || {}).value || '').trim().toUpperCase(); if (code.length >= 4) startCoop('guest', code, !getCoopPrefs().relay); else toast = 'Enter the room code.'; break; }
     case 'coopleave': leaveCoop(); return;
-    case 'coopready': state.guestReady = !state.guestReady; if (net) net.send({ t: 'ready', on: state.guestReady }); sfx('click'); break;
+    case 'coopready': state.guestReady = !state.guestReady; if (net) net.send({ t: 'ready', on: state.guestReady, auto: !!coopReadyAuto }); sfx('click'); break;
     case 'newspage': newsPage = +v; sfx('click'); break;
     case 'newsok': newsPage = 0; try { localStorage.setItem(NEWS_KEY, NEWS_ID); } catch (e) {} modal = null; sfx('click'); break;
     case 'modal': modal = v; if (v === 'board') loadBoard(); sfx('click'); break;
@@ -4338,7 +4355,7 @@ function applyAct(a, v, k) {
     case 'spend': ok = E.spendAttr(state, v); break;
     case 'respec': ok = E.respec(state); break;
     case 'pickmap': state.gateMap = v; break;
-    case 'deploy': if (E.isCoop(state) && !state.guestReady) { ok = false; break; } state.trade = null; state.popup = null; state.lastResult = null; E.deploy(state, state.gateMap || 'garrison', +v, rng); break;
+    case 'deploy': if (E.isCoop(state) && !state.guestReady) { if (!peerAuto) { ok = false; break; } state.hostWants = String(v); sfx('click'); break; } state.hostWants = null; state.trade = null; state.popup = null; state.lastResult = null; E.deploy(state, state.gateMap || 'garrison', +v, rng); break;
     case 'continue': if (!['victory', 'room', 'loot', 'perk'].includes(state.screen)) break; E.continueAfterVictory(state, rng); break;
     case 'room': { if (E.isCoop(state) && net && net.peer) { if (!E.voteDoor(state, actingAs, +v, rng)) break; } else E.enterRoom(state, +v, rng); state.lastResult = null; } if (state.screen === 'room') { state.lastResult = { kind: 'room', ...state.roomResult }; E.continueAfterVictory(state, rng); } break;
     case 'dismissresult': state.lastResult = null; break;
@@ -4411,6 +4428,9 @@ document.addEventListener('keydown', (ev) => {
   if (ev.key === 'Escape' && state.screen === 'town' && globalThis.cinderTown && globalThis.cinderTown.interior && !globalThis.cinderTown.offer) { globalThis.cinderTown.exit(); return; }
   if (ev.key === 'Escape' && rewardView() === 'loot') { act('lootsell'); return; }
   if (ev.key === 'Escape' && rewardView() === 'perk') { act('perk', ''); return; }
+  // The ring: the raid fight's keys. Above the modal check, since the ring is opened from one.
+  { const mv = !ev.metaKey && !ev.ctrlKey && !ev.altKey && duelOnScreen() && state.duel.phase === 'fight' && { a: 'shoot', f: 'strike', d: 'guard', s: 'special' }[ev.key.toLowerCase()];
+    if (mv) { ev.preventDefault(); ev.stopPropagation(); const b = document.querySelector(`button[data-a="duel"][data-k="${mv}"]:not(:disabled)`); if (b) b.click(); return; } }
   if (ev.metaKey || ev.ctrlKey || ev.altKey || busy || modal || ev.target.tagName === 'INPUT') return;
   A.unlock();
   const key = ev.key.toLowerCase();

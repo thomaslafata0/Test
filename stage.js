@@ -290,7 +290,9 @@ class Actor {
     if (!this.sheet) return { img: this.drawn, sx: 0, sw: 40, sh: 40 };
     let a = this.sheet.anims[this.anim] || this.sheet.anims.idle;
     let f = Math.max(0, Math.floor(((t - this.animStart) / 1000) * a.fps)); // never negative: the clock stands still during hit-stop
-    if (a.loop && this.anim === 'charge' && this.sheet.hd && !CHARGE_LOOPS.has(this.id) && a.frames >= 6) { if (f >= a.frames) f = a.frames - 1 - [3, 2, 1, 0, 1, 2][(f - a.frames) % 6]; }
+    // Winding up a heavy: raise the weapon, then hold the ready pose. The last frames of most charge rows are the shot itself
+    // (Halvek's muzzle flash, the crawler's), so cycling them looked like firing over and over.
+    if (a.loop && this.anim === 'charge' && this.sheet.hd && !CHARGE_LOOPS.has(this.id) && a.frames >= 6) { const h0 = Math.round(a.frames * 0.55), h1 = h0 + 1; if (f > h1) f = [h1, h0][Math.floor((f - h1 - 1) / 3) % 2]; }
     // Standing still: a slow, small breath over the first few frames, not the whole idle cycle, which reads as swaying.
     else if (a.loop && this.anim === 'idle' && this.sheet.hd && a.frames >= 6) f = [0, 1, 2, 1][Math.max(0, Math.floor(((t - this.animStart) / 1000) * 2)) % 4];
     else if (a.loop) f %= a.frames;
@@ -764,6 +766,7 @@ export class Stage {
     this.setHp(side, hp);
   }
   setHp(side, hp) {
+    if (side === 'player' && this.evPartner) return;
     const h = this.hud[side], max = this.max[side], v = Math.max(0, hp);
     h.querySelector('.hud-hp').textContent = side === 'player' ? `${v} / ${max}` : `${v} / ${max}`;
     const bar = h.querySelector('.bar');
@@ -905,9 +908,10 @@ export class Stage {
   // ---------- turn playback ----------
   async play(events) {
     this.stopBudget = 100; // ms of hit-stop this whole playback may add, however many crits land
+    // The bar under you is yours alone: what happens to your partner shows on their own bar at the top, not here.
     for (const ev of events) {
-      if (!this.skip) await this.handle(ev);
-      else this.apply(ev);
+      this.evPartner = !!(this.partner && this.partnerInfo && ev.actor === this.partnerInfo.idx);
+      try { if (!this.skip) await this.handle(ev); else this.apply(ev); } finally { this.evPartner = false; }
       await this.wait(110);
     }
     this.playerShield = false;

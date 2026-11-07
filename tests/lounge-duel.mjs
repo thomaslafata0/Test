@@ -76,5 +76,15 @@ const give = (c, id, n = 1) => { c.perkN = c.perkN || {}; c.perkN[id] = n; if (!
   const rate = ids.map((id) => wins[id] / games[id]);
   ok('random play: every loadout wins 38-62% of mixed bouts', rate.every((x) => x > 0.38 && x < 0.62), rate.map((x) => x.toFixed(2)).join(' '));
 }
+// The Wheel in co-op: each spin moves only the spinner's credits, even when the other one owes Marrow.
+for (const who of [0, 1]) {
+  const { s, rng } = pair(60 + who);
+  s.char.credits = 500; s.char2.credits = 500; s.char.debt = 200; s.char2.debt = 200;
+  const other = () => (who === 0 ? s.char2 : s.char), mine = () => (who === 0 ? s.char : s.char2);
+  let wins = 0, spins = 0;
+  for (let i = 0; i < 40 && wins < 3; i++) { const r = E.withActor(s, who, () => E.spinWheel(s, 'red', 10, 0, rng)); if (r) { spins++; if (r.win) wins++; } }
+  ok(`${who ? 'friend' : 'host'} spins: the other operative's credits and debt don't move`, spins > 0 && wins > 0 && other().credits === 500 && other().debt === 200, `${spins} spins, ${wins} wins, other ${other().credits}/${other().debt}`);
+  ok(`${who ? 'friend' : 'host'} spins: their own wins pay their own debt`, mine().debt < 200, `debt ${mine().debt}`);
+}
 console.log(fails ? `${fails} FAILED` : 'all passed');
 process.exit(fails ? 1 : 0);

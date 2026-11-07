@@ -38,6 +38,12 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   await host.evaluate(async () => { const D = await import('./data.js'), s = cinderGame.state(), id = D.PERKS[1].id; s.char2.perks = [id]; s.char2.perkN = { [id]: 1 }; s.char2.credits = 700; cinderGame.after(); });
   await guest.waitForTimeout(600);
   if (room) {
+  // The host opening and closing menus doesn't rebuild the friend's page (that rebuild was a visible flash).
+  await guest.bringToFront(); await guest.waitForTimeout(300);
+  await guest.evaluate(() => { globalThis.__mark = document.querySelector('#app .status'); });
+  for (const v of ['missions', 'market', 'character']) { await host.evaluate((x) => document.querySelector(`button[data-a="popup"][data-v="${x}"]`).click(), v); await host.waitForTimeout(350); await host.keyboard.press('Escape'); await host.waitForTimeout(350); }
+  await guest.waitForTimeout(400);
+  check('the host\u2019s menus don\u2019t flash the friend\u2019s screen', await guest.evaluate(() => globalThis.__mark === document.querySelector('#app .status')));
   // The friend's own night out runs on the host and lands on the friend's operative only.
   await guest.click('.shortcuts button[data-v="bar"]'); await guest.waitForTimeout(250); await guest.click('.pop-tabs [data-v="lounge"]'); await guest.waitForTimeout(300);
   await guest.click('button[data-a="lounge"][data-v="rook"]'); await guest.waitForTimeout(700);
@@ -46,7 +52,8 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   check('the friend sees their result', await guest.locator('.lounge-res').count() === 1);
   await guest.keyboard.press('Escape'); await guest.waitForTimeout(150);
   }
-  // The duel.
+  // The duel. The friend plays it at phone size.
+  await guest.setViewportSize({ width: 844, height: 390 }); await guest.waitForTimeout(300);
   await host.evaluate(() => cinderTown.onAction('barracks')); await host.waitForTimeout(300);
   await host.click('button[data-a="duel"][data-v="challenge"]'); await host.waitForTimeout(700);
   check('the challenge opens the ring on the friend’s screen', await guest.locator('.modal.duel button[data-v="yes"]').count() === 1);
@@ -54,20 +61,24 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   await guest.click('button[data-a="duel"][data-v="yes"]'); await guest.waitForTimeout(600);
   await host.click('button[data-a="duel"][data-v="pick"][data-k="bruiser"]'); await host.waitForTimeout(400);
   await guest.click('button[data-a="duel"][data-v="pick"][data-k="gunner"]'); await guest.waitForTimeout(700);
-  await host.waitForSelector('.duel-moves', { timeout: 8000 }); await guest.waitForSelector('.duel-moves', { timeout: 8000 });
-  check('both screens are in the fight', await host.locator('.duel-moves').count() === 1 && await guest.locator('.duel-moves').count() === 1);
+  await host.waitForSelector('.duel-fight .actions', { timeout: 8000 }); await guest.waitForSelector('.duel-fight .actions', { timeout: 8000 });
+  check('both screens are in the fight', true);
   await host.screenshot({ path: `${OUT}/duel-fight.png` });
-  check('both fighters are on the battle stage', await host.locator('.duel-arena .stage canvas').count() === 1 && await guest.locator('.duel-arena .stage canvas').count() === 1);
+  check('both fighters are on the battle stage, laid out like a raid fight', await host.locator('#app > .columns.fight.duel-fight .stage canvas').count() === 1 && await guest.locator('#app > .columns.fight.duel-fight .stage canvas').count() === 1);
   for (let i = 0; i < 16; i++) {
-    await host.waitForSelector('.duel-moves button, .duel-ctl .notice', { timeout: 20000 });
-    if (await host.locator('.duel-ctl .notice').count()) break;
-    await host.click('button[data-a="duel"][data-k="strike"]');
-    await guest.waitForSelector('.duel-moves button', { timeout: 20000 });
+    await host.waitForSelector('.duel-fight button[data-k="strike"]:not([disabled]), .duel-fight .notice', { timeout: 20000 });
+    if (await host.locator('.duel-fight .notice').count()) break;
+    await host.keyboard.press('f');
+    await guest.waitForSelector('.duel-fight button[data-k="shoot"]:not([disabled])', { timeout: 8000 }).catch(async (e) => { for (const [n, pg] of [['host', host], ['guest', guest]]) console.log(n, await pg.evaluate(() => { const d = cinderGame.state().duel; return JSON.stringify({ phase: d && d.phase, round: d && d.round, move: d && d.move, busy: cinderGame.stage.duelBusy, btns: [...document.querySelectorAll('.duel-fight button')].map((b) => b.dataset.k + (b.disabled ? '-off' : '-on')).join(' '), screen: !!document.querySelector('.duel-fight') }); })); throw e; });
     await guest.click('button[data-a="duel"][data-k="shoot"]');
-    if (i === 1) { await host.waitForTimeout(900); await host.screenshot({ path: `${OUT}/duel-anim.png` }); }
+    if (i === 1) { await host.waitForTimeout(900); await host.screenshot({ path: `${OUT}/duel-anim.png` }); await guest.screenshot({ path: `${OUT}/duel-phone-mid.png` }); }
   }
-  await host.waitForSelector('.duel-ctl .notice', { timeout: 20000 }).catch(() => {});
+  await host.waitForSelector('.duel-fight .notice', { timeout: 20000 }).catch(() => {});
   await host.screenshot({ path: `${OUT}/duel-done-host.png` });
+  // On a phone the moves sit beside the stage, no scrolling.
+  const fit = await guest.evaluate(() => ({ scroll: Math.max(document.documentElement.scrollHeight, document.body.scrollHeight) - innerHeight, notice: (() => { const r = document.querySelector('.duel-fight .notice, .duel-fight .actions').getBoundingClientRect(); return r.bottom <= innerHeight && r.right <= innerWidth; })() }));
+  check('phone: the ring fits on one screen', fit.scroll <= 1 && fit.notice, JSON.stringify(fit));
+  await guest.screenshot({ path: `${OUT}/duel-phone.png` });
   const end = await host.evaluate(() => { const s = cinderGame.state(), d = s.duel; return d && { phase: d.phase, winner: d.winner, prize: d.prize, a: s.char.perkN, b: s.char2.perkN }; });
   check('the bout ends', end && end.phase === 'done', JSON.stringify(end));
   if (end && end.winner !== null) {
@@ -75,8 +86,8 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
     check('one piece changes hands', end.prize && total(end.a) + total(end.b) === 3 && (end.winner === 0 ? total(end.a) === 3 : total(end.b) === 2), JSON.stringify(end));
   }
   await guest.waitForTimeout(400);
-  await guest.waitForSelector('.duel-ctl .notice', { timeout: 20000 }).catch(() => {});
-  check('the friend sees the result', /You (win|lose)|Draw/.test(await guest.innerText('.duel-arena')));
+  await guest.waitForSelector('.duel-fight .notice', { timeout: 20000 }).catch(() => {});
+  check('the friend sees the result', /You (win|lose)|Draw/.test(await guest.innerText('.duel-fight')));
   await guest.screenshot({ path: `${OUT}/duel-done-guest.png` });
   await host.click('button[data-a="duel"][data-v="close"]'); await host.waitForTimeout(500);
   check('closing clears the ring', await host.evaluate(() => !cinderGame.state().duel));

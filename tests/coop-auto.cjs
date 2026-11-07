@@ -22,14 +22,14 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
 
   // One player on: the friend readies up and follows the host's door.
   await guest.bringToFront(); await guest.click('button[data-a="autoaccept"]'); await guest.waitForTimeout(1500);
-  check('auto-accept readies the friend up by itself', (await save()).ready === true, JSON.stringify(await save()));
+  check('auto-accept alone never readies the friend up', (await save()).ready !== true, JSON.stringify(await save()));
   await host.bringToFront(); await host.waitForTimeout(150);
   check('the host still decides with one on', !(await save()).run);
   await host.evaluate(() => { document.querySelector('button[data-a="popup"][data-v="missions"]').click(); }); await host.waitForTimeout(200);
   await host.locator('button[data-a="deploy"]:not([disabled])').first().click(); await host.waitForTimeout(800);
   await host.evaluate(() => {}); let sv = await save();
-  for (let i = 0; i < 6 && sv.screen !== 'route'; i++) { await host.waitForTimeout(400); sv = await save(); }
-  check('the raid starts', sv.run, JSON.stringify(sv));
+  for (let i = 0; i < 10 && sv.screen !== 'route'; i++) { await guest.bringToFront(); await guest.waitForTimeout(400); await host.bringToFront(); sv = await save(); }
+  check('the host presses Deploy, the friend follows, and the raid starts', sv.run, JSON.stringify(sv));
   if (sv.screen === 'route') {
     const r0 = sv.room;
     await host.locator('button[data-a="room"]').first().click(); await host.waitForTimeout(150);
