@@ -30,46 +30,132 @@ const sheets = {};
 // Composited look sheets (look.js) for the player and the co-op partner; they replace sheets.player per side.
 const lookSheets = { player: null, partner: null };
 export function setLookSheets(player, partner) { lookSheets.player = player || null; lookSheets.partner = partner || null; }
-export async function loadSheets(base = 'sprites/') {
-  let man;
-  try { const res = await fetch(base + 'manifest.json', { cache: 'no-cache' }); if (!res.ok) return 0; man = await res.json(); } catch (e) { return 0; }
-  // High-resolution sheets replace older ones of the same name.
-  try { const res = await fetch(base + 'hd.json', { cache: 'no-cache' }); if (res.ok) { const hd = await res.json(); for (const k of Object.keys(hd)) man[k] = { ...hd[k], hd: true }; } } catch (e) {}
-  // Operatives, drones and the townsfolk load now. Enemies load with their map, so a phone only ever holds one map's fighters.
-  const now = [];
-  for (const [id, def] of Object.entries(man)) {
-    if (def.hd && !EAGER.test(id)) lazySheets[id] = { def, base }; else now.push(loadSheet(id, def, base));
-  }
-  await Promise.all(now);
-  return Object.keys(sheets).length + Object.keys(lazySheets).length;
+// Art can arrive long after the first fight on a bad connection, so nothing about it is final: every file is retried,
+// and whatever comes in late tells the listeners (index.html recomposites operatives; each stage swaps its actors in place).
+const artListeners = new Set(), artWaiters = new Set();
+export function onArtChange(fn) { artListeners.add(fn); return () => artListeners.delete(fn); }
+function artChanged(id) {
+  for (const fn of artListeners) { try { fn(id); } catch (e) { console.warn('art change', e); } }
+  for (const w of [...artWaiters]) w();
 }
-const EAGER = /^(op_|drone_)|^(prisoner|marrow|ilse|handler|dispatcher|vendor|worker|kid|patrol)$/;
-const lazySheets = {}, sheetLoads = {};
-async function loadSheet(id, def, base) {
-  const anims = {};
-  await Promise.all(Object.entries(def.anims || {}).map(([name, a]) => new Promise((ok) => {
+// The waits between tries of a file that failed: about a minute in all.
+const RETRY_MS = [700, 1800, 4000, 8000, 15000, 30000];
+function fetchJson(url, ok, gone, firstFail) {
+  let tries = 0;
+  const go = () => fetch(tries ? `${url}?retry=${tries}` : url, { cache: 'no-cache' })
+    .then((res) => { if (!res.ok) throw new Error(String(res.status)); return res.json(); })
+    .then(ok, () => { if (!tries && firstFail) firstFail(); if (tries >= RETRY_MS.length) gone(); else setTimeout(go, RETRY_MS[tries++]); });
+  go();
+}
+function fetchImage(src, job, ok, gone, firstFail) {
+  let tries = 0;
+  const go = () => {
+    if (job.dead) return;
     const img = new Image();
-    img.onload = () => { anims[name] = { img, frames: a.frames || 1, fps: a.fps || 8, loop: !!a.loop, pad: a.pad, tip: a.tip }; ok(); };
-    img.onerror = () => ok();
-    img.src = `${base}${id}/${name}.png`;
-  })));
-  if (anims.idle) sheets[id] = { size: def.size || anims.idle.img.height, anims, hd: !!def.hd, fig: def.fig };
+    img.onload = () => { if (!job.dead) ok(img); };
+    img.onerror = () => { if (job.dead) return; if (!tries) firstFail(); if (tries >= RETRY_MS.length) gone(); else setTimeout(go, RETRY_MS[tries++]); };
+    img.src = tries ? `${src}?retry=${tries}` : src;
+  };
+  go();
+}
+const defs = {}, jobs = {};
+// 'wait' until hd.json has answered or the retries ran out. Almost every sheet, operatives included, is described only there.
+let hdState = 'wait', hdMissed = false, opFirst = null;
+// The operative this player will see first loads before anything else.
+export function preferOpArt(sex) { opFirst = sex === 'f' || sex === 'm' ? sex : null; }
+const NPCS = ['marrow', 'ilse', 'handler', 'dispatcher', 'vendor', 'worker', 'kid'];
+const LAZY = (id) => !/^(op_|drone_)|^(prisoner|player|patrol)$/.test(id) && !NPCS.includes(id);
+export function loadSheets(base = 'sprites/') {
+  return new Promise((resolve) => {
+    fetchJson(`${base}manifest.json`, (man) => {
+      // Only where hd.json has nothing: its sheets replace older ones of the same name.
+      for (const [id, def] of Object.entries(man)) if (!defs[id]) defs[id] = { def, base };
+      if (hdState !== 'wait' || hdMissed) ensureSheet('player');
+    }, () => {}, null);
+    const hdKnown = () => {
+      for (const id of Object.keys(tintCache)) delete tintCache[id];
+      artChanged('*');
+      if (sheetsFor) { const t = sheetsFor; sheetsFor = null; loadMapSheets(t); }
+    };
+    fetchJson(`${base}hd.json`, (hd) => {
+      for (const [id, def] of Object.entries(hd)) {
+        if (jobs[id]) { jobs[id].dead = true; delete jobs[id]; }
+        delete sheets[id];
+        defs[id] = { def: { ...def, hd: true }, base };
+      }
+      hdState = 'ok';
+      hdKnown();
+      loadEager().then(resolve);
+    }, () => { hdState = 'gone'; hdKnown(); resolve(); },
+    // Without hd.json only the stock figure is safe to load: the rest of manifest.json no longer matches its files.
+    () => { hdMissed = true; ensureSheet('player'); });
+  });
+}
+// In order of how soon a player sees them, so a slow connection spends itself on the operative first.
+async function loadEager() {
+  const steps = [opFirst ? [`op_${opFirst}`] : ['op_m', 'op_f'], ['op_m', 'op_f'], ['drone_hornet', 'drone_aegis', 'drone_mender', 'drone_magpie', 'prisoner'], NPCS, ['patrol', 'player']];
+  for (const step of steps) {
+    await Promise.all(step.map(ensureSheet));
+    // A fight's enemy goes ahead of the next batch.
+    await Promise.all(Object.values(jobs).filter((j) => !j.firstDone).map((j) => j.first));
+  }
+}
+// The idle row comes first and is enough to go on with: a boss intro or an opening stance needs nothing else, and the
+// other moves join the same sheet as they arrive. Listeners hear at idle and at the end of the first pass, so an operative
+// (expensive to composite) is rebuilt twice, not once per file.
+function startSheet(id) {
+  const { def, base } = defs[id], names = Object.keys(def.anims || {});
+  const job = jobs[id] = { dead: false, anims: {}, open: names.length, firstDone: false, first: null };
+  const publish = () => { if (job.anims.idle && !job.dead) sheets[id] = { size: def.size || job.anims.idle.img.height, anims: job.anims, hd: !!def.hd, fig: def.fig }; };
+  job.first = new Promise((done) => {
+    let waiting = names.length;
+    if (!waiting) { job.firstDone = true; done(); return; }
+    const fetchOne = (name, then) => {
+      const a = def.anims[name];
+      let counted = false;
+      const count = () => { if (counted) return; counted = true; if (then) then(); if (--waiting) return; job.firstDone = true; publish(); done(); if (!job.dead) artChanged(id); };
+      fetchImage(`${base}${id}/${name}.png`, job, (img) => {
+        job.open--;
+        // A manifest line can outlive its art: a 250px sheet read as 96px frames would draw a giant. Only hd.json describes those files.
+        if (def.hd || !def.size || img.height === def.size) {
+          job.anims[name] = { img, frames: a.frames || 1, fps: a.fps || 8, loop: !!a.loop, pad: a.pad, tip: a.tip };
+          tintLate(id, name);
+        }
+        if (name === 'idle') { publish(); artChanged(id); }
+        else if (counted) artChanged(id); // came in on a retry
+        count();
+      }, () => { job.open--; if (job.open <= 0 && job.firstDone) artChanged(id); }, count);
+    };
+    if (def.anims.idle) fetchOne('idle', () => names.forEach((n) => { if (n !== 'idle') fetchOne(n); }));
+    else names.forEach((n) => fetchOne(n));
+  });
 }
 export function ensureSheet(id) {
-  if (sheets[id] || !lazySheets[id]) return Promise.resolve();
-  return sheetLoads[id] || (sheetLoads[id] = loadSheet(id, lazySheets[id].def, lazySheets[id].base).finally(() => { delete sheetLoads[id]; }));
+  if (sheets[id] || !defs[id] || (hdState === 'wait' && id !== 'player')) return Promise.resolve();
+  const j = jobs[id];
+  if (j && !j.dead && (j.open > 0 || !j.firstDone)) return j.first;
+  startSheet(id);
+  return jobs[id].first;
+}
+// Is the real art for this id still on its way? Used to hold a fight briefly rather than show a stand-in.
+function artPending(id) {
+  if (sheets[id] && sheets[id].hd) return false;
+  if (hdState === 'wait') return true;
+  if (sheets[id] || !defs[id]) return false;
+  const j = jobs[id];
+  return !j || j.open > 0 || !j.firstDone;
 }
 // Load this map's fighters ahead of the first fight and let go of the last map's.
 let sheetsFor = null;
-function loadMapSheets(theme) {
+function loadMapSheets(theme, first) {
   if (theme === sheetsFor) return;
   sheetsFor = theme;
   const map = MAPS.find((m) => m.theme === theme);
   if (!map) return;
   const keep = new Set([...map.pool.map((p) => p[0]), ...map.bosses]);
-  for (const id of Object.keys(lazySheets)) if (!keep.has(id)) delete sheets[id];
+  for (const id of Object.keys(defs)) if (LAZY(id) && !keep.has(id)) { delete sheets[id]; if (jobs[id]) { jobs[id].dead = true; delete jobs[id]; } }
   for (const k of Object.keys(tintCache)) if (!k.endsWith(`-${theme}`)) delete tintCache[k];
-  (async () => { for (const id of keep) await ensureSheet(id); })();
+  (async () => { await first; for (const id of keep) await ensureSheet(id); })();
 }
 
 export const sheetOf = (id) => sheets[id] || null;
@@ -82,8 +168,19 @@ function tintedSheet(id, theme) {
   if (!base || !base.hd || !tint || !TINTED.has(id)) return base || null;
   const key = `${id}-${theme}`;
   if (tintCache[key]) return tintCache[key];
-  const [r, gr, b, amt, gain] = tint, anims = {};
-  for (const [name, a] of Object.entries(base.anims)) {
+  const anims = {};
+  for (const [name, a] of Object.entries(base.anims)) anims[name] = tintRow(a, tint);
+  return (tintCache[key] = { ...base, anims });
+}
+// A row that arrives after its sheet was recoloured.
+function tintLate(id, name) {
+  const base = sheets[id];
+  if (!base) return;
+  for (const [k, sh] of Object.entries(tintCache)) if (k.startsWith(`${id}-`)) sh.anims[name] = tintRow(base.anims[name], MAP_TINT[k.slice(id.length + 1)]);
+}
+function tintRow(a, tint) {
+  const [r, gr, b, amt, gain] = tint;
+  {
     const c = document.createElement('canvas'); c.width = a.img.width; c.height = a.img.height;
     const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(a.img, 0, 0);
     const im = g.getImageData(0, 0, c.width, c.height), d = im.data;
@@ -95,9 +192,8 @@ function tintedSheet(id, theme) {
       d[i] = Math.min(255, d[i] * (1 - amt) + l * r * amt); d[i + 1] = Math.min(255, d[i + 1] * (1 - amt) + l * gr * amt); d[i + 2] = Math.min(255, d[i + 2] * (1 - amt) + l * b * amt);
     }
     g.putImageData(im, 0, 0);
-    anims[name] = { ...a, img: c };
+    return { ...a, img: c };
   }
-  return (tintCache[key] = { ...base, anims });
 }
 // Painted backdrops: per map, an area and then a boss arena for each stretch of five sectors. They load when needed; the code-drawn scene stands in until then.
 const BG_OPEN = new Set(['garrison_1', 'garrison_2', 'foundry_1', 'port_1', 'port_2']);
@@ -108,8 +204,8 @@ function paintedBackdrop(theme, sector, boss) {
   if (!e) {
     e = { canvas: null, open: BG_OPEN.has(key) };
     bgCache.set(key, e);
-    const img = new Image();
-    img.onload = () => {
+    let img = new Image(), tries = 0;
+    const paint = () => {
       const c = document.createElement('canvas'); c.width = W * RES; c.height = H * RES;
       const q = c.getContext('2d'); q.imageSmoothingEnabled = true; q.imageSmoothingQuality = 'high';
       q.drawImage(img, 0, 0, c.width, c.height);
@@ -122,6 +218,12 @@ function paintedBackdrop(theme, sector, boss) {
       // Keep only the last few in memory: each one is about 3 MB on a phone.
       if (bgCache.size > 3) { const old = bgCache.keys().next().value; if (old !== key) bgCache.delete(old); }
     };
+    // The code-drawn scene stays up while a failed backdrop is tried again.
+    const fail = () => {
+      if (tries >= RETRY_MS.length || bgCache.get(key) !== e) return;
+      setTimeout(() => { if (bgCache.get(key) !== e) return; tries++; img = new Image(); img.onload = paint; img.onerror = fail; img.src = `bg/${key}.png?retry=${tries}`; }, RETRY_MS[tries]);
+    };
+    img.onload = paint; img.onerror = fail;
     img.src = `bg/${key}.png`;
   } else { bgCache.delete(key); bgCache.set(key, e); }
   return e;
@@ -146,6 +248,7 @@ export function sheetStill(id) {
 }
 
 // ---------- helpers ----------
+const phoneView = () => typeof matchMedia !== 'undefined' && matchMedia('(max-height: 500px) and (orientation: landscape)').matches;
 const ease = (p) => 1 - Math.pow(1 - p, 3);
 function seeded(seed) { let a = seed >>> 0; return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
@@ -184,8 +287,10 @@ class Actor {
 
 const SIG_COLOR = { shutter: '#9aa3ad', confiscate: '#e6d36a', anchor: '#c79a5a', siege: '#ffb347', roll: '#ff8a3c', floor: '#ff8a3c', overtime: '#d4483a', front: '#e6d36a', count: '#e6d36a', lights: '#73b6d4', crane: '#c79a5a', salute: '#fff1c9', redact: '#efe7d6', audit: '#ffffff' };
 
+const ART_HOLD_MS = 4000;
 export class Stage {
   constructor() {
+    this.holdSince = {}; this.artHold = false; this.holding = null; this.popAt = {};
     this.el = document.createElement('div');
     this.el.className = 'stage';
     this.el.innerHTML = `<canvas width="${W * RES}" height="${H * RES}" aria-hidden="true"></canvas>
@@ -193,6 +298,7 @@ export class Stage {
       <div class="hud hud-player"><div class="hud-row"><b class="hud-name"></b><span class="hud-tag"></span></div><div class="bar"><i></i></div><div class="hud-row"><span class="hud-st"></span><span class="hud-hp num"></span></div></div>
       <div class="cine" hidden><i class="bar-top"></i><i class="bar-bot"></i><div class="cine-card"><span class="cine-label"></span><b class="cine-name"></b><span class="cine-epithet"></span><span class="cine-line"></span></div><span class="cine-skip">Tap to skip</span></div>
       <div class="bsay" hidden role="status"><span class="bsay-text"></span><span class="bsay-note"></span></div>
+      <div class="art-wait" hidden role="status">Loading fighters\u2026</div>
       <div class="pops" aria-hidden="true"></div>
       <div class="speed" role="group" aria-label="Battle mode"><button data-speed="manual" title="You choose every move">Manual</button><button data-speed="auto1" title="Auto battle: the operative fights with a fixed routine. Tap Manual to take over.">Auto 1\u00D7</button><button data-speed="auto2" title="Auto battle at double speed.">Auto 2\u00D7</button></div>`;
     this.canvas = this.el.querySelector('canvas');
@@ -224,6 +330,7 @@ export class Stage {
       this.setMode(b.dataset.speed === this.mode && matchMedia('(max-height: 500px) and (orientation: landscape)').matches ? { manual: 'auto1', auto1: 'auto2', auto2: 'manual' }[this.mode] : b.dataset.speed);
     });
     this.syncSpeed();
+    onArtChange((id) => { if (id === '*' && this.enemy) ensureSheet(this.enemy.id); this.refreshArt(); });
     const loop = (t) => { try { this.draw(performance.now()); } catch (e) { console.warn('stage draw', e); const g = this.ctx; g.setTransform(RES, 0, 0, RES, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; } requestAnimationFrame(loop); };
     requestAnimationFrame(loop);
   }
@@ -343,7 +450,7 @@ export class Stage {
     if (partner && !this.partner) this.partner = new Actor('player', 'partner', false);
     if (!partner) this.partner = null;
     this.sector = sector; this.boss = boss; this.theme = theme; this.allies = allies;
-    loadMapSheets(theme);
+    loadMapSheets(theme, ensureSheet(enemy.id)); // this fight's enemy goes ahead of the rest of the map
     if (!this.allySprite) this.allySprite = portraitCanvas('prisoner');
     if (sheets.prisoner) {
       this.allyActors = this.allyActors || [];
@@ -358,12 +465,13 @@ export class Stage {
     this.setStatuses('enemy', est, affix, quirk);
     this.label = label;
     this.bfx = enemy.bs ? { shutter: enemy.bs.shutter, floor: enemy.bs.floor, front: enemy.bs.front, lights: enemy.bs.lights, wreck: enemy.bs.wreck, sig: enemy.sig ? enemy.sig.id : null, left: enemy.sig ? enemy.sig.left : 0 } : null;
-    let isNewBoss = false;
+    let isNewBoss = false, artWait = null;
+    const enter = [], newFight = this.runRef !== run || !this.player || this.enemyRef !== enemy;
     if (this.runRef !== run || !this.player) {
       this.runRef = run;
-      this.player = new Actor('player', 'player', false);
-      this.player.ox = -150; this.player.alpha = 0;
-      this.tween(500, (p) => { this.player.ox = -150 * (1 - ease(p)); this.player.alpha = p; });
+      const P = this.player = new Actor('player', 'player', false);
+      P.ox = -150; P.alpha = 0;
+      enter.push(() => this.tween(500, (p) => { P.ox = -150 * (1 - ease(p)); P.alpha = p; }));
     }
     // Co-op: a downed operative stays on the floor until they're back up.
     for (const [a, info] of [[this.player, player], [this.partner, partner]]) {
@@ -376,15 +484,49 @@ export class Stage {
       this.hideSay(); this.sayN = enemy.say ? enemy.say.n : 0; this.drop = null; // what was said before a reload stays said
       this.enemy = new Actor(enemy.id, 'enemy', enemy.boss);
       if (this.enemy.sheet) this.enemy.sheet = tintedSheet(enemy.id, theme) || this.enemy.sheet;
-      else if (lazySheets[enemy.id]) { const actor = this.enemy; ensureSheet(enemy.id).then(() => { const sh = tintedSheet(enemy.id, theme); if (sh) { actor.sheet = sh; actor.drawn = null; } }); }
-      this.enemy.ox = 140; this.enemy.alpha = 0;
-      if (enemy.boss) { isNewBoss = true; this.enemy.alpha = 0; this.enemy.ox = 0; }
-      else { this.tween(450, (p) => { this.enemy.ox = 140 * (1 - ease(p)); this.enemy.alpha = p; }); play('door'); if (quirk) setTimeout(() => this.popup('enemy', quirk.toUpperCase(), 'quirk'), 450 / (this.speed || 1)); }
+      const F = this.enemy;
+      F.ox = 140; F.alpha = 0;
+      if (enemy.boss) { isNewBoss = true; F.alpha = 0; F.ox = 0; }
+      else enter.push(() => { if (this.enemy !== F) return; this.tween(450, (p) => { F.ox = 140 * (1 - ease(p)); F.alpha = p; }); play('door'); if (quirk) setTimeout(() => this.popup('enemy', quirk.toUpperCase(), 'quirk'), 450 / (this.speed || 1)); });
     }
+    // Nobody walks on in the wrong art: on a slow connection the fight waits a moment for its sheets.
+    if (newFight) artWait = this.holdArt(enemy.id);
+    if (artWait) artWait.then(() => enter.forEach((f) => f())); else enter.forEach((f) => f());
     this.enemy.rest = enemy.intent === 'heavy' && !enemy.stun ? 'charge' : 'idle';
     if (this.enemy.anim === 'idle' && this.enemy.rest === 'charge') this.enemy.setAnim('charge', now);
     this.playerShield = false;
-    return { isNewBoss };
+    return { isNewBoss, artWait };
+  }
+
+  // Late art swaps into the fighters already on the stage, keeping what they are doing.
+  refreshArt() {
+    const swap = (a, sh) => { if (a && sh && sh !== a.sheet) { a.sheet = sh; a.drawn = null; } };
+    swap(this.player, lookSheets.player || sheets.player);
+    swap(this.partner, lookSheets.partner || sheets.player);
+    if (this.enemy) swap(this.enemy, tintedSheet(this.enemy.id, this.theme));
+    for (const al of this.allyActors || []) swap(al, sheets.prisoner);
+  }
+  artMissing(a) {
+    if (a.id !== 'player') return artPending(a.id);
+    const look = lookSheets[a.side === 'partner' ? 'partner' : 'player'];
+    return !(look && look.hd) && (artPending('op_m') || artPending('op_f'));
+  }
+  // Holds the fight on a "loading" line until its art is in. Each fighter has one allowance of about four seconds, so a
+  // file that won't load delays only the first fight it matters to; after that the stand-in shows and the real art swaps in if it comes.
+  holdArt(enemyId) {
+    const fighters = () => [this.player, this.partner, this.enemy].filter(Boolean), missing = () => fighters().filter((a) => this.artMissing(a));
+    const now = performance.now(), left = missing().map((a) => { const k = a.id === 'player' ? 'player' : enemyId; if (this.holdSince[k] === undefined) this.holdSince[k] = now; return ART_HOLD_MS - (now - this.holdSince[k]); });
+    if (!left.length || Math.max(...left) <= 0) return null;
+    if (this.holding) return this.holding;
+    const note = this.el.querySelector('.art-wait');
+    this.artHold = true; note.hidden = false;
+    return (this.holding = new Promise((done) => {
+      let timer = 0;
+      const finish = () => { artWaiters.delete(check); clearTimeout(timer); this.artHold = false; this.holding = null; note.hidden = true; done(); };
+      const check = () => { if (!missing().length) finish(); };
+      artWaiters.add(check);
+      timer = setTimeout(finish, Math.max(...left));
+    }));
   }
 
   setStatuses(side, st = {}, affix = null, quirk = null) {
@@ -493,7 +635,16 @@ export class Stage {
 
   setHud(side, name, tag, hp) {
     const h = this.hud[side];
-    const nm = h.querySelector('.hud-name'); nm.textContent = name; nm.classList.toggle('long', name.length > 16);
+    const nm = h.querySelector('.hud-name'); nm.textContent = name; nm.classList.remove('xlong'); nm.classList.toggle('long', name.length > 16);
+    h.dataset.tip = name;
+    if (phoneView()) {
+      // A phone has one line for it: smaller first, and only then do the leading words go (the quirk, then the variant). Tapping shows the whole name.
+      nm.classList.remove('long');
+      const over = () => nm.scrollWidth > nm.clientWidth;
+      if (over()) nm.classList.add('long');
+      if (over()) nm.classList.add('xlong');
+      for (let words = name.split(' '); over() && words.length > 1;) { words.shift(); nm.textContent = words.join(' '); }
+    }
     h.querySelector('.hud-tag').textContent = tag;
     this.setHp(side, hp);
   }
@@ -511,7 +662,10 @@ export class Stage {
     el.className = `pop ${cls}`;
     el.textContent = text;
     const [x, y] = side === 'enemy' ? [75, 22] : side === 'partner' ? [10, 48] : [26, 52];
-    el.style.left = `${x + (Math.random() * 8 - 4)}%`; el.style.top = `${y + (Math.random() * 6 - 3)}%`;
+    // Several at once from one side stack up instead of printing over each other.
+    const at = performance.now(), last = this.popAt[side], n = last && at - last.t < 700 ? last.n + 1 : 0;
+    this.popAt[side] = { t: at, n };
+    el.style.left = `${x + (Math.random() * 8 - 4)}%`; el.style.top = `${Math.max(3, y + (Math.random() * 4 - 2) + [0, 13, -13, 26, -26][n % 5])}%`;
     // A number has to be readable, so 2x doesn't cut it quite in half. The longer crit keeps its hold.
     const life = (cls.includes('crit') ? 1250 : 1050) / Math.max(1, (this.speed || 1) * 0.8);
     el.style.animationDuration = `${life}ms`;
@@ -1405,7 +1559,7 @@ export class Stage {
   }
 
   drawActor(actor, t) {
-    if (!actor || actor.alpha <= 0) return;
+    if (!actor || actor.alpha <= 0 || (this.artHold && this.artMissing(actor))) return;
     const g = this.ctx, a = this.anchor(actor.side, actor), f = actor.frame(t), s = actor.scale;
     if (!f.img) return; // art still loading
     const w = Math.round(f.sw * s), h = Math.round(f.sh * s);
@@ -1474,7 +1628,8 @@ export class Stage {
     this.drawBossFx(g, t, E, 'under');
     const pa = this.anchor('player');
     if (painted.canvas) this.groundShadow(pa.x, pa.y - 2, 84, 16); else this.pad(pa.x, this.player && this.player.sheet ? pa.y - 2 : pa.y - 16, 84, 16);
-    if (this.allies && this.allyActors && this.allyActors.length && this.player && this.player.alpha > 0) {
+    if (this.artHold) { /* nobody stands around in stand-in art */ }
+    else if (this.allies && this.allyActors && this.allyActors.length && this.player && this.player.alpha > 0) {
       // Freed prisoners from the PixelLab sheet stand behind the player's left shoulder.
       this.allyActors.forEach((al, i) => {
         const f = al.frame(t), sc = al.scale, w = Math.round(f.sw * sc), h = Math.round(f.sh * sc);
@@ -1495,7 +1650,7 @@ export class Stage {
       if (this.partnerInfo) { const pc = this.center(this.partner); g.fillStyle = this.partnerInfo.acting ? C.amber : 'rgba(221,214,198,.7)'; g.font = '7px monospace'; g.textAlign = 'center'; g.fillText(this.partnerInfo.name.toUpperCase().slice(0, 12), Math.round(pc.x), Math.round(pc.y - this.partner.size * 0.45)); g.textAlign = 'left'; }
     }
     this.drawActor(this.player, t);
-    if (this.player && this.player.alpha > 0) {
+    if (this.player && this.player.alpha > 0 && !this.artHold) {
       if (this.partner && this.partnerDrone) this.drawDrone(this.partner, this.partnerDrone, t, 1);
       if (this.drone) this.drawDrone(this.player, this.drone, t, 0);
     }

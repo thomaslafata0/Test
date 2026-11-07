@@ -73,9 +73,9 @@ const turns = ({ s, rng }, n, act = 'defend') => { for (let i = 0; i < n && s.sc
 {
   const rng = E.seededRng(6), s = E.newGame(rng); E.createChar(s, rng, E.newDraft(s.meta, rng)); s.screen = 'town';
   const c = s.char;
-  s.meta.resolve = 3;
-  assert.strictEqual(E.upgradeDrone(s), false, 'needs Resolve');
   s.meta.resolve = 4;
+  assert.strictEqual(E.upgradeDrone(s), false, 'needs Resolve');
+  s.meta.resolve = 5;
   assert.strictEqual(E.upgradeDrone(s), true); assert.strictEqual(c.drone.rank, 2); assert.strictEqual(s.meta.resolve, 0);
   c.drone.rank = 5; s.meta.resolve = 99;
   assert.strictEqual(E.upgradeDrone(s), false, 'rank 5 is the top');
@@ -158,7 +158,7 @@ const turns = ({ s, rng }, n, act = 'defend') => { for (let i = 0; i < n && s.sc
   assert(base > 0);
   const old = E.newGame(rng); old.meta.cell = ['stash', 'ledger', 'heirloom'];
   assert.strictEqual(E.cellLevel(old.meta, 'stash'), 2); assert.strictEqual(E.cellLevel(old.meta, 'ledger'), 3); assert.strictEqual(E.cellLevel(old.meta, 'heirloom'), 1);
-  old.meta.resolve = 9; assert.strictEqual(E.buyCell(old, 'stash'), true, 'an old save can level up'); assert.strictEqual(E.cellLevel(old.meta, 'stash'), 3);
+  old.meta.resolve = 10; assert.strictEqual(E.buyCell(old, 'stash'), true, 'an old save can level up'); assert.strictEqual(E.cellLevel(old.meta, 'stash'), 3);
   console.log('PASS cell upgrades have levels');
 }
 assert.strictEqual(D.DRONE_ORDER.length, 4);

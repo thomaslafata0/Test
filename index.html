@@ -508,6 +508,23 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .town-fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
 .town-fade.on { animation: tfade .45s ease-out; }
 @media (max-width: 520px) { .town-prompt { font-size: .58rem; padding: 3px 7px; } .town-bubble { font-size: .78rem; } }
+/* The open-square yard (yard.js): floating name signs, two name labels, and a small prompt that stays over the rooftops. */
+.town.yard { touch-action: none; overscroll-behavior: none; }
+.yard-signs { position: absolute; inset: 0; pointer-events: none; }
+.yard-signs[hidden] { display: none; }
+.yard-sign { position: absolute; left: 0; top: 0; display: grid; place-items: center; min-width: 38px; min-height: 38px; margin: 0; padding: 0; border: 0; background: none; color: var(--sodium); font-family: var(--mono); font-size: max(12px, .76rem); line-height: 1.2; white-space: nowrap; cursor: pointer; pointer-events: auto; touch-action: none; }
+.yard-sign span { position: relative; padding: 2px 7px; white-space: pre; text-align: center; background: #0b0d12e0; border: 1px solid currentColor; border-radius: 3px; }
+.yard-sign.minor { color: #aeb4c0; font-size: 11px; }
+.yard-sign.minor span { padding: 1px 5px; border-color: #5a606c; }
+.yard-sign.mate span::after { content: ''; position: absolute; right: -4px; top: -4px; width: 9px; height: 9px; border-radius: 50%; background: #7fd7ff; border: 1px solid #0b0d12; }
+.yard-sign.pulse span { animation: yardpulse 1.8s ease-in-out infinite; }
+@keyframes yardpulse { 50% { background: #5a3a12; box-shadow: 0 0 9px var(--sodium); } }
+@media (prefers-reduced-motion: reduce) { .yard-sign.pulse span { animation: none; } }
+.town.yard .town-tag { font-size: max(11px, .68rem); color: #7fd7ff; }
+.town.yard .town-tag.me { color: var(--sodium); }
+.town.yard .town-prompt { top: 3px; bottom: auto; max-width: min(74%, 440px); padding: 2px 9px; letter-spacing: 0; }
+/* On a phone the prompt stays a 38px target but only the middle 26px of it shows. */
+.town.yard .town-prompt.act:not([hidden]) { background: linear-gradient(transparent 6px, #121518e6 6px, #121518e6 calc(100% - 6px), transparent calc(100% - 6px)); border: 0; }
 @keyframes tfade { 0% { opacity: .9; } 100% { opacity: 0; } }
 .town-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 6px 16px; }
 .town-help { font-size: .85rem; max-width: 46ch; }
@@ -949,6 +966,9 @@ html.calm .btn:active, html.calm .door:active, html.calm .tab:active, html.calm 
 /* ============ Phones held sideways ============
    One screen, no page scroll. Text is never under 11px, anything you tap is at least 38px, and each screen uses the whole display.
    The usable area on an iPhone with a notch is about 750 x 370, so sizes are worked out for that. */
+.sk-brief, .it-brief, .statline .ph { display: none; }
+.art-wait { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); z-index: 3; padding: 4px 12px; font-family: var(--mono); font-size: max(12px, .8rem); letter-spacing: .08em; text-transform: uppercase; color: var(--fg); background: #000000b0; border: 1px solid var(--line); white-space: nowrap; pointer-events: none; animation: pulse 1.2s ease-in-out infinite; }
+.art-wait[hidden] { display: none; }
 @media (max-height: 500px) and (orientation: landscape) {
   html { font-size: clamp(14px, calc((100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)) * .02), 16px); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   html, body { height: 100dvh; overflow: hidden; overscroll-behavior: none; }
@@ -1169,57 +1189,80 @@ html.calm .btn:active, html.calm .door:active, html.calm .tab:active, html.calm 
   /* The fight fills the left: stat line and traits share one row under the stage. */
   .c-left { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); grid-auto-rows: auto; gap: 2px 8px; min-width: 0; min-height: 0; }
   .c-left > * { grid-column: 1 / -1; min-width: 0; }
-  .c-left > .statline { grid-column: 1; }
-  .c-left > .quirk-row { grid-column: 2; overflow: hidden; }
+  .c-left > .quirk-row { display: none; }
   .c-left > .stage-box { flex: 1 1 0; min-height: 0; container-type: size; display: grid; place-items: center; }
-  .combat .stage, #stage-slot { width: min(100cqw, calc((100cqh - 27px) * 1.7778)); margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1px; background: var(--line); }
+  .combat .stage, #stage-slot { width: min(100cqw, calc((100cqh - 27px) * 1.7778)); margin: 0; display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 1px; background: var(--line); }
   .stage canvas { grid-column: 1 / -1; }
   .hud { position: static; width: auto; max-width: none; height: 26px; border: 0; background: var(--panel-2); padding: 1px 8px; gap: 1px 6px; grid-template-columns: minmax(0, 1fr) auto; align-items: center; align-content: center; }
   .hud-player { order: 2; }
   .hud-enemy { order: 3; }
   .hud-row { min-width: 0; }
-  .hud-name, .hud-name.long { font-size: max(13px, .9rem); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
-  .hud-hp { font-size: max(11px, .78rem); color: var(--fg); }
+  .hud-name { font-size: max(13px, .9rem); white-space: nowrap; overflow: hidden; display: block; }
+  .hud-name.long { font-size: 12px; letter-spacing: .01em; }
+  .hud-name.xlong { font-size: 11px; letter-spacing: 0; }
+  .hud-hp { font-size: max(11px, .78rem); color: var(--fg); word-spacing: -.25em; white-space: nowrap; }
   .hud .bar { grid-column: 1 / -1; height: 5px; order: 3; }
   .hud-st { display: none; }
   .speed { right: 4px; top: 4px; gap: 3px; }
   .speed button { font-size: 11px; padding: 0 9px; min-height: 38px; }
-  .intent, .combat .intent { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; padding: 0 8px; grid-template-columns: none; min-height: 26px; }
-  .intent b { font-size: 1.05rem; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; }
-  .intent .tip { font-size: max(12px, .84rem); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
-  .intent .dot { margin: 0; flex: none; width: 8px; height: 8px; }
-  .intent-side { flex: none; gap: 4px; }
+  .intent, .combat .intent { display: grid; grid-template-columns: auto fit-content(26%) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); align-items: center; gap: 0 7px; padding: 0 8px; height: 29px; overflow: hidden; }
+  .intent b { font-size: 13.5px; line-height: 13px; min-width: 0; }
+  .intent .tip, .combat .intent .tip { grid-column: 3; font-size: 12px; line-height: 13.5px; min-width: 0; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+  .intent .next-intent { display: none; }
+  .intent .dot { grid-row: auto; margin: 0; width: 8px; height: 8px; }
+  .intent-side { display: none; }
   .mech { padding: 0 6px; }
   .quirk-row .quirk-line > span:not(.chip) { display: none; }
-  .statline { gap: 2px 10px; flex-wrap: nowrap; overflow: hidden; white-space: nowrap; }
+  .statline { display: flex; flex-wrap: wrap; align-items: center; align-content: flex-start; gap: 0 8px; height: 24px; overflow: hidden; white-space: nowrap; font-size: 12px; }
+  .statline > * { flex: none; order: 9; height: 24px; line-height: 22px; }
+  .statline .ph { display: inline-block; order: 1; font-family: var(--body); font-weight: 600; font-size: 12px; letter-spacing: .02em; padding: 0 5px; }
+  .statline .tag { order: 2; font-size: 11px; line-height: 22px; letter-spacing: .04em; padding: 0 5px; }
+  .statline .s-atk { order: 3; } .statline .s-def { order: 4; } .statline .s-spd { order: 5; } .statline .s-dodge { order: 6; } .statline .s-drone { order: 7; } .statline .s-run { order: 8; }
   .quirk-line { flex-wrap: nowrap; overflow: hidden; white-space: nowrap; gap: 6px; font-size: max(11px, .78rem); }
   .c-right { display: flex; flex-direction: column; gap: 4px; padding: 9px 5px 5px; min-height: 0; overflow: hidden; }
   .c-right > * { flex: none; }
   .party .pm { padding: 2px 6px; }
   .actions, .skills, .items { gap: 4px; }
-  .c-right > .actions { flex: 2.3 1 auto; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: minmax(44px, 1.25fr) minmax(38px, 1fr); }
-  .actions .btn { grid-column: span 2; min-height: 0; padding: 2px 3px; font-size: .95rem; }
+  /* Rows share out the height by count, not by their text: a row can't push the next off the panel. */
+  .c-right > .actions { flex: 2.3 1 0; min-height: 86px; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: minmax(44px, 1.25fr) minmax(38px, 1fr); }
+  .actions .btn { grid-column: span 2; min-height: 0; padding: 2px 3px; font-size: .95rem; overflow: hidden; }
   .actions .btn.atk { grid-column: span 3; font-size: 1.15rem; }
   .actions .btn .wpn { display: none; }
-  .actions .btn .bs { font-size: max(11px, .8rem); }
+  .actions .btn .bs { font-size: max(11px, .8rem); line-height: 1.1; }
+  .actions .btn[data-v="defend"] .bs, .actions .btn[data-v="run"] .bs { font-size: 11px; white-space: nowrap; }
+  .actions .btn[data-v="run"]:disabled .bs { white-space: normal; }
+  /* The smallest phones. */
+  @media (max-width: 700px) {
+    .sk-name .ico, .actions .btn[data-v="stim"] .ico, .actions .btn[data-v="run"]:disabled .bs { display: none; }
+  }
   .actions .btn.atk .bs { font-size: max(12px, .88rem); }
   .actions .btn[data-v="stim"] .bs { display: none; }
-  .c-right > .skills { flex: 2 1 auto; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(38px, 1fr); }
-  .skills .btn { min-height: 0; padding: 2px 8px; gap: 0; align-content: center; }
+  .c-right > .skills { flex: 1 1 0; min-height: 38px; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(38px, 1fr); }
+  .c-right > .skills:has(> :nth-child(3)) { flex-grow: 2; min-height: 80px; }
+  .skills .btn { min-height: 0; padding: 2px 6px; gap: 0; align-content: center; overflow: hidden; }
   .sk-name { font-size: max(12px, .8rem); gap: 4px; white-space: nowrap; overflow: hidden; }
   .sk-name .ico { width: 16px; height: 16px; }
   .sk-note { display: flex; gap: 6px; font-size: max(11px, .78rem); white-space: nowrap; overflow: hidden; }
-  .sk-note .sk-status { order: -1; flex: none; text-transform: uppercase; letter-spacing: .04em; }
-  .c-right > .items { flex: 1 1 auto; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(38px, 1fr); }
-  .items .btn { min-height: 0; padding: 2px 4px; font-size: max(12px, .86rem); }
+  .sk-note .sk-status { order: -1; flex: none; letter-spacing: 0; text-transform: none; }
+  .sk-full, .skill.ready .sk-status { display: none; }
+  .skill.ready .sk-brief { display: inline; }
+  .c-right > .items { flex: .8 1 0; min-height: 38px; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(38px, 1fr); }
+  .items .btn { min-height: 0; padding: 2px 3px; font-size: max(12px, .86rem); overflow: hidden; }
+  .it-full, .items .k { display: none; }
+  .items .btn .bt { display: grid; grid-template-columns: auto auto; justify-content: center; align-items: center; column-gap: 3px; white-space: nowrap; line-height: 13px; }
+  .items .bt .ico { grid-row: 1 / span 2; }
+  .items .it-brief { display: block; line-height: 13px; }
+  .items .bt .num { line-height: 12px; }
+  .items .btn.confirm .bt { display: none; }
   .items .bs { display: none; }
-  .items .btn.confirm .bs { display: block; font-size: 11px; }
-  .items .bt { gap: 3px; line-height: 1.05; }
+  .items .btn.confirm .bs { display: block; font-size: 11px; line-height: 12px; }
   .items .ico { width: 18px; height: 18px; }
 
   /* Fixes after looking at every screen. */
   .town-spend { display: none; }
-  .town-panel .shortcuts .btn:has(.badge) { border-color: var(--sodium); }
+  .town-panel .shortcuts .btn:has(.badge) { border-color: var(--sodium); gap: 3px; min-width: 0; font-size: .95rem; }
+  /* Notes go along the top, away from the buttons at the bottom of every screen. */
+  .toast { top: 4px; bottom: auto; }
   .town-prompt { font-size: max(12px, .82rem); padding: 5px 12px; }
   .town-prompt.act:not([hidden]) { min-height: 38px; display: flex; align-items: center; }
   .town-bubble { font-size: max(13px, .9rem); }
@@ -1257,20 +1300,15 @@ html.calm .btn:active, html.calm .door:active, html.calm .tab:active, html.calm 
   .speed button { min-height: 38px; padding: 0 8px; background: #121518b0; }
   .speed button[aria-pressed="false"] { display: none; }
   .pop { font-size: 21px; } .pop.heavy { font-size: 25px; } .pop.crit { font-size: 34px; -webkit-text-stroke: .6px #b8451f; } .pop.info, .pop.quirk, .pop.st-bleed, .pop.st-burn, .pop.st-shaken, .pop.st-exposed { font-size: 11px; } .pop.tag { font-size: 12px; margin-top: 3.4em; }
-  .cine-card { max-width: 66%; bottom: 15%; padding: 4px 10px 4px 8px; }
+  .cine-card { max-width: 52%; bottom: 15%; padding: 4px 10px 4px 8px; background: linear-gradient(90deg, #000d 0%, #000b 80%, #0000 100%); }
   .cine-name { font-size: 1.5rem; }
   .cine-epithet { font-size: max(12px, .8rem); }
   .cine-line { font-size: max(12px, .82rem); line-height: 1.2; margin-top: 2px; }
-  .bsay { left: 1%; right: 1%; bottom: 34px; padding: 2px 6px; gap: 0; }
+  /* Along the top, clear of the mode button, the feet and (at this width) the boss's head. */
+  .bsay { left: 66px; right: 27%; top: 2px; bottom: auto; padding: 2px 6px; gap: 0; }
   .bsay-text { font-size: max(12px, .84rem); line-height: 1.18; }
   .bsay-note { font-size: 11px; }
-  .intent.fx { flex-wrap: wrap; row-gap: 2px; }
-  .intent.fx .intent-side { flex: 1 1 100%; flex-wrap: wrap; justify-content: flex-start; align-items: center; gap: 3px; }
-  .intent.fx .intent-side .chip { padding: 1px 4px; letter-spacing: .02em; }
-  .intent.fx .intent-side .mech { padding: 1px 4px; }
   .area-line { font-size: max(12px, .84rem); line-height: 1.2; padding: 0 0 0 8px; max-width: none; }
-  .intent.sigi { flex-wrap: wrap; row-gap: 0; }
-  .intent.sigi .tip { white-space: normal; flex: 1 1 100%; order: 3; line-height: 1.15; }
   .scene { gap: 6px; }
   .scene h2 { font-size: 1.4rem; }
   .scene-beat { font-size: 1.1rem; line-height: 1.25; min-height: 0; }
@@ -1308,11 +1346,18 @@ html.calm .btn:active, html.calm .door:active, html.calm .tab:active, html.calm 
   .route-notes .bulletin span:last-child { font-size: max(11px, .76rem); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
   .screen-route .door { overflow: hidden; align-content: start; }
   .screen-route .door .desc { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
-  .has-mate .num-stat.minor { display: none; }
+  .has-mate .num-stat.minor, .has-mate .name-stat { display: none; }
   .has-mate .stat .pm-stim { font-size: 11px; }
-  .look-step { grid-template-columns: minmax(0, 32%) minmax(0, 1fr); gap: 12px; min-height: 0; overflow: hidden; }
-  .look-big { width: 100%; height: 100%; aspect-ratio: auto; overflow: hidden; min-height: 0; }
-  .look-big img { width: 100%; height: 100%; object-fit: contain; }
+  /* Each stat is as wide as its text, and one that doesn't fit drops whole, the least needed first. */
+  .has-mate .head-stats { flex-wrap: wrap; gap: 0 12px; height: 38px; align-content: flex-start; flex: 1 1 auto; }
+  .has-mate .stat { height: 38px; align-content: center; }
+  .has-mate .stat.hp { width: auto; min-width: 66px; }
+  .has-mate .cred-stat { order: 3; }
+  .has-mate .unsec-stat { order: 2; }
+  .has-mate .res-stat { order: 1; }
+  .look-step { grid-template-columns: minmax(0, 32%) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 12px; min-height: 0; overflow: hidden; }
+  .look-big { position: relative; width: 100%; height: 100%; aspect-ratio: auto; overflow: hidden; min-height: 0; }
+  .look-big img { position: absolute; inset: 4px; width: calc(100% - 8px); height: calc(100% - 8px); object-fit: contain; }
   .look-opts { align-content: start; gap: 4px; min-height: 0; }
   .look-opts .btnrow { flex-wrap: nowrap; gap: 4px; }
   .look-opts .btnrow .btn { padding: 0 7px; min-height: 38px; font-size: max(12px, .84rem); white-space: nowrap; flex: 1 1 auto; }
@@ -1388,10 +1433,10 @@ import * as D from './data.js';
 import * as E from './engine.js';
 import { fallenLine, BOSS_MOVES } from './lore.js';
 import { portraitURL } from './portraits.js';
-import { Stage, loadSheets, sheetOf, sheetStill, setLookSheets, setCalm as setStageCalm } from './stage.js';
+import { Stage, loadSheets, onArtChange, preferOpArt, sheetOf, sheetStill, setLookSheets, setCalm as setStageCalm } from './stage.js';
 import * as A from './audio.js';
 import { iconURL, gearIconKey } from './icons.js';
-import { Town, SHOPS, setCalm as setTownCalm } from './street.js';
+import { Town, SHOPS, setCalm as setTownCalm } from './yard.js';
 import { droneIcon, setDroneArt, droneHiFrame } from './drones.js';
 import { TitleScene } from './titlefx.js';
 import { autoStep, autoFinish, loadDev, BUILDS } from './dev.js';
@@ -2024,9 +2069,9 @@ function statusStrip() {
     <div class="stat hp"><span class="label">HP</span><span class="v">${Math.max(0, c.hp)} / ${st.maxHp}</span>${bar(c.hp, st.maxHp)}</div>
     ${mateStat}
     ${[['Shoot', st.atk], ['Strike', st.atkM], ['DEF', st.def, 'minor'], ['SPD', st.spd, 'minor']].map(([k, v, cls]) => `<div class="stat num-stat ${cls || ''}"><span class="label">${k}</span><span class="v">${v}</span></div>`).join('')}
-    <div class="stat"><span class="label">${esc(S.currency)}</span><span class="v">${cntSpan('credits', c.credits)}</span></div>
+    <div class="stat cred-stat"><span class="label">${esc(S.currency)}</span><span class="v">${cntSpan('credits', c.credits)}</span></div>
     ${state.run ? `<div class="stat unsec-stat" title="Earned this stretch. It becomes levels when you beat the boss or get out, and leaving early costs a share."><span class="label">Unsecured</span><span class="v" style="color:var(--sodium)">${cntSpan('unsec', E.unsecured(state))} ${esc(S.cur)} \u00B7 ${cntSpan('xpbank', c.xpBank || 0)} XP</span></div>` : ''}
-    ${state.screen === 'town' ? `<button class="stat resolve-link" data-a="tab" data-v="character" data-k="resolve" title="Spend Resolve on the Character tab"><span class="label">${esc(S.meta)} \u00B7 spend</span><span class="v" style="color:var(--sodium)">${state.meta.resolve}</span></button>` : `<div class="stat"><span class="label">${esc(S.meta)}</span><span class="v" style="color:var(--sodium)">${state.meta.resolve}</span></div>`}
+    ${state.screen === 'town' ? `<button class="stat resolve-link" data-a="tab" data-v="character" data-k="resolve" title="Spend Resolve on the Character tab"><span class="label">${esc(S.meta)} \u00B7 spend</span><span class="v" style="color:var(--sodium)">${state.meta.resolve}</span></button>` : `<div class="stat res-stat"><span class="label">${esc(S.meta)}</span><span class="v" style="color:var(--sodium)">${state.meta.resolve}</span></div>`}
     </div>
   </header>`;
 }
@@ -2680,6 +2725,9 @@ function intentInfo(e) {
   if (e.intent === 'special') { const sp = D.SPECIALS[e.id]; return { label: sp.name, tone: 'danger', tip: sp.tip }; }
   return D.INTENTS[e.intent];
 }
+// What a phone has room to say on a skill or item button. The full wording is in the title, shown by holding.
+const SKILL_BRIEF = { aimed: 'x1.5, +25% crit', burst: '3 quick shots', blast: 'x2 vs unarmoured', smash: 'Melee, \u00BD armour', overload: 'Stuns droids', suppress: 'Pins it in cover' };
+const ITEM_BRIEF = { thermal: 'Thermal', ion: 'Ion', smoke: 'Smoke' };
 function combatScreen() {
   const r = state.run, e = r.enemy, c = state.char, st = E.stats(state);
   const intent = intentInfo(e);
@@ -2693,24 +2741,36 @@ function combatScreen() {
   const reviveBtn = downedMate ? `<button class="btn primary big" data-a="act" data-v="revive" style="width:100%">Get ${esc(downedMate.name.split(' ')[0])} up \u00B7 ${downedMate.downed} round${downedMate.downed > 1 ? 's' : ''} left<span class="k">V</span></button>` : '';
   const confirmSmoke = state.confirmSmoke && c.items.smoke;
   const items = ['thermal', 'ion', 'smoke'].map((id, i) => !c.items[id] ? '' : `<button class="btn twoline ${id === 'smoke' && confirmSmoke ? 'confirm' : ''}" data-a="act" data-v="${id}" title="${esc(D.ITEMS[id].desc)}" ${c.items[id] ? '' : 'disabled'}>
-      <span class="bt">${ico(`item:${id}`, 'sm')}${esc(D.ITEMS[id].name)} <span class="num">\u00D7${c.items[id]}</span><span class="k">${i + 2}</span></span>
+      <span class="bt">${ico(`item:${id}`, 'sm')}<span class="it-full">${esc(D.ITEMS[id].name)}</span><span class="it-brief">${ITEM_BRIEF[id]}</span> <span class="num">\u00D7${c.items[id]}</span><span class="k">${i + 2}</span></span>
       <span class="bs">${id === 'smoke' && confirmSmoke ? 'Tap again to try to escape' : esc(D.ITEMS[id].short)}</span></button>`).join('');
   const skills = E.skillsOf(c).slice(0, 4).map((k, i) => {
     const cd = r.cooldowns[k] || 0, sk = D.SKILLS[k];
     const status = k === 'intimidate' ? (cd ? 'used this sector' : e.tags.includes('human') ? `${pct(E.intimidateChance(state))} chance` : 'humans only') : cd ? `ready in ${cd}` : 'ready';
-    const note = `${esc(sk.short)} <span class="sk-status">${status}</span>`;
+    const note = `<span class="sk-full">${esc(sk.short)}</span><span class="sk-brief">${k === 'intimidate' ? status : SKILL_BRIEF[k] || esc(sk.short)}</span> <span class="sk-status">${status}</span>`;
     return `<button class="btn skill ${cd ? '' : 'ready'}" data-a="act" data-v="${k}" title="${esc(sk.desc)}" ${E.canUse(state, k) && !(k === 'intimidate' && !e.tags.includes('human')) ? '' : 'disabled'}>
       <span class="sk-name">${ico(`skill:${k}`, 'sm')}${esc(sk.name)}<span class="k">${SKILL_KEYS[i].toUpperCase()}</span></span><span class="sk-note">${note}</span></button>`;
   }).join('');
-  const meta = [...e.tags.filter((t) => t !== 'boss').map((t) => `<span class="tag ${t}">${t}</span>`),
-    `<span>ATK <b>${e.atk}</b></span>`, `<span>DEF <b>${e.def}</b></span>`, `<span>SPD <b>${e.spd}</b></span>`,
-    `<span>Dodge <b>${pct(E.dodgeChance(st, e))}</b></span>`, `<span>Run <b>${pct(E.runChance(state))}</b></span>`,
-    c.drone ? `<span class="${c.drone.damaged ? 'danger-text' : ''}" title="${esc(`${D.DRONES[c.drone.type].name}, rank ${c.drone.rank}. ${c.drone.damaged ? 'Offline until repaired in town.' : D.DRONES[c.drone.type].effect(E.droneValue(c.drone))}`)}">${esc(D.DRONES[c.drone.type].name)} <b>${c.drone.damaged ? 'off' : `R${c.drone.rank}`}</b></span>` : ''].join('');
+  const fx = E.bossEffects(state), traits = [['quirk', e.quirk && E.quirkById(e.quirk)], ['bad', D.MELEE_COUNTER[e.id]], ['bad', e.affix && D.AFFIXES[e.affix]]].filter((x) => x[1]);
+  const scanned = st.scan && e.next && !(e.boss && E.intentHidden(state)) ? intentLabel(e, e.next) : '';
+  const aimChip = r.ready ? `Aim +${E.hasPerk(c, 'steady') ? 100 : 50}%` : '', pushChip = r.momentum ? `Momentum +${Math.round(E.TUNE.momentum * 100)}%` : '';
+  // A phone has one row for all of it. In order of need; what doesn't fit drops whole, and a tap on the row gives the full list.
+  const phoneChips = [incChip.replace('class="chip', 'class="chip ph'),
+    ...fx.map((x) => `<span class="chip ph bad" data-tip="${esc(x.tip)}">${esc(x.label)}</span>`),
+    scanned ? `<span class="chip ph" data-tip="Scanner: the move after this one.">Then ${esc(scanned)}</span>` : '',
+    mechanicBrief(r),
+    aimChip ? `<span class="chip ph good">${aimChip}</span>` : '', pushChip ? `<span class="chip ph good">${pushChip}</span>` : '',
+    ...traits.map(([cls, t]) => `<span class="chip ph ${cls}" data-tip="${esc(`${t.name}: ${t.desc}`)}">${esc(t.name)}</span>`)].join('');
+  const rowTip = [`${e.name}.`, `ATK ${e.atk}, DEF ${e.def}, SPD ${e.spd}.`, `Your dodge ${pct(E.dodgeChance(st, e))}, run ${pct(E.runChance(state))}.`, ...traits.map(([, t]) => `${t.name}: ${t.desc}`), c.drone ? `${D.DRONES[c.drone.type].name} ${c.drone.damaged ? 'offline' : `rank ${c.drone.rank}`}.` : ''].join(' ');
+  const intentTip = [`${intent.label}: ${intent.tip}`, scanned ? `Scanner: then ${scanned}.` : '', ...fx.map((x) => x.tip)].join(' ');
+  const meta = [phoneChips, ...e.tags.filter((t) => t !== 'boss').map((t) => `<span class="tag ${t}">${t}</span>`),
+    `<span class="s-atk">ATK <b>${e.atk}</b></span>`, `<span class="s-def">DEF <b>${e.def}</b></span>`, `<span class="s-spd">SPD <b>${e.spd}</b></span>`,
+    `<span class="s-dodge">Dodge <b>${pct(E.dodgeChance(st, e))}</b></span>`, `<span class="s-run">Run <b>${pct(E.runChance(state))}</b></span>`,
+    c.drone ? `<span class="s-drone ${c.drone.damaged ? 'danger-text' : ''}" title="${esc(`${D.DRONES[c.drone.type].name}, rank ${c.drone.rank}. ${c.drone.damaged ? 'Offline until repaired in town.' : D.DRONES[c.drone.type].effect(E.droneValue(c.drone))}`)}">${esc(D.DRONES[c.drone.type].name)} <b>${c.drone.damaged ? 'off' : `R${c.drone.rank}`}</b></span>` : ''].join('');
   return `<div class="columns"><section class="panel combat"><div class="c-left">
     <div class="combat-head"><span class="label">${esc(E.mapById(r.map).name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${stage.auto ? '<span class="auto-note">Auto battle \u00B7 change the mode to take over</span>' : ''}${roomPips(r)}</div>
     <div class="stage-box"><div id="stage-slot"></div></div>
-    <div class="intent ${intent.tone} ${e.intent === 'sig' ? 'sigi' : ''} ${E.bossEffects(state).length ? 'fx' : ''}"><span class="dot"></span><b>${esc(intent.label)}</b><span class="tip">${esc(intent.tip)}${st.scan && e.next && !(e.boss && E.intentHidden(state)) ? ` <span class="next-intent">Scanner: then ${esc(intentLabel(e, e.next))}</span>` : ''}</span><span class="intent-side">${incChip}${E.bossEffects(state).map((x) => `<span class="chip bad" data-tip="${esc(x.tip)}" title="${esc(x.tip)}">${esc(x.label)}</span>`).join('')}${mechanicChip(r)}${r.ready ? `<span class="chip good">Aim +${E.hasPerk(c, 'steady') ? 100 : 50}%</span>` : ''}${r.momentum ? `<span class="chip good">Momentum +${Math.round(E.TUNE.momentum * 100)}%</span>` : ''}</span></div>
-    <div class="statline">${meta}</div>
+    <div class="intent ${intent.tone} ${e.intent === 'sig' ? 'sigi' : ''} ${fx.length ? 'fx' : ''}" data-tip="${esc(intentTip)}"><span class="dot"></span><b>${esc(intent.label)}</b><span class="tip">${esc(intent.tip)}${st.scan && e.next && !(e.boss && E.intentHidden(state)) ? ` <span class="next-intent">Scanner: then ${esc(intentLabel(e, e.next))}</span>` : ''}</span><span class="intent-side">${incChip}${fx.map((x) => `<span class="chip bad" data-tip="${esc(x.tip)}" title="${esc(x.tip)}">${esc(x.label)}</span>`).join('')}${mechanicChip(r)}${r.ready ? `<span class="chip good">Aim +${E.hasPerk(c, 'steady') ? 100 : 50}%</span>` : ''}${r.momentum ? `<span class="chip good">Momentum +${Math.round(E.TUNE.momentum * 100)}%</span>` : ''}</span></div>
+    <div class="statline" data-tip="${esc(rowTip)}">${meta}</div>
     ${(() => { const trait = (cls, t) => (t ? `<div class="quirk-line"><span class="chip ${cls}" data-tip="${esc(`${t.name}: ${t.desc}`)}">${esc(t.name)}</span><span>${esc(t.desc)}</span></div>` : ''); const all = trait('quirk', e.quirk && E.quirkById(e.quirk)) + trait('bad', D.MELEE_COUNTER[e.id]) + trait('bad', e.affix && D.AFFIXES[e.affix]); return all ? `<div class="quirk-row">${all}</div>` : ''; })()}
     </div><div class="c-right">
     ${tip('combat')}
@@ -2737,6 +2797,14 @@ function mechanicChip(r) {
   if (m.id === 'snipers') v = `${Math.round(E.sniperChance(r) * 100)}% per turn`;
   const hot = (m.id === 'vents' && r.enemy && r.vent === 1) || (m.id === 'alarm' && r.alert >= 3);
   return `<span class="mech ${hot ? 'hot' : ''}" title="${esc(m.desc)}"><b>${esc(m.name)}</b> ${v}</span>`;
+}
+// The same, short enough for a phone's one row. The tap gives the rest.
+function mechanicBrief(r) {
+  const m = E.mapById(r.map).mechanic;
+  const text = { alarm: `Alarm ${r.alert}/5`, vents: r.vent === 1 ? 'Vents next' : `Vents in ${r.vent}`, allies: `Allies ${r.allies}/2`, snipers: `Snipers ${Math.round(E.sniperChance(r) * 100)}%` }[m.id];
+  if (!text) return '';
+  const hot = (m.id === 'vents' && r.vent === 1) || (m.id === 'alarm' && r.alert >= 3);
+  return `<span class="chip ph ${hot ? 'bad' : ''}" data-tip="${esc(`${m.name}: ${m.desc}`)}">${text}</span>`;
 }
 function bulletinBox(r) {
   const b = E.bulletinOf(r);
@@ -3322,6 +3390,7 @@ function screenWipe() {
 }
 
 const BOSS_SEEN_KEY = 'cinder-cell-boss-seen';
+let bossShowing = null;
 let lastLootKey = '';
 function render() {
   if (!appReadySent) { appReadySent = true; const r = appBridge('ready'); if (r) requestAnimationFrame(() => setTimeout(() => { try { r.postMessage(1); } catch (e) {} }, 80)); }
@@ -3433,14 +3502,22 @@ function render() {
       // Once per boss fight on this device: reloading in the middle of one doesn't play it again.
       const seenKey = `${state.meta.stats.raids}|${state.char.number}|${r.map}|${r.sector}|${r.enemy.id}`;
       let seen = null; try { seen = localStorage.getItem(BOSS_SEEN_KEY); } catch (e) {}
-      if (seen === seenKey) stage.showBoss();
+      if (seen === seenKey || bossShowing === seenKey) stage.showBoss();
       else {
-        try { localStorage.setItem(BOSS_SEEN_KEY, seenKey); } catch (e) {}
+        // Counted as seen once its last beat has shown: a reload before that plays it again.
+        const heard = () => { try { localStorage.setItem(BOSS_SEEN_KEY, seenKey); } catch (e) {} };
+        bossShowing = seenKey;
         busy = true; document.getElementById('app').classList.add('busy');
         const info = D.BOSS_INFO[r.enemy.id] || {};
         const scene = r.enemy.intro;
-        stage.bossIntro({ name: r.enemy.name, epithet: info.epithet, line: r.enemy.line || (D.ENEMIES[r.enemy.id] || {}).line, lines: scene && scene.beats, onFull: () => { if (scene && scene.first && !isGuest()) { E.markSceneSeen(state, scene.key); save(); } }, label: `${map.name} \u00B7 Sector ${r.sector}` }).then(() => { busy = false; document.getElementById('app').classList.remove('busy'); scheduleAuto(); drainGuest(); });
+        const wait = res.artWait; res.artWait = null;
+        Promise.resolve(wait).then(() => stage.bossIntro({ name: r.enemy.name, epithet: info.epithet, line: r.enemy.line || (D.ENEMIES[r.enemy.id] || {}).line, lines: scene && scene.beats, onFull: () => { heard(); if (scene && scene.first && !isGuest()) { E.markSceneSeen(state, scene.key); save(); } }, label: `${map.name} \u00B7 Sector ${r.sector}` })).then(() => { heard(); busy = false; document.getElementById('app').classList.remove('busy'); scheduleAuto(); drainGuest(); });
       }
+    }
+    // Any other fight whose art is still coming: no moves until it's in, or the wait runs out.
+    if (res && res.artWait) {
+      busy = true; document.getElementById('app').classList.add('busy');
+      res.artWait.then(() => { busy = false; document.getElementById('app').classList.remove('busy'); scheduleAuto(); drainGuest(); });
     }
   }
   if (sameView && pageY) window.scrollTo(0, pageY);
@@ -3846,7 +3923,7 @@ document.addEventListener('keydown', (ev) => {
 // Composites the operative's look into town and battle sheets whenever the look, class or weapons change.
 let lookKey = '';
 function applyLook() {
-  if (!hasLayers()) return;
+  if (!hasLayers() && !sheetOf('op_m') && !sheetOf('op_f')) return;
   const c = state.char, p = E.isCoop(state) ? E.charAt(state, 1 - myIdx()) : null;
   const wp = (ch) => [weaponLayer(E.baseOf(ch.gear.ranged)), weaponLayer(E.baseOf(ch.gear.melee))];
   const key = JSON.stringify([c && [c.look, c.background, wp(c)], p && [p.look, p.background, wp(p)]]);
@@ -3856,7 +3933,19 @@ function applyLook() {
   town.setPlayerSheets(mine ? townSheets(mine[0], mine[1]) : null, mine ? battleSheet(...mine) : null);
   town.setPartnerSheets(theirs ? townSheets(theirs[0], theirs[1]) : null, theirs ? battleSheet(...theirs) : null);
   setLookSheets(mine ? battleSheet(...mine) : null, theirs ? battleSheet(...theirs) : null);
-  stage.player = null; stage.partner = null;
+  stage.refreshArt();
+}
+// Sheets can arrive any time, retries included. Fighters on the stage swap in place, so a fight isn't re-rendered for it.
+let artRenderTimer = 0;
+function artArrived(id) {
+  if (!state) return;
+  const all = id === '*', ops = all || id.startsWith('op_'), drones = all || id.startsWith('drone_');
+  if (drones) for (const k of D.DRONE_ORDER) setDroneArt(k, sheetOf(`drone_${k}`));
+  if (ops) { setOpSheets(sheetOf('op_m'), sheetOf('op_f')); lookKey = ''; applyLook(); }
+  if (!ops && !drones) return;
+  clearTimeout(artRenderTimer);
+  // Only where a still of them is on show. Anywhere else a re-render could cut an animation short for nothing.
+  artRenderTimer = setTimeout(() => { if (!busy && !auto && state && (state.screen === 'create' || state.popup) && !(state.char && state.char.payout)) render(); }, 80);
 }
 // This device's raids and any still waiting to be sent survive New cell and Reset.
 function keepBoard(fresh) { if (state && state.meta) { fresh.meta.board = state.meta.board || []; fresh.meta.boardOut = state.meta.boardOut || []; fresh.meta.boardMine = state.meta.boardMine || []; } return fresh; }
@@ -3887,10 +3976,12 @@ async function start(data) {
   render();
   if (!isGuest()) E.syncCareer(state);
   flushBoard();
-  loadLayers().then((ok) => { if (ok) { lookKey = ''; render(); } });
+  loadLayers().then((ok) => { if (ok) { lookKey = ''; if (busy || (state && state.screen === 'combat')) applyLook(); else render(); } });
   loadDowntimeArt().then((ok) => { if (ok && modal) render(); });
-  // PixelLab sheets, if any have been delivered. Re-render so the stage picks them up.
-  loadSheets().then((n) => { setOpSheets(sheetOf('op_m'), sheetOf('op_f')); for (const id of D.DRONE_ORDER) setDroneArt(id, sheetOf(`drone_${id}`)); lookKey = ''; if (n) { stage.enemyRef = null; stage.player = null; stage.partner = null; render(); } });
+  // PixelLab sheets: this player's operative first. artArrived picks each one up as it comes.
+  onArtChange(artArrived);
+  preferOpArt(state.char && state.char.look ? sexOf(state.char.look) : null);
+  loadSheets();
 }
 window.claude?.hot?.snapshot?.(() => ({ state }));
 window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});

@@ -17,6 +17,8 @@ async function open(browser, opt, route) {
   const ctx = await browser.newContext(opt), page = await ctx.newPage(), errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'warning' && /street/.test(m.text())) errors.push(m.text()); });
+  // The game now loads yard.js; this suite still covers street.js, so it serves index.html with the old import put back.
+  await page.route(/index\.html/, async (r) => { const res = await r.fetch(); await r.fulfill({ response: res, body: (await res.text()).replace("from './yard.js'", "from './street.js'") }); });
   if (route === 'none') await page.route(/town\/street\/.*\.png/, (r) => r.abort());
   else if (route) await page.route(/town\/street\/.*\.png/, (r) => { const f = path.join(route, path.basename(new (globalThis.URL)(r.request().url()).pathname)); return fs.existsSync(f) ? r.fulfill({ path: f }) : r.abort(); });
   await page.goto(URL);

@@ -26,7 +26,7 @@ const saved = (p) => p.evaluate(() => JSON.parse(localStorage.getItem('cinder-ce
   // An old operative with no drone.
   ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } }); p = await ctx.newPage(); watch(p, 'old');
   await p.goto(URL);
-  await p.evaluate(seed(`delete c.drone; c.credits = 500; s.meta.resolve = 4;`));
+  await p.evaluate(seed(`delete c.drone; c.credits = 500; s.meta.resolve = 5;`));
   await p.reload(); await p.click('button[data-a="continue-title"]'); await p.waitForTimeout(400);
   assert(/!/.test(await p.textContent('.shortcuts [data-v="character"]')), 'the safehouse flags it');
   await p.click('.shortcuts [data-v="missions"]'); await p.waitForTimeout(200);

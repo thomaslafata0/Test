@@ -267,9 +267,11 @@ export function townSheets(look, background) {
 // A battle sheet in stage.js's shape: { size, anims: { idle, attack, attackM, charge, hit, defend, death } }. Ranged weapon in
 // idle, charge and attack; the melee weapon in attackM; no weapon on hit, defend and death (the pack has none there).
 export function battleSheet(look, background, ranged, melee) {
-  if (!ready || !look) return null;
+  if (!look) return null;
+  // High-res operatives need only their own sheet, so they don't wait for the layer pack.
   const hd = hdSheet(look, ranged);
   if (hd) return hd;
+  if (!ready) return null;
   const key = `battle:${JSON.stringify([look, background, ranged, melee])}`;
   if (sheetCache[key]) return sheetCache[key];
   const anims = {};
@@ -391,7 +393,7 @@ function cropStill(img, sx, fw, fh) {
 }
 // A full-figure still (town, facing down) of a look, as a data URL.
 export function lookStill(look, background) {
-  const hdS = ready && look ? hdSheet(look, null) : null;
+  const hdS = look ? hdSheet(look, null) : null;
   if (hdS) { const k = `hdstill:${JSON.stringify(look)}`; const a = hdS.anims.idle; return stillCache[k] || (stillCache[k] = cropStill(a.img, 0, a.img.width / a.frames, a.img.height)); }
   const sh = townSheets(look, background);
   if (!sh) return null;
@@ -400,7 +402,7 @@ export function lookStill(look, background) {
 }
 // The battle pose still (facing right, with the ranged weapon), for victory and death screens.
 export function lookBattleStill(look, background, ranged) {
-  const hdS = ready && look ? hdSheet(look, ranged) : null;
+  const hdS = look ? hdSheet(look, ranged) : null;
   if (hdS) { const k = `hdbstill:${JSON.stringify([look, ranged])}`; const a = hdS.anims.idle; return stillCache[k] || (stillCache[k] = cropStill(a.img, 0, a.img.width / a.frames, a.img.height)); }
   const sh = battleSheet(look, background, ranged, null);
   if (!sh) return null;

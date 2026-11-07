@@ -31,26 +31,26 @@ require('fs').mkdirSync(OUT, { recursive: true });
     await page.keyboard.down('ArrowLeft'); await page.waitForTimeout(900); await page.keyboard.up('ArrowLeft'); await page.waitForTimeout(400);
     console.log(width, 'back outside via the door:', (await T()).scene);
     // 2) teleport next to the vendor and buy noodles
-    await page.evaluate(() => { const t = globalThis.cinderTown; t.player.x = t.folk.find((f) => f.id === 'vendor').x + 20; t.snapCamera(); });
+    await page.evaluate(() => { const t = globalThis.cinderTown; const f = t.folk.find((q) => q.id === 'vendor'); t.player.x = f.x + 20; t.player.y = f.y; });
     await page.waitForTimeout(200); await page.keyboard.press('e'); await page.waitForTimeout(200);
     console.log(width, 'vendor offer:', JSON.stringify(await T()));
     await page.keyboard.press('Enter'); await page.waitForTimeout(300);
     s = await save(); console.log(width, 'fed:', s.char.fed, 'credits', s.char.credits, 'say:', (await T()).say);
     await page.screenshot({ path: `${OUT}/t2-noodles-${width}.png` });
     // 3) tenement knock
-    await page.evaluate(() => { const t = globalThis.cinderTown; const d = t.doors.find((x) => x.id === 'tenement_a'); t.player.x = d.front.x; t.player.y = d.front.y; t.snapCamera(); });
+    await page.evaluate(() => { const t = globalThis.cinderTown; const d = t.doors.find((x) => x.id === 'tenement_a'); t.player.x = d.front[0]; t.player.y = d.front[1]; });
     await page.waitForTimeout(200); await page.keyboard.press('e'); await page.waitForTimeout(200);
     s = await save(); console.log(width, 'tenement stims:', s.char.items.stim, 'say:', (await T()).say);
     // 4) terminal auto-opens
-    await page.evaluate(() => { const t = globalThis.cinderTown; const d = t.doors.find((x) => x.id === 'terminal'); t.player.x = d.front.x; t.player.y = d.front.y + 4; t.snapCamera(); });
+    await page.evaluate(() => { const t = globalThis.cinderTown; const d = t.doors.find((x) => x.id === 'terminal'); t.player.x = d.front[0]; t.player.y = d.front[1]; });
     await page.keyboard.down('ArrowUp'); await page.waitForTimeout(600); await page.keyboard.up('ArrowUp'); await page.waitForTimeout(500);
     s = await save(); console.log(width, 'terminal:', (await T()).scene, 'popup:', s.popup);
     await ov('missions'); await page.screenshot({ path: `${OUT}/t2-missions-${width}.png` });
-    // 5) the pavement holds you: pushing up into a blank wall and along it stays on the street
+    // 5) the area holds you: pushing up into a blank wall and along it stays in the yard
     await page.keyboard.press('Escape'); await page.waitForTimeout(200);
     await page.keyboard.press('Escape'); await page.waitForTimeout(400);
     console.log(width, 'Esc leaves the terminal:', (await T()).scene);
-    await page.evaluate(() => { const t = globalThis.cinderTown; t.player.x = 480; t.snapCamera(); });
+    await page.evaluate(() => { const t = globalThis.cinderTown; t.player.x = 450; t.player.y = 250; });
     await page.keyboard.down('ArrowUp'); await page.waitForTimeout(2500); await page.keyboard.up('ArrowUp');
     await page.keyboard.down('ArrowLeft'); await page.waitForTimeout(250); await page.keyboard.up('ArrowLeft');
     await page.waitForTimeout(200);

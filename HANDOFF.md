@@ -28,7 +28,7 @@ A browser roguelite in plain HTML + JS modules, no build step. A resistance cell
 | `engine.js` | All rules. `TUNE` and `HARD` are the balance knobs. Sections: gear, stats, combat, raids, leaderboard, co-op actors, downtime, feats. |
 | `data.js` | Content: maps, enemies, bosses, quirks, bulletins, gear, rarities, bonuses, traits, uniques, implants, perks, events, contracts, backgrounds, Marks, shuttle parts, orbit tiers, ventures, the bar, feats. |
 | `stage.js` | Battle canvas (384x216): sprite sheets, effects, boss intro, co-op partner, Manual / Auto 1x / Auto 2x. `setLookSheets` takes composited player sheets. |
-| `street.js` | The town: a side-on painted street (three 688x384 panels in `town/street/`) and single-screen rooms. `PLACES` at the top holds every door, spot, light and person in street pixels; art changes need only that table. Replaced `town.js`, which is now unused except by `tests/grid.cjs`. |
+| `yard.js` | The town: one painted courtyard (`town/street/yard.png`, 688x384) always fully on screen, free 2D movement with depth scaling, tappable signs on every building, both co-op players visible, plus single-screen rooms. `PLACES` at the top holds the walk polygon, buildings, doors, spots and people in image pixels. `cinderTown.debug = true` draws them over the art. Replaced `street.js` (kept for `tests/street.cjs` only) and `town.js` (kept for `tests/grid.cjs` only). |
 | `look.js` | Character compositor over `chars2/`: `townSheets`, `battleSheet` (ranged weapon in idle/charge/attack, melee weapon in `attackM`), `lookStill`, `lookBattleStill`, `lookPortrait`, `weaponLayer(base)`. Skin and hair swap their exact three-shade ramps. Town overlays drawn on body_m1 are shifted per frame onto other bodies; battle hair is pre-fitted per body (`<hair>@<body>` layers cut from one atlas per hairstyle via the manifest's `y`/`w`/`h`). |
 | `downtime.js` | Code-drawn roulette `Wheel` and `OrbitScene` (smog planet, lift cable, station drawn in code unless `bg:orbit` is supplied); ship art from `downtime/manifest.json`, enemies mirrored. |
 | `net.js`, `coop/` | Co-op transports (WebSocket relay, BroadcastChannel) and the Cloudflare Worker + Durable Object relay (not deployed). |
@@ -179,3 +179,6 @@ Artifact tool, publish `index.html` with `url` set to the live link, `root` set 
 - **Shop scaling:** higher tiers, a rising floor and pre-upgraded stock as the cell goes deeper.
 - **Raid depth:** sector conditions, six rare doors on every map, 12 new events; Manual updated.
 - Save stays `VERSION = 4`: new fields (`orbitTierWins`, `char.orbitFlown`, `run.cond`, item `premium`) default safely; older orbit wins count as low-orbit wins.
+
+## Loading order and tests
+Operative art loads first (each sheet's idle row first). `hd.json`, `manifest.json`, sprites and `bg/` retry with backoff and swap in place. The fight holds on "Loading fighters..." for up to about 4s, then plays with stand-in art. `tests/yard.cjs` covers the town and `tests/fight-fit.cjs` the phone fight layout. Under load use a server with a long listen queue: stock `python3 -m http.server` resets connections and leaves pages stuck on "Loading...".
