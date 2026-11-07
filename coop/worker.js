@@ -162,7 +162,8 @@ export default {
     if (url.pathname === '/.well-known/apple-app-site-association' || url.pathname === '/apple-app-site-association') {
       return new Response(JSON.stringify({ applinks: { details: [{ appIDs: ['39BW6948KL.com.thomaslafata.cindercell'], components: [{ '/': '/', '?': { join: '?*' }, comment: 'co-op invites' }] }] } }), { headers: { 'content-type': 'application/json', 'cache-control': 'max-age=3600' } });
     }
-    if (url.pathname === '/board') return env.BOARD.get(env.BOARD.idFromName('global')).fetch(request);
+    if (url.pathname === '/board') return env.BOARD.get(env.BOARD.idFromName('season2'))  // season 1's board is kept under 'global'
+     .fetch(request);
     const sv = url.pathname.match(/^\/save\/([A-Z0-9]{12})(\/versions)?$/);
     if (sv) return env.VAULT.get(env.VAULT.idFromName(sv[1])).fetch(request);
     const m = url.pathname.match(/^\/room\/([A-Z0-9]{4,8})$/i);

@@ -144,7 +144,7 @@ function campaign(seed, bots, stName, map = 'garrison') {
     raid(s, rng, bots, st, map, startOf(s, map, st));
     if (s.coopFallen) { deaths++; s.coopFallen = null; }
     if (s.screen === 'death') { deaths++; if (s.outcome && s.outcome.wipe) wipes++; s.screen = 'town'; s.char = null; }
-    for (const b of [5, 10, 15]) if (!seen[b] && (s.meta.bestByMap[map] || 0) >= b) { seen[b] = 1; out[b] = { ops: ops / bots.length, raids }; }
+    for (const b of [5, 10, 15, 20]) if (!seen[b] && (s.meta.bestByMap[map] || 0) >= b) { seen[b] = 1; out[b] = { ops: ops / bots.length, raids }; }
     if (seen[15]) break;
   }
   return { ...out, raids, deaths, wipes, ops: ops / bots.length, kept: s.meta.resolve };
@@ -279,4 +279,30 @@ if (SECTIONS.includes('econ')) {
   }
   console.log(`\n=== Economy: per operative, by how deep it got. "Idle" is the most cash it left town with after shopping ===`);
   for (const [k, a] of Object.entries(buckets)) console.log(`deepest ${k.padEnd(6)} ${String(a.length).padStart(4)} ops  earned ${Math.round(avg(a.map((x) => x.earned))).toString().padStart(6)}  idle ${Math.round(avg(a.map((x) => x.left))).toString().padStart(6)}  (${Math.round(avg(a.map((x) => x.left)) / Math.max(1, avg(a.map((x) => x.earned))) * 100)}%)  level ${avg(a.map((x) => x.level)).toFixed(1)}`);
+}
+// Threat 1 on the Garrison: how many operatives until one frees it (threat 1 opens for that operative), and until one clears
+// sector 20 at threat 1. Threat levels belong to the operative, so each new one has to free a district first.
+if (SECTIONS.includes('threat')) {
+  const camp = Math.ceil(CAMP / 2);
+  console.log(`\n=== Threat 1 on the Garrison (${camp} cells): median operatives (raids) until threat 1 opens, and until it is beaten ===`);
+  for (const [label, b, stName] of [['strength standard', BUILDS.strength, 'standard'], ['strength cautious', BUILDS.strength, 'cautious'], ['agility standard', BUILDS.agility, 'standard'], ['charisma standard', BUILDS.charisma, 'standard'], ['intellect standard', BUILDS.intellect, 'standard']]) {
+    const open = [], beat = [];
+    for (let k = 0; k < camp; k++) {
+      const st = STYLES[stName], rng = E.seededRng(9100 + k), s = E.newGame(rng); let ops = 0, raids = 0, o = null, w = null;
+      while (ops < 250 && !w) {
+        if (!s.char) { ops++; E.createChar(s, rng, draft(s, rng, b)); s.screen = 'town'; }
+        spendResolve(s); shop(s, b, st);
+        s.meta.threat = Math.min(1, E.maxThreat(s));
+        raids++;
+        raid(s, rng, [b], st, 'garrison', startOf(s, 'garrison', st));
+        if (s.screen === 'ending') { s.meta.endingSeen = true; s.screen = 'town'; }
+        if (s.screen === 'death') { s.screen = 'town'; s.char = null; continue; }
+        if (!o && E.maxThreat(s) >= 1) o = { ops, raids };
+        if (s.char && E.insertionsAt(s.char, 'garrison', 1).includes(E.MAX_SECTOR + 1)) w = { ops, raids };
+      }
+      if (o) open.push(o); if (w) beat.push(w);
+    }
+    const med = (a, k) => (a.length ? pct(a.map((x) => x[k]), 0.5) : '-');
+    console.log(`${label.padEnd(22)} threat 1 opens: ${med(open, 'ops')} ops (${med(open, 'raids')} raids) in ${Math.round(100 * open.length / camp)}%   beaten: ${med(beat, 'ops')} ops (${med(beat, 'raids')} raids) in ${Math.round(100 * beat.length / camp)}%`);
+  }
 }

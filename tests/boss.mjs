@@ -4,7 +4,9 @@ import * as D from '../data.js';
 import { BOSS_MOVES, BOSS_SCRIPT, fallenLine, FALLEN, CODEX } from '../lore.js';
 let fails = 0;
 const ok = (name, v, extra = '') => { console.log(`${v ? 'PASS' : 'FAIL'} ${name} ${extra}`); if (!v) fails++; };
-const WHERE = { halvek: ['garrison', 5], crawler: ['garrison', 10], ostrane: ['garrison', 15], brask: ['foundry', 5], crucible: ['foundry', 10], kell: ['detention', 5], vane: ['port', 5] };
+// Every boss, where it fights: from D.MAPS, a boss every 5 sectors.
+const WHERE = Object.fromEntries(D.MAPS.flatMap((m) => m.bosses.map((id, i) => [id, [m.id, (i + 1) * 5]])));
+const NEW = ['dray', 'slagmother', 'hale', 'restraint', 'voight', 'venn', 'pell', 'gantry', 'imre'];
 
 function game(seed = 7, coop = false) {
   const rng = E.seededRng(seed), s = E.newGame(rng);
@@ -16,6 +18,8 @@ function game(seed = 7, coop = false) {
 }
 function deployBoss(s, rng, id) {
   const [map, sector] = WHERE[id];
+  // Later districts open from progress elsewhere: give the operative exactly what this one asks for.
+  for (const [m, n] of Object.entries(D.MAPS.find((x) => x.id === map).unlock || {})) { const p = E.mapProgress(s.char, m); p.deepest = Math.max(p.deepest, n); }
   E.deploy(s, map, 1, rng);
   s.run.sector = sector; s.run.room = 2; s.run.choices = null; s.run.bulletin = 'quiet'; s.run.allies = 0;
   E.offerRoute(s, rng);
@@ -309,9 +313,10 @@ const act = (t, a) => { E.playerAct(t.s, a, t.rng, 0); hold(t.s); };
   E.markSceneSeen(s, 'intro:halvek:garrison'); E.recruit(s, rng); E.createChar(s, rng);
   const e4 = deployBoss(s, rng, 'halvek');
   ok('later operative, cell has seen the meeting: its last beat', e4.intro.first && e4.intro.beats.length === 1 && e4.intro.beats[0] === BOSS_SCRIPT.halvek.firstIntro[BOSS_SCRIPT.halvek.firstIntro.length - 1]);
-  // Maps are separate scenes, and the crawler's lines follow the map
-  const a = game(4); const foundry = (() => { a.s.meta.bestSector = 99; E.deploy(a.s, 'foundry', 1, a.rng); a.s.run.sector = 15; a.s.run.room = 2; a.s.run.choices = null; E.offerRoute(a.s, a.rng); for (let i = 0; i < 8 && a.s.screen !== 'combat'; i++) { if (a.s.run.choices && a.s.run.choices.length) E.enterRoom(a.s, 0, a.rng); else E.offerRoute(a.s, a.rng); } return a.s.run.enemy; })();
-  ok('crawler on another map: its own lines', foundry.id === 'crawler' && foundry.intro.first && JSON.stringify(foundry.intro.beats) !== JSON.stringify(BOSS_SCRIPT.crawler.firstIntro), foundry.intro.beats[0]);
+  // No boss fights on two maps, and the one each sector names is the one that turns up
+  { const seen = {}; for (const m of D.MAPS) for (const id of m.bosses) (seen[id] = seen[id] || []).push(m.id);
+    const twice = Object.entries(seen).filter(([, maps]) => maps.length > 1); ok('no boss on two maps', !twice.length, JSON.stringify(twice)); }
+  { const a = game(4), ef = deployBoss(a.s, a.rng, 'slagmother'); ok('foundry sector 15 is the Slagmother', ef.id === 'slagmother' && ef.intro.first && ef.intro.beats[0] === BOSS_SCRIPT.slagmother.firstIntro[0], ef.id); }
   // Ostrane's class line
   const o = game(5); o.s.char.background = 'clerk'; const eo = deployBoss(o.s, o.rng, 'ostrane');
   ok('ostrane: a line for the class', eo.intro.beats.includes(BOSS_SCRIPT.ostrane.byBackground.clerk));
@@ -374,7 +379,7 @@ const act = (t, a) => { E.playerAct(t.s, a, t.rng, 0); hold(t.s); };
 { // Co-op: everything in the state, a target rule for moves aimed at one player
   const t = boss('halvek', 7, true), { s, e, b, rng } = t;
   const copy = () => JSON.parse(JSON.stringify(s));
-  e.next = 'sig:confiscate'; b.phase = 100; e.intent = 'attack'; s.run.actor = 0; s.run.acted = {};
+  e.next = 'sig:confiscate'; b.phase = 100; b.cd = 9; e.intent = 'attack'; s.run.actor = 0; s.run.acted = {}; // forced, so no cooldown was set: hold the next move off
   E.playerAct(s, 'defend', rng, 0); E.playerAct(s, 'defend', rng, 1); hold(s);
   ok('co-op: the move is in the mirrored state', copy().run.enemy.sig.id === 'confiscate' && copy().run.enemy.say && copy().run.enemy.say.text.length > 3);
   const stims = [s.char.items.stim, s.char2.items.stim];
@@ -398,6 +403,125 @@ const act = (t, a) => { E.playerAct(t.s, a, t.rng, 0); hold(t.s); };
     const full = E.withActor(r.s, 0, () => range(r.s, true)[1]), cut = E.withActor(r.s, 1, () => range(r.s, true)[1]);
     ok('co-op: Redact cuts only that operative', full !== cut || r.s.char.attrs.str !== r.s.char2.attrs.str, `${full} ${cut}`);
   } else ok('co-op: Redact went off', false);
+}
+
+{ // The nine added with twenty sectors: data in place, each move fires and resolves, the phase notes apply
+  const LINE_KEYS = ['intro', 'firstIntro', 'taunt', 'playerLow', 'defeat', 'firstDefeat'];
+  for (const id of NEW) {
+    const en = D.ENEMIES[id], info = D.BOSS_INFO[id], sc = BOSS_SCRIPT[id], kit = D.BOSS_KIT[id];
+    ok(`${id}: enemy, special, info, kit and script`, en && en.tags.includes('boss') && D.SPECIALS[id] && info && info.epithet && info.he && kit && sc);
+    ok(`${id}: opening line is the enemy line, 50% line is phase2`, sc.firstIntro[0] === en.line && sc.phase[50][0] === info.phase2);
+    const all = [...LINE_KEYS.flatMap((k) => sc[k]), ...[75, 50, 25].flatMap((t) => sc.phase[t]), ...Object.values(sc.signature).flat(), sc.victoryNote];
+    const long = all.filter((l) => typeof l !== 'string' || l.length > 120);
+    ok(`${id}: every line there and under 120 characters`, !long.length && Object.keys(sc.signature).every((m) => kit.moves[m]), long.join(' | '));
+    ok(`${id}: notes for 75, 50 and 25`, [75, 50, 25].every((t) => kit.notes[t] && kit.notes[t].length > 5));
+  }
+  // Each pair of moves is its own: no new boss repeats another's pair.
+  const pairs = Object.keys(BOSS_MOVES).map((id) => Object.keys(BOSS_MOVES[id]).sort().join('+'));
+  ok('every boss has a different pair of moves', new Set(pairs).size === pairs.length, pairs.join(', '));
+
+  // Each move: brought up, played to the end with no error, and its effect shows.
+  const effect = {
+    shutter: (t) => t.b.shutter === 2 && !E.canUse(t.s, 'run'),
+    confiscate: (t) => t.b.taken.length === 1,
+    anchor: (t, ev) => ev.some((x) => x.type === 'sig' && x.dmg > 0) && t.s.run.pst.pinned === 2,
+    siege: (t, ev) => ev.some((x) => x.type === 'sig' && x.dmg > 0),
+    roll: (t, ev) => ev.some((x) => x.type === 'sig' && x.dmg > 0),
+    floor: (t) => t.b.floor === 3,
+    overtime: (t, ev) => ev.some((x) => x.type === 'sig' && x.hits && x.hits.length === 2) && t.e.st.exposed === 2,
+    front: (t) => t.b.front === 2,
+    count: (t) => t.s.run.pst.shaken === 2,
+    lights: (t) => t.b.lights === 2 && E.intentHidden(t.s),
+    crane: (t, ev) => ev.some((x) => x.type === 'sig' && x.dmg > 0) && t.b.wreck === 2,
+    salute: (t, ev) => ev.some((x) => x.type === 'sig' && x.crit),
+    redact: (t) => t.b.redact && t.b.redact.t === 2,
+    audit: (t, ev) => ev.some((x) => x.type === 'sig' && x.dmg > 0),
+  };
+  for (const id of NEW) for (const m of Object.keys(BOSS_MOVES[id])) {
+    const t = boss(id), { s, e } = t;
+    s.char.items.stim = 2; t.b.cd = 9;
+    let err = null, ev = [];
+    try {
+      bring(t, m);
+      const inf = E.sigInfo(s); if (!inf || /[{}]/.test(inf.tip)) throw new Error(`intent line: ${JSON.stringify(inf)}`);
+      // Shoot rather than Defend when Defend would block the effect the check looks for (a pin, a status).
+      const a = ['anchor', 'count'].includes(m) ? 'shoot' : 'defend';
+      for (let i = 0; i < 4 && e.sig; i++) { s.events = []; E.playerAct(s, a, t.rng, 0); ev.push(...s.events); delete s.events; hold(s); }
+      if (e.sig) throw new Error('still on its way after 4 turns');
+      E.bossEffects(s); E.sigAdvice(s); E.runBlocked(s);
+    } catch (x) { err = x; }
+    ok(`${id}: ${BOSS_MOVES[id][m].name} (${m}) fires and resolves`, !err && effect[m](t, ev), err ? err.message : JSON.stringify(ev.filter((x) => x.type === 'sig' || x.type === 'sigfail')));
+    const chips = E.bossEffects(s);
+    ok(`${id}: ${m} chips read right`, chips.every((c) => c.label && c.tip && !/Brask|Kell|Gatehouse|Slag Floor|Count Time|Lights Out|Shift in Front|her moves/.test(c.tip + c.label) || D.BOSS_INFO[id].he === 'she'), JSON.stringify(chips));
+  }
+  // Counters that reused moves bring their own words.
+  { const t = boss('hale'); bring(t, 'siege'); t.s.char.items.ion = 1; const ev = (t.s.events = []); E.playerAct(t.s, 'ion', t.rng, 0); delete t.s.events; hold(t.s);
+    const f = ev.find((x) => x.type === 'sigfail'); ok('hale: an ion pulse shorts the lance, in his words', !t.e.sig && f && f.text === BOSS_MOVES.hale.siege.ion, f && f.text); }
+  { const t = boss('hale'); bring(t, 'roll'); t.e.hp -= Math.ceil(t.e.maxHp * 0.12); const ev = (t.s.events = []); E.playerAct(t.s, 'defend', t.rng, 0); delete t.s.events; hold(t.s);
+    ok('hale: Vent Cycle choked staggers him', !t.e.sig && t.e.stun === 1 && ev.some((x) => x.type === 'sigfail' && x.text === BOSS_MOVES.hale.roll.fail)); }
+  { const t = boss('dray'); t.s.char.attrs.cha = 8; t.s.char.skills = [...new Set([...(t.s.char.skills || []), 'intimidate'])]; t.s.run.cooldowns = {};
+    bring(t, 'front'); E.playerAct(t.s, 'defend', t.rng, 0); hold(t.s);
+    ok('dray: conscripts in front halve shots', t.b.front === 2 && E.bossEffects(t.s).some((c) => /^Conscripts 2$/.test(c.label)));
+    if (E.canUse(t.s, 'intimidate')) { t.e.sig = null; t.e.next = 'attack'; t.e.intent = 'attack'; E.playerAct(t.s, 'intimidate', () => 0.999, 0); ok('dray: Intimidate scatters the conscripts', t.b.front === 0); } }
+  { const t = boss('pell'); bring(t, 'confiscate'); act(t, 'strike'); ok('pell: a Strike stops the Seizure', !t.e.sig && !t.b.taken.length); }
+  { const t = boss('venn'); t.s.run.allies = 2; bring(t, 'count'); act(t, 'defend'); ok('venn: Order in Court freezes prisoners', t.b.count === 2); t.s.run.allies = 0; }
+  { const t = boss('imre'); bring(t, 'shutter'); act(t, 'defend'); ok('imre: the shield blocks Run, in his words', E.runBlocked(t.s) === BOSS_MOVES.imre.shutter.blocked); }
+
+  // Phases: the line, the note, and what each note says actually happens.
+  const after = {
+    dray: { 25: (u) => u.b.noRun && u.b.every.act === 'salute' && u.b.every.n === 3 },
+    slagmother: { 50: (u) => u.b.floorTurns === 4 && u.e.intents.repair === 0, 25: (u, d0) => u.e.def === Math.max(0, d0 - 3) && u.b.every.act === 'floor' },
+    hale: { 50: (u, d0, s0) => u.e.spd === s0 + 2, 25: (u) => u.b.brittle && u.b.every.act === 'siege' && u.b.every.n === 3 },
+    restraint: { 50: (u) => u.e.intents.repair === 0, 25: (u) => u.b.noRun && u.b.every.act === 'anchor' && !E.canUse(u.s, 'run') && E.runBlocked(u.s) === D.BOSS_INFO.restraint.noRun[0] },
+    voight: { 25: (u, d0, s0, sp0) => u.e.intents.special === sp0 * 2 && u.b.every.act === 'redact' },
+    venn: { 50: (u, d0) => u.e.def === d0 + 2, 25: (u) => u.b.noRun && u.b.every.act === 'audit' && E.runBlocked(u.s) === D.BOSS_INFO.venn.noRun[0] },
+    pell: { 50: (u) => E.sniperChance(u.s.run) === 0.3, 25: (u) => E.sniperChance(u.s.run) === 0.45 },
+    gantry: { 50: (u) => u.e.intents.repair === 0, 25: (u) => u.b.wide === 0.25 && u.b.every.act === 'anchor' },
+    imre: { 50: (u, d0, s0) => u.e.spd === s0 + 2 && E.sniperChance(u.s.run) === 0.4, 25: (u) => u.b.noRun && u.b.twice && u.b.every.act === 'siege' && u.b.every.n === 4 && E.runBlocked(u.s) === D.BOSS_INFO.imre.noRun[0] },
+  };
+  for (const id of NEW) {
+    const u = boss(id); u.e.intents = { attack: 1, special: 2, repair: 1 };
+    for (const [mark, want] of [[0.74, 75], [0.49, 50], [0.24, 25]]) {
+      const d0 = u.e.def, s0 = u.e.spd, sp0 = u.e.intents.special, atk0 = u.e.atk;
+      u.e.hp = Math.round(u.e.maxHp * mark); u.s.events = []; E.checkPhase(u.s);
+      const ph = u.s.events.filter((x) => x.type === 'phase'), line = u.s.events.find((x) => x.type === 'say'); delete u.s.events;
+      ok(`${id}: phase at ${want}, its line and note`, u.b.phase === want && ph.length === 1 && BOSS_SCRIPT[id].phase[want].includes(line && line.text) && line.note === D.BOSS_KIT[id].notes[want], line && line.note);
+      if (want === 50) ok(`${id}: 50% is +20% ATK`, u.e.atk === Math.round(atk0 * 1.2));
+      const chk = (after[id] || {})[want];
+      if (chk) ok(`${id}: what the ${want}% note says happens`, chk(u, d0, s0, sp0), JSON.stringify({ def: u.e.def, spd: u.e.spd, every: u.b.every, intents: u.e.intents }));
+      // A move that opens at this mark is next, so the change is felt.
+      const opens = Object.entries(D.BOSS_KIT[id].moves).find(([, m]) => m.from === want);
+      if (opens) ok(`${id}: ${opens[0]} opens at ${want} and comes next`, u.e.next === `sig:${opens[0]}`, u.e.next);
+      u.e.next = 'attack'; u.e.sig = null;
+    }
+    // And the moves that close at a mark stay closed.
+    for (const [m, k] of Object.entries(D.BOSS_KIT[id].moves)) if (k.until) {
+      const v = boss(id); v.b.phase = k.until; v.e.next = `sig:${m}`; v.e.sig = null; v.e.intent = 'attack'; E.playerAct(v.s, 'defend', v.rng, 0); hold(v.s);
+      ok(`${id}: ${m} closed from ${k.until}%`, !v.e.sig || v.e.sig.id !== m);
+    }
+  }
+
+  // The map pools: every id real, each district has its own new cast, the opening sectors stay small.
+  const OWN = { foundry: ['stoker', 'hookbot', 'castguard'], detention: ['warder', 'orderly'], port: ['customs', 'tetherdrone', 'exo'] };
+  for (const m of D.MAPS) {
+    ok(`${m.id}: every pool id is an enemy`, m.pool.every(([id]) => D.ENEMIES[id] && !D.ENEMIES[id].tags.includes('boss')));
+    for (const id of OWN[m.id] || []) ok(`${m.id}: ${id} in the pool, with a special`, m.pool.some(([p]) => p === id) && D.SPECIALS[id]);
+  }
+  // Each one stands in for a loaned enemy at the same sector, and is no more than 10% tougher (HP x ATK) than it was.
+  const WAS = { stoker: 'hound', hookbot: 'riot', castguard: 'shock', orderly: 'hound', warder: 'riot', tetherdrone: 'probe', customs: 'marksman', exo: 'shock' };
+  for (const [id, was] of Object.entries(WAS)) { const a = D.ENEMIES[id], z = D.ENEMIES[was]; ok(`${id}: about as tough as the ${was} it replaced`, a.hp * a.atk <= z.hp * z.atk * 1.1, `${a.hp}x${a.atk} vs ${z.hp}x${z.atk}`); }
+  const own = Object.values(OWN).flat(); ok('new enemies sit on one map each', own.every((id) => D.MAPS.filter((m) => m.pool.some(([p]) => p === id)).length === 1));
+
+  // Codex: the district finales now open what Ostrane and the crawler used to.
+  for (const [entry, key] of [['booth', 'hale:foundry'], ['paid', 'venn:detention'], ['ledger', 'imre:port']]) {
+    const x = CODEX.find((c) => c.id === entry); ok(`codex: ${entry} opens on ${key}`, x && x.unlock.id === key.split(':')[0] && x.unlock.map === key.split(':')[1]);
+  }
+  { const g = game(11); g.s.meta.liberated = { foundry: true, detention: true, port: true }; const open = E.codexEntries(g.s).filter((x) => x.open).map((x) => x.entry.id);
+    ok('codex: freed districts open their finale entries', ['booth', 'paid', 'ledger'].every((k) => open.includes(k)), open.join(',')); }
+  // Imre's scene ends the story: the ledger, the column, the brake.
+  ok('imre: the last scene names the ledger, Paid, and stops the lift', BOSS_SCRIPT.imre.firstDefeat.some((l) => /ledger/.test(l)) && BOSS_SCRIPT.imre.firstDefeat.some((l) => /Paid/.test(l)) && /stops/.test(BOSS_SCRIPT.imre.firstDefeat[BOSS_SCRIPT.imre.firstDefeat.length - 1]));
+  { const g = game(12), ei = deployBoss(g.s, g.rng, 'imre'); ei.hp = 1; ei.intent = 'guard'; g.s.char.hp = 500; E.playerAct(g.s, 'strike', g.rng, 0);
+    ok('imre: beating him plays the whole scene', g.s.scene && g.s.scene.beats.length === BOSS_SCRIPT.imre.firstDefeat.length && g.s.scene.note === BOSS_SCRIPT.imre.victoryNote && !/[{}]/.test(g.s.scene.beats.join(''))); }
 }
 
 { // Bots and auto battle get through every boss, on many seeds, without getting stuck

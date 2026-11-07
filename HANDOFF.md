@@ -182,3 +182,10 @@ Artifact tool, publish `index.html` with `url` set to the live link, `root` set 
 
 ## Loading order and tests
 Operative art loads first (each sheet's idle row first). `hd.json`, `manifest.json`, sprites and `bg/` retry with backoff and swap in place. The fight holds on "Loading fighters..." for up to about 4s, then plays with stand-in art. `tests/yard.cjs` covers the town and `tests/fight-fit.cjs` the phone fight layout. Under load use a server with a long listen queue: stock `python3 -m http.server` resets connections and leaves pages stuck on "Loading...".
+
+## Season 2 (20-sector districts)
+- `E.SEASON` stamps new saves; the page sets aside an older save under `cinder-cell-season1` and starts fresh. Old cloud saves and save codes are refused. The leaderboard Durable Object is `season2` (season 1 stays under `global`).
+- Each district has 20 sectors and four bosses (`D.MAPS[].bosses`, none shared). `offset` (0/4/8/12) adds to the sector for enemy strength (`E.effSector`). Districts open per operative (`unlock: { mapId: sector }`, `E.mapUnlocked`), and threat levels belong to the operative who freed districts (`E.maxThreat`).
+- Money: `E.payDepth` grows rooms, events and sector bonuses sublinearly. Contraband caps at 3 per piece, raised one at a time to 99 (`E.perkCap`, `E.buyPerkCap`, 8% dearer each time).
+- Shop and drops follow the operative's deepest ground plus threat (`E.opDepth`); bench levels go to +8.
+- The "What's new" modal (`newsView`) shows once per `NEWS_ID`.

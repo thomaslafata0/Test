@@ -141,13 +141,106 @@ export const BOSS_MOVES = {
     },
     audit: { name: 'Final Audit', tip: 'x{x} right now: x1 plus 0.4 per item you used this fight, up to x3. Defend halves it.' },
   },
+  // A move reused by another boss can carry its own words for what the engine says:
+  // fail (countered or jammed), ion (siege stopped by an ion pulse), charge (roll's second turn), winded and late (overtime's
+  // aftermath), blocked (why Run is shut while a shutter is up), chip (the label of a lasting effect), who (who stands in front).
+  dray: {
+    front: {
+      name: 'Conscripts Forward', chip: 'Conscripts', who: 'the conscripts',
+      tip: 'For 2 turns shots deal half. Hold your fire throughout for +1 Resolve on the kill. Intimidate clears them.',
+      fail: 'The conscripts break and run. Dray doesn\u2019t waste a bullet on them.',
+    },
+    salute: {
+      name: 'The Colonel\u2019s Draw',
+      tip: 'His next shot is a sure crit, x1.6. Shoot back and yours is too. The sabre parries Strikes for half. Or Defend.',
+    },
+  },
+  slagmother: {
+    floor: { name: 'Ladle Pour', tip: 'For {t} turns every Strike costs 5% of your max HP on top of the burn. Shoot until it cools.' },
+    overtime: {
+      name: 'Both Arms',
+      tip: 'Two swings at x0.8, then it sways to catch the ladle, Exposed for 2 turns. Defend, then hit it.',
+      winded: 'It sways to catch the ladle: Exposed.',
+    },
+  },
+  hale: {
+    siege: {
+      name: 'Lance Charge',
+      tip: 'A x2.6 plasma thrust. Ion pulse, or 10% of his HP in damage first, shorts it. Defend takes about a third.',
+      fail: 'Your fire knocks the lance aside. The charge earths into the floor.',
+      ion: 'The ion pulse shorts the lance coil. Hale swears inside his visor.',
+    },
+    roll: {
+      name: 'Vent Cycle',
+      tip: 'His suit vents open: +50% damage. Deal 12% of his HP now to choke the blast and stagger him.',
+      tipNext: 'Heat blast, x2. Defend halves it.',
+      fail: 'You hit the open vents. The heat backs up and Hale staggers.',
+      charge: 'The vents glow white. A blast is coming.',
+    },
+  },
+  restraint: {
+    anchor: {
+      name: 'Clamp Arms',
+      tip: 'x1.6, then clamped 2 turns: no Run. Defend blocks the clamp. Strike the joints now for +30%.',
+    },
+    shutter: {
+      name: 'Cage Down', chip: 'Cage', blocked: 'The cage is down',
+      tip: 'For 2 turns shots through the bars deal half and you can\u2019t Run. Strike still reaches.',
+    },
+  },
+  voight: {
+    redact: { name: 'Nerve Block', tip: '{act} deals half for 2 turns, or locks if it is a skill. Do something else.' },
+    lights: {
+      name: 'Gas Cloud', chip: 'Gas',
+      tip: 'For 2 turns you can\u2019t read him and shots miss 25% of the time. A scanner still can. Strike can\u2019t miss.',
+    },
+  },
+  venn: {
+    count: {
+      name: 'Order in Court', chip: 'Order',
+      tip: 'Freed prisoners freeze for 2 turns. Alone, you are Shaken 2 unless you Defend. Intimidate breaks it.',
+      fail: 'You shout her down. The prisoners hear someone louder than the bench.',
+    },
+    audit: { name: 'Sentence', tip: 'x{x} right now: x1 plus 0.4 per item you used this fight, up to x3. Defend halves it.' },
+  },
+  pell: {
+    confiscate: {
+      name: 'Seized',
+      tip: 'He seizes a stim, or another item, until he goes down. Strike now to stop him, or use it first.',
+      fail: 'You knock the scanner out of his hand. Nothing gets logged.',
+    },
+    crane: { name: 'Crate Drop', tip: 'A x2.2 crate off the customs crane. Smoke clears you, even if it fails. Defend only halves it.' },
+  },
+  gantry: {
+    anchor: {
+      name: 'Mag Clamp',
+      tip: 'x1.6, then clamped 2 turns: no Run. Defend blocks the clamp. Strike the cab now for +30%.',
+    },
+    overtime: {
+      name: 'Hook Swing',
+      tip: 'Two hits at x0.8, then it rocks on its legs, Exposed for 2 turns. Defend, then hit it.',
+      winded: 'It rocks back on its legs: Exposed.',
+    },
+  },
+  imre: {
+    shutter: {
+      name: 'Shield Projector', chip: 'Shield', blocked: 'His shield is up',
+      tip: 'For 2 turns the shield halves your shots and you can\u2019t Run. Strike gets inside it.',
+    },
+    siege: {
+      name: 'Station Strike',
+      tip: 'A x2.8 strike called down the cable. Ion pulse, or 10% of his HP first, breaks the uplink. Defend takes a third.',
+      fail: 'Your fire knocks the uplink off his wrist. The strike never comes.',
+      ion: 'The ion pulse scrambles the uplink. Far above, a gun goes quiet.',
+    },
+  },
 };
 
 // ---------- boss dialogue ----------
 // Keys: intro (pick one, a later meeting), firstIntro (beats, in order), phase[75|50|25] (pick one),
 // taunt (the boss, when the player is low), playerLow (the operative's own head, when low),
 // signature[moveId] (pick one), defeat (pick one), firstDefeat (beats, in order), victoryNote (one string).
-// byMap[mapId] overrides any of those keys on that map. byBackground (Ostrane only) is one extra line per class.
+// byMap[mapId] overrides any of those keys on that map (no boss fights on two maps now, so none uses it). byBackground (Ostrane only) is one extra line per class.
 // Bosses come back because nobody stays to check: defeat lines end with them dragged out, never confirmed dead.
 export const BOSS_SCRIPT = {
   halvek: {
@@ -264,51 +357,6 @@ export const BOSS_SCRIPT = {
       '\u201CRegs want a person on the key. It takes your name off the list. For a while.\u201D',
     ],
     victoryNote: 'Every crawler has a yard worker welded inside. There is a list, and the key keeps you off it.',
-    byMap: {
-      foundry: {
-        intro: ['Slag on its legs. It stands square across the booth door. \u201CRESTRICTED. CLEAR THE ROUTE.\u201D'],
-        firstIntro: [
-          'Up here, above the Blast Furnace, a siege crawler is parked across a small grey door.',
-          '\u201CCONTROL BOOTH RESTRICTED. CLEAR THE ROUTE.\u201D Nobody guards a booth with one of these.',
-        ],
-        firstDefeat: [
-          'The crawler sags across the door. Whoever holds its key has stopped knocking and started crying.',
-          'Inside, one chair and one board. A dial for every furnace in the Works, all set below a third.',
-          'A card taped over the board: the yard\u2019s target for the quarter, and what the dials allow.',
-          'The shortfall is set here before the shift starts. Nobody on that floor ever had a chance.',
-        ],
-        victoryNote:
-          'The quota can\u2019t be met. The furnaces are throttled from the booth so the yard is always short.',
-      },
-      detention: {
-        intro: ['It fills the transfer corridor wall to wall. \u201CCLEAR THE ROUTE. PRISONERS WILL KNEEL.\u201D'],
-        firstIntro: [
-          'A siege engine, in a prison. The corridor is wide enough. Everything here is built for loads.',
-          '\u201CCLEAR THE ROUTE. PRISONERS WILL KNEEL.\u201D Somewhere behind you, they do.',
-        ],
-        firstDefeat: [
-          'The crawler slumps against the wall of the Interrogation Suite. Two taps on the hatch.',
-          'You cut it open. The key-holder has a Cell Block C number inked on one hand.',
-          '\u201CThey come round with two offers. The key, or the lift. Nobody\u2019s been back from the lift.\u201D',
-          '\u201CSo I took the key. Tell my sister I took the key.\u201D',
-        ],
-        victoryNote: 'Prisoners get offered the firing key or the lift. Everyone fears the lift more.',
-      },
-      port: {
-        intro: ['It paces the apron under the tower. \u201CCLEAR THE ROUTE. DEPARTURES HAVE PRIORITY.\u201D'],
-        firstIntro: [
-          'A crawler on the apron, its legs clamped for the wind. The tower has already told it about you.',
-          '\u201CCLEAR THE ROUTE. DEPARTURES HAVE PRIORITY.\u201D',
-        ],
-        firstDefeat: [
-          'The crawler goes over at the foot of the Control Tower. Two taps on the hatch.',
-          'The key-holder climbs out and looks straight up at the cable, and keeps looking.',
-          '\u201CKey\u2019s good for a year. Then you\u2019re freight like anyone. I\u2019ve got nine days.\u201D',
-          'They walk off across the pad without asking which way the gate is.',
-        ],
-        victoryNote: 'The firing key only buys a year. In the end the crawler crews go up the lift too.',
-      },
-    },
   },
 
   ostrane: {
@@ -372,36 +420,6 @@ export const BOSS_SCRIPT = {
       runner: '\u201CYou moved goods past my checkpoints for years. I allowed it. You were useful to count.\u201D',
       clerk: '\u201CYou filed for me for two years. I know your handwriting. You filed your own notice.\u201D',
       preacher: '\u201CPeople listen when you talk. Seventeen of them are in my book because they did.\u201D',
-    },
-    byMap: {
-      detention: {
-        intro: ['Ostrane sits in Kell\u2019s chair. \u201CWarden Kell\u2019s numbers are clean. Yours are not.\u201D'],
-        firstIntro: [
-          'Ostrane is in the Warden\u2019s Tower with the block laid out below her. She doesn\u2019t turn round.',
-          '\u201CYou freed some of them. I have already written them back in. Come and see the sum.\u201D',
-        ],
-        firstDefeat: [
-          'From the tower you can see every cell. Ostrane watches them, one hand under her ribs.',
-          '\u201CI will save you the question. A raider killed on my ground is a head removed from the yard.\u201D',
-          '\u201CIt counts against the quarter. Each operative you spend is one name I do not collect.\u201D',
-          '\u201CSo far, {ops}. Your handler does this sum as well. I want you to know that.\u201D',
-        ],
-        victoryNote: 'A dead raider counts as a head paid. Each operative spared someone in the yard. Cass knows.',
-      },
-      port: {
-        intro: ['Ostrane waits at the lift gate, a case at her feet. \u201CThe last car goes when I say.\u201D'],
-        firstIntro: [
-          'The cable hums over the top deck. Ostrane stands at the lift gate with a case at her feet.',
-          '\u201CYou have come for the books. Your predecessors came for me. You are improving.\u201D',
-        ],
-        firstDefeat: [
-          'The case has burst. Paper, the real ledger, in her tidy hand. She holds it to her chest.',
-          '\u201CEveryone in this is alive and working. I can tell you where each one is. Nobody else can.\u201D',
-          '\u201CStop the lift and the quota has nowhere to go. It also means no one comes back down.\u201D',
-          'You take it from her. On the first page, a column of your cell\u2019s dead, headed Paid.',
-        ],
-        victoryNote: 'The cell has the ledger. Everyone on it is alive, and the lift is the only road to them.',
-      },
     },
   },
 
@@ -624,6 +642,531 @@ export const BOSS_SCRIPT = {
     ],
     victoryNote: 'The lift carries people. Confiscated goods is the manifest\u2019s word for them. They go up alive.',
   },
+
+  dray: {
+    intro: [
+      '\u201COn your feet, recruit. You fell over last time as well.\u201D His medals have been polished.',
+      'Dray checks his revolver, chamber by chamber. \u201CSame steps. Same result.\u201D',
+      '\u201CThe surgeons say I am not to exert myself.\u201D He draws the sabre anyway.',
+    ],
+    firstIntro: [
+      'Colonel Dray waits on the Spire steps, sabre at his side. \u201CStand up straight.\u201D',
+      '\u201CI took this yard in a night. Three years on, it still sends me children.\u201D',
+    ],
+    phase: {
+      75: [
+        '\u201CBetter. Somebody taught you to keep your feet.\u201D',
+        'Dray touches a medal, as if he is counting them. \u201CAgain.\u201D',
+      ],
+      50: [
+        'Dray unbuckles his greatcoat and draws the sabre.',
+        '\u201CVery well. As we did it at the gate.\u201D',
+      ],
+      25: [
+        '\u201CTurn out the guard! Nobody leaves these steps.\u201D',
+        'Blood on the greatcoat. He does a button up over it. \u201CI was patient at the gate too.\u201D',
+      ],
+    },
+    taunt: [
+      '\u201CDown you go. They always go down on the third step.\u201D',
+      '\u201CBreathe, recruit. It is nearly over, one way or the other.\u201D',
+      '\u201CI have buried better soldiers than you. I did not visit them either.\u201D',
+    ],
+    playerLow: [
+      'Your boots slip on the Spire steps. Every one of them was cut for marching.',
+      'Down on the parade ground someone is counting a drill. You lose count with them.',
+      'The sabre catches the floodlight. You have stopped watching the revolver.',
+    ],
+    signature: {
+      front: [
+        '\u201CConscripts, front rank!\u201D Yard faces, holding rifles they have never fired.',
+        'He pushes a boy in a yard jacket ahead of him. \u201CShoot through him, then.\u201D',
+      ],
+      salute: [
+        'Dray brings the sabre up to his face, then the revolver. \u201CProperly, now.\u201D',
+        '\u201COne each. As officers do it.\u201D',
+      ],
+    },
+    defeat: [
+      'Dray goes down on one knee and stays there. His aides carry him into the Spire.',
+      '\u201CNote the time,\u201D Dray says, and his chin drops onto his medals.',
+      'The guard drag him up the steps by his greatcoat. The sabre stays behind.',
+    ],
+    firstDefeat: [
+      'Dray sits on the Spire steps, sabre across his knees. He looks very old.',
+      '\u201CWe could have come through the gate on the first day. The order said wait.\u201D',
+      '\u201CLet them shut the doors, it said. Count who stays inside.\u201D',
+      '\u201CEveryone who held that floor for eleven days was on the first roster.\u201D',
+    ],
+    victoryNote: 'The garrison waited eleven days on purpose, to count who held the floor. They were the first roster.',
+  },
+
+  slagmother: {
+    intro: [
+      'The bell on the ladle track rings twice. The Slagmother\u2019s ladle is full again.',
+      'New plates on its crane arms, bolted over the scorch marks. It still pours.',
+      'The track bell rings. The shift on the floor below steps back without looking up.',
+    ],
+    firstIntro: [
+      'A bell rings on the ladle track. The Slagmother swings its ladle round to face you.',
+      'The shift calls it Mother. It carries steel off the floor, and it never brings any back.',
+    ],
+    phase: {
+      75: [
+        'The ladle tilts a degree. The track bell starts ringing and does not stop.',
+        'One crane arm drags along the rail, throwing sparks. It doesn\u2019t slow down.',
+      ],
+      50: [
+        'Both crane arms lock. The ladle glows white.',
+        'It holds the ladle level, and the heat comes off it like a wall.',
+      ],
+      25: [
+        'A crane arm folds at the elbow. The ladle hangs off the other one, still pouring.',
+        'The bell gives out. The Slagmother keeps to the track without it.',
+      ],
+    },
+    taunt: [
+      'It waits above you, ladle tipped, for you to stop moving.',
+      'The bell rings once, slowly, the way it rings at the end of a shift.',
+      'The ladle swings low. The heat presses on your face like a hand.',
+    ],
+    playerLow: [
+      'Your lungs are full of the smell of hot metal. You take the air in small sips.',
+      'You are watching the ladle instead of the arms. You know that is a mistake.',
+      'The floor below has gone quiet. The shift is waiting to see if you get up.',
+    ],
+    signature: {
+      floor: [
+        'The ladle tips. A sheet of slag runs out across the walkway.',
+        'The bell rings three times. Everyone on the floor below knows what that means.',
+      ],
+      overtime: [
+        'Both arms swing at once, the ladle riding between them.',
+        'The crane arms open wide, then come together.',
+      ],
+    },
+    defeat: [
+      'The Slagmother tips forward and the ladle pours out across the track. A crew is on the way.',
+      'Its arms fold and the bell rings once. The shift on the floor goes back to work.',
+      'It settles on its rail, ladle cooling to grey. By morning it will be pouring again.',
+    ],
+    firstDefeat: [
+      'The Slagmother sags on its rail and the ladle spills across the walkway.',
+      'Not slag. Good steel, bright and clean. This morning\u2019s best castings.',
+      'Its run log is on the cab panel. Most days, nothing. Some days, a full ladle to the slag pit.',
+      'Those are the days the shift came close to its number. It takes the difference and pours it away.',
+    ],
+    victoryNote: 'When the shift gets close to its number, the Slagmother pours the difference into the slag pit.',
+  },
+
+  hale: {
+    intro: [
+      '\u201CBack again. You\u2019re a recurring fault.\u201D Hale taps his visor. \u201CI log those.\u201D',
+      'A fresh patch on the chest of Hale\u2019s heat suit. \u201CThey rated it for worse than you.\u201D',
+      '\u201CThe gallery runs at ninety-one percent uptime. You\u2019re the nine.\u201D',
+    ],
+    firstIntro: [
+      'Hale lifts his visor. \u201CYou\u2019re the fault I\u2019ve been chasing all quarter.\u201D',
+      'Through the gallery glass behind him, every furnace in the Works burns low and even.',
+    ],
+    phase: {
+      75: [
+        '\u201CTolerable. I\u2019ve had worse from a cracked flue.\u201D',
+        'Hale checks a gauge on his wrist. \u201CRunning warm. Fine.\u201D',
+      ],
+      50: [
+        'Hale drops his visor. The lance burns blue.',
+        '\u201CFull output, then. You\u2019ll be the first thing in the Works that gets it.\u201D',
+      ],
+      25: [
+        'A seam on the heat suit splits and steam pours out. \u201CI\u2019ll have to revise that rating.\u201D',
+        '\u201CDo you know how hard it is to run a works at a third? Exactly a third?\u201D',
+      ],
+    },
+    taunt: [
+      '\u201CYou\u2019re losing pressure. I can hear it from here.\u201D',
+      '\u201CShut down. It\u2019s the efficient thing.\u201D',
+      '\u201CI\u2019ve seen gaskets fail slower than you.\u201D',
+    ],
+    playerLow: [
+      'Sweat runs into your eyes and dries before it reaches your chin.',
+      'Your hands won\u2019t stop shaking. The furnaces behind the glass don\u2019t flicker once.',
+      'You can\u2019t tell the roar in your ears from the roar of the Works.',
+    ],
+    signature: {
+      siege: [
+        'The lance hums and climbs in pitch. \u201CStand still. It\u2019s cleaner.\u201D',
+        'Hale sets his feet and braces the lance like a drill.',
+      ],
+      roll: [
+        '\u201CVenting.\u201D The panels on his back open and the heat pours out.',
+        'Steam bursts from every seam of the heat suit. The vents glow.',
+      ],
+    },
+    defeat: [
+      'Hale goes down hissing steam. Two techs drag him away from the glass.',
+      '\u201CLog it as a fault,\u201D Hale says through the visor, and stops moving.',
+      'His crew haul him out by the suit straps. Behind him, the dials don\u2019t move.',
+    ],
+    firstDefeat: [
+      'Hale is down on the gallery floor, visor cracked. Behind him, one board, one dial per furnace.',
+      'Every dial is set below a third. He watches you see it. \u201CI set them every morning.\u201D',
+      '\u201CA number comes down the cable at six. How many names they want. I make the steel short by that.\u201D',
+      '\u201CBest casters in the system. They were never going to make it. That was the job.\u201D',
+    ],
+    victoryNote: 'The furnaces are held below a third on purpose. The lift sends down how many names it wants.',
+  },
+
+  restraint: {
+    intro: [
+      '\u201CPlease remain still.\u201D The cage on its back is new. The recording is the same.',
+      'Fresh welds on the cage door. Someone inside it coughs.',
+      '\u201CRestraint is for your safety. Please do not touch the bars.\u201D',
+    ],
+    firstIntro: [
+      'A cage on legs fills the corridor. \u201CPlease remain still. Restraint is for your safety.\u201D',
+      'Inside the cage, behind the bars, somebody in a prison smock has a hand on a lever.',
+    ],
+    phase: {
+      75: [
+        '\u201CThank you for your patience.\u201D The person inside is pressed against the bars.',
+        'The recording skips. Under it, quietly: \u201CI\u2019m sorry. I have to.\u201D',
+      ],
+      50: [
+        'Every cuff on the Restraint Engine snaps open at once.',
+        '\u201CRestraint level raised. Please lie face down.\u201D Inside, someone is crying.',
+      ],
+      25: [
+        '\u201CLockdown. Lockdown.\u201D The voice inside: \u201CI can\u2019t open it. It won\u2019t let me.\u201D',
+        'The prisoner inside shouts over the recording. \u201CThe joints! Go for the joints!\u201D',
+      ],
+    },
+    taunt: [
+      '\u201CYou have been restrained. Please wait to be collected.\u201D',
+      '\u201CPlease stop resisting. Resistance is noted on your file.\u201D',
+      'The voice inside, barely: \u201CStay down. It stops when you stay down.\u201D',
+    ],
+    playerLow: [
+      'Cuffs hang off you like jewellery. You can\u2019t remember them all landing.',
+      'You can hear the person in the cage breathing as hard as you are.',
+      'A cell door stands open behind you. For a moment it looks like somewhere to sit.',
+    ],
+    signature: {
+      anchor: [
+        '\u201CPlease extend your arms.\u201D The clamps open wide.',
+        'Both clamp arms reach for you, slow and very sure.',
+      ],
+      shutter: [
+        '\u201CSecuring.\u201D Bars slam down round the whole machine.',
+        'The cage drops to the floor. \u201CPlease step back from the bars.\u201D',
+      ],
+    },
+    defeat: [
+      'The Engine folds onto its cage. Guards drag it to the repair bay, prisoner and all.',
+      '\u201CThank you for your cooperation,\u201D says the recording, and the legs give out.',
+      'It sinks to the floor. The prisoner inside doesn\u2019t try the door. It is welded shut.',
+    ],
+    firstDefeat: [
+      'The Restraint Engine slumps against the wall of the Interrogation Suite. Two taps on the bars.',
+      'You cut the cage door. The prisoner on the lever has a Cell Block C number inked on one hand.',
+      '\u201CThey come round with two offers. The lever, or the lift. Nobody\u2019s been back from the lift.\u201D',
+      '\u201CSo I took the lever. Tell my sister I took the lever.\u201D',
+    ],
+    victoryNote: 'Prisoners are offered the lever in the Engine or the lift. Everyone fears the lift more.',
+  },
+
+  voight: {
+    intro: [
+      '\u201CYou again. Sit. I kept your chair warm.\u201D Voight lays out a fresh tray.',
+      'Voight\u2019s gas mask hangs round his neck. \u201CThey sewed me up. I took notes.\u201D',
+      '\u201CLast time you didn\u2019t give me a single name. Let\u2019s see about today.\u201D',
+    ],
+    firstIntro: [
+      'Dr. Voight looks up from a steel tray. \u201CSit. We\u2019ll start with your shift.\u201D',
+      '\u201CDon\u2019t worry. I never ask what you know. Only who you know.\u201D',
+    ],
+    phase: {
+      75: [
+        '\u201CInteresting.\u201D He writes something down. \u201CGo on.\u201D',
+        'Voight pulls the mask up over his face. His voice comes out flat and close.',
+      ],
+      50: [
+        'Voight pulls on a second pair of gloves.',
+        '\u201CVery well. We\u2019ll do this the long way.\u201D',
+      ],
+      25: [
+        'Voight laughs into the mask. \u201CNobody has ever made me hurry before.\u201D',
+        '\u201CGive me one name and you can walk out. One. Anyone.\u201D',
+      ],
+    },
+    taunt: [
+      '\u201CTell me who taught you that, and I\u2019ll let you sit down.\u201D',
+      '\u201CA name. Any name. It all stops for a name.\u201D',
+      '\u201CYour hands are shaking. Mine never do.\u201D',
+    ],
+    playerLow: [
+      'Names come into your head, people from the yard. You hold on to them.',
+      'The tray rattles every time you move. You stop moving as much.',
+      'The gas smells sweet. You try not to like it.',
+    ],
+    signature: {
+      redact: [
+        '\u201CHold still. This only takes the feeling.\u201D',
+        'The syringe gun hisses. Something goes cold and quiet.',
+      ],
+      lights: [
+        'Voight drops a canister and the room fills with grey.',
+        '\u201CBreathe normally,\u201D says the mask, somewhere in the gas.',
+      ],
+    },
+    defeat: [
+      'Voight goes down across his tray. His orderlies carry him out, holding his hands.',
+      '\u201CWrite that down,\u201D Voight says to nobody, and the mask fogs over.',
+      'His orderlies have him on a gurney before you can reach him. He waves.',
+    ],
+    firstDefeat: [
+      'Voight is on the floor of the Tower, mask off, picking glass out of his glove.',
+      'His file box has spilled. No questions in it. Only names, in other people\u2019s handwriting.',
+      '\u201CNobody comes here for what they know. They come to give me names. Each name buys a week.\u201D',
+      '\u201CThat is how the roster stays full. You fill it for us, in here.\u201D',
+    ],
+    victoryNote: 'Interrogation isn\u2019t for answers. Prisoners trade names for weeks, and that keeps the roster full.',
+  },
+
+  venn: {
+    intro: [
+      '\u201CThe accused returns. The court notes it has sentenced you once already.\u201D',
+      'Venn settles her collar over a fresh scar. \u201CThe court does not recognise your last verdict.\u201D',
+      '\u201CBe seated, or be made to sit. The court is indifferent.\u201D',
+    ],
+    firstIntro: [
+      'Magistrate Venn does not rise from the bench. \u201CThe accused will approach.\u201D',
+      '\u201CThe court has your cell\u2019s record. {ops} heard so far. All sentenced. All served.\u201D',
+    ],
+    phase: {
+      75: [
+        '\u201CObjection noted, and overruled.\u201D',
+        'Venn brings the gavel-mace down on the bench. The wood splits. \u201COrder.\u201D',
+      ],
+      50: [
+        'Venn stands. Nobody in this court has seen her stand.',
+        '\u201CThe court will hear this matter in person.\u201D',
+      ],
+      25: [
+        '\u201CSeal the doors. This court does not adjourn.\u201D',
+        'Blood runs down the armoured collar. Her voice doesn\u2019t change. \u201CThe sentence stands.\u201D',
+      ],
+    },
+    taunt: [
+      '\u201CThe accused may stop resisting at any time. It will not affect the verdict.\u201D',
+      '\u201CThe court finds you tired.\u201D',
+      '\u201CKneel. It is customary, at the end.\u201D',
+    ],
+    playerLow: [
+      'The court is silent. Every bench is full of people who won\u2019t look at you.',
+      'Your knees want to fold. The floor before the bench is worn into two dips.',
+      'You can hear the gavel even when it isn\u2019t falling.',
+    ],
+    signature: {
+      count: [
+        '\u201COrder in court!\u201D Every prisoner on the benches goes still.',
+        'The gavel comes down once. Nobody in the room breathes.',
+      ],
+      audit: [
+        '\u201CThe court will now consider what you have spent.\u201D',
+        'Venn lifts the gavel-mace high. \u201CSentence.\u201D',
+      ],
+    },
+    defeat: [
+      'Venn falls back against the bench. Her clerks carry her out through the robing door.',
+      '\u201CThe verdict stands,\u201D Venn says, and her ushers take her by the arms.',
+      'Her ushers carry her out. The court rises as she passes, out of habit.',
+    ],
+    firstDefeat: [
+      'Venn sits on the steps of her own bench, collar undone, the gavel in her lap.',
+      '\u201CYou want the sentence. Here it is.\u201D A ledger page: the yard\u2019s quarter, a column of numbers.',
+      '\u201CA raider killed on our ground is a sentence served. It comes off the yard\u2019s number.\u201D',
+      '\u201CSo far, {ops}. Your handler does this sum as well. Ask for how long.\u201D',
+    ],
+    victoryNote: 'A dead raider counts as a sentence served. Each operative spared someone in the yard. Cass knows.',
+  },
+
+  pell: {
+    intro: [
+      '\u201CYou again. You never declare anything.\u201D Pell\u2019s nose has been set crooked.',
+      'Pell stamps a form without reading it. \u201CSecond offence. There is a fee.\u201D',
+      '\u201CThe surgeon billed customs for me. I have billed you.\u201D',
+    ],
+    firstIntro: [
+      'Chief Pell runs a scanner over you and frowns at it. \u201CAnything to declare?\u201D',
+      '\u201CWeapons. Contraband. Yard goods without a stamp. You are all three.\u201D',
+    ],
+    phase: {
+      75: [
+        '\u201CThat is assault on an officer of customs. There is a form for it.\u201D',
+        'Pell wipes his scanner on his sleeve. \u201CStill reading you. Still guilty.\u201D',
+      ],
+      50: [
+        'Pell puts the scanner away and takes the baton in both hands.',
+        '\u201CTower, this is customs. I need a second stamp down here.\u201D',
+      ],
+      25: [
+        '\u201CI just stamp them! I don\u2019t load them!\u201D His voice cracks.',
+        'Pell is sweating through his collar. \u201CTower! Somebody! I\u2019m only customs!\u201D',
+      ],
+    },
+    taunt: [
+      '\u201CDeclared: one raider, damaged. No value.\u201D',
+      '\u201CLie still. I need you flat for the scanner.\u201D',
+      '\u201CNobody leaves the port without a stamp. You will get yours.\u201D',
+    ],
+    playerLow: [
+      'The wind off the pad pushes you sideways. You let it, for a second.',
+      'There is a queue of crates behind him, all stamped. You can\u2019t stop looking at them.',
+      'You can taste the stamp ink. You don\u2019t remember being hit in the mouth.',
+    ],
+    signature: {
+      confiscate: [
+        '\u201CThat is undeclared. Seized.\u201D',
+        'Pell\u2019s hand shoots out. \u201CContraband. I will need to keep that.\u201D',
+      ],
+      crane: [
+        '\u201CCrane four, drop the inspection lot.\u201D A crate swings out overhead.',
+        'Pell waves his baton at the crane cab. Something huge lets go above you.',
+      ],
+    },
+    defeat: [
+      'Pell sits down hard on a crate. His deputies carry him into the tower base.',
+      '\u201CMark it damaged in transit,\u201D Pell wheezes, and passes out.',
+      'Customs officers drag him off by the belt. His stamp rolls away across the pad.',
+    ],
+    firstDefeat: [
+      'Pell is on his back by the crate queue. His scanner is still on, pointed at a crate.',
+      'The screen shows heat. Forty warm shapes lying in rows, in a crate stamped Kessa Yard.',
+      '\u201CIt reads for contraband. It reads warm. They all read warm.\u201D He won\u2019t look at it.',
+      '\u201CI don\u2019t open them. Nobody opens them. You stamp it and it goes up.\u201D',
+    ],
+    victoryNote: 'The yard crates read warm on the customs scanner. Pell stamps them anyway. Nobody opens them.',
+  },
+
+  gantry: {
+    intro: [
+      'The Walker swings off the gantry. The cab radio: \u201CNot you again. Please just go home.\u201D',
+      'A new hook on the arm, the paint still tacky. \u201CSorry. Sorry about this.\u201D',
+      'The radio clicks on. \u201CThey patched it overnight. They always patch it.\u201D',
+    ],
+    firstIntro: [
+      'A cargo walker steps off the gantry, hook swinging. The cab radio crackles. \u201CSorry.\u201D',
+      '\u201CLoad coming over. Mind your head.\u201D The voice is from the yard. You can tell.',
+    ],
+    phase: {
+      75: [
+        '\u201CIt\u2019s taking the controls back. That one wasn\u2019t me.\u201D',
+        'The hook swings wide. The radio: \u201CGet under the arm. It can\u2019t see under the arm.\u201D',
+      ],
+      50: [
+        'The Gantry Walker drops its load and turns all the way round.',
+        '\u201COverride. Override.\u201D The driver: \u201CIt\u2019s locked me out. It\u2019s all it now.\u201D',
+      ],
+      25: [
+        'Fluid sprays from a knee. On the radio: \u201CKeep going. I\u2019ve got nine days anyway.\u201D',
+        '\u201CHit the cab! I\u2019ll duck! Just hit the cab!\u201D',
+      ],
+    },
+    taunt: [
+      '\u201CStay down, please. It stops if you stay down.\u201D',
+      '\u201CLOAD SECURED,\u201D says the Walker, in a voice that isn\u2019t the driver\u2019s.',
+      'The radio, very quietly: \u201CI\u2019m so sorry. Please don\u2019t get up.\u201D',
+    ],
+    playerLow: [
+      'The wind under the gantry is cold. The cable sings above you.',
+      'The hook goes past your head close enough to hear. You count to two.',
+      'Somebody on the radio is praying. It might be the driver. It might be you.',
+    ],
+    signature: {
+      anchor: [
+        'The magnetic clamp hums and swings for you. \u201CSorry. Sorry.\u201D',
+        '\u201CCLAMPING.\u201D Your belt buckle drags toward the arm.',
+      ],
+      overtime: [
+        'Hook and clamp swing together. The radio: \u201CWatch it!\u201D',
+        '\u201CIt\u2019s doing the double. Get down!\u201D',
+      ],
+    },
+    defeat: [
+      'The Walker sits down on its haunches. The cab stays shut till the tower crew arrive.',
+      '\u201CThanks,\u201D says the radio, as the Walker topples. A tower crew is already running.',
+      'It folds up under the gantry. You can hear the driver breathing on the radio.',
+    ],
+    firstDefeat: [
+      'The Walker goes over at the foot of the Control Tower. Two taps on the cab door.',
+      'The driver climbs out and looks straight up at the cable, and keeps looking.',
+      '\u201CKey\u2019s good for a year. Then you\u2019re freight like anyone. I\u2019ve got nine days.\u201D',
+      'They walk off across the pad without asking which way the gate is.',
+    ],
+    victoryNote: 'The Walker\u2019s key buys a year off the list. Then its drivers go up the lift as freight too.',
+  },
+
+  // The last boss of the game. His scene is where the through-line ends: they are alive, the lift is the road, and it stops.
+  imre: {
+    intro: [
+      '\u201CBack at the top. Few people see it twice.\u201D Imre does not turn round.',
+      'A new seam in the white armour. \u201CThe surgeons up here are very good.\u201D',
+      '\u201CYou came the long way again. The cable is quicker. Ask anyone in the ledger.\u201D',
+    ],
+    firstIntro: [
+      'Director Imre stands at the glass with his back to you. \u201CCome and look at it first.\u201D',
+      'Far below, Kessa Yard is a smudge of furnace light. \u201CThat is all of it. It is very small.\u201D',
+      '\u201CI have run this cable for twenty years. Nobody has come up it uninvited. Until you.\u201D',
+    ],
+    phase: {
+      75: [
+        '\u201CGood. I wanted to see what the yard makes now.\u201D',
+        'Imre glances at a scorch on his shield arm. \u201CNobody has marked this armour before.\u201D',
+      ],
+      50: [
+        'Imre turns away from the glass at last.',
+        '\u201CVery well. Let us not pretend this is a negotiation.\u201D',
+      ],
+      25: [
+        '\u201CSeal the deck.\u201D The shield gutters out on his arm. He does not look at it.',
+        '\u201CIf I fall, the cable stops. Think about who is at the top of it.\u201D',
+      ],
+    },
+    taunt: [
+      '\u201CLie still. You can see the whole yard from the floor too.\u201D',
+      '\u201CYou are very tired. Everyone from the yard is tired. It is how we know them.\u201D',
+      '\u201CThere is no shame in it. Everyone ends up on the cable.\u201D',
+    ],
+    playerLow: [
+      'Through the glass the yard is so small you could cover it with your hand.',
+      'Your blood is bright on the white deck. Somebody will have to clean it.',
+      'The cable hums under your feet. Somewhere up it, people are listening to it too.',
+    ],
+    signature: {
+      shutter: [
+        'A disc of light opens off his forearm. \u201CShall we be civil?\u201D',
+        'The shield projector hums up. Your sights slide off it.',
+      ],
+      siege: [
+        'Imre touches his wrist. \u201CStation, this is the deck. One round, please.\u201D',
+        'Something far up the cable turns to look at you.',
+      ],
+    },
+    defeat: [
+      'Imre kneels on the white deck. His staff carry him to the station car.',
+      '\u201CBring the car down,\u201D Imre says, very calmly, and his guard lift him into it.',
+      'His guards have him in a lift car before you reach the glass. It climbs.',
+    ],
+    firstDefeat: [
+      'Imre sits against the glass with the whole yard behind him. He looks smaller than it.',
+      '\u201CThe ledger is in the case. Ostrane writes it, I keep it.\u201D Every name taken, alive, and where.',
+      'On the first page, a column of your cell\u2019s dead, headed Paid.',
+      '\u201CStop the cable and nobody else goes up. Nobody comes back down. They are all up there.\u201D',
+      'You find the brake. It takes both hands. Far above you, a lift car stops and waits.',
+    ],
+    victoryNote: 'Everyone taken is alive, and the ledger says where. The lift is the only road to them.',
+  },
 };
 
 const lookup = (id, key, map) => {
@@ -770,10 +1313,10 @@ export const CODEX = [
     'Foundry hands say they can tell when it has been spliced. They say it\u2019s worse when they can\u2019t.',
   ] },
   { id: 'booth', title: 'The Control Booth',
-    unlock: { kind: 'boss', id: 'crawler', map: 'foundry' }, hint: 'Clear the Foundry Works.',
+    unlock: { kind: 'boss', id: 'hale', map: 'foundry' }, hint: 'Clear the Foundry Works.',
     text: [
     'One chair, and one dial per furnace, all of them set below a third.',
-    'The shortfall the yard is punished for gets decided here each morning by a technician on a good wage.',
+    'The shortfall the yard is punished for gets set here each morning, to a number that comes down the cable.',
     'Some of the best casters in the system, and they were never going to make their number.',
   ] },
   { id: 'roster', title: 'The Roster',
@@ -791,16 +1334,16 @@ export const CODEX = [
     '\u201CHate me for it after, like plenty on that wall did.\u201D',
   ] },
   { id: 'paid', title: 'Paid',
-    unlock: { kind: 'boss', id: 'ostrane', map: 'detention' }, hint: 'Clear the Detention Complex.',
+    unlock: { kind: 'boss', id: 'venn', map: 'detention' }, hint: 'Clear the Detention Complex.',
     text: [
     'A raider killed on Directorate ground comes off the yard\u2019s number for the quarter.',
     'Cass found that line in a stolen audit in the first year, and has told nobody.',
     'Somewhere in the yard there\u2019s a neighbour for every name on that wall, still going to work.',
   ] },
   { id: 'ledger', title: 'The Ledger',
-    unlock: { kind: 'boss', id: 'ostrane', map: 'port' }, hint: 'Clear the Orbital Lift Port.',
+    unlock: { kind: 'boss', id: 'imre', map: 'port' }, hint: 'Clear the Orbital Lift Port.',
     text: [
-    'Ostrane kept it on paper, because paper can\u2019t be sliced.',
+    'Ostrane wrote it on paper, because paper can\u2019t be sliced, and Director Imre kept it at the top of the lift.',
     'Every person ever lifted out of Kessa Yard is in it, with the place they were sold to and the price.',
     'Juno, who flew the lift before they tore off her patch, has started marking routes in the margins.',
   ] },

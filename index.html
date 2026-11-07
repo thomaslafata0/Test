@@ -1465,6 +1465,30 @@ html.calm .btn:active, html.calm .door:active, html.calm .tab:active, html.calm 
 .modal:focus, [role="dialog"]:focus, [role="alertdialog"]:focus { outline: none; }
 .feat-filter { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0; }
 @media (pointer: coarse) { .actions .btn:disabled, .skills .btn:disabled, .items .btn:disabled { pointer-events: none; } }
+
+/* What's new */
+.news { max-width: 760px; padding: 0; overflow-x: hidden; max-height: calc(100dvh - 32px); overflow-y: auto; }
+.news-hero { position: relative; min-height: 170px; display: flex; align-items: flex-end; padding: 18px 22px; background: linear-gradient(180deg, #0b0e1100 30%, #0b0e11f2 100%), url(bg/port_8.png) center 40% / cover, url(bg/port_6.png) center 40% / cover; border-bottom: 1px solid var(--line); image-rendering: pixelated; }
+.news-hero h2 { margin: 2px 0 4px; font-size: 2rem; color: var(--sodium); text-shadow: 0 2px 10px #000; }
+.news-hero p { margin: 0; max-width: 46ch; text-shadow: 0 1px 6px #000; }
+.news-bosses { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 14px 18px 4px; }
+.news-boss { margin: 0; display: grid; justify-items: center; gap: 4px; text-align: center; }
+.news-boss img, .news-face { width: 96px; height: 96px; object-fit: contain; image-rendering: pixelated; background: radial-gradient(circle at 50% 60%, #e8973a33, #0000 70%); border: 1px solid var(--line); }
+.news-face.blank { display: grid; place-items: center; }
+.news-boss figcaption { display: grid; font-size: .78rem; line-height: 1.2; } .news-boss figcaption span { color: var(--muted); }
+.news-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px; padding: 14px 18px; }
+.news-item { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; }
+.news-item b { display: block; font-family: var(--display); text-transform: uppercase; letter-spacing: .03em; font-size: .95rem; }
+.news-item span { color: var(--muted); font-size: .85rem; line-height: 1.35; }
+.news-go { position: sticky; bottom: 0; padding: 10px 18px 14px; justify-content: flex-end; background: linear-gradient(180deg, #0000, var(--panel) 35%); }
+@media (max-width: 640px) { .news-grid { grid-template-columns: minmax(0, 1fr); } .news-bosses { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (orientation: landscape) and (max-height: 600px), (orientation: landscape) and (pointer: coarse) and (max-height: 820px) {
+  .news { max-height: calc(100dvh - 16px); overflow-y: auto; }
+  .news-hero { min-height: 92px; padding: 10px 14px; } .news-hero h2 { font-size: 1.4rem; }
+  .news-bosses { grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 8px 14px 0; } .news-boss img, .news-face { width: 64px; height: 64px; }
+  .news-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; padding: 8px 14px; } .news-item span { font-size: 12px; }
+  .news-go { padding: 8px 14px 8px; }
+}
 </style>
 
 <div class="rotate-note"><b>Turn your phone sideways</b><span class="muted">Cinder Cell plays in landscape.</span><div><button class="btn" onclick="this.closest('.rotate-note').remove()">Play upright anyway</button></div></div>
@@ -1475,7 +1499,7 @@ import * as D from './data.js';
 import * as E from './engine.js';
 import { fallenLine, BOSS_MOVES } from './lore.js';
 import { portraitURL } from './portraits.js';
-import { Stage, loadSheets, onArtChange, preferOpArt, sheetOf, sheetStill, setLookSheets, setCalm as setStageCalm } from './stage.js';
+import { ensureSheet as ensureArt, Stage, loadSheets, onArtChange, preferOpArt, sheetOf, sheetStill, setLookSheets, setCalm as setStageCalm } from './stage.js';
 import * as A from './audio.js';
 import { iconURL, gearIconKey } from './icons.js';
 import { Town, SHOPS, setCalm as setTownCalm } from './yard.js';
@@ -1498,6 +1522,9 @@ function shareOrCopy(text, done) {
 import { BODIES, HAIR_FOR, sexOf, setOpSheets, HAIR, HAIR_NAMES, SKINS, HAIRS, defaultLook, loadLayers, hasLayers, lookStill, lookBattleStill, lookPortrait, townSheets, battleSheet, weaponLayer } from './look.js';
 
 const SAVE_KEY = 'cinder-cell-save-v1';
+const oldSeason = (s) => !!(s && s.meta && (s.meta.season || 1) < E.SEASON);
+const NEWS_KEY = 'cinder-cell-news', NEWS_ID = 'season2';
+let seasonFresh = false;
 const rng = Math.random;
 const S = D.SETTING;
 let state;
@@ -1692,6 +1719,7 @@ function cloudStart() {
 }
 function adoptSave(data, rev, code) {
   const parsed = JSON.parse(data);
+  if (oldSeason(parsed)) { toast = 'That save is from before the season reset, so it can\u2019t be loaded.'; return false; }
   state = E.migrate(parsed, rng);
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) {}
   lastBody = bodyOf(state);
@@ -2184,6 +2212,7 @@ function titleScreen() {
         <button class="btn big" data-a="modal" data-v="feats">Achievements</button>
         <button class="btn big" data-a="modal" data-v="codex">${codexLabel()}</button>
         <button class="btn big" data-a="modal" data-v="manual">Field manual</button>
+        <button class="btn big" data-a="modal" data-v="news">What\u2019s new</button>
         <button class="btn big" data-a="modal" data-v="settings">Settings &amp; co-op</button>
       </div>
       ${m.operatives ? (() => { const best = (m.board || [])[0]; return `<dl class="kv title-stats"><dt>Deepest</dt><dd>Sector ${m.bestSector}</dd><dt>Raids</dt><dd>${m.stats.raids}</dd><dt>${esc(S.meta)}</dt><dd>${m.resolve}</dd>${best ? `<dt>Best operative</dt><dd>${best.score.toLocaleString()} points</dd>` : ''}</dl>`; })() : ''}
@@ -2199,7 +2228,7 @@ function introScreen() {
       <li><b>Raid</b> one of four Directorate districts. Pick your doors, fight, push deeper or slip out with the credits.</li>
       <li><b>Die</b> and you lose the operative: level, gear, implants, contraband, credits.</li>
       <li><b>Resolve</b> survives. It\u2019s scarce: earned from new sectors, bosses, contracts and brave choices. Spend it on training every future operative keeps.</li>
-      <li><b>Liberate</b> all four districts by beating their sector-15 bosses.</li>
+      <li><b>Liberate</b> all four districts by beating their sector-20 bosses.</li>
     </ol>
     <div class="btnrow"><button class="btn primary big" data-a="begin">Build your first operative</button><button class="btn big" data-a="modal" data-v="manual">Field manual</button></div>
   </section>`;
@@ -2720,7 +2749,7 @@ function character() {
       <div style="display:grid;gap:14px;align-content:start;min-width:0">
         <span class="label">Marks \u00B7 ${(c.marks || []).length} / 5 \u00B7 earned in orbit</span>${(c.marks || []).length ? `<div class="perk-list">${c.marks.map((id) => { const mk = D.MARKS[id]; return `<div class="perk-mini rare">${ico(`mark:${id}`, 'sm2')}<div><b>${esc(mk.name)}</b><span>${esc(mk.desc)}</span></div></div>`; }).join('')}</div>` : '<p class="muted">None yet. Fly the shuttle (Orbit, after curfew) on the harder runs.</p>'}
         ${(() => { const fb = E.featBuffs(m), t = Object.entries(fb).filter(([k, v]) => k !== 'vs' && v > 0), vs = Object.keys(fb.vs).length; return `<span class="label">Achievements \u00B7 the cell\u2019s permanent edges</span>${t.length || vs ? `<div class="chips">${t.map(([k, v]) => `<span class="chip good">+${(v * 100).toFixed(1).replace(/\.0$/, '')}% ${esc(E.BUFF_NAMES[k])}</span>`).join('')}${vs ? `<span class="chip good">bonus damage vs ${vs} enemy type${vs > 1 ? 's' : ''}</span>` : ''}<button class="btn" data-a="modal" data-v="feats" style="margin-left:4px">All feats</button></div>` : '<p class="muted">No tiers yet. Everything the cell does counts: see <button class="btn" data-a="modal" data-v="feats">Feats</button>.</p>'}`; })()}
-        <span class="label">Contraband \u00B7 ${c.perks.reduce((t, id) => t + E.perkStacks(c, id), 0)} carried</span>${c.perks.length ? `<div class="perk-list">${c.perks.map((id) => { const pk = { ...E.perkById(id), name: E.perkName(id, E.perkStacks(c, id)), desc: E.perkText(id, E.perkStacks(c, id)) }; return `<div class="perk-mini ${pk.rare ? 'rare' : ''}">${ico(`perk:${id}`, 'sm2')}<div><b>${esc(pk.name)}</b><span>${esc(pk.desc)}</span></div></div>`; }).join('')}</div>` : '<p class="muted">None yet. Bosses always carry it; other enemies sometimes do.</p>'}
+        <span class="label">Contraband \u00B7 ${c.perks.reduce((t, id) => t + E.perkStacks(c, id), 0)} carried \u00B7 up to ${E.perkCap(c)} of each</span>${E.perkCap(c) < E.PERK_CAP_MAX ? `<div class="set-row"><span class="muted small">Marrow can hide more on you: carry ${E.perkCap(c) + 1} of each.</span><button class="btn" data-a="perkcap" ${c.credits < E.perkCapCost(state) ? 'disabled' : ''}>${cr(E.perkCapCost(state))}</button></div>` : ''}${c.perks.length ? `<div class="perk-list">${c.perks.map((id) => { const pk = { ...E.perkById(id), name: E.perkName(id, E.perkStacks(c, id)), desc: E.perkText(id, E.perkStacks(c, id)) }; return `<div class="perk-mini ${pk.rare ? 'rare' : ''}">${ico(`perk:${id}`, 'sm2')}<div><b>${esc(pk.name)}</b><span>${esc(pk.desc)}</span></div></div>`; }).join('')}</div>` : '<p class="muted">None yet. Bosses always carry it; other enemies sometimes do.</p>'}
       </div>
       <div style="display:grid;gap:14px;align-content:start;min-width:0">
         <span class="label">Choices that changed you</span><div class="wall">${history}</div>
@@ -2734,10 +2763,10 @@ function gate() {
   const sel = E.mapById(state.gateMap || 'garrison'), tab = state.missionTab || 'deploy';
   const open = D.MAPS.filter((mp) => E.mapUnlocked(state, mp)), locked = D.MAPS.filter((mp) => !E.mapUnlocked(state, mp));
   const cards = open.map((mp) => {
-    const lib = m.liberated[mp.id];
-    return `<button class="map-card ${mp.id === sel.id ? 'on' : ''} theme-${mp.theme}" data-a="pickmap" data-v="${mp.id}" aria-pressed="${mp.id === sel.id}"><b>${esc(mp.name)}</b><span class="label">${lib ? '<span class="lib">Liberated</span>' : `Best: sector ${m.bestByMap[mp.id] || 0} / 15`}</span></button>`;
+    const best = (c.maps[mp.id] || {}).deepest || 0, lib = best >= E.MAX_SECTOR;
+    return `<button class="map-card ${mp.id === sel.id ? 'on' : ''} theme-${mp.theme}" data-a="pickmap" data-v="${mp.id}" aria-pressed="${mp.id === sel.id}"><b>${esc(mp.name)}</b><span class="label">${lib ? '<span class="lib">Liberated</span>' : `Cleared: ${best} / ${E.MAX_SECTOR}`}</span></button>`;
   }).join('');
-  const traits = [sel.credits !== 1 ? `${sel.credits > 1 ? '+' : ''}${pct(sel.credits - 1)} credits` : null, sel.level ? `enemies +${sel.level} lv` : null, (c.maps[sel.id] || {}).deepest ? `this operative: sector ${c.maps[sel.id].deepest}` : null].filter(Boolean);
+  const traits = [sel.credits !== 1 ? `${sel.credits > 1 ? '+' : ''}${pct(sel.credits - 1)} credits` : null, sel.offset ? `starts as hard as Garrison sector ${sel.offset + 1}` : null].filter(Boolean);
   const ins = [...E.insertionsAt(c, sel.id, m.threat || 0)].sort((a, b) => a - b);
   // Under 80% health the dispatcher says so, with the clinic one tap away. Deploying hurt is still allowed.
   const hurt = c.hp < st.maxHp * 0.8, hc = E.healCost(state), canHeal = c.credits >= hc;
@@ -2754,7 +2783,7 @@ function gate() {
     : `<div class="deploy-go ${hurt && canHeal ? 'hurt' : ''}">${warn}${E.isCoop(state) ? `<span class="muted" style="font-size:.84rem">${state.guestReady ? `${esc(state.guestName || 'Your friend')} is ready.` : `Waiting for ${esc(state.guestName || 'your friend')} to press Ready.`}</span>` : ''}<span class="label">${ins.length > 1 ? 'Deploy \u00B7 pick where to start' : 'Deploy'}</span><div class="ins">${ins.map((n) => `<button class="btn big ${n === ins[ins.length - 1] ? 'primary' : ''}" data-a="deploy" data-v="${n}" ${E.isCoop(state) && !state.guestReady ? 'disabled' : ''}><span class="ins-n">Sector ${n}</span> <span class="ins-name">${esc(E.sectorName(n, sel.id))}</span></button>`).join('')}</div>${ins.length === 1 ? '<span class="muted ins-hint">Beat a boss to start deeper next time.</span>' : ''}</div>`;
   return `<nav class="tabs pop-tabs">${tabBtn('deploy', 'Deploy')}${tabBtn('contracts', `Contracts ${(m.contracts || []).length}`)}</nav>
     ${tab === 'contracts' ? `<div class="contracts">${contracts || '<p class="muted">No jobs right now.</p>'}</div>` : `<div class="gate">
-      <div class="gate-maps"><div class="maps">${cards}</div>${locked.length ? `<p class="muted maps-locked">Locked: ${locked.map((mp) => `${esc(mp.name)} (reach sector ${mp.unlock})`).join(', ')}</p>` : ''}</div>
+      <div class="gate-maps"><div class="maps">${cards}</div>${locked.length ? `<p class="muted maps-locked">Locked: ${locked.map((mp) => `${esc(mp.name)} (clear ${Object.entries(mp.unlock).map(([id, n]) => `${esc(E.mapById(id).name)} ${n}`).join(', ')})`).join(', ')}</p>` : ''}</div>
       <div class="gate-brief"><span class="label">${esc(sel.name)} \u00B7 what to expect</span><b class="mech-title">${esc(sel.mechanic.name)}</b> <span class="mech-line">${esc(sel.mechanic.desc)}</span>${traits.length ? `<div class="chips">${traits.map((x) => `<span class="chip">${esc(x)}</span>`).join('')}</div>` : ''}${threat}</div>
       ${go}
     </div>`}`;
@@ -3017,10 +3046,33 @@ function sealedLabel(x) {
   if (u.kind === 'boss') return u.map ? `${E.mapById(u.map).name} file` : 'A warden\u2019s file';
   return 'Cell record';
 }
+// What changed this season: shown once on opening the game, and from the menu.
+function newsView() {
+  const finale = [['ostrane', 'Garrison'], ['hale', 'Foundry'], ['venn', 'Detention'], ['imre', 'Lift Port']];
+  for (const [id] of finale) if (!sheetOf(id)) ensureArt(id); // their portraits fill in when the art arrives
+  const face = (id, where) => { const en = D.ENEMIES[id]; if (!en) return ''; const img = portraitImg({ id, name: en.name }, 'news-face'); return `<figure class="news-boss">${img || `<div class="news-face blank">${ico('room:boss', 'lg')}</div>`}<figcaption><b>${esc(en.name)}</b><span>${esc(where)} \u00b7 sector 20</span></figcaption></figure>`; };
+  const item = (icon, title, text) => `<div class="news-item">${ico(icon, 'md')}<div><b>${title}</b><span>${text}</span></div></div>`;
+  return `<div class="modal-wrap news-wrap" data-a="closemodal"><div class="modal news" role="dialog" aria-modal="true" aria-label="What's new">
+    <div class="news-hero"><div class="news-hero-text"><span class="label">Season 2</span><h2>The deep districts</h2><p>Everyone starts fresh: new operatives, a new cell and a new leaderboard.</p></div></div>
+    <div class="news-bosses">${finale.map(([id, w]) => face(id, w)).join('')}</div>
+    <div class="news-grid">
+      ${item('room:boss', '9 new bosses, 20 sectors', 'Every district now runs to sector 20 with four bosses of its own. Nobody fights the same boss twice across districts.')}
+      ${item('room:elite', 'Districts that build on each other', 'The Foundry opens at Garrison sector 5, Detention after Garrison 10 and Foundry 5, the Lift Port after 15, 10 and 5. Each one starts harder than the last.')}
+      ${item('skill:smash', 'Stronger classes, a reason to Strike', 'Every background has a real edge now. Strike hits 25% harder and stops repairs; Shoot is the safe option.')}
+      ${item('perk:grudge', 'Tougher fights', 'Enemies take more hits, especially when you re-clear old ground, and bosses never run.')}
+      ${item('perk:chit', 'Credits are harder to come by', 'Deep rooms and strongboxes pay less. Contraband stacks to 3, and Marrow sells more room, up to 99.')}
+      ${item('room:locker', 'Late-game gear', 'The market follows how deep your operative has been and your threat level, with bench work up to +8.')}
+      ${item('train:spd', 'Co-op auto-accept', 'Follow your partner\u2019s votes, or both turn it on and watch the raid play itself.')}
+      ${item('room:rest', 'A new yard', 'An open square you can see whole, the Lantern casino, and a proper hideout.')}
+    </div>
+    <div class="btnrow news-go"><button class="btn primary big" data-a="newsok">Start the new season</button></div>
+  </div></div>`;
+}
 function modalView() {
   if (!modal) return '';
   if (['bar', 'wheel', 'orbit', 'ventures'].includes(modal)) return downtimeView();
   const p = A.getPrefs();
+  if (modal === 'news') return newsView();
   if (modal === 'menu') return `<div class="modal-wrap" data-a="closemodal"><div class="modal menu-modal" role="dialog" aria-modal="true" aria-label="Menu">
     <div class="pop-head"><h2>Menu</h2><button class="tool close" data-a="closemodal" aria-label="Close">Close</button></div>
     <div class="menu-grid"><button class="btn" data-a="modal" data-v="manual">Manual</button><button class="btn" data-a="sound">${p.muted ? 'Sound off' : 'Sound on'}</button><button class="btn" data-a="modal" data-v="board">Leaderboard</button><button class="btn" data-a="modal" data-v="feats">Achievements</button><button class="btn" data-a="modal" data-v="codex">${codexLabel()}</button><button class="btn" data-a="modal" data-v="settings">Settings</button>${devOn && !isGuest() ? '<button class="btn" data-a="modal" data-v="dev">Dev</button>' : ''}</div></div></div>`;
@@ -3036,7 +3088,7 @@ function modalView() {
         <li><b>Defend</b> heavy hits, <b>Strike</b> enemies in cover, heal with a <b>Stim</b> before you need it.</li>
         <li>Between sectors, push on or extract. Dying loses what you carry, but Resolve stays. Spend it on Character.</li></ul></section>
       <section><h3>Controls</h3><p>Phone: tap to walk or pick a sign; hold any button to read it. Keyboard: <b>WASD</b> walk, <b>E</b> talk, <b>Tab</b> battle mode, <b>A F D S R</b> shoot, strike, defend, stim, run. Each button shows its key; skill keys follow the skill\u2019s slot, so they can change with your build.</p></section>
-      <section><h3>The goal</h3><p>Beat the sector 15 boss in all four districts. Operatives die; the cell remembers.</p></section>
+      <section><h3>The goal</h3><p>Beat the sector 20 boss in all four districts. Each district opens once your operative has cleared far enough into the earlier ones, and each starts harder than the last. A new operative starts from the Garrison again; the cell remembers the rest.</p></section>
       <section><h3>A raid</h3><p>Three rooms per sector, choosing one of two doors each time. A boss every fifth sector. After each sector, push deeper or extract.</p></section>
       <section><h3>Getting out</h3><p>Credits and XP stay <b>unsecured</b> until you beat a boss or leave, and levels only come then. Extracting costs a share of what\u2019s unsecured, by sector: 1, 6, 11: 80%. 2, 7, 12: 65%. 3, 8, 13: 50%. 4, 9, 14: 40%. Nothing after a boss. So 200 credits and 40 XP banked at sector 2 pays 70 credits and 14 XP. Risky extraction can also fail (${Math.round(E.TUNE.extractFail * 100)}%), and then you go one sector deeper. Running mid-fight costs 90% to 60%. What you walked in with is safe.</p></section>
       <section><h3>Your turn</h3><ul>
@@ -3833,13 +3885,14 @@ async function fight(v, who = 0) {
   }
 }
 
-const BUY = new Set(['droneswitch', 'droneup', 'droneupfree', 'dronerepair', 'dronepick', 'restock', 'respec', 'buygear', 'upgradegear', 'reroll', 'item', 'upgrade', 'implant', 'heal', 'train', 'cell', 'spend', 'equipheirloom']);
+const BUY = new Set(['perkcap', 'droneswitch', 'droneup', 'droneupfree', 'dronerepair', 'dronepick', 'restock', 'respec', 'buygear', 'upgradegear', 'reroll', 'item', 'upgrade', 'implant', 'heal', 'train', 'cell', 'spend', 'equipheirloom']);
 function act(a, v, k) {
   A.unlock();
   if (a === 'autostop') { stopAuto(); return; }
   if (auto) return;
   if (a === 'scenenext') return sceneNext();
   if (a === 'sceneskip') return sceneEnd();
+  if (a === 'closemodal' && modal === 'news') { try { localStorage.setItem(NEWS_KEY, NEWS_ID); } catch (e) {} }
   if (a === 'closemodal') { if (modal === 'codex' && !isGuest()) state.meta.codexNew = []; modal = null; confirmReset = false; state.report = null; render(); return; }
   if (a === 'stimprompt') {
     stimPrompt = false; stimPromptDone = true; A.play('click');
@@ -3914,7 +3967,7 @@ function applyAct(a, v, k) {
     case 'dronerepair': ok = E.repairDrone(state); break;
     case 'look': state.draft.look = state.draft.look || defaultLook(); state.draft.look[v] = v === 'skin' || v === 'hairColor' ? +k : k; if (v === 'body') state.draft.look.hair = HAIR_FOR[sexOf(state.draft.look)]; sfx('click'); break;
     case 'savecode': { const code = E.exportSave(state); state.report = code; try { navigator.clipboard.writeText(code).then(() => { toast = 'Save code copied.'; render(); }).catch(() => {}); } catch (e) {} sfx('click'); break; }
-    case 'loadcode': { const t = (document.getElementById('load-code') || {}).value || ''; const loaded = E.importSave(t, rng); if (loaded) { state = loaded; modal = null; titleOpen = false; toast = 'Save loaded.'; sfx('perk'); } else { toast = 'That is not a Cinder Cell save code.'; sfx('denied'); } break; }
+    case 'loadcode': { const t = (document.getElementById('load-code') || {}).value || ''; const loaded = E.importSave(t, rng); if (loaded && oldSeason(loaded)) { toast = 'That save is from before the season reset.'; sfx('denied'); break; } if (loaded) { state = loaded; modal = null; titleOpen = false; toast = 'Save loaded.'; sfx('perk'); } else { toast = 'That is not a Cinder Cell save code.'; sfx('denied'); } break; }
     case 'coophost': {
       const pre = getCoopPrefs(), code = pre.hostCode || makeCode(); // the same room each time, so an old invite link keeps working
       setCoopPrefs({ name: (document.getElementById('coop-name') || {}).value || '', relay: ((document.getElementById('coop-relay') || {}).value || '').trim(), hostCode: code });
@@ -3952,6 +4005,7 @@ function applyAct(a, v, k) {
     case 'coopjoin': { setCoopPrefs({ name: (document.getElementById('coop-name') || {}).value || '', relay: ((document.getElementById('coop-relay') || {}).value || '').trim() }); const code = ((document.getElementById('coop-code') || {}).value || '').trim().toUpperCase(); if (code.length >= 4) startCoop('guest', code, !getCoopPrefs().relay); else toast = 'Enter the room code.'; break; }
     case 'coopleave': leaveCoop(); return;
     case 'coopready': state.guestReady = !state.guestReady; if (net) net.send({ t: 'ready', on: state.guestReady }); sfx('click'); break;
+    case 'newsok': try { localStorage.setItem(NEWS_KEY, NEWS_ID); } catch (e) {} modal = null; sfx('click'); break;
     case 'modal': modal = v; if (v === 'board') loadBoard(); sfx('click'); break;
     case 'drink': ok = E.buyDrink(state, v); if (ok) { toast = `KEG-7 slides you a ${E.drinkOf(state.char).name}.`; sfx('perk'); } break;
     case 'bet': (state.wheel || (state.wheel = { bet: 'red', stake: 10, pick: 7 })).bet = v; sfx('click'); break;
@@ -4042,6 +4096,7 @@ function applyAct(a, v, k) {
     case 'markettab': state.marketTab = v; sfx('click'); break;
     case 'chartab': state.charTab = v; sfx('click'); break;
     case 'train': ok = E.train(state, v); break;
+    case 'perkcap': ok = E.buyPerkCap(state); if (ok) sfx('buy'); break;
     case 'cell': ok = E.buyCell(state, v); break;
     case 'spend': ok = E.spendAttr(state, v); break;
     case 'respec': ok = E.respec(state); break;
@@ -4167,7 +4222,7 @@ function artArrived(id) {
   const all = id === '*', ops = all || id.startsWith('op_'), drones = all || id.startsWith('drone_');
   if (drones) for (const k of D.DRONE_ORDER) setDroneArt(k, sheetOf(`drone_${k}`));
   if (ops) { setOpSheets(sheetOf('op_m'), sheetOf('op_f')); lookKey = ''; applyLook(); }
-  if (!ops && !drones) return;
+  if (!ops && !drones) { if (modal === 'news') { clearTimeout(artRenderTimer); artRenderTimer = setTimeout(render, 120); } return; }
   clearTimeout(artRenderTimer);
   // Only where a still of them is on show. Anywhere else a re-render could cut an animation short for nothing.
   artRenderTimer = setTimeout(() => { if (!busy && !auto && state && (state.screen === 'create' || state.popup) && !(state.char && state.char.payout)) render(); }, 80);
@@ -4184,11 +4239,14 @@ async function start(data) {
       else if (o) { cloud.rev = o.rev; storeCloud(); }
     } catch (e) {}
   }
+  // A new season: a save from before it is kept on this device under its own key, and the game starts over.
+  if (saved && !(data && data.state) && oldSeason(saved)) { try { localStorage.setItem('cinder-cell-season1', JSON.stringify(saved)); } catch (e) {} saved = null; pulledToast = null; seasonFresh = true; }
   applyUi();
   state = E.migrate(saved, rng);
   delete state.events;
   lastBody = bodyOf(state);
   if (pulledToast) toast = pulledToast;
+  try { if (localStorage.getItem(NEWS_KEY) !== NEWS_ID && !(data && data.state) && !new URLSearchParams(location.search).get('join') && !navigator.webdriver) modal = 'news'; } catch (e) {}
   cloudStart();
   if (state.screen === 'create' && !state.draft) state.draft = E.newDraft(state.meta, rng);
   titleOpen = !(data && data.state);

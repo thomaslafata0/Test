@@ -124,7 +124,7 @@ for (let k = 0; k < CAMPAIGNS; k++) {
     if (life > 0) E.recruit(s, rng);
     createBot(s, rng);
     playLife(s, rng, byLife[life]);
-    for (const b of [5, 10, 15]) if (!seen[b] && Math.max(0, ...Object.values(s.meta.bestByMap)) >= b) { seen[b] = 1; firstBoss[b].push(life + 1); }
+    for (const b of [5, 10, 15, 20]) if (!seen[b] && Math.max(0, ...Object.values(s.meta.bestByMap)) >= b) { seen[b] = 1; firstBoss[b].push(life + 1); }
   }
   raidsTotal += s.meta.stats.raids;
 }
@@ -135,7 +135,7 @@ for (const i of [0, 1, 2, 4, 9, 14, 19, 29, 39].filter((i) => i < LIVES)) {
   const L = byLife[i];
   console.log(`${String(i + 1).padStart(4)}  ${String(pct(L.deathSectors, 0.5)).padStart(19)}  ${String(pct(L.deathSectors, 0.9)).padStart(3)}  ${avg(L.deployments).padStart(15)}`);
 }
-for (const b of [5, 10, 15]) {
+for (const b of [5, 10, 15, 20]) {
   const arr = firstBoss[b];
   console.log(`Boss sector ${b}: beaten in ${((arr.length / CAMPAIGNS) * 100).toFixed(0)}% of campaigns, median at life ${pct(arr, 0.5) || '-'}`);
 }

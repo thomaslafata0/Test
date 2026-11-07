@@ -38,12 +38,20 @@ export const HARD = [
   { hp: 1.18, price: 1.1 },
   { hp: 1.21, price: 1.12 },
   { hp: 1.25, price: 1.15 },
+  { hp: 1.3, price: 1.18 },
+  { hp: 1.35, price: 1.21 },
+  { hp: 1.4, price: 1.24 },
 ];
-export const hardTier = (sector) => (sector > 10 ? 2 : sector > 5 ? 1 : 0);
+// Sectors 1-20 per district; a later district starts as deep as an earlier one's sector 5, 9 or 13 (`offset`).
+export const MAX_SECTOR = 20;
+export const effSector = (sector, mapId) => sector + ((D.MAPS.find((m) => m.id === mapId) || {}).offset || 0);
+export const hardTier = (sector) => (sector > 25 ? 5 : sector > 20 ? 4 : sector > 15 ? 3 : sector > 10 ? 2 : sector > 5 ? 1 : 0);
+// Money from rooms, events and sector bonuses grows slower than the sector: deep runs pay more, not five times more.
+export const payDepth = (r) => 1.5 * Math.pow(effSector(r.sector, r.map), 0.65);
 export const hardAt = (sector) => HARD[hardTier(sector)];
 // In a raid the current sector sets the tier; in the yard, the deepest sector the cell has reached.
 export const hard = (s) => hardAt(s.run ? s.run.sector : (s.meta && s.meta.bestSector) || 0);
-export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.012, bossHp: 2.1, bossAtk: 1.4, enemyAtk: 1.74, enemyHp: 2.047, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 1.5, strAtk: 0.6, agiCrit: 0.05, agiDodge: 0.035, intOverload: 5, chaHesitate: 0.055, chaCredits: 0.05, wanted: 0.025, ambush: 1.5,
+export const TUNE = { hpLin: 0.28, hpQuad: 0.003, atkLin: 0.14, atkQuad: 0.002, bossHp: 2.1, bossAtk: 1.4, enemyAtk: 1.8, enemyHp: 2.4, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 1.5, strAtk: 0.6, agiCrit: 0.05, agiDodge: 0.035, intOverload: 5, chaHesitate: 0.055, chaCredits: 0.05, wanted: 0.025, ambush: 1.5,
   upgradeCost: 60, eliteGear: 0.3, shopLegendary: 0.06, cover: 0.5, agiAtk: 1.2,
   // Enemy strength in sectors 1-5. Nobody levels up during a raid, so a first raid has to be winnable on level-1 stats.
   earlyCurve: [1, 0.95, 0.88, 0.84, 0.85, 0.95, 0.95, 0.95, 0.95, 0.95],
@@ -95,8 +103,10 @@ export function newMeta() {
     fallen: [], contracts: [], liberated: {}, threat: 0, heirloom: null, tips: {}, endingSeen: false, stats: { kills: 0, bosses: 0, raids: 0 }, board: [], boardOut: [], boardV: 2, ship: { hull: 0, guns: 0, shields: 0, engines: 0, cell: [] }, orbitWins: 0, orbitTierWins: {}, feats: { counters: {}, tiers: {}, v: 0 } };
 }
 
+// Season 2 (the 20-sector districts) started everyone over. Older saves are set aside by the page, not migrated.
+export const SEASON = 2;
 export function newGame(rng) {
-  const meta = newMeta();
+  const meta = newMeta(); meta.season = SEASON;
   const s = { v: VERSION, meta, char: null, run: null, screen: 'intro', tab: 'market', log: [], notice: null, outcome: null };
   s.draft = newDraft(meta, rng);
   return s;
@@ -368,16 +378,17 @@ export function rollGear(rng, { slot = null, tierMin = 1, tierMax = 6, odds, fil
   return makeItem(id, pickWeighted(rng, Object.entries(odds)), rng);
 }
 // Black Market rarity odds improve with the cell's deepest sector.
-export function shopOdds(meta) {
-  const b = meta.bestSector || 0;
+export function shopOdds(meta, c = null) {
+  const b = (c ? opDepth(c) : meta.bestSector || 0) + 4 * (meta.threat || 0);
   const legendary = Math.min(TUNE.shopLegendary, 0.004 * b), elite = Math.min(0.16, 0.03 + 0.008 * b), rare = Math.min(0.32, 0.2 + 0.008 * b);
   return { common: 1 - legendary - elite - rare, rare, elite, legendary };
 }
-export const shopBand = (meta) => clamp(1 + Math.floor((meta.bestSector || 0) / 3), 1, 6);
+export const shopBand = (meta, c = null) => clamp(1 + Math.floor(((c ? opDepth(c) : meta.bestSector || 0) + 3 * (meta.threat || 0)) / 3), 1, 6);
 // v5 shop scaling: the floor rises with the band (no more tier-1 junk at sector 12), and past sector 5 Marrow sells
 // pieces already worked on his bench (+1 per 5 sectors, up to +3), priced at 85% of what those upgrades would cost.
-export const shopFloor = (meta) => Math.max(1, shopBand(meta) - 2);
-export const shopLevel = (meta) => clamp(Math.floor((meta.bestSector || 0) / 5), 0, 3);
+export const shopFloor = (meta, c = null) => Math.max(1, shopBand(meta, c) - 2);
+// Past tier 6 the gear itself stops getting better, so Marrow's bench work keeps climbing: deeper ground and higher threat sell higher +levels.
+export const shopLevel = (meta, c = null) => clamp(Math.floor((c ? opDepth(c) : meta.bestSector || 0) / 5) + (meta.threat || 0), 0, D.UPGRADE_MAX - 1);
 function benchWork(it, lvl) {
   let premium = 0;
   for (let i = 0; i < lvl && canUpgrade(it); i++) { premium += upgradeCost(it); it.level += 1; }
@@ -385,7 +396,7 @@ function benchWork(it, lvl) {
   return it;
 }
 export function restockMarket(s, rng) {
-  const c = s.char, odds = shopOdds(s.meta), band = shopBand(s.meta), lo = shopFloor(s.meta), lvl = shopLevel(s.meta);
+  const c = s.char, odds = shopOdds(s.meta, c), band = shopBand(s.meta, c), lo = shopFloor(s.meta, c), lvl = shopLevel(s.meta, c);
   const slots = ['ranged', 'melee', 'head', 'chest', 'legs'];
   c.market = slots.map((slot) => rollGear(rng, { slot, tierMin: lo, tierMax: band, odds }));
   // The sixth piece suits the operative's best attribute (Marrow knows what you like), or is a gadget.
@@ -395,7 +406,7 @@ export function restockMarket(s, rng) {
 }
 // Gear dropped by an elite or boss in this sector.
 function rollLoot(s, rng, e) {
-  const c = s.char, r = s.run, band = clamp(Math.ceil(r.sector / 3), 1, 6);
+  const c = s.char, r = s.run, eff = effSector(r.sector, r.map) + 3 * (r.threat || 0), band = clamp(Math.ceil(eff / 3), 1, 6);
   if (e.boss) {
     const u = D.BOSS_UNIQUE[e.id];
     if (u && !hasUnique(c, D.GEAR[u].unique)) return makeItem(u);
@@ -733,7 +744,7 @@ export function statsOf(meta, c) {
   const common = B.atk + t.atk * D.TRAINING.atk.per + (c.level - 1) + (has(c, 'drill') ? 2 : 0);
   const rMain = (mainStat(gearIn(c, 'ranged')) || { v: 0 }).v, mMain = (mainStat(gearIn(c, 'melee')) || { v: 0 }).v;
   const optic = hasImp(c, 'optic') ? 0.08 : 0, gadget = baseOf(gearIn(c, 'gadget')) || {};
-  const hp = B.hp + t.hp * D.TRAINING.hp.per + (c.level - 1) * 5 + Math.round(str * TUNE.strHp) + (c.background === 'foundry' ? 25 + 3 * (c.level - 1) : 0) + (hasImp(c, 'pain') ? 20 : 0) + gearBonus(c, 'hp');
+  const hp = Math.round(B.hp * 1.25) + t.hp * D.TRAINING.hp.per + (c.level - 1) * 6 + Math.round(str * TUNE.strHp) + (c.background === 'foundry' ? 25 + 3 * (c.level - 1) : 0) + (hasImp(c, 'pain') ? 20 : 0) + gearBonus(c, 'hp');
   const mk = markSum(c), drink = drinkOf(c) || {}, fb = featBuffs(meta), dAtk = drink.atk || 0, dCrit = drink.crit || 0;
   return {
     maxHp: Math.round(hp * (hasTrait(c, 'stalwart') ? 1.12 : 1) * (1 + pv(c, 'ironlung') / 100) * (1 + mk.hp + fb.hp) * (1 + (drink.hp || 0))),
@@ -1095,7 +1106,11 @@ export function addStatus(obj, fresh, statuses, reduce = 0) {
 const outMult = (attackerSt, defenderSt) => (attackerSt.shaken ? 0.75 : 1) * (defenderSt.exposed ? 1.25 : 1);
 
 // ---------- maps ----------
-export const mapUnlocked = (s, map) => s.meta.bestSector >= map.unlock;
+// A district opens when this operative has cleared far enough into the earlier ones. A new operative starts again.
+export const mapUnlocked = (s, map) => Object.entries(map.unlock || {}).every(([id, n]) => !!s.char && ((s.char.maps || {})[id] || {}).deepest >= n);
+// How deep this operative has been anywhere, in Garrison-equivalent sectors (the shop and drops follow it).
+export const opDepth = (c) => Math.max(0, ...Object.entries((c && c.maps) || {}).map(([id, p]) => (p.deepest ? effSector(p.deepest, id) : 0)));
+export const opFreed = (c, mapId) => (((c && c.maps) || {})[mapId] || {}).deepest >= MAX_SECTOR;
 export function mapProgress(c, mapId) {
   if (!c.maps[mapId]) c.maps[mapId] = { insertions: [1], deepest: 0 };
   return c.maps[mapId];
@@ -1112,6 +1127,7 @@ const earnInsertion = (c, mapId, threat, sector) => { const list = insertionsAt(
 export function deploy(s, mapId, startSector, rng) {
   const map = mapById(mapId);
   if (!mapUnlocked(s, map)) return false;
+  s.meta.threat = Math.min(s.meta.threat || 0, maxThreat(s)); // threat levels belong to the operative who freed districts
   if (!insertionsAt(s.char, map.id, s.meta.threat || 0).includes(startSector)) startSector = 1;
   s.run = { startCredits: s.char.credits, map: map.id, sector: startSector, startSector, room: 0, choices: null, enemy: null, nextMod: null, sectorCredits: 0, kills: 0, bosses: 0, cleared: 0, elites: 0,
     alert: 0, allies: 0, vent: 3, turns: 0, threat: s.meta.threat || 0, perkOffer: null, ...freshBag(), cb: {}, actor: 0, acted: {}, round: 0, lastAttacker: 0 };
@@ -1247,8 +1263,8 @@ export function enterRoom(s, idx, rng) {
   const notes = [];
   let text = '';
   if (kind === 'supply' || kind === 'cargo') {
-    const range = kind === 'cargo' ? [20, 30] : [8, 15];
-    const cr = Math.round(randInt(rng, range[0], range[1]) * r.sector * map.credits * creditMult(s));
+    const range = kind === 'cargo' ? [14, 22] : [6, 11];
+    const cr = Math.round(randInt(rng, range[0], range[1]) * payDepth(r) * map.credits * creditMult(s));
     forEachActor(s, (a) => { a.credits += cr; });
     r.sectorCredits += cr; ledger(s, 'rooms', cr); notes.push(`+${cr} ${D.SETTING.cur}${isCoop(s) ? ' each' : ''}`);
     if (kind === 'supply' && rng() < 0.5) {
@@ -1275,7 +1291,7 @@ export function enterRoom(s, idx, rng) {
     text = 'A medic station, abandoned mid-shift. Clean dressings, a full stim rack.';
   } else if (kind === 'vault') {
     const ok = rng() < clamp(0.3 + 0.1 * attr(c, 'int'), 0.3, 0.9);
-    const cr = Math.round(randInt(rng, ok ? 24 : 10, ok ? 36 : 16) * r.sector * map.credits * creditMult(s));
+    const cr = Math.round(randInt(rng, ok ? 15 : 6, ok ? 24 : 10) * payDepth(r) * map.credits * creditMult(s));
     forEachActor(s, (a) => { a.credits += cr; }); r.sectorCredits += cr; ledger(s, 'rooms', cr); notes.push(`+${cr} ${D.SETTING.cur}`);
     if (ok) text = 'The tumblers fall one by one. The strongroom is yours.';
     else { const dmg = Math.round(st.maxHp * 0.15); c.hp = Math.max(1, c.hp - dmg); notes.push(`\u2212${dmg} HP`); text = 'A dye charge goes off in your face. You grab what you can through the smoke.'; }
@@ -1288,7 +1304,7 @@ export function enterRoom(s, idx, rng) {
   } else if (kind === 'bench') {
     const opts = D.SLOT_ORDER.map((sl) => gearIn(c, sl)).filter((it) => canUpgrade(it));
     if (opts.length) { const it = pick(rng, opts); it.level += 1; notes.push(`${itemName(it)}`); text = 'Somebody left the lathe running. You make good use of it.'; }
-    else { const cr = Math.round(randInt(rng, 10, 16) * r.sector * creditMult(s)); c.credits += cr; r.sectorCredits += cr; notes.push(`+${cr} ${D.SETTING.cur}`); text = 'Nothing of yours needs work. You strip the bench for parts and sell them on.'; }
+    else { const cr = Math.round(randInt(rng, 7, 11) * payDepth(r) * creditMult(s)); c.credits += cr; r.sectorCredits += cr; notes.push(`+${cr} ${D.SETTING.cur}`); text = 'Nothing of yours needs work. You strip the bench for parts and sell them on.'; }
   } else if (kind === 'fence') {
     forEachActor(s, () => { r.perkOffer = offerPerks(s, rng, false); });
     text = 'Behind a false wall: a smuggler\u2019s stash, labelled in a hand you don\u2019t know. Take one thing.';
@@ -1304,7 +1320,7 @@ function startFight(s, rng, kind) {
   if (kind === 'fight' && r.cond === 'hunters' && rng() < 0.25) kind = 'elite';
   if (kind === 'bounty') kind = 'elite';
   const boss = kind === 'boss';
-  const e = makeEnemy(r.sector, boss, rng, r.map, r.threat, r.reinforced || 0);
+  const e = makeEnemy(r.sector, boss, rng, r.map, r.threat, r.reinforced || 0, Math.max(0, (s.char.level || 1) - 4));
   if (!boss) applyQuirk(r, e, rng);
   if (kind === 'elite') makeElite(e, rng);
   if (r.bulletin === 'payday') e.hp = e.maxHp = Math.round(e.maxHp * 1.1);
@@ -1381,36 +1397,38 @@ function makeElite(e, rng) {
   if (e.affix === 'relentless') { e.intents = { ...e.intents }; delete e.intents.guard; e.intents.special = (e.intents.special || 0) * 2; }
 }
 
-export function makeEnemy(sector, boss, rng, mapId = 'garrison', threat = 0, reinforced = 0) {
-  const map = mapById(mapId);
+export function makeEnemy(sector, boss, rng, mapId = 'garrison', threat = 0, reinforced = 0, floorLvl = 0) {
+  const map = mapById(mapId), eff = effSector(sector, mapId);
   let id, lvl;
   if (boss) {
     const idx = sector / 5 - 1;
     id = map.bosses[idx % map.bosses.length];
-    lvl = idx * 2 + map.level;
+    lvl = Math.round((eff / 5 - 1) * 2);
   } else {
     // The four most recently unlocked enemy types, so old enemies don't get absurdly scaled.
     const pool = map.pool.filter(([, min]) => min <= sector).sort((a, b) => b[1] - a[1]).slice(0, 4);
     const [pid, min] = pickWeighted(rng, pool.map((p) => [p, 1 + p[1] * 0.3]));
-    id = pid; lvl = sector - min + map.level;
+    id = pid; lvl = eff - min;
   }
+  // A strong operative re-clearing early ground still meets enemies that take a few hits.
+  lvl = Math.max(lvl, floorLvl);
   const base = D.ENEMIES[id];
-  const tm = (1 + 0.12 * threat) * (1 + (TUNE.reinforce[reinforced] || 0)) * (reinforced ? 1 : TUNE.earlyCurve[sector - 1] || 1);
-  const hp = Math.ceil(base.hp * TUNE.enemyHp * hardAt(sector).hp * tm * growth(lvl, TUNE.hpLin, TUNE.hpQuad) * (boss ? TUNE.bossHp : 1));
+  const tm = (1 + 0.12 * threat) * (1 + (TUNE.reinforce[reinforced] || 0)) * (reinforced ? 1 : TUNE.earlyCurve[eff - 1] || 1);
+  const hp = Math.ceil(base.hp * TUNE.enemyHp * hardAt(eff).hp * tm * growth(lvl, TUNE.hpLin, TUNE.hpQuad) * (boss ? TUNE.bossHp : 1));
   const e = {
     id, name: base.name, tags: base.tags || [], line: base.line, portrait: base.portrait || null, boss,
     hp, maxHp: hp,
     atk: Math.round(base.atk * TUNE.enemyAtk * tm * growth(lvl, TUNE.atkLin, TUNE.atkQuad) * (boss ? TUNE.bossAtk : 1)),
     def: base.def + Math.floor(lvl / 2),
     spd: base.spd + Math.floor(lvl / 4),
-    cr: base.cr.map((v) => Math.round(v * Math.pow(1.1, lvl) * map.credits * (1 + (TUNE.reinforce[reinforced] || 0) / 2))),
+    cr: base.cr.map((v) => Math.round(v * Math.pow(1.07, lvl) * map.credits * (1 + (TUNE.reinforce[reinforced] || 0) / 2))),
     xp: Math.round(base.xp * Math.pow(1.12, lvl) * map.xp * (1 + (TUNE.reinforce[reinforced] || 0) / 2)),
     intents: D.SPECIALS[id] ? { ...base.intents, special: Math.round(2 * TUNE.statusRate) } : base.intents,
     intent: 'attack', lastIntent: null, stun: 0, shaken: false, st: {}, fresh: [], phase2: false,
   };
   const mv = !boss && D.MAP_VARIANT_IDS.includes(id) && D.MAP_VARIANT[map.id];
   if (mv) {
-    e.name = `${mv.prefix} ${e.name}`; e.variant = map.id;
+    e.variant = map.id; // a different look, not a different name
     if (mv.hp) e.hp = e.maxHp = Math.round(e.hp * mv.hp);
     if (mv.atk) e.atk = Math.round(e.atk * mv.atk);
     if (mv.def) e.def += mv.def;
@@ -1557,7 +1575,7 @@ function strike(s, rng, { mult = 1, critBonus = 0, pierce = 0, unarmoredBonus = 
   mult = hitMult(s, melee, { mult, unarmoredBonus });
   r.momentum = false;
   // Lights Out: a shot in the dark can go anywhere. A swing can't.
-  if (!melee && e.bs && e.bs.lights > 0 && rng() < D.BOSS_KIT.kell.moves.lights.miss) { r.struck = true; feat(s, 'shots'); return { dmg: 0, crit: false, missed: true }; }
+  if (!melee && e.bs && e.bs.lights > 0 && rng() < kitOf(e).moves.lights.miss) { r.struck = true; feat(s, 'shots'); return { dmg: 0, crit: false, missed: true }; }
   const crit = forceCrit || (!melee && e.sig && e.sig.id === 'salute') || (first && (hasUnique(c, 'ostrane') || c.background === 'runner')) || rng() < critChance(st, e, melee) + critBonus;
   if (crit) mult *= hasPerk(c, 'hollow') ? pv(c, 'hollow') : 1.6;
   if (w.type === 'tech') pierce = Math.max(pierce, 0.5);
@@ -2015,6 +2033,14 @@ const bossState = (e) => ({ phase: e.phase2 ? 50 : 100, cd: 1, last: null, since
   frontFired: false, frontHeld: false, taken: [], lastAtk: {}, used: {}, taunts: 0, lastTaunt: -9, wide: 0, glow: false, brittle: false, twice: false, snipers: 0, floorTurns: 3, auditCount: 2, late: false });
 const kitOf = (e) => D.BOSS_KIT[e.id] || { rate: 0, cd: 99, moves: {}, notes: {} };
 const bsOf = (e) => (e.bs || (e.bs = bossState(e))); // a boss fight saved before these rules existed picks them up here
+// Several bosses share a move, so the engine's own lines name the boss from D.BOSS_INFO (short, he/she/it), and a move can
+// bring its own words in lore.js (BOSS_MOVES[boss][move].fail, .ion, .charge, .winded, .late, .blocked, .chip, .who).
+const bossWho = (e) => {
+  const i = D.BOSS_INFO[e.id] || {}, he = i.he || 'it';
+  return { short: i.short || e.name, he, him: { he: 'him', she: 'her' }[he] || 'it', his: { he: 'his', she: 'her' }[he] || 'its' };
+};
+const moveWord = (e, id, key, dflt) => { const mv = (BOSS_MOVES[e.id] || {})[id] || {}; return mv[key] || dflt; };
+const moveName = (e, id) => moveWord(e, id, 'name', id);
 
 function moveOpen(e, id) {
   const m = kitOf(e).moves[id], b = e.bs;
@@ -2113,6 +2139,37 @@ function bossPhase(s, t) {
     if (t === 50) b.snipers = 0.4;
     if (t === 25) { b.twice = true; every('crane', 3); }
   }
+  // The nine added with twenty sectors: notes in D.BOSS_KIT say the same.
+  if (e.id === 'dray' && t === 25) { b.noRun = true; every('salute', 3); }
+  if (e.id === 'slagmother') {
+    if (t === 50) { e.intents = { ...e.intents, repair: 0 }; b.floorTurns = 4; }
+    if (t === 25) { e.intents = { ...e.intents, repair: 0 }; e.def = Math.max(0, e.def - 3); every('floor', 3); }
+  }
+  if (e.id === 'hale') {
+    if (t === 50) e.spd += 2;
+    if (t === 25) { b.brittle = true; every('siege', 3); }
+  }
+  if (e.id === 'restraint') {
+    if (t === 50) e.intents = { ...e.intents, repair: 0 };
+    if (t === 25) { e.intents = { ...e.intents, repair: 0 }; b.noRun = true; every('anchor', 3); }
+  }
+  if (e.id === 'voight' && t === 25) { e.intents = { ...e.intents, special: (e.intents.special || 0) * 2 }; every('redact', 3); }
+  if (e.id === 'venn') {
+    if (t === 50) e.def += 2;
+    if (t === 25) { b.noRun = true; every('audit', 3); }
+  }
+  if (e.id === 'pell') {
+    if (t === 50) b.snipers = 0.3;
+    if (t === 25) b.snipers = 0.45;
+  }
+  if (e.id === 'gantry') {
+    if (t === 50) e.intents = { ...e.intents, repair: 0 };
+    if (t === 25) { e.intents = { ...e.intents, repair: 0 }; b.wide = 0.25; every('anchor', 3); }
+  }
+  if (e.id === 'imre') {
+    if (t === 50) { e.spd += 2; b.snipers = 0.4; }
+    if (t === 25) { b.noRun = true; b.twice = true; every('siege', 4); }
+  }
   // A move that has just opened comes next, so the change is felt.
   for (const [id, m] of Object.entries(kit.moves)) if (m.from === t && moveOpen(e, id)) { e.next = `sig:${id}`; b.last = id; b.cd = kit.cd; break; }
   return kit.notes[t] || '';
@@ -2165,8 +2222,9 @@ export function runBlocked(s) {
   const r = s.run, e = r && r.enemy, b = e && e.bs;
   if (r && r.pst && r.pst.pinned) return 'Pinned';
   if (!b) return null;
-  if (b.noRun) return e.id === 'kell' ? 'She threw away the keys' : 'The shutter is down';
-  return b.shutter > 0 ? 'The shutter is down' : null;
+  const shut = moveWord(e, 'shutter', 'blocked', 'The shutter is down'), nr = (D.BOSS_INFO[e.id] || {}).noRun;
+  if (b.noRun) return nr ? nr[0] : shut;
+  return b.shutter > 0 ? shut : null;
 }
 export const sniperChance = (r) => { const b = r && r.enemy && r.enemy.bs; return b && b.wreck > 0 ? 0 : (b && b.snipers) || 0.2; };
 // Lights Out hides her moves, unless you have a scanner.
@@ -2184,17 +2242,18 @@ function bossAfterAct(s, act, who, rng) {
   if (WEAPON_ACTS.has(act)) b.lastAtk[who] = act;
   if (D.ITEMS[act]) b.used[who] = (b.used[who] || 0) + 1;
   const cancel = (type, text) => { e.sig = null; fx(s, { who: 'enemy', type: 'sigfail', sig: g.id, text }); log(s, text, 'good'); };
-  if (g && g.id === 'confiscate' && MELEE_ACTS.has(act)) cancel('sigfail', 'You knock his hand away. No receipt today.');
-  else if (g && g.id === 'siege' && act === 'ion') cancel('sigfail', 'The ion pulse jams the breech. The Siege Round doesn\u2019t fire.');
-  else if (g && g.id === 'count' && act === 'intimidate') cancel('sigfail', 'You shout over the count. Nobody is listening to her now.');
-  else if (g && g.id === 'crane' && act === 'smoke') { cancel('sigfail', 'The container lands where you were, in the smoke. The wreck blocks the tower\u2019s view.'); b.wreck = kit.crane.wreck; }
-  if (act === 'intimidate') { if (b.count > 0) { b.count = 0; log(s, 'The count breaks. The prisoners move.', 'good'); } if (b.front > 0) { b.front = 0; b.frontWatch = false; log(s, 'The workers scatter. Brask can\u2019t stop them all.', 'good'); } }
+  const w = bossWho(e);
+  if (g && g.id === 'confiscate' && MELEE_ACTS.has(act)) cancel('sigfail', moveWord(e, 'confiscate', 'fail', `You knock ${w.his} hand away. No receipt today.`));
+  else if (g && g.id === 'siege' && act === 'ion') cancel('sigfail', moveWord(e, 'siege', 'ion', 'The ion pulse jams the breech. The Siege Round doesn\u2019t fire.'));
+  else if (g && g.id === 'count' && act === 'intimidate') cancel('sigfail', moveWord(e, 'count', 'fail', `You shout over the count. Nobody is listening to ${w.him} now.`));
+  else if (g && g.id === 'crane' && act === 'smoke') { cancel('sigfail', moveWord(e, 'crane', 'fail', 'The container lands where you were, in the smoke. The wreck blocks the tower\u2019s view.')); b.wreck = kit.crane.wreck; }
+  if (act === 'intimidate') { if (b.count > 0) { b.count = 0; log(s, 'The count breaks. The prisoners move.', 'good'); } if (b.front > 0) { b.front = 0; b.frontWatch = false; log(s, moveWord(e, 'front', 'fail', `The workers scatter. ${w.short} can\u2019t stop them all.`), 'good'); } }
   if (b.front > 0 && RANGED_ACTS.has(act)) b.frontFired = true;
   if (b.floor > 0 && MELEE_ACTS.has(act)) {
     const cost = Math.max(1, Math.round(st.maxHp * kit.floor.cost));
     c.hp -= cost;
     const added = addPlayerStatus(s, { burn: 1 }, rng);
-    fx(s, { who: 'enemy', type: 'counter', dmg: cost, text: 'Slag Floor', statuses: added });
+    fx(s, { who: 'enemy', type: 'counter', dmg: cost, text: moveName(e, 'floor'), statuses: added });
     log(s, `The slag floor costs you ${cost}.`, 'bad');
   }
 }
@@ -2242,16 +2301,17 @@ export function bossEffects(s) {
   const e = s.run.enemy, b = e && e.bs;
   if (!b) return [];
   const out = [], add = (label, tip) => out.push({ label, tip });
-  if (b.shutter > 0) add(`Shutter ${b.shutter}`, 'Gatehouse Shutter: shots deal half, and you can\u2019t Run.');
-  if (b.noRun && !(b.shutter > 0)) add('No Run', e.id === 'kell' ? 'She threw away her keys. No Run for the rest of the fight.' : 'The shutter stays down. No Run for the rest of the fight.');
-  if (b.floor > 0) add(`Slag ${b.floor}`, 'Slag Floor: each Strike costs 5% of your max HP and burns. Shoot is safe.');
-  if (b.front > 0) add(`Workers ${b.front}`, `Shift in Front: shots deal half.${b.frontFired ? '' : ' Hold your fire throughout for +1 Resolve on the kill.'} Intimidate clears them.`);
-  if (b.frontHeld) add('+1 Resolve', 'You held your fire. +1 Resolve when Brask goes down.');
-  if (b.count > 0) add(`Count ${b.count}`, 'Count Time: freed prisoners do nothing. Intimidate breaks it.');
-  if (b.lights > 0) add(`Dark ${b.lights}`, 'Lights Out: her moves are hidden unless you have a scanner, and shots miss 25% of the time. Strike can\u2019t miss.');
+  const w = bossWho(e), chip = (id, dflt) => moveWord(e, id, 'chip', dflt), nr = (D.BOSS_INFO[e.id] || {}).noRun;
+  if (b.shutter > 0) add(`${chip('shutter', 'Shutter')} ${b.shutter}`, `${moveName(e, 'shutter')}: shots deal half, and you can\u2019t Run.`);
+  if (b.noRun && !(b.shutter > 0)) add('No Run', nr ? nr[1] : 'The shutter stays down. No Run for the rest of the fight.');
+  if (b.floor > 0) add(`${chip('floor', 'Slag')} ${b.floor}`, `${moveName(e, 'floor')}: each Strike costs 5% of your max HP and burns. Shoot is safe.`);
+  if (b.front > 0) add(`${chip('front', 'Workers')} ${b.front}`, `${moveName(e, 'front')}: shots deal half.${b.frontFired ? '' : ' Hold your fire throughout for +1 Resolve on the kill.'} Intimidate clears them.`);
+  if (b.frontHeld) add('+1 Resolve', `You held your fire. +1 Resolve when ${w.short} goes down.`);
+  if (b.count > 0) add(`${chip('count', 'Count')} ${b.count}`, `${moveName(e, 'count')}: freed prisoners do nothing. Intimidate breaks it.`);
+  if (b.lights > 0) add(`${chip('lights', 'Dark')} ${b.lights}`, `${moveName(e, 'lights')}: ${w.his} moves are hidden unless you have a scanner, and shots miss 25% of the time. Strike can\u2019t miss.`);
   if (b.wreck > 0) add(`Wreck ${b.wreck}`, 'The wrecked container blocks the tower snipers.');
-  if (b.redact && b.redact.who === actorIdx(s)) add(`${actName(b.redact.act)} cut ${b.redact.t}`, `Redact: ${actName(b.redact.act)} ${D.SKILLS[b.redact.act] ? 'is locked' : 'deals half'} for ${b.redact.t} more turn${b.redact.t > 1 ? 's' : ''}.`);
-  for (const t of b.taken || []) if (t.who === actorIdx(s)) add(`Took ${D.ITEMS[t.item].name}`, 'Confiscated. You get it back when he goes down.');
+  if (b.redact && b.redact.who === actorIdx(s)) add(`${actName(b.redact.act)} cut ${b.redact.t}`, `${moveName(e, 'redact')}: ${actName(b.redact.act)} ${D.SKILLS[b.redact.act] ? 'is locked' : 'deals half'} for ${b.redact.t} more turn${b.redact.t > 1 ? 's' : ''}.`);
+  for (const t of b.taken || []) if (t.who === actorIdx(s)) add(`Took ${D.ITEMS[t.item].name}`, `Confiscated. You get it back when ${w.he} goes down.`);
   return out;
 }
 // The sensible answer to what the boss is doing: act = a specific action, hit = the weapon to use. Auto battle and the simulator bots read this.
@@ -2274,7 +2334,7 @@ export function sigAdvice(s) {
     case 'confiscate': if (!out.hit || out.hit === 'strike') out.hit = 'strike'; break;
     case 'anchor': if (low) out.act = 'defend'; else out.hit = 'strike'; break;
     case 'siege':
-      if (e.tags.includes('droid') && can('ion')) out.act = 'ion';
+      if (can('ion')) out.act = 'ion'; // a pulse jams a breech, a lance coil or an uplink alike
       else if (g.left === 1 && !needs(kit.siege.jam)) out.act = 'defend';
       break;
     case 'roll': if (g.left === 1) out.act = 'defend'; break;
@@ -2293,12 +2353,12 @@ function sigTurn(s, rng, vamp, reflect) {
   if (!g) return; // the operative stopped it this turn: the boss has lost its move
   const kit = kitOf(e).moves[g.id], name = BOSS_MOVES[e.id][g.id].name, dealt = g.startHp - e.hp;
   const fail = (text) => { e.sig = null; fx(s, { who: 'enemy', type: 'sigfail', sig: g.id, text }); log(s, text, 'good'); };
-  if (g.id === 'siege' && dealt >= e.maxHp * kit.jam) return fail('Your fire knocks the turret off its line. The Siege Round jams in the breech.');
-  if (g.id === 'roll' && g.left === 2 && dealt >= e.maxHp * kit.choke) { e.stun = Math.max(e.stun, 1); return fail('You choke the open core. The blast dies and the Crucible staggers.'); }
+  if (g.id === 'siege' && dealt >= e.maxHp * kit.jam) return fail(moveWord(e, 'siege', 'fail', 'Your fire knocks the turret off its line. The Siege Round jams in the breech.'));
+  if (g.id === 'roll' && g.left === 2 && dealt >= e.maxHp * kit.choke) { e.stun = Math.max(e.stun, 1); return fail(moveWord(e, 'roll', 'fail', 'You choke the open core. The blast dies and the Crucible staggers.')); }
   g.left -= 1;
   if (g.left > 0) {
     fx(s, { who: 'enemy', type: 'charging', sig: g.id, n: g.n, name, left: g.left });
-    log(s, g.id === 'roll' ? 'The core flares. A blast is coming.' : `${name}: ${g.left} more turn${g.left > 1 ? 's' : ''}.`, 'bad');
+    log(s, g.id === 'roll' ? moveWord(e, 'roll', 'charge', 'The core flares. A blast is coming.') : `${name}: ${g.left} more turn${g.left > 1 ? 's' : ''}.`, 'bad');
     return;
   }
   e.sig = null;
@@ -2315,8 +2375,8 @@ function sigTurn(s, rng, vamp, reflect) {
     case 'shutter': b.shutter = kit.turns; go({}); said(`${name}: for ${kit.turns} turns your shots deal half and there\u2019s no Run.`); break;
     case 'confiscate': {
       const item = c.items.stim > 0 ? 'stim' : ['thermal', 'ion', 'smoke'].find((k) => c.items[k] > 0);
-      if (item) { c.items[item] -= 1; b.taken.push({ who: actorIdx(s), item }); go({ text: D.ITEMS[item].name }); said(`${e.name} takes your ${D.ITEMS[item].name}. You get it back if he goes down.`); }
-      else { const dmg = hit(kit.mult, kit.guard); go({ dmg }); said(`Nothing to take, so he hits you instead: ${dmg}.`); }
+      if (item) { c.items[item] -= 1; b.taken.push({ who: actorIdx(s), item }); go({ text: D.ITEMS[item].name }); said(`${e.name} takes your ${D.ITEMS[item].name}. You get it back if ${bossWho(e).he} goes down.`); }
+      else { const dmg = hit(kit.mult, kit.guard); go({ dmg }); said(`Nothing to take, so ${bossWho(e).he} hits you instead: ${dmg}.`); }
       break;
     }
     case 'anchor': {
@@ -2332,7 +2392,7 @@ function sigTurn(s, rng, vamp, reflect) {
       if (c.hp > 0) z = hit(kit.mult, kit.guard);
       if (b.late) e.hp -= Math.max(1, Math.round(e.maxHp * kit.self));
       else addStatus(e.st, e.fresh, { exposed: kit.winded });
-      go({ dmg: a + z, hits: [a, z], winded: !b.late }); said(`${name}: ${a} and ${z}. ${b.late ? 'It tears something in him.' : 'He stands there heaving: Exposed.'}`);
+      go({ dmg: a + z, hits: [a, z], winded: !b.late }); said(`${name}: ${a} and ${z}. ${b.late ? moveWord(e, 'overtime', 'late', 'It tears something in him.') : moveWord(e, 'overtime', 'winded', 'He stands there heaving: Exposed.')}`);
       break;
     }
     case 'front': b.front = kit.turns; b.frontFired = false; b.frontWatch = true; go({}); said(`${name}: for ${kit.turns} turns your shots deal half.`); break;
@@ -2344,7 +2404,7 @@ function sigTurn(s, rng, vamp, reflect) {
       go({ statuses: added });
       break;
     }
-    case 'lights': b.lights = kit.turns; go({}); said(`${name}: for ${kit.turns} turns her moves are hidden and shots miss 25% of the time.`); break;
+    case 'lights': b.lights = kit.turns; go({}); said(`${name}: for ${kit.turns} turns ${bossWho(e).his} moves are hidden and shots miss 25% of the time.`); break;
     case 'crane': { const dmg = hit(kit.mult, kit.guard); b.wreck = kit.wreck; go({ dmg }); said(`${name}: ${dmg}${r.defending ? ', behind cover' : ''}. The wreck blocks the tower snipers for ${kit.wreck} turns.`); break; }
     case 'salute': { const dmg = hit(kit.mult, kit.guard); go({ dmg, crit: true }); said(`${name}: a clean hit for ${dmg}.`); break; }
     case 'redact': b.redact = { act: g.act, who: g.who || 0, t: kit.turns }; go({ text: actName(g.act) }); said(`${name}: ${actName(g.act)} ${D.SKILLS[g.act] ? 'is locked' : 'deals half'} for ${kit.turns} turns.`); break;
@@ -2379,7 +2439,7 @@ function bossBeaten(s, e, out, rng) {
   for (const c of who) (c.bossBeat = c.bossBeat || {})[key] = 1;
   (m.bossWins = m.bossWins || {})[key] = (m.bossWins[key] || 0) + 1;
   // Shift in Front: hold your fire and the workers go home.
-  if (b.frontHeld && !out.fled) { m.resolve += 1; m.totalResolve += 1; out.resolve = (out.resolve || 0) + 1; out.notes.push('You held your fire on the workers: +1 Resolve'); }
+  if (b.frontHeld && !out.fled) { m.resolve += 1; m.totalResolve += 1; out.resolve = (out.resolve || 0) + 1; out.notes.push(`You held your fire on ${moveWord(e, 'front', 'who', 'the workers')}: +1 Resolve`); }
   const opts = { map: r.map, name: firstName(s.char), rng }, sceneKey = `defeat:${key}`;
   if (first) {
     const seen = !!(m.sceneSeen || {})[sceneKey], all = bossLines(e.id, 'firstDefeat', opts);
@@ -2533,8 +2593,8 @@ function winFight(s, rng, fled = false) {
     m.resolve += out.resolve; m.totalResolve += out.resolve; m.stats.bosses += 1;
     earnInsertion(c, r.map, r.threat, r.sector + 1);
     contractEvent(s, 'boss', {});
-    if (r.sector >= 15 && !m.liberated[r.map]) {
-      m.liberated[r.map] = true;
+    if (r.sector >= MAX_SECTOR && !mapProgress(c, r.map).freed) {
+      mapProgress(c, r.map).freed = true; m.liberated[r.map] = true;
       out.liberated = mapById(r.map).name;
       log(s, `The ${out.liberated} is liberated.`, 'reward');
     }
@@ -2554,11 +2614,23 @@ function winFight(s, rng, fled = false) {
 
 // ---------- contraband ----------
 // Three different pieces. What you already carry turns up more often, so a build can be chased; a boss always offers something rare.
+// Contraband: up to perkCap copies of any one piece, 3 to start and up to 99. Marrow sells more room one copy at a time,
+// each raise 8% dearer than the last: cheap early, a long credit sink late.
+export const PERK_CAP_MAX = 99, PERK_CAP_BASE = 120, PERK_CAP_STEP = 1.08;
+export const perkCap = (c) => Math.min(PERK_CAP_MAX, 3 + ((c && c.perkCapUp) || 0));
+export const perkCapCost = (s) => Math.ceil(price(s, PERK_CAP_BASE * Math.pow(PERK_CAP_STEP, s.char.perkCapUp || 0)));
+export function buyPerkCap(s) {
+  const c = s.char, cost = perkCapCost(s);
+  if (perkCap(c) >= PERK_CAP_MAX || c.credits < cost) return false;
+  c.credits -= cost; c.perkCapUp = (c.perkCapUp || 0) + 1; ledger(s, 'spend:contraband', cost);
+  s.notice = `You can carry ${perkCap(c)} of each piece of contraband now.`;
+  return true;
+}
 function offerPerks(s, rng, boss) {
-  const c = s.char, pool = D.PERKS.slice(), out = [];
+  const c = s.char, pool = D.PERKS.filter((p) => perkStacks(c, p.id) < perkCap(c)), out = [];
   const weight = (p) => (p.rare ? (boss ? 2 : 1) : 3) * (hasPerk(c, p.id) ? 3 : 1);
   const take = (list) => { const it = pickWeighted(rng, list.map((p) => [p, weight(p)])); out.push(it.id); pool.splice(pool.indexOf(it), 1); };
-  if (boss) take(pool.filter((p) => p.rare));
+  if (boss && pool.some((p) => p.rare)) take(pool.filter((p) => p.rare));
   while (out.length < (has(c, 'broker') ? 4 : 3) && pool.length) take(pool);
   return out;
 }
@@ -2568,7 +2640,7 @@ export function choosePerk(s, id, rng, who = actorIdx(s)) {
 function choosePerkInner(s, id, rng) {
   const r = s.run, c = s.char;
   if (!r || !r.perkOffer) return false;
-  if (id && r.perkOffer.includes(id)) {
+  if (id && r.perkOffer.includes(id) && perkStacks(c, id) < perkCap(c)) {
     c.perkN = c.perkN || {};
     c.perkN[id] = (c.perkN[id] || 0) + 1;
     if (!c.perks.includes(id)) c.perks.push(id);
@@ -2615,7 +2687,7 @@ function resolveEventInner(s, index, rng) {
   const success = !opt.check || rng() < checkChance(s, opt.check);
   const fxs = success ? opt.win : opt.lose;
   const notes = [];
-  if (fxs.credits) { const cr = Math.round(randInt(rng, fxs.credits[0], fxs.credits[1]) * r.sector * creditMult(s)); c.credits += cr; r.sectorCredits += cr; ledger(s, 'events', cr); notes.push(`+${cr} ${D.SETTING.cur}`); }
+  if (fxs.credits) { const cr = Math.round(randInt(rng, fxs.credits[0], fxs.credits[1]) * payDepth(r) * creditMult(s)); c.credits += cr; r.sectorCredits += cr; ledger(s, 'events', cr); notes.push(`+${cr} ${D.SETTING.cur}`); }
   if (fxs.hp) {
     const amt = Math.round(st.maxHp * Math.abs(fxs.hp));
     if (fxs.hp > 0) { const h = Math.min(st.maxHp - c.hp, amt); c.hp += h; notes.push(`+${h} HP`); }
@@ -2640,7 +2712,7 @@ function resolveEventInner(s, index, rng) {
 function clearSector(s, rng = Math.random) {
   const r = s.run, c = s.char, map = mapById(r.map), m = s.meta;
   r.cleared = (r.cleared || 0) + 1; feat(s, 'sectors');
-  const bonus = Math.round(8 * r.sector * map.credits * creditMult(s) * payScale(c, r.sector));
+  const bonus = Math.round(6 * payDepth(r) * map.credits * creditMult(s) * payScale(c, r.sector));
   const prog = mapProgress(c, r.map);
   // Resolve only for new ground: sectors this operative hasn't cleared on this map before.
   // Repeat clears pay every other time, so farming early sectors is slow.
@@ -2690,7 +2762,7 @@ export function pushDeeper(s, rng) {
 // The row goes in meta.boardOut for the page to send after every raid; meta.board keeps this device's best BOARD_SIZE for when the board can't be reached.
 export const BOARD_SIZE = 50;
 export const SECTOR_POINTS = 100, BOSS_POINTS = 400, LIBERATE_POINTS = 1000, THREAT_POINTS = 0.5;
-export const groundWorth = (best, threat = 0) => Math.round((best * SECTOR_POINTS + Math.floor(best / 5) * BOSS_POINTS + (best >= 15 ? LIBERATE_POINTS : 0)) * (1 + THREAT_POINTS * threat));
+export const groundWorth = (best, threat = 0) => Math.round((best * SECTOR_POINTS + Math.floor(best / 5) * BOSS_POINTS + (best >= MAX_SECTOR ? LIBERATE_POINTS : 0)) * (1 + THREAT_POINTS * threat));
 const markBest = (c, mapId, threat, sector) => { const p = mapProgress(c, mapId), b = p.best || (p.best = { 0: p.deepest || 0 }); b[threat] = Math.max(b[threat] || 0, sector); };
 // Every district and threat level this operative has cleared sectors on, as { map, threat, best }.
 export function careerProgress(c) {
@@ -2704,7 +2776,7 @@ function careerRow(s, c, status, foe = null) {
   if (m.dev || score <= 0) return ''; // cells touched by dev mode stay off the leaderboard
   const top = progress.slice().sort((a, b) => b.threat - a.threat || b.best - a.best)[0];
   const entry = { id: c.uid, name: c.name, number: c.number, background: c.background, level: c.level, status, score, gain: score - (c.boardScore || 0), progress,
-    map: top.map, threat: top.threat, deepest: top.best, freed: progress.filter((x) => x.threat === 0 && x.best >= 15).length, raids: k.raids, kills: k.kills, bosses: k.bosses,
+    map: top.map, threat: top.threat, deepest: top.best, freed: progress.filter((x) => x.threat === 0 && x.best >= MAX_SECTOR).length, raids: k.raids, kills: k.kills, bosses: k.bosses,
     killer: foe ? foe.name : '', when: Date.now() };
   c.boardScore = score;
   addToBoard(m, entry);
@@ -2778,7 +2850,7 @@ export const unsecuredNow = (s) => unsecured(s);
 export const extractLoss = (s) => Math.round(unsecured(s) * leaveShare(s));
 export const extractXpLoss = (s) => Math.round((s.char.xpBank || 0) * leaveShare(s));
 export const allLiberated = (s) => D.MAPS.every((m) => s.meta.liberated[m.id]);
-export const maxThreat = (s) => Math.min(D.THREAT.length - 1, Object.keys(s.meta.liberated).length);
+export const maxThreat = (s) => Math.min(D.THREAT.length - 1, s.char ? D.MAPS.filter((mp) => opFreed(s.char, mp.id)).length : 0);
 
 // ---------- contracts ----------
 // Credit payouts per contract type. Haul targets are themselves credit amounts, so they pay a small share.
@@ -2794,7 +2866,7 @@ export function refreshContracts(s, rng) {
     const map = t.map ? mapById(t.map) : t.kind === 'haul' ? null : pick(rng, open);
     if (map && !mapUnlocked(s, map)) continue;
     let n = t.n;
-    if (t.kind === 'sector') n = Math.min(15, Math.max(3, (m.bestByMap[map.id] || 0) + (t.n >= 7 ? 4 : 2)));
+    if (t.kind === 'sector') n = Math.min(MAX_SECTOR, Math.max(3, (m.bestByMap[map.id] || 0) + (t.n >= 7 ? 4 : 2)));
     if (t.kind === 'haul') n = Math.round(t.n * (1 + (m.bestSector || 0) / 5));
     const key = `${t.kind}-${t.tag || ''}-${map ? map.id : ''}`;
     if (m.contracts.some((k) => k.key === key)) continue;

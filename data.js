@@ -134,7 +134,7 @@ export const GEAR = {
   injector: { slot: 'gadget', tier: 2, name: 'Stim Injector',         cost: 200, stimBoost: 0.5, desc: 'Stims heal 50% more.' },
   scanner:  { slot: 'gadget', tier: 2, name: 'Threat Scanner',        cost: 260, req: { int: 3 }, scan: true, desc: 'Shows the enemy\u2019s next two moves.' },
   coil:     { slot: 'gadget', tier: 3, name: 'Arc Coil',              cost: 380, req: { int: 4 }, overload: 0.2, desc: 'Grants Overload. Overload deals +20%.' },
-  // added in v5: more mid and deep-game pieces. Tier 6 only shows up once the cell has reached sector 15.
+  // added in v5: more mid and deep-game pieces. Tier 6 shows up once an operative is deep enough.
   needler:  { slot: 'ranged', tier: 2, name: 'Flechette Needler',     type: 'pistol',  atk: 6,  cost: 190,  req: { agi: 2 }, crit: 0.08, desc: 'Fires a fan of steel slivers. +8% crit.' },
   rivetgun: { slot: 'ranged', tier: 3, name: 'Rivet Gun',             type: 'heavy',   atk: 9,  cost: 340,  req: { str: 4 }, desc: 'Foundry tool, barely modified. Adds STR to ATK like a melee weapon.' },
   smartgun: { slot: 'ranged', tier: 4, name: 'Tracking Smartgun',     type: 'tech',    atk: 13, cost: 620,  req: { int: 5 }, desc: 'Ignores half of armour, +50% against droids. The rounds argue with gravity.' },
@@ -176,7 +176,7 @@ export const RARITY = {
   unique:    { name: 'Unique',    color: '#e8673a', mult: 1,    bonuses: 0, price: 1,   up: 1.6 },
 };
 export const RARITY_ORDER = ['common', 'rare', 'elite', 'legendary', 'unique'];
-export const UPGRADE_MAX = 5;      // +1 .. +5
+export const UPGRADE_MAX = 8;      // +1 .. +8 (the late bench levels come with threat and the later districts)
 export const UPGRADE_STEP = 0.08;  // main stat per upgrade level
 
 // Random bonuses. range [low, high] at tier 1; higher tiers roll up to +50% more. slots: which slots can roll it.
@@ -214,6 +214,8 @@ export const MELEE_COUNTER = {
   shock:    { name: 'Shock baton', mult: 0.4, desc: 'Strikes against it are answered with a baton: you take 40% of its ATK.' },
   sentinel: { name: 'Arc field', mult: 0.4, desc: 'Its hull is live: striking it costs you 40% of its ATK.' },
   brask:    { name: 'Hammer fist', mult: 0.5, desc: 'Brask loves a brawl: strikes against him are met with 50% of his ATK.' },
+  warder:   { name: 'Shield and prod', mult: 0.4, desc: 'The prod comes round the shield: striking it costs you 40% of its ATK.' },
+  hale:     { name: 'Heat suit', status: { burn: 2 }, desc: 'His suit runs at furnace heat: striking him sets you Burning.' },
 };
 
 export const ITEMS = {
@@ -356,6 +358,24 @@ export const ENEMIES = {
   deckbot: { name: 'Deck Bot', tags: ['droid'], hp: 13, atk: 7, def: 1, spd: 8, cr: [8, 12], xp: 6,
     intents: { attack: 6, heavy: 1 }, line: 'A white maintenance bot scuttles along the deck with a rivet gun raised.' },
 
+  // each district's own people, in place of some of the Garrison's loaned roster
+  stoker:  { name: 'Furnace Stoker', tags: ['human'], hp: 18, atk: 7, def: 1, spd: 5, cr: [6, 10], xp: 7,
+    intents: { attack: 5, heavy: 2 }, line: 'A stoker turns from the firebox with a shovel full of live coals.' },
+  hookbot: { name: 'Crane Hook Droid', tags: ['droid', 'armored'], hp: 28, atk: 7, def: 4, spd: 3, cr: [10, 16], xp: 10,
+    intents: { attack: 4, heavy: 2, repair: 1 }, line: 'A hook droid drops off the overhead rail, its hook swinging ahead of it.' },
+  castguard: { name: 'Casting Guard', tags: ['human', 'armored'], hp: 36, atk: 12, def: 5, spd: 4, cr: [16, 24], xp: 15,
+    intents: { attack: 4, heavy: 2, guard: 1 }, line: 'A casting guard in scorched plate racks a slug rifle.' },
+  warder:  { name: 'Block Warder', tags: ['human', 'armored'], hp: 30, atk: 7, def: 4, spd: 3, cr: [10, 16], xp: 10,
+    intents: { attack: 4, heavy: 2, guard: 2 }, line: 'A warder steps out behind a riot shield, shock prod crackling.' },
+  orderly: { name: 'Ward Orderly', tags: ['human'], hp: 17, atk: 6, def: 0, spd: 6, cr: [7, 11], xp: 7,
+    intents: { attack: 5, heavy: 1 }, line: 'An orderly in a stained smock thumbs the cap off an injector.' },
+  customs: { name: 'Customs Enforcer', tags: ['human'], hp: 22, atk: 10, def: 2, spd: 6, cr: [14, 20], xp: 11,
+    intents: { attack: 4, heavy: 2, guard: 1 }, line: '\u201cDeclare that.\u201d A customs enforcer levels a carbine at your chest.' },
+  tetherdrone: { name: 'Tether Drone', tags: ['droid'], hp: 14, atk: 5, def: 1, spd: 8, cr: [5, 9], xp: 6,
+    intents: { attack: 5, heavy: 1 }, line: 'A tether drone rises off the pad, trailing a weighted line.' },
+  exo:     { name: 'Cargo Exo', tags: ['human', 'armored'], hp: 38, atk: 11, def: 5, spd: 3, cr: [16, 24], xp: 15,
+    intents: { attack: 3, heavy: 3, guard: 1 }, line: 'A loader in a cargo exoskeleton clanks round the stack, fists raised.' },
+
   // bosses
   halvek:  { name: 'Sector Warden Halvek', tags: ['boss', 'human'], hp: 75, atk: 9, def: 3, spd: 5, cr: [70, 90], xp: 35,
     intents: { attack: 4, heavy: 2, guard: 1 }, line: 'Warden Halvek steps out of the gatehouse, buttoning his gloves. \u201CAnother one.\u201D' },
@@ -371,6 +391,26 @@ export const ENEMIES = {
     intents: { attack: 4, heavy: 2, guard: 1 }, line: 'Warden Kell closes the cell door behind you. \u201CWe have a bed ready.\u201D' },
   vane:    { name: 'Port Commodore Vane', tags: ['boss', 'human'], hp: 140, atk: 17, def: 6, spd: 8, cr: [240, 300], xp: 95,
     intents: { attack: 3, heavy: 2, guard: 2 }, line: 'Commodore Vane lowers his macrobinoculars. \u201CYou\u2019re a long way from the yard.\u201D' },
+  // Base stats follow each boss's place in its own district (first, second, third, last). The district's offset and the
+  // engine's level growth already make a later district's bosses hit harder, so these aren't scaled for it again.
+  dray:    { name: 'Colonel Marrick Dray', tags: ['boss', 'human'], hp: 135, atk: 16, def: 6, spd: 6, cr: [180, 230], xp: 75,
+    intents: { attack: 4, heavy: 2, guard: 1 }, line: 'Colonel Dray waits on the Spire steps, sabre at his side. \u201CStand up straight.\u201D' },
+  slagmother: { name: 'The Slagmother', tags: ['boss', 'droid', 'armored'], hp: 145, atk: 16, def: 8, spd: 2, cr: [190, 240], xp: 80,
+    intents: { attack: 3, heavy: 3, repair: 1 }, line: 'A bell rings on the ladle track. The Slagmother swings its ladle round to face you.' },
+  hale:    { name: 'Chief Engineer Corvin Hale', tags: ['boss', 'human'], hp: 150, atk: 18, def: 6, spd: 7, cr: [240, 300], xp: 95,
+    intents: { attack: 3, heavy: 2, guard: 2 }, line: 'Hale lifts his visor. \u201CYou\u2019re the fault I\u2019ve been chasing all quarter.\u201D' },
+  restraint: { name: 'The Restraint Engine', tags: ['boss', 'droid', 'armored'], hp: 125, atk: 14, def: 7, spd: 2, cr: [130, 170], xp: 60,
+    intents: { attack: 3, heavy: 3, repair: 1 }, line: 'A cage on legs fills the corridor. \u201CPlease remain still. Restraint is for your safety.\u201D' },
+  voight:  { name: 'Dr. Ansel Voight', tags: ['boss', 'human'], hp: 135, atk: 16, def: 5, spd: 7, cr: [180, 230], xp: 75,
+    intents: { attack: 3, heavy: 2, guard: 2 }, line: 'Dr. Voight looks up from a steel tray. \u201CSit. We\u2019ll start with your shift.\u201D' },
+  venn:    { name: 'Magistrate Orla Venn', tags: ['boss', 'human'], hp: 150, atk: 18, def: 7, spd: 6, cr: [240, 300], xp: 95,
+    intents: { attack: 3, heavy: 2, guard: 2 }, line: 'Magistrate Venn does not rise from the bench. \u201CThe accused will approach.\u201D' },
+  pell:    { name: 'Customs Chief Pell', tags: ['boss', 'human'], hp: 90, atk: 11, def: 4, spd: 5, cr: [100, 130], xp: 45,
+    intents: { attack: 4, heavy: 2, guard: 1 }, line: 'Chief Pell runs a scanner over you and frowns at it. \u201CAnything to declare?\u201D' },
+  gantry:  { name: 'The Gantry Walker', tags: ['boss', 'droid', 'armored'], hp: 130, atk: 15, def: 7, spd: 2, cr: [150, 190], xp: 65,
+    intents: { attack: 3, heavy: 3, repair: 1 }, line: 'A cargo walker steps off the gantry, hook swinging. The cab radio crackles. \u201CSorry.\u201D' },
+  imre:    { name: 'Director Saul Imre', tags: ['boss', 'human'], hp: 160, atk: 19, def: 7, spd: 9, cr: [300, 360], xp: 110,
+    intents: { attack: 3, heavy: 2, guard: 2 }, line: 'Director Imre stands at the glass with his back to you. \u201CCome and look at it first.\u201D' },
 };
 
 export const INTENTS = {
@@ -425,38 +465,38 @@ export const MAP_VARIANT = {
   port: { prefix: 'Vacuum-Rated', hp: 1.08, spd: -1 },
 };
 export const MAPS = [
-  { id: 'garrison', name: 'Directorate Garrison', unlock: 0, level: 0, credits: 1, xp: 1, events: 0.3, theme: 'garrison',
+  { id: 'garrison', name: 'Directorate Garrison', unlock: {}, offset: 0, level: 0, credits: 1, xp: 1, events: 0.3, theme: 'garrison',
     mechanic: { id: 'alarm', name: 'Alarm', desc: 'Long fights and botched checks raise it. Each level: enemies +6% ATK, you +5% credits. Rest rooms lower it.' },
     rooms: { fight: 5, elite: 2, event: 2, supply: 1, rest: 1 },
     roomNames: { fight: 'Guard Post', elite: 'Armoury', event: 'Side Corridor', supply: 'Quartermaster', rest: 'Abandoned Bunk' },
     desc: 'Checkpoints, barracks and the regime\u2019s soldiers. The straight fight.',
-    sectors: ['Outer Checkpoint', 'Barracks Ring', 'Motor Pool', 'Comms Spire', 'Warden\u2019s Gate', 'Ration Depot', 'Armoury Row', 'Reactor Annex', 'Archive Vault', 'Siege Hangar', 'Officers\u2019 Deck', 'Signal Core', 'Chancery Halls', 'Inner Keep', 'Supervisor\u2019s Spire'],
+    sectors: ['Outer Checkpoint', 'Barracks Ring', 'Motor Pool', 'Comms Spire', 'Warden\u2019s Gate', 'Ration Depot', 'Armoury Row', 'Reactor Annex', 'Archive Vault', 'Siege Hangar', 'Officers\u2019 Deck', 'Signal Core', 'Chancery Halls', 'Inner Keep', 'Supervisor\u2019s Spire', 'Parade Ground', 'Commandant\u2019s Wing', 'Strategy Room', 'Bunker Stairs', 'Command Bunker'],
     pool: [['patrol', 1], ['probe', 1], ['officer', 1], ['smallbot', 1], ['hound', 2], ['bulwark', 2], ['riot', 3], ['marksman', 6], ['interrogator', 7], ['shock', 8], ['sentinel', 11]],
-    bosses: ['halvek', 'crawler', 'ostrane'] },
-  { id: 'foundry', name: 'Foundry Works', unlock: 0, level: 0, credits: 1.25, xp: 0.9, events: 0.3, theme: 'foundry',
+    bosses: ['halvek', 'crawler', 'dray', 'ostrane'] },
+  { id: 'foundry', name: 'Foundry Works', unlock: { garrison: 5 }, offset: 4, level: 0, credits: 1.1, xp: 0.9, events: 0.3, theme: 'foundry',
     mechanic: { id: 'vents', name: 'Furnace vents', desc: 'Every 3 turns the vents blast the floor: 10% of your max HP, 12% of the enemy\u2019s (6% for droids). Defend on vent turns to take none.' },
     rooms: { fight: 4, elite: 2, event: 2, supply: 3, rest: 1 },
     roomNames: { fight: 'Assembly Line', elite: 'Heavy Press', event: 'Catwalks', supply: 'Scrap Heap', rest: 'Cooling Room' },
     desc: 'The occupied foundry. Heat, machines and overtime. More droids, more credits.',
-    sectors: ['Slag Yard', 'Conveyor Hall', 'Casting Floor', 'Smelter Gantry', 'Foreman\u2019s Office', 'Coolant Tunnels', 'Ore Crusher', 'Pattern Shop', 'Shipping Bay', 'Furnace Core', 'Rolling Mill', 'Quench Pits', 'Tapping Floor', 'Blast Furnace', 'Control Booth'],
-    pool: [['welder', 1], ['probe', 1], ['foreman', 1], ['spotweld', 1], ['hound', 2], ['slagrunt', 2], ['loader', 3], ['riot', 5], ['slagger', 6], ['shock', 9], ['sentinel', 10]],
-    bosses: ['brask', 'crucible', 'crawler'] },
-  { id: 'detention', name: 'Detention Complex', unlock: 5, level: 1, credits: 1, xp: 1.15, events: 0.5, theme: 'detention',
+    sectors: ['Slag Yard', 'Conveyor Hall', 'Casting Floor', 'Smelter Gantry', 'Foreman\u2019s Office', 'Coolant Tunnels', 'Ore Crusher', 'Pattern Shop', 'Shipping Bay', 'Furnace Core', 'Rolling Mill', 'Quench Pits', 'Tapping Floor', 'Blast Furnace', 'Control Booth', 'Ladle Track', 'Furnace Heart', 'Turbine Hall', 'Reactor Catwalk', 'Engineer\u2019s Gallery'],
+    pool: [['welder', 1], ['probe', 1], ['foreman', 1], ['spotweld', 1], ['stoker', 2], ['slagrunt', 2], ['loader', 3], ['hookbot', 5], ['slagger', 6], ['castguard', 9], ['sentinel', 10]],
+    bosses: ['brask', 'crucible', 'slagmother', 'hale'] },
+  { id: 'detention', name: 'Detention Complex', unlock: { garrison: 10, foundry: 5 }, offset: 8, level: 0, credits: 1.15, xp: 1.15, events: 0.5, theme: 'detention',
     mechanic: { id: 'allies', name: 'Prisoners', desc: 'Freed prisoners fight beside you (up to 2), hitting for 30% of your ATK each turn. Enemies sometimes shoot them instead of you. Bring them home for +1 Resolve each.' },
     rooms: { fight: 4, elite: 1, event: 3, cells: 2, rest: 1 },
     roomNames: { fight: 'Guard Station', elite: 'Interrogation Room', event: 'Corridor', cells: 'Cell Block', rest: 'Laundry' },
     desc: 'Where the yard\u2019s people disappear. More prisoners, more choices, more Resolve.',
-    sectors: ['Intake', 'Holding Pens', 'Processing', 'Cell Block A', 'Warden\u2019s Office', 'Isolation Wing', 'Infirmary', 'Cell Block C', 'Records Room', 'Interrogation Suite', 'Yard Gallery', 'Solitary', 'Transfer Dock', 'Deep Cells', 'Warden\u2019s Tower'],
-    pool: [['jailer', 1], ['officer', 1], ['hound', 1], ['cuffbot', 1], ['sedation', 2], ['gasbot', 2], ['riot', 3], ['interrogator', 4], ['marksman', 6], ['shock', 8], ['sentinel', 11]],
-    bosses: ['kell', 'crawler', 'ostrane'] },
-  { id: 'port', name: 'Orbital Lift Port', unlock: 10, level: 0, credits: 1.5, xp: 1.2, events: 0.25, theme: 'port',
+    sectors: ['Intake', 'Holding Pens', 'Processing', 'Cell Block A', 'Warden\u2019s Office', 'Isolation Wing', 'Infirmary', 'Cell Block C', 'Records Room', 'Interrogation Suite', 'Yard Gallery', 'Solitary', 'Transfer Dock', 'Deep Cells', 'Warden\u2019s Tower', 'Tribunal Wing', 'Sentencing Hall', 'Magistrate\u2019s Archive', 'Gallows Court', 'High Court'],
+    pool: [['jailer', 1], ['officer', 1], ['orderly', 1], ['cuffbot', 1], ['sedation', 2], ['gasbot', 2], ['warder', 3], ['interrogator', 4], ['marksman', 6], ['shock', 8], ['sentinel', 11]],
+    bosses: ['kell', 'restraint', 'voight', 'venn'] },
+  { id: 'port', name: 'Orbital Lift Port', unlock: { garrison: 15, foundry: 10, detention: 5 }, offset: 12, level: 0, credits: 1.2, xp: 1.2, events: 0.25, theme: 'port',
     mechanic: { id: 'snipers', name: 'Tower snipers', desc: 'Open landing pads. Each turn there is a 20% chance a tower sniper hits you for 8% of max HP unless you Defend.' },
     rooms: { fight: 4, elite: 3, event: 1, cargo: 3, rest: 1 },
     roomNames: { fight: 'Checkpoint', elite: 'Security Office', event: 'Crew Lounge', cargo: 'Cargo Stack', rest: 'Maintenance Bay' },
     desc: 'The regime\u2019s lifeline off-world. Elite guards and rich cargo.',
-    sectors: ['Cargo Gate', 'Customs Hall', 'Fuel Depot', 'Landing Pad 3', 'Tower Base', 'Container Stacks', 'Lift Shaft', 'Hangar Deck', 'Crew Quarters', 'Control Tower', 'Tether Anchor', 'Gantry Ring', 'Flight Ops', 'Command Deck', 'The Lift'],
-    pool: [['dockguard', 1], ['probe', 1], ['deckbot', 1], ['gunner', 2], ['mortarbot', 2], ['marksman', 3], ['shock', 4], ['sentinel', 6]],
-    bosses: ['vane', 'crawler', 'ostrane'] },
+    sectors: ['Cargo Gate', 'Customs Hall', 'Fuel Depot', 'Landing Pad 3', 'Tower Base', 'Container Stacks', 'Lift Shaft', 'Hangar Deck', 'Crew Quarters', 'Control Tower', 'Tether Anchor', 'Gantry Ring', 'Flight Ops', 'Command Deck', 'The Lift', 'Tether Climb', 'Upper Lift', 'Cloud Station', 'Director\u2019s Lounge', 'Observation Deck'],
+    pool: [['dockguard', 1], ['tetherdrone', 1], ['deckbot', 1], ['gunner', 2], ['mortarbot', 2], ['customs', 3], ['exo', 4], ['sentinel', 6]],
+    bosses: ['pell', 'gantry', 'vane', 'imre'] },
 ];
 
 // ---------- events between fights ----------
@@ -686,6 +726,23 @@ export const SPECIALS = {
   crucible: { name: 'Slag torrent',   mult: 1.0, status: { burn: 3 }, tip: 'Burning for 3 turns. Defend to block it.' },
   kell:     { name: 'Solitary',       mult: 0.7, status: { exposed: 3 }, tip: 'Exposed for 3 turns. Defend to block it.' },
   vane:     { name: 'Orbital spotter', mult: 1.3, status: { exposed: 2 }, tip: 'A spotter drone paints you. Defend.' },
+  stoker:   { name: 'Live coals',     mult: 0.6, status: { burn: 2 }, tip: 'A shovel of coals. Sets you Burning. Defend to block it.' },
+  hookbot:  { name: 'Hook snag',      mult: 0.8, status: { bleed: 2 }, tip: 'Leaves you Bleeding. Defend to block it.' },
+  castguard:{ name: 'Slug round',     mult: 1.2, status: { shaken: 2 }, tip: 'A heavy slug. Leaves you Shaken. Defend to block it.' },
+  warder:   { name: 'Prod and shove', mult: 0.7, status: { shaken: 2 }, tip: 'Leaves you Shaken. Defend to block it.' },
+  orderly:  { name: 'Injector',       mult: 0.4, status: { exposed: 2 }, tip: 'Your limbs go heavy: Exposed for 2 turns. Defend to block it.' },
+  customs:  { name: 'Carbine burst',  mult: 1.0, status: { bleed: 2 }, tip: 'Leaves you Bleeding. Defend to block it.' },
+  tetherdrone: { name: 'Cable lash',  mult: 0.5, status: { bleed: 2 }, tip: 'A weighted line. Leaves you Bleeding. Defend to block it.' },
+  exo:      { name: 'Power slam',     mult: 1.4, status: { shaken: 2 }, tip: 'Servo-driven fists. Leaves you Shaken. Defend.' },
+  dray:     { name: 'Firing party',   mult: 1.2, status: { shaken: 2 }, tip: 'Dray drops his sabre like a flag. Defend.' },
+  slagmother: { name: 'Slag splash',  mult: 1.0, status: { burn: 3 }, tip: 'Burning for 3 turns. Defend to block it.' },
+  hale:     { name: 'Cutting arc',    mult: 1.1, status: { burn: 2 }, tip: 'A plasma arc. Burning for 2 turns. Defend to block it.' },
+  restraint:{ name: 'Cuff launcher',  mult: 0.8, status: { exposed: 3 }, tip: 'Cuffed: Exposed for 3 turns. Defend to block it.' },
+  voight:   { name: 'Syringe dart',   mult: 0.7, status: { shaken: 3 }, tip: 'A sedative dart. Shaken for 3 turns. Defend to block it.' },
+  venn:     { name: 'Gavel',          mult: 1.3, status: { shaken: 2 }, tip: 'The gavel-mace comes down. Shaken. Defend.' },
+  pell:     { name: 'Stamped',        mult: 0.8, status: { exposed: 2 }, tip: 'The stamp baton marks you. Exposed for 2 turns. Defend.' },
+  gantry:   { name: 'Hook rake',      mult: 1.1, status: { bleed: 3 }, tip: 'Bleeding for 3 turns. Defend to block it.' },
+  imre:     { name: 'Director\u2019s mark', mult: 1.3, status: { exposed: 2, shaken: 2 }, tip: 'Exposed and Shaken. Defend to block it.' },
 };
 
 // ---------- elite modifiers (one per elite) ----------
@@ -699,14 +756,29 @@ export const AFFIXES = {
 };
 
 // ---------- bosses ----------
+// short and he: how the engine's own lines name the boss (he, she or it). noRun: [why Run is blocked, the chip's tip] once a phase takes Run away for good.
 export const BOSS_INFO = {
-  halvek:   { epithet: 'Keeper of the Gate',        phase2: 'Halvek tears off his gloves. \u201CEnough paperwork.\u201D' },
-  crawler:  { epithet: 'Siege Engine, Mark IV',      phase2: 'The crawler vents its coolant and redlines every gun.' },
-  ostrane:  { epithet: 'Supervisor of Kessa Yard',  phase2: 'Ostrane finally puts the datapad down.' },
-  brask:    { epithet: 'Overseer of the Casting Floor', phase2: 'Brask roars and wades in swinging.' },
-  crucible: { epithet: 'The Furnace Walks',          phase2: 'The Crucible\u2019s core goes white-hot.' },
-  kell:     { epithet: 'Warden of the Deep Cells',   phase2: 'Kell takes off her glasses. Her eyes are worse.' },
-  vane:     { epithet: 'Master of the Lift',         phase2: 'Vane calls in the tower guns.' },
+  halvek:   { epithet: 'Keeper of the Gate',        phase2: 'Halvek tears off his gloves. \u201CEnough paperwork.\u201D', short: 'Halvek', he: 'he' },
+  crawler:  { epithet: 'Siege Engine, Mark IV',      phase2: 'The crawler vents its coolant and redlines every gun.', short: 'The crawler', he: 'it' },
+  ostrane:  { epithet: 'Supervisor of Kessa Yard',  phase2: 'Ostrane finally puts the datapad down.', short: 'Ostrane', he: 'she' },
+  brask:    { epithet: 'Overseer of the Casting Floor', phase2: 'Brask roars and wades in swinging.', short: 'Brask', he: 'he' },
+  crucible: { epithet: 'The Furnace Walks',          phase2: 'The Crucible\u2019s core goes white-hot.', short: 'The Crucible', he: 'it' },
+  kell:     { epithet: 'Warden of the Deep Cells',   phase2: 'Kell takes off her glasses. Her eyes are worse.', short: 'Kell', he: 'she',
+    noRun: ['She threw away the keys', 'She threw away her keys. No Run for the rest of the fight.'] },
+  vane:     { epithet: 'Master of the Lift',         phase2: 'Vane calls in the tower guns.', short: 'Vane', he: 'he' },
+  dray:     { epithet: 'Commandant of the Garrison', phase2: 'Dray unbuckles his greatcoat and draws the sabre.', short: 'Dray', he: 'he',
+    noRun: ['The guard is turned out', 'The guard is turned out on the steps. No Run for the rest of the fight.'] },
+  slagmother: { epithet: 'Keeper of the Ladle Track', phase2: 'Both crane arms lock. The ladle glows white.', short: 'The Slagmother', he: 'it' },
+  hale:     { epithet: 'Chief Engineer of the Works', phase2: 'Hale drops his visor. The lance burns blue.', short: 'Hale', he: 'he' },
+  restraint:{ epithet: 'Riot Pattern, Block Issue',  phase2: 'Every cuff on the Restraint Engine snaps open at once.', short: 'The Engine', he: 'it',
+    noRun: ['Lockdown', 'Lockdown. No Run for the rest of the fight.'] },
+  voight:   { epithet: 'Chief Interrogator',         phase2: 'Voight pulls on a second pair of gloves.', short: 'Voight', he: 'he' },
+  venn:     { epithet: 'Magistrate of the High Court', phase2: 'Venn stands. Nobody in this court has seen her stand.', short: 'Venn', he: 'she',
+    noRun: ['The court is sealed', 'The doors of the court are sealed. No Run for the rest of the fight.'] },
+  pell:     { epithet: 'Chief of Customs',           phase2: 'Pell puts the scanner away and takes the baton in both hands.', short: 'Pell', he: 'he' },
+  gantry:   { epithet: 'Cargo Walker, Gantry Ring',  phase2: 'The Gantry Walker drops its load and turns all the way round.', short: 'The Walker', he: 'it' },
+  imre:     { epithet: 'Director of the Orbital Lift', phase2: 'Imre turns away from the glass at last.', short: 'Imre', he: 'he',
+    noRun: ['The deck is sealed', 'The observation deck is sealed. No Run for the rest of the fight.'] },
 };
 
 // Rules for the bosses' signature moves. Names, tips and lines are in lore.js; docs/LORE.md has the design.
@@ -737,10 +809,38 @@ export const BOSS_KIT = {
   ostrane: { rate: 0.4, cd: 2,
     moves: { redact: { from: 75, count: 1, turns: 2, cut: 0.5 }, audit: { from: 50, count: 2, base: 1, per: 0.4, max: 3, guard: 0.5 } },
     notes: { 75: 'Redact opens up.', 50: 'ATK +20%, SPD +2. Final Audit opens up.', 25: 'Final Audit on a 1-turn count, every third turn.' } },
+  // The nine added with twenty sectors. Same mechanics by id, each boss with a pair of its own.
+  dray: { rate: 0.4, cd: 2,
+    moves: { front: { from: 100, until: 50, count: 1, turns: 2 }, salute: { from: 75, count: 1, mult: 1.6, guard: 0.5, parry: 0.5 } },
+    notes: { 75: 'The Colonel\u2019s Draw opens up.', 50: 'ATK +20%. No more conscripts in front.', 25: 'The guard is turned out: no Run. The Colonel\u2019s Draw every third turn.' } },
+  slagmother: { rate: 0.4, cd: 2,
+    moves: { floor: { from: 100, count: 1, turns: 3, cost: 0.05 }, overtime: { from: 75, until: 25, count: 1, mult: 0.8, hits: 2, guard: 0.5, winded: 2, self: 0.03 } },
+    notes: { 75: 'Both Arms opens up.', 50: 'ATK +20%. No more self-repair. Ladle Pour lasts 4 turns.', 25: 'An arm buckles: DEF \u22123, no more Both Arms. Ladle Pour every third turn.' } },
+  hale: { rate: 0.4, cd: 2,
+    moves: { siege: { from: 100, count: 2, mult: 2.6, guard: 0.35, jam: 0.1 }, roll: { from: 75, count: 2, mult: 2, guard: 0.5, open: 1.5, choke: 0.12 } },
+    notes: { 75: 'Vent Cycle opens up.', 50: 'ATK +20%, SPD +2.', 25: 'Suit breached: he takes +15% damage. Lance Charge every third turn.' } },
+  restraint: { rate: 0.4, cd: 2,
+    moves: { anchor: { from: 100, count: 1, mult: 1.6, guard: 0.5, pin: 2, belly: 1.3 }, shutter: { from: 75, count: 1, turns: 2 } },
+    notes: { 75: 'Cage Down opens up.', 50: 'ATK +20%. No more self-repair.', 25: 'Lockdown: no Run, no more Cage Down. Clamp Arms every third turn.' } },
+  voight: { rate: 0.4, cd: 2,
+    moves: { redact: { from: 75, count: 1, turns: 2, cut: 0.5 }, lights: { from: 50, count: 1, turns: 2, miss: 0.25 } },
+    notes: { 75: 'Nerve Block opens up.', 50: 'ATK +20%. Gas Cloud opens up.', 25: 'Syringe darts twice as often. Nerve Block every third turn.' } },
+  venn: { rate: 0.4, cd: 2,
+    moves: { count: { from: 100, count: 1, turns: 2, shaken: 2 }, audit: { from: 75, count: 2, base: 1, per: 0.4, max: 3, guard: 0.5 } },
+    notes: { 75: 'Sentence opens up.', 50: 'ATK +20%, DEF +2.', 25: 'The court is sealed: no Run. Sentence every third turn.' } },
+  pell: { rate: 0.4, cd: 2,
+    moves: { confiscate: { from: 100, until: 25, count: 1, mult: 1, guard: 0.5 }, crane: { from: 75, count: 2, mult: 2.2, guard: 0.5, wreck: 2 } },
+    notes: { 75: 'Crate Drop opens up.', 50: 'ATK +20%. Tower snipers: 30% per turn.', 25: 'No more Seizures. Tower snipers: 45% per turn.' } },
+  gantry: { rate: 0.4, cd: 2,
+    moves: { anchor: { from: 100, count: 1, mult: 1.6, guard: 0.5, pin: 2, belly: 1.3 }, overtime: { from: 75, count: 1, mult: 0.8, hits: 2, guard: 0.5, winded: 2, self: 0.03 } },
+    notes: { 75: 'Hook Swing opens up.', 50: 'ATK +20%. No more self-repair.', 25: 'Hydraulics failing: a quarter of plain shots go wide. Mag Clamp every third turn.' } },
+  imre: { rate: 0.4, cd: 2,
+    moves: { shutter: { from: 100, count: 1, turns: 2 }, siege: { from: 75, count: 2, mult: 2.8, guard: 0.35, jam: 0.1 } },
+    notes: { 75: 'Station Strike opens up.', 50: 'ATK +20%, SPD +2. Tower snipers: 40% per turn.', 25: 'The deck is sealed: no Run, no more Shield Projector. Station Strike every fourth turn. Plain fire is two shots at x0.7.' } },
 };
 
 // ---------- contraband: run perks drafted after fights. Kept until the operative dies. ----------
-// No limit on how much you carry, and every copy stacks. The first copy gives per; each further copy adds r times what the last one added,
+// Up to 3 copies of each piece to start, raised one at a time for credits up to 99, and every copy stacks. The first copy gives per; each further copy adds r times what the last one added,
 // so stacks keep paying forever but level off (E.perkValue). add: the value before any copies. whole: rounded, for turns and flat stats.
 export const PERKS = [
   { id: 'hollow',    name: 'Hollow-Points',      rare: false, add: 1.6, per: 0.15, dp: 2, desc: 'Critical hits deal x{v} instead of x1.6.' },

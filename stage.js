@@ -13,11 +13,17 @@ const RES = 3;
 // How tall each high-resolution figure stands on the stage. The enemy stands further back, so it's smaller.
 const HD_HEIGHT = { player: 146, partner: 124, patrol: 112, probe: 66, officer: 108, hound: 78, riot: 116, marksman: 112, interrogator: 112, shock: 116, sentinel: 116, halvek: 118, crawler: 92, ostrane: 112, ally: 98,
   welder: 66, foreman: 112, loader: 112, slagger: 114, jailer: 108, sedation: 108, dockguard: 112, gunner: 112, brask: 122, crucible: 128, kell: 116, vane: 116,
-  smallbot: 62, bulwark: 62, spotweld: 60, slagrunt: 60, cuffbot: 60, gasbot: 62, mortarbot: 66, deckbot: 60 };
-const MELEE = new Set(['hound', 'riot', 'loader', 'brask', 'foreman', 'slagger', 'jailer', 'sedation', 'bulwark', 'spotweld', 'cuffbot']);
+  smallbot: 62, bulwark: 62, spotweld: 60, slagrunt: 60, cuffbot: 60, gasbot: 62, mortarbot: 66, deckbot: 60,
+  stoker: 110, hookbot: 84, castguard: 116, warder: 116, orderly: 108, customs: 112, tetherdrone: 64, exo: 122,
+  dray: 120, slagmother: 132, hale: 120, restraint: 126, voight: 116, venn: 118, pell: 112, gantry: 134, imre: 122 };
+// Fighters whose own sheet isn't in yet borrow one that fits, worn in the map's colours. Each lookup checks for the real
+// sheet first, so it takes over the moment hd.json lists it, with nothing to change here.
+const STAND_IN = { dray: 'halvek', slagmother: 'crucible', hale: 'brask', restraint: 'crawler', voight: 'interrogator', venn: 'kell', pell: 'officer', gantry: 'loader', imre: 'ostrane',
+  stoker: 'foreman', hookbot: 'welder', castguard: 'shock', warder: 'riot', orderly: 'jailer', customs: 'dockguard', tetherdrone: 'probe', exo: 'shock' };
+const MELEE = new Set(['hound', 'riot', 'loader', 'brask', 'foreman', 'slagger', 'jailer', 'sedation', 'bulwark', 'spotweld', 'cuffbot', 'stoker', 'warder', 'orderly', 'exo', 'hale', 'venn']);
 // Charge poses that were drawn to loop from their first frame. The rest settle into a brace and breathe on their last frames.
 const CHARGE_LOOPS = new Set(['gunner', 'marksman', 'riot', 'shock']);
-const HOVER = new Set(['probe']);
+const HOVER = new Set(['probe', 'tetherdrone']);
 const osCalm = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 let reduceMotion = osCalm;
 export const setCalm = (on) => { reduceMotion = osCalm || on; };
@@ -138,7 +144,8 @@ export function ensureSheet(id) {
   return jobs[id].first;
 }
 // Is the real art for this id still on its way? Used to hold a fight briefly rather than show a stand-in.
-function artPending(id) {
+function artPending(name) {
+  const id = artOf(name);
   if (sheets[id] && sheets[id].hd) return false;
   if (hdState === 'wait') return true;
   if (sheets[id] || !defs[id]) return false;
@@ -152,21 +159,29 @@ function loadMapSheets(theme, first) {
   sheetsFor = theme;
   const map = MAPS.find((m) => m.theme === theme);
   if (!map) return;
-  const keep = new Set([...map.pool.map((p) => p[0]), ...map.bosses]);
+  const keep = new Set([...map.pool.map((p) => p[0]), ...map.bosses].flatMap((id) => [id, artOf(id)]));
   for (const id of Object.keys(defs)) if (LAZY(id) && !keep.has(id)) { delete sheets[id]; if (jobs[id]) { jobs[id].dead = true; delete jobs[id]; } }
   for (const k of Object.keys(tintCache)) if (!k.endsWith(`-${theme}`)) delete tintCache[k];
   (async () => { await first; for (const id of keep) await ensureSheet(id); })();
 }
 
 export const sheetOf = (id) => sheets[id] || null;
+// The sheet to load for an id: its own once hd.json or the manifest knows it, else its stand-in.
+const artOf = (id) => (STAND_IN[id] && !defs[id] ? STAND_IN[id] : id);
+// The sheet to draw now, and whose it is: its own if loaded, else a loaded stand-in.
+function sheetFor(id) {
+  if (sheets[id]) return [id, sheets[id]];
+  const alt = STAND_IN[id];
+  return alt && sheets[alt] ? [alt, sheets[alt]] : [id, null];
+}
 // Enemies shared between maps wear that map's colours. Recoloured once per enemy and map, in code. Bright glows (eyes, muzzles) keep their colour.
 const MAP_TINT = { foundry: [1, 0.72, 0.52, 0.42, 0.86], detention: [0.62, 0.78, 1, 0.48, 0.92], port: [0.96, 1, 1.06, 0.55, 1.28] };
 const TINTED = new Set(['probe', 'officer', 'hound', 'riot', 'marksman', 'interrogator', 'shock', 'sentinel', 'crawler', 'ostrane']);
 const tintCache = {};
 function tintedSheet(id, theme) {
-  const base = sheets[id], tint = MAP_TINT[theme];
-  if (!base || !base.hd || !tint || !TINTED.has(id)) return base || null;
-  const key = `${id}-${theme}`;
+  const [src, base] = sheetFor(id), tint = MAP_TINT[theme];
+  if (!base || !base.hd || !tint || !(TINTED.has(src) || src !== id)) return base || null;
+  const key = `${src}-${theme}`;
   if (tintCache[key]) return tintCache[key];
   const anims = {};
   for (const [name, a] of Object.entries(base.anims)) anims[name] = tintRow(a, tint);
@@ -199,7 +214,7 @@ function tintRow(a, tint) {
 const BG_OPEN = new Set(['garrison_1', 'garrison_2', 'foundry_1', 'port_1', 'port_2']);
 const bgCache = new Map();
 function paintedBackdrop(theme, sector, boss) {
-  const band = Math.min(2, Math.floor((sector - 1) / 5)), key = `${theme}_${band * 2 + (boss ? 2 : 1)}`;
+  const band = Math.min(3, Math.floor((sector - 1) / 5)), key = `${theme}_${band * 2 + (boss ? 2 : 1)}`;
   let e = bgCache.get(key);
   if (!e) {
     e = { canvas: null, open: BG_OPEN.has(key) };
@@ -230,9 +245,9 @@ function paintedBackdrop(theme, sector, boss) {
 }
 // First idle frame of a character's sheet, cropped to the figure, as a data URL (for victory/death screens).
 const stills = {};
-export function sheetStill(id) {
+export function sheetStill(name) {
+  const [id, sh] = sheetFor(name);
   if (stills[id] !== undefined) return stills[id];
-  const sh = sheets[id];
   if (!sh || !sh.anims.idle) return null;
   const a = sh.anims.idle, fw = a.img.width / a.frames, fh = a.img.height;
   const c = document.createElement('canvas'); c.width = fw; c.height = fh;
@@ -255,8 +270,8 @@ function seeded(seed) { let a = seed >>> 0; return () => { a = (a + 0x6d2b79f5) 
 class Actor {
   constructor(id, side, boss) {
     this.id = id; this.side = side; this.boss = boss;
-    this.sheet = (id === 'player' && lookSheets[side === 'partner' ? 'partner' : 'player']) || sheets[id] || null;
-    this.drawn = this.sheet ? null : portraitCanvas(id);
+    this.sheet = (id === 'player' && lookSheets[side === 'partner' ? 'partner' : 'player']) || sheetFor(id)[1] || null;
+    this.drawn = this.sheet ? null : portraitCanvas(id) || (STAND_IN[id] ? portraitCanvas(STAND_IN[id]) : null);
     this.ox = 0; this.oy = 0; this.alpha = 1; this.flash = 0; this.flashColor = '#ffffff';
     this.anim = 'idle'; this.animStart = 0; this.rest = 'idle';
   }
@@ -332,7 +347,7 @@ export class Stage {
       this.setMode(b.dataset.speed === this.mode && matchMedia('(orientation: landscape) and (max-height: 600px), (orientation: landscape) and (pointer: coarse) and (max-height: 820px)').matches ? { manual: 'auto1', auto1: 'auto2', auto2: 'manual' }[this.mode] : b.dataset.speed);
     });
     this.syncSpeed();
-    onArtChange((id) => { if (id === '*' && this.enemy) ensureSheet(this.enemy.id); this.refreshArt(); });
+    onArtChange((id) => { if (id === '*' && this.enemy) ensureSheet(artOf(this.enemy.id)); this.refreshArt(); });
     const loop = (t) => { try { this.draw(performance.now()); } catch (e) { console.warn('stage draw', e); const g = this.ctx; g.setTransform(RES, 0, 0, RES, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; } requestAnimationFrame(loop); };
     requestAnimationFrame(loop);
   }
@@ -429,7 +444,7 @@ export class Stage {
     return { x: a.x + actor.ox, y: a.y + actor.oy - actor.size * (actor.side === 'player' ? 0.45 : 0.5) };
   }
   muzzle(actor) {
-    const a = this.anchor(actor.side, actor), s = actor.size, m = !actor.sheet && MUZZLE[actor.id];
+    const a = this.anchor(actor.side, actor), s = actor.size, m = !actor.sheet && (MUZZLE[actor.id] || MUZZLE[STAND_IN[actor.id]]);
     if (actor.sheet && actor.sheet.hd) { const at = actor.sheet.anims.attack, tip = at && at.tip; if (tip) return { x: a.x + actor.ox + tip[0] * actor.scale, y: a.y + actor.oy + tip[1] * actor.scale }; return { x: a.x + actor.ox + (actor.side === 'enemy' ? -1 : 1) * actor.tall * 0.25, y: a.y + actor.oy - actor.tall * 0.65 }; }
     if (actor.sheet && actor.sheet.look && actor.sheet.anims.attack && actor.sheet.anims.attack.tip) { const tip = actor.sheet.anims.attack.tip[0] || actor.sheet.anims.attack.tip; if (tip && tip.length === 2) return { x: a.x + actor.ox - s / 2 + (tip[0] / 96) * s, y: a.y + actor.oy - s + (tip[1] / 96) * s + this.footPad(actor) }; }
     if (actor.sheet) return actor.side === 'player' ? { x: a.x + actor.ox + s * 0.18, y: a.y + actor.oy - s * 0.36 } : { x: a.x + actor.ox - s * 0.18, y: a.y + actor.oy - s * 0.36 };
@@ -453,7 +468,7 @@ export class Stage {
     if (partner && !this.partner) this.partner = new Actor('player', 'partner', false);
     if (!partner) this.partner = null;
     this.sector = sector; this.boss = boss; this.theme = theme; this.allies = allies;
-    loadMapSheets(theme, ensureSheet(enemy.id)); // this fight's enemy goes ahead of the rest of the map
+    loadMapSheets(theme, ensureSheet(artOf(enemy.id))); // this fight's enemy goes ahead of the rest of the map
     if (!this.allySprite) this.allySprite = portraitCanvas('prisoner');
     if (sheets.prisoner) {
       this.allyActors = this.allyActors || [];

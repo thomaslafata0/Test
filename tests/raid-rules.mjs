@@ -58,9 +58,13 @@ for (const [sector, want] of [[1, 0.8], [2, 0.65], [3, 0.5], [4, 0.4], [5, 0], [
   s.char.perks = ['ironlung']; s.char.perkN = { ironlung: 5 };
   ok('stacks apply to stats', E.statsOf(s.meta, s.char).maxHp === Math.round(base * (1 + lung(5) / 100)), `${base} -> ${E.statsOf(s.meta, s.char).maxHp}`);
   // No pockets: take as many different pieces as you like, and a copy adds to the stack.
+  s.char.perkN = { ironlung: 2 };
   for (const id of D.PERKS.map((p) => p.id)) { s.run.perkOffer = [id]; s.screen = 'perk'; E.choosePerk(s, id, rng); }
+  s.run.perkOffer = ['ironlung']; E.choosePerk(s, 'ironlung', rng); ok('the fourth copy is refused at the cap', s.char.perkN.ironlung === 3);
   ok('no limit on pieces', s.char.perks.length === D.PERKS.length, `${s.char.perks.length}`);
-  ok('a copy stacks instead of duplicating', s.char.perkN.ironlung === 6 && s.char.perks.filter((x) => x === 'ironlung').length === 1);
+  ok('a copy stacks instead of duplicating, up to 3', s.char.perkN.ironlung === 3 && s.char.perks.filter((x) => x === 'ironlung').length === 1, `${s.char.perkN.ironlung}`);
+  s.char.credits = 99999; const before = E.perkCap(s.char), c1 = E.perkCapCost(s); ok('the cap can be raised for credits', E.buyPerkCap(s) && E.perkCap(s.char) === before + 1 && E.perkCapCost(s) > c1);
+  s.run.perkOffer = ['ironlung']; s.screen = 'perk'; E.choosePerk(s, 'ironlung', rng); ok('a raised cap takes one more', s.char.perkN.ironlung === 4);
   // Old saves: a tier becomes that many copies.
   const old = game(14); old.s.char.perks = ['chit', 'hollow']; old.s.char.perkLv = { chit: 3 }; delete old.s.char.perkN;
   const m = E.migrate(old.s, old.rng);

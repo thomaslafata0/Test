@@ -8,7 +8,7 @@ let failed = 0;
 const errs = [];
 const check = (name, ok, extra = '') => { console.log(`${ok ? 'PASS' : 'FAIL'} ${name} ${extra}`); if (!ok) failed++; };
 
-const TO_BOSS = (map, sector) => `s.meta.bestSector = 99; E.deploy(s, '${map}', 1, rng); s.run.sector = ${sector}; s.run.room = 2; s.run.choices = null; s.run.bulletin = 'quiet'; E.offerRoute(s, rng); for (let i = 0; i < 8 && s.screen !== 'combat'; i++) { if (s.run.choices && s.run.choices.length) E.enterRoom(s, 0, rng); else E.offerRoute(s, rng); } s.char.hp = E.stats(s).maxHp;`;
+const TO_BOSS = (map, sector) => `s.meta.bestSector = 99; for (const k of ['garrison', 'foundry', 'detention', 'port']) E.mapProgress(s.char, k).deepest = 20; E.deploy(s, '${map}', 1, rng); s.run.sector = ${sector}; s.run.room = 2; s.run.choices = null; s.run.bulletin = 'quiet'; E.offerRoute(s, rng); for (let i = 0; i < 8 && s.screen !== 'combat'; i++) { if (s.run.choices && s.run.choices.length) E.enterRoom(s, 0, rng); else E.offerRoute(s, rng); } s.char.hp = E.stats(s).maxHp;`;
 async function load(p, src) {
   await p.evaluate(async ([src, SAVE]) => {
     const E = await import('./engine.js'), D = await import('./data.js'), rng = E.seededRng(11), s = E.newGame(rng);
@@ -237,7 +237,9 @@ const idle = (p) => p.waitForFunction(() => !document.getElementById('app').clas
   await p.evaluate(() => { const u = JSON.parse(localStorage.getItem('cinder-cell-ui') || '{}'); u.calm = false; localStorage.setItem('cinder-cell-ui', JSON.stringify(u)); });
 
   // --- Every boss's moves through the page, without their art being checked: nothing throws, the intent reads true.
-  for (const [id, map, sec, moves] of [['crawler', 'garrison', 10, ['anchor', 'siege']], ['ostrane', 'garrison', 15, ['redact', 'audit']], ['brask', 'foundry', 5, ['overtime', 'front']], ['crucible', 'foundry', 10, ['roll', 'floor']], ['kell', 'detention', 5, ['count', 'lights']], ['vane', 'port', 5, ['crane', 'salute']]]) {
+  const DD = await import(require('url').pathToFileURL(require('path').join(__dirname, '..', 'data.js')).href);
+  for (const [id, map, sec, moves] of DD.MAPS.flatMap((m) => m.bosses.map((b, k) => [b, m.id, (k + 1) * 5, Object.keys(DD.BOSS_KIT[b].moves)]))) {
+
     await load(p, TO_BOSS(map, sec) + `s.char.bossMet = { '${id}:${map}': 1 }; s.char.hp = 9000;`);
     await pastIntro(p); await idle(p);
     for (const mv of moves) {

@@ -1860,5 +1860,1014 @@
   "size": 232,
   "feetY": 197,
   "fig": 160
+ },
+ "imre": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 10
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 10,
+    "tip": [
+     -102,
+     -178
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 10
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 10
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 10
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 10
+   },
+   "sig1": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 10
+   },
+   "sig2": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 10
+   },
+   "special": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 10
+   }
+  },
+  "size": 256,
+  "feetY": 245,
+  "fig": 232
+ },
+ "pell": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 8
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 8,
+    "tip": [
+     -93,
+     -167
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 8
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 8
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 8
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 8
+   },
+   "sig1": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 8
+   },
+   "sig2": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 8
+   },
+   "special": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 8
+   }
+  },
+  "size": 256,
+  "feetY": 247,
+  "fig": 239
+ },
+ "dray": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 8
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 8,
+    "tip": [
+     -116,
+     -192
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 8
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 8
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 8
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 8
+   },
+   "sig1": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 8
+   },
+   "sig2": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 8
+   },
+   "special": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 8
+   }
+  },
+  "size": 256,
+  "feetY": 247,
+  "fig": 239
+ },
+ "gantry": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 12
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 12,
+    "tip": [
+     -100,
+     -94
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 12
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 12
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 12
+   },
+   "repair": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 12
+   },
+   "sig1": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 12
+   },
+   "sig2": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 12
+   },
+   "special": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 12
+   }
+  },
+  "size": 256,
+  "feetY": 243,
+  "fig": 232
+ },
+ "hale": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 6
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 6,
+    "tip": [
+     -100,
+     -120
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 6
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 6
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 6
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 6
+   },
+   "sig1": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 6
+   },
+   "sig2": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 6
+   },
+   "special": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 6
+   }
+  },
+  "size": 256,
+  "feetY": 249,
+  "fig": 243
+ },
+ "restraint": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 11
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 11,
+    "tip": [
+     -94,
+     -156
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 11
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 11
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 11
+   },
+   "repair": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 11
+   },
+   "sig1": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 11
+   },
+   "sig2": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 11
+   },
+   "special": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 11
+   }
+  },
+  "size": 256,
+  "feetY": 244,
+  "fig": 228
+ },
+ "slagmother": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 5
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 5,
+    "tip": [
+     -98,
+     -146
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 5
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 5
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 5
+   },
+   "repair": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 5
+   },
+   "sig1": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 5
+   },
+   "sig2": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 5
+   },
+   "special": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 5
+   }
+  },
+  "size": 256,
+  "feetY": 250,
+  "fig": 244
+ },
+ "venn": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 7
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 7,
+    "tip": [
+     -94,
+     -188
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 7
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 7
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 7
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 7
+   },
+   "sig1": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 7
+   },
+   "sig2": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 7
+   },
+   "special": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 7
+   }
+  },
+  "size": 256,
+  "feetY": 248,
+  "fig": 241
+ },
+ "voight": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 9
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 9,
+    "tip": [
+     -96,
+     -194
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 9
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 9
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 9
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 9
+   },
+   "sig1": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 9
+   },
+   "sig2": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 9
+   },
+   "special": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 9
+   }
+  },
+  "size": 256,
+  "feetY": 246,
+  "fig": 236
+ },
+ "castguard": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 8
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 8,
+    "tip": [
+     -101,
+     -200
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 8
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 8
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 8
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 8
+   },
+   "special": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 8
+   }
+  },
+  "size": 256,
+  "feetY": 247,
+  "fig": 239
+ },
+ "customs": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 10
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 10,
+    "tip": [
+     -102,
+     -192
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 10
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 10
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 10
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 10
+   },
+   "special": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 10
+   }
+  },
+  "size": 256,
+  "feetY": 245,
+  "fig": 236
+ },
+ "exo": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 4
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 4,
+    "tip": [
+     -96,
+     -120
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 4
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 4
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 4
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 4
+   },
+   "special": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 4
+   }
+  },
+  "size": 256,
+  "feetY": 251,
+  "fig": 245
+ },
+ "hookbot": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 32
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 32,
+    "tip": [
+     -58,
+     -97
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 32
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 32
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 32
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 32
+   },
+   "special": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 32
+   }
+  },
+  "size": 172,
+  "feetY": 139,
+  "fig": 112
+ },
+ "orderly": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 8
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 8,
+    "tip": [
+     -121,
+     -196
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 8
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 8
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 8
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 8
+   },
+   "special": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 8
+   }
+  },
+  "size": 256,
+  "feetY": 247,
+  "fig": 238
+ },
+ "stoker": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 9
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 9,
+    "tip": [
+     -31,
+     -175
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 9
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 9
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 9
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 9
+   },
+   "special": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 9
+   }
+  },
+  "size": 256,
+  "feetY": 246,
+  "fig": 237
+ },
+ "tetherdrone": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 31
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 31,
+    "tip": [
+     -37,
+     -128
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 31
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 31
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 31
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 31
+   },
+   "special": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 31
+   }
+  },
+  "size": 208,
+  "feetY": 176,
+  "fig": 122
+ },
+ "warder": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 11
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 11,
+    "tip": [
+     -41,
+     -164
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 11
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 11
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 11
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 11
+   },
+   "special": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 11
+   }
+  },
+  "size": 256,
+  "feetY": 244,
+  "fig": 232
  }
 }
