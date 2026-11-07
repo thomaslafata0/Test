@@ -1816,6 +1816,8 @@ const isHost = () => !!net && net.role === 'host';
 const myIdx = () => (isGuest() ? 1 : 0);
 // Actions that only touch this screen, never the game.
 const DOWNTIME = new Set(['drink', 'bet', 'stake', 'spin', 'invest', 'withdraw', 'shippart', 'shipcell', 'orbitgo', 'orbitact', 'orbitclose']);
+// The shuttle belongs to each player's own cell, so a friend in someone's room can't fly or fit it from here.
+const SHIP_ACTS = new Set(['shippart', 'shipcell', 'orbitarm', 'orbitgo', 'orbitact', 'orbitclose']);
 const LOCAL = new Set(['autostim', 'featfilter', 'stimprompt', 'draftdrone', 'randomize', 'missiontab', 'markettab', 'chartab', 'continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm', 'cloudcopy', 'cloudload', 'cloudversions', 'cloudrestore', 'cloudkeep', 'devunlock', 'devoff', 'dev', 'autostart']);
 function coopChip() {
   if (!net) return '';
@@ -1864,12 +1866,12 @@ function syncHome(hostMeta) {
 }
 let homePayout = 0;
 const GUEST_LOCAL = ['missionTab', 'marketTab', 'charTab', 'popup', 'compare', 'gearSlot', 'confirmSmoke', 'report', 'draft', 'guestSawDeath'];
-const GUEST_VIEW = ['notice', 'perkPick', 'compare', 'popup'];
+const GUEST_VIEW = ['notice', 'perkPick', 'compare', 'popup', 'wheel', 'wheelResult'];
 const NEEDS_RUN = new Set(['continue', 'room', 'roomDone', 'event', 'eventDone', 'deeper', 'extract', 'extractsafe', 'loottake', 'lootsell', 'perk', 'perkdrop']);
 let guestView = {}, guestQueue = [], guestToast = null, hostSynced = false, awaitingHost = false, awaitTimer = null, inbox = [], pumping = false, hadRun = false;
 function broadcast() {
   if (!isHost() || !net.peer) return;
-  const copy = { ...state, meta: { ...state.meta, journal: undefined }, events: undefined, report: null, notice: guestView.notice || null, perkPick: guestView.perkPick || null, popup: null, compare: null };
+  const copy = { ...state, meta: { ...state.meta, journal: undefined }, events: undefined, report: null, notice: guestView.notice || null, perkPick: guestView.perkPick || null, popup: null, compare: null, wheel: guestView.wheel || null, wheelResult: guestView.wheelResult || null };
   net.send({ t: 'state', s: JSON.stringify(copy), toast: guestToast });
   guestToast = null; state.guestFeats = null;
 }
@@ -2118,7 +2120,7 @@ function statusStrip() {
 }
 // The after-curfew row: only in the yard, only for the host.
 function downtimeBar() {
-  if (state.run || isGuest()) return '';
+  if (state.run) return '';
   const v = E.venturesTotal(state), left = E.marksLeft(state.char).length, d = E.drinkOf(state.char);
   const b = (id, label, note = '') => `<button class="btn quiet" data-a="modal" data-v="${id}">${label}${note ? ` <span class="muted">${esc(note)}</span>` : ''}</button>`;
   return b('bar', 'Lantern', d ? d.name : '') + b('wheel', 'Wheel') + b('orbit', 'Orbit', state.orbit ? 'in flight' : left < 5 ? `${5 - left}/5` : '') + b('ventures', 'Ventures', v ? v.toLocaleString() : '');
@@ -3204,7 +3206,7 @@ function boardView() {
 const DT_TITLES = { bar: ['The Lantern', 'Tenement basement \u00b7 after curfew'], wheel: ['The Wheel', 'Back room of the Lantern'], orbit: ['Orbit', 'The cell\u2019s shuttle \u00b7 lift corridor'], ventures: ['Ventures', 'Sable\u2019s ledger'] };
 function downtimeView() {
   const [title, where] = DT_TITLES[modal];
-  const body = { bar: barView, wheel: wheelView, orbit: orbitView, ventures: venturesView }[modal]();
+  const body = modal === 'orbit' && isGuest() ? '<div class="notice">The shuttle stays with your own cell. Leave the room to fly it from your own game.</div>' : { bar: barView, wheel: wheelView, orbit: orbitView, ventures: venturesView }[modal]();
   return `<div class="modal-wrap" data-a="closemodal"><div class="modal popup wide dt dtm-${modal}" role="dialog" aria-modal="true" aria-label="${esc(title)}">
     <div class="pop-head"><div class="pop-title"><span class="label">${esc(where)}</span><h2>${esc(title)}</h2></div><nav class="tabs pop-tabs head-tabs">${['bar', 'wheel', 'orbit', 'ventures'].map((k) => `<button class="tab" aria-selected="${modal === k}" data-a="modal" data-v="${k}">${esc(DT_TITLES[k][0])}</button>`).join('')}</nav><button class="tool" data-a="closemodal" aria-label="Close">Close</button></div>
     ${!E.inTown(state) ? '<p class="muted">Only between raids, and only in the yard.</p>' : body}
@@ -3223,9 +3225,9 @@ function barView() {
     <p class="muted">One drink before each raid. It lasts until you come home.${cur ? ` You\u2019re drinking a <b>${esc(cur.name)}</b> (${esc(cur.effect)}).` : ''}</p>
     <div class="dt-bar">${B.menu.map(row).join('')}</div>`;
 }
-let wheel = null, wheelBusy = false;
+let wheel = null, wheelBusy = false, guestWheelSeen = null;
 function wheelView() {
-  const c = state.char, w = state.wheel || (state.wheel = { bet: 'red', stake: 10, pick: 7 }), res = state.wheelResult, st = state.meta.wheel || { spins: 0, net: 0 };
+  const c = state.char, w = state.wheel || (state.wheel = { bet: 'red', stake: 10, pick: 7 }), res = wheelBusy ? null : state.wheelResult, st = state.meta.wheel || { spins: 0, net: 0 };
   const betBtn = (k) => `<button class="btn ${w.bet === k ? 'primary' : ''} ${k === 'red' ? 'red' : k === 'black' ? 'black' : ''}" data-a="bet" data-v="${k}" ${wheelBusy ? 'disabled' : ''}>${esc(E.BETS[k].name)} <span class="muted small">${E.BETS[k].pays}:1</span></button>`;
   return `<div class="dt-wheel">
     <div class="dt-wheel-left"><div id="wheel-slot"></div>
@@ -3581,7 +3583,11 @@ function render() {
   A.setMusic(state.run ? 'raid' : 'town');
   applyLook();
   const wslot = document.getElementById('wheel-slot');
-  if (wslot) { if (!wheel) { wheel = new Wheel(); globalThis.cinderWheel = wheel; } wslot.replaceWith(wheel.el); if (state.wheelResult && !wheelBusy) wheel.draw(state.wheelResult.n); }
+  if (wslot) { if (!wheel) { wheel = new Wheel(); globalThis.cinderWheel = wheel; } wslot.replaceWith(wheel.el); if (isGuest() && state.wheelResult && state.wheelResult.id !== guestWheelSeen) {
+      const res = state.wheelResult; guestWheelSeen = res.id; wheelBusy = true; A.play('click');
+      setTimeout(async () => { if (wheel) await wheel.spinTo(res.n); wheelBusy = false; A.play(res.win ? 'perk' : 'denied'); render(); }, 50);
+      setTimeout(render, 0);
+    } else if (state.wheelResult && !wheelBusy) wheel.draw(state.wheelResult.n); }
   const oslot = document.getElementById('orbit-slot');
   if (oslot) { if (!orbitScene) orbitScene = new OrbitScene(); const o = state.orbit; orbitScene.set(D.ORBIT_TIERS.find((x) => x.id === o.tier).ship, { me: o.over === 'lost' || o.over === 'ejected', enemy: o.over === 'won' }); oslot.replaceWith(orbitScene.el); }
   const tslot = document.getElementById('town-slot');
@@ -3771,7 +3777,10 @@ function act(a, v, k) {
   if (a === 'uipref') { uiPrefs[v] = !uiPrefs[v]; try { localStorage.setItem(UI_KEY, JSON.stringify(uiPrefs)); } catch (e) {} applyUi(); A.play('click'); render(); return; }
   if (busy && !modal) return;
   if (a === 'act') return fight(v);
-  if (DOWNTIME.has(a) && (isGuest() || wheelBusy || orbitBusy)) { A.play('denied'); return; }
+  if ((DOWNTIME.has(a) && (wheelBusy || orbitBusy)) || (isGuest() && SHIP_ACTS.has(a))) { A.play('denied'); return; }
+  // Read what only this screen knows before the action goes to the host.
+  if (isGuest() && a === 'spin') k = String((document.getElementById('wheel-pick') || {}).value ?? (state.wheel || {}).pick ?? 7);
+  if (isGuest() && a === 'invest') k = String((document.getElementById(`inv-${v}`) || {}).value || 0);
   // The friend's game actions run on the host; a few need a different message.
   if (isGuest() && !LOCAL.has(a)) {
     if (!net.online || !net.peer) { toast = 'Not connected to the host right now.'; A.play('denied'); render(); return; }
@@ -3868,17 +3877,18 @@ function applyAct(a, v, k) {
     case 'coopready': state.guestReady = !state.guestReady; if (net) net.send({ t: 'ready', on: state.guestReady }); sfx('click'); break;
     case 'modal': modal = v; if (v === 'board') loadBoard(); sfx('click'); break;
     case 'drink': ok = E.buyDrink(state, v); if (ok) { toast = `KEG-7 slides you a ${E.drinkOf(state.char).name}.`; sfx('perk'); } break;
-    case 'bet': state.wheel.bet = v; sfx('click'); break;
-    case 'stake': state.wheel.stake = +v; sfx('click'); break;
+    case 'bet': (state.wheel || (state.wheel = { bet: 'red', stake: 10, pick: 7 })).bet = v; sfx('click'); break;
+    case 'stake': (state.wheel || (state.wheel = { bet: 'red', stake: 10, pick: 7 })).stake = +v; sfx('click'); break;
     case 'spin': {
-      const w = state.wheel, pick = +((document.getElementById('wheel-pick') || {}).value ?? w.pick); w.pick = pick;
+      const w = state.wheel || (state.wheel = { bet: 'red', stake: 10, pick: 7 }), friend = actingAs === 1, pick = friend ? +k : +((document.getElementById('wheel-pick') || {}).value ?? w.pick); w.pick = pick;
       const res = E.spinWheel(state, w.bet, w.stake, pick, rng);
       if (!res) { ok = false; break; }
+      if (friend) { state.wheelResult = { ...res, id: Date.now() }; break; } // the friend's own screen plays the spin
       state.wheelResult = null; wheelBusy = true; save(); sfx('click');
       setTimeout(async () => { if (wheel) await wheel.spinTo(res.n); state.wheelResult = res; wheelBusy = false; sfx(res.win ? 'perk' : 'denied'); render(); }, 50);
       break;
     }
-    case 'invest': { const n = Math.floor(+((document.getElementById(`inv-${v}`) || {}).value || 0)); ok = E.invest(state, v, n); break; }
+    case 'invest': { const n = Math.floor(+(actingAs === 1 ? k : (document.getElementById(`inv-${v}`) || {}).value || 0)); ok = E.invest(state, v, n); break; }
     case 'withdraw': ok = E.withdraw(state, v); break;
     case 'shippart': ok = E.buyShipPart(state, v); break;
     case 'shipcell': ok = E.buyShipCell(state, v); if (ok) sfx('perk'); break;
