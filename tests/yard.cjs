@@ -125,7 +125,7 @@ const openOf = { terminal: 'missions', market: 'market', clinic: 'clinic', safeh
     const b2 = await T(); check(tag, 'drag: release stops, no walk left over', !b2.path && !b2.moving, JSON.stringify(b2));
     // A drag begun on a sign steers, it doesn't go there.
     await put(300, 300);
-    const sr = await page.evaluate(() => { const r = cinderTown.signs.noodles.el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+    const sr = await page.evaluate(() => { const r = cinderTown.signs.lantern.el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
     await fing.down(sr.x, sr.y); f1 = await at(480, 300); await fing.move(f1.x, f1.y); await page.waitForTimeout(40); await run(10); await fing.up(); await page.waitForTimeout(40); await run(2);
     a = await T(); check(tag, 'a drag from a sign steers', a.x > 320 && a.scene === 'town' && !a.path, JSON.stringify(a));
 
@@ -152,7 +152,7 @@ const openOf = { terminal: 'missions', market: 'market', clinic: 'clinic', safeh
 
     // ---------- every destination, by its sign and by its building, from every corner ----------
     const corners = [[126, 378], [618, 378], [226, 162], [405, 152]];
-    const places = [...P.buildings.filter((d) => d.sign).map((d) => ({ id: d.id, box: d.box, enter: !d.knock })), { id: 'noodles', spot: P.spots.find((h) => h.id === 'noodles') }];
+    const places = [...P.buildings.filter((d) => d.sign).map((d) => ({ id: d.id, box: d.box, enter: !d.knock }))];
     for (const q of places) for (const [cx, cy] of corners) for (const how of ['sign', 'building']) {
       await home(); await put(cx, cy);
       if (how === 'sign') await tapSign(q.id);
@@ -162,7 +162,6 @@ const openOf = { terminal: 'missions', market: 'market', clinic: 'clinic', safeh
       a = await T();
       const name = `${q.id} by ${how} from ${cx},${cy}`;
       if (q.enter) check(tag, `${name} goes in`, a.scene === `interior:${q.id}`, JSON.stringify(a));
-      else if (q.id === 'noodles') check(tag, `${name} offers a bowl`, a.scene === 'town' && a.offer && !!a.say, JSON.stringify(a));
       else check(tag, `${name} knocks`, a.scene === 'town' && !!a.say, JSON.stringify(a));
       if (q.id === 'terminal') await page.waitForTimeout(230);
     }
@@ -180,11 +179,13 @@ const openOf = { terminal: 'missions', market: 'market', clinic: 'clinic', safeh
       check(tag, `${d.id}: the room fits whole, signs away`, seen.signs && seen.whole && seen.art === 'ok', JSON.stringify(seen));
       if (d.id === 'clinic' || d.id === 'market') await page.screenshot({ path: `${OUT}/yard-${tag}-${d.id}.png` });
       await tapStage(it.npc.x, 280); await run(); await page.waitForTimeout(40);
-      a = await T(); check(tag, `${d.id}: tapping the person opens the menu`, a.popup === want && !!a.say, JSON.stringify(a));
+      a = await T(); const opened = async () => (d.id === 'lantern' ? (await page.locator('.dtm-bar').count()) > 0 : (await T()).popup === want);
+      check(tag, `${d.id}: tapping the person opens the menu`, (await opened()) && !!a.say, JSON.stringify(a));
       await page.keyboard.press('Escape'); await page.waitForTimeout(60);
       await page.keyboard.press('e'); await page.waitForTimeout(60);
-      a = await T(); check(tag, `${d.id}: E near the person opens the menu`, a.popup === want, a.popup);
+      a = await T(); check(tag, `${d.id}: E near the person opens the menu`, await opened(), a.popup);
       await page.keyboard.press('Escape'); await page.waitForTimeout(60);
+      if (it.also) { await tapStage(it.also.x, 280); await run(); await page.waitForTimeout(40); check(tag, 'the croupier opens the wheel', (await page.locator('.dtm-wheel').count()) > 0); await page.keyboard.press('Escape'); await page.waitForTimeout(60); }
       await put(it.exit[1] + 30, 316); await hold(['ArrowLeft'], 15); await page.waitForTimeout(30);
       a = await T(); check(tag, `${d.id}: walking to the exit leaves`, a.scene === 'town' && Math.hypot(a.x - door[0], a.y - door[1]) < 2, `${a.scene} ${a.x} ${a.y}`);
       // Back in by keys, walking through the door the way its push says.
@@ -230,12 +231,6 @@ const openOf = { terminal: 'missions', market: 'market', clinic: 'clinic', safeh
       await home(); await page.evaluate(([x, y]) => { const n = Y.nearestWalk(x + 18, y), p = cinderTown.player; p.x = n[0]; p.y = n[1]; }, q); await page.waitForTimeout(40);
       await page.keyboard.press('e'); await page.waitForTimeout(50);
       a = await T(); check(tag, `${f.id} speaks`, !!a.say, JSON.stringify(a));
-      if (f.talk === 'noodles') {
-        check(tag, 'vendor offers a bowl', a.offer);
-        await page.screenshot({ path: `${OUT}/yard-${tag}-noodles.png` });
-        await page.keyboard.press('Enter'); await page.waitForTimeout(80);
-        check(tag, 'noodles bought', await page.evaluate(() => !!cinderGame.state().char.fed));
-      }
     }
     const pat = await page.evaluate(() => { const t = cinderTown, g = t.patrol; g.pause = 0; t.player.x = 130; t.player.y = 372; const xs = [], ys = []; for (let i = 0; i < 900; i++) { t.update(1 / 30); xs.push(g.x); ys.push(g.y); } const k = t.folk.find((f) => f.id === 'kid'); k.pause = 0; k.gx = k.x + 30; k.gy = k.y + 20; const kx = k.x, ky = k.y; for (let i = 0; i < 60; i++) t.update(1 / 30); return { wx: Math.max(...xs) - Math.min(...xs), wy: Math.max(...ys) - Math.min(...ys), kx: k.x - kx, ky: k.y - ky, inside: Y.walkable(g.x, g.y) }; });
     check(tag, 'patrol walks in 2D', pat.wx > 100 && pat.wy > 60 && pat.inside, JSON.stringify(pat));
@@ -272,7 +267,7 @@ const openOf = { terminal: 'missions', market: 'market', clinic: 'clinic', safeh
     await home(); await put(330, 300); await page.waitForTimeout(80);
     const rules = await page.evaluate(() => { const t = cinderTown, out = {}, bad = []; const pills = []; for (const k in t.signs) { const e = t.signs[k].el, r = e.getBoundingClientRect(), s = e.firstChild.getBoundingClientRect(), fs = parseFloat(getComputedStyle(e).fontSize), c = t.cv.getBoundingClientRect(); if (fs < 11 - 0.01) bad.push(`${k} font ${fs}`); if (r.width < 37.5 || r.height < 37.5) bad.push(`${k} target ${r.width}x${r.height}`); if (r.left < c.left - 0.5 || r.right > c.right + 0.5 || r.top < c.top - 0.5 || r.bottom > c.bottom + 0.5) bad.push(`${k} off the view`); const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); if (!hit || !e.contains(hit)) bad.push(`${k} covered by ${hit && hit.className}`); pills.push([k, s]); } for (let i = 0; i < pills.length; i++) for (let j = i + 1; j < pills.length; j++) { const a = pills[i][1], b = pills[j][1]; if (a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom) bad.push(`${pills[i][0]} overlaps ${pills[j][0]}`); } out.bad = bad; out.names = Object.keys(t.signs); out.texts = Object.values(t.signs).map((q) => q.el.textContent); const cv = t.cv.getBoundingClientRect(); out.covered = [...document.querySelectorAll('.shortcuts .btn')].filter((e) => { const r = e.getBoundingClientRect(); if (!r.width) return false; const h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !h || !(h === e || e.contains(h)); }).map((e) => e.textContent); out.overlapBtns = [...document.querySelectorAll('.shortcuts .btn')].filter((e) => { const r = e.getBoundingClientRect(); return r.left < cv.right && r.right > cv.left && r.top < cv.bottom && r.bottom > cv.top; }).map((e) => e.textContent); return out; });
     check(tag, 'signs: readable, tappable, on screen, not overlapping', !rules.bad.length, rules.bad.join('; '));
-    for (const want of ['Missions', 'Black Market', 'Clinic', 'Resolve', 'Noodles', 'Barracks']) check(tag, `a sign says ${want}`, rules.texts.some((x) => x.includes(want)), rules.texts.join());
+    for (const want of ['Missions', 'Black Market', 'Clinic', 'Resolve', 'Lantern', 'Barracks']) check(tag, `a sign says ${want}`, rules.texts.some((x) => x.includes(want)), rules.texts.join());
     check(tag, 'nothing covers the buttons', !rules.covered.length && !rules.overlapBtns.length, JSON.stringify(rules));
     // The prompt: small, up over the rooftops, and never on the player, wherever they stand.
     const prob = await page.evaluate(async () => { const t = cinderTown, p = t.player, bad = []; const check = async (x, y, want) => { p.x = x; p.y = y; await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))); const pr = t.prompt.getBoundingClientRect(), v = t.cv.getBoundingClientRect(), h = t.figureAt(p.y), a = t.toPage(p.x, p.y - h), b = t.toPage(p.x, p.y), w = (b.y - a.y) * 0.3; if (t.prompt.hidden) { if (want) bad.push(`none at ${x},${y}`); return null; } if (pr.left < b.x + w && pr.right > b.x - w && pr.top < b.y && pr.bottom > a.y) bad.push(`over the player at ${x},${y}`); return { h: pr.height, top: pr.top - v.top, vh: v.height, w: pr.width, vw: v.width }; }; let last = null; for (const d of t.doors) last = (await check(d.x, d.y, true)) || last; for (const [x, y] of [[300, 152], [400, 152], [130, 380], [610, 380]]) await check(x, y, false); return { bad, last }; });

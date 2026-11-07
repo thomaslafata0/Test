@@ -60,7 +60,6 @@ function shop(s, b, st, o = {}) {
     if (c.credits > 60 && !o.noDrink) E.buyDrink(s, b.drink);
   }
   G.upgradeGear(s, b.style, 40, skipOf(b), b.w || {});
-  if (c.credits > 40) E.buyNoodles(s);
 }
 function act(s, st, b, who = 0) {
   const r = s.run, e = r.enemy, c = s.char, hp = E.stats(s).maxHp, free = e.stun > 0;

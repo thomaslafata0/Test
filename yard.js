@@ -4,7 +4,7 @@
 // The art lives in town/street/. A missing image gets a flat labelled placeholder, so nothing here depends on it.
 // To line PLACES up against the art, run `cinderTown.debug = true` in the console: it draws the area, doors, spots and tap boxes.
 import { play } from './audio.js';
-import { sheetOf } from './stage.js';
+import { sheetOf, ensureSheet } from './stage.js';
 
 const ART = 'town/street/';
 const VIEW_W = 688, VIEW_H = 384;
@@ -43,9 +43,9 @@ export const PLACES = {
     { id: 'safehouse', box: [565, 140, 688, 285], door: [590, 274], push: [0.6, -0.8], sign: { x: 632, y: 172, text: 'Character\n& Resolve' } },
     { id: 'tenement_b', box: [219, 118, 250, 150], door: [238, 160], push: [0, -1], knock: { prompt: 'knock', lines: ['The door is welded shut. Curfew rules.', 'Someone inside is singing, badly. You leave them to it.', 'A note on the door: GONE TO THE FOUNDRY. BACK NEVER.'] } },
     { id: 'market', box: [28, 125, 188, 265], door: [172, 250], push: [-0.8, -0.5], sign: { x: 84, y: 118 } },
+    { id: 'lantern', box: [0, 270, 140, 384], door: [122, 325], push: [-1, 0], sign: { x: 60, y: 246, text: 'The Lantern' } },
   ],
   spots: [
-    { id: 'noodles', x: 58, y: 315, r: 58, stand: [122, 325], folk: 'vendor', sign: { x: 60, y: 246, text: 'Noodles' } },
     { id: 'fire', x: 646, y: 355, r: 30, stand: [625, 345], prompt: 'warm your hands', lines: ['You warm your hands. The rain hisses on the rim.', 'Someone has burned a stack of ration cards in here.', 'Warm. For a moment nothing is chasing you.'] },
     { id: 'holosign', x: 118, y: 160, r: 26, stand: [194, 222], prompt: 'read the sign', lines: ['MARROW\u2019S. OPEN. (The word CLOSED flickers underneath.)', 'The sign buzzes: NO REFUNDS. NO RECEIPTS. NO RUNNING.'] },
     { id: 'vent', x: 560, y: 182, r: 22, stand: [540, 196], prompt: 'look at the vent', lines: ['Steam. The foundry runs under half the town now.', 'The vent sighs. It sounds tired.'] },
@@ -53,11 +53,11 @@ export const PLACES = {
     { id: 'poster', x: 282, y: 118, r: 24, stand: [282, 156], prompt: 'read the poster', lines: ['\u201CPRODUCTIVITY IS LOYALTY.\u201D Someone has drawn a moustache on the Supervisor.', '\u201CREPORT UNUSUAL MOVEMENT.\u201D Below it, in marker: \u201Clike your bowels?\u201D', '\u201CCURFEW: DUSK.\u201D The word DUSK has been scratched out and replaced with NEVER.', 'A reward notice. The face is smudged. Could be anyone. Could be you.'] },
     { id: 'noticeboard', x: 425, y: 140, r: 22, stand: [428, 158], prompt: 'read the board (Missions)', open: 'missions' },
     { id: 'vending', x: 455, y: 128, r: 22, stand: [462, 172], prompt: 'use the vending terminal (1 cr)', action: 'vending' },
-    { id: 'crawler', x: 677, y: 328, r: 26, stand: [630, 310], prompt: 'look at the crawler', lines: ['A cargo crawler, three wheels and a prayer. Someone has keyed REPAIR ME into the door.', 'The crawler\u2019s cab smells of coolant and old noodles.'] },
+    { id: 'crawler', x: 677, y: 328, r: 26, stand: [630, 310], prompt: 'look at the crawler', lines: ['A cargo crawler, three wheels and a prayer. Someone has keyed REPAIR ME into the door.', 'The crawler\u2019s cab smells of coolant and old cigarettes.'] },
     { id: 'tower', x: 648, y: 75, r: 58, stand: [590, 320], prompt: 'look up', lines: ['The water tower. The Directorate tested the water last month and nobody saw the results.', 'A kid has climbed it and painted a fist on the tank. Nobody has painted over it yet.'] },
   ],
   folk: [
-    { id: 'vendor', x: 104, y: 352, h: 110, talk: 'noodles', lines: ['Noodles. Real broth, mostly.', 'Two credits a bowl. Curfew prices.'] },
+    { id: 'vendor', x: 100, y: 366, h: 110, lines: ['The Lantern\u2019s open. Go on in, the house is hungry.', 'Drinks at the bar, wheel in the back. Nobody saw you.', 'Curfew stops at the door. Debts don\u2019t.'] },
     { id: 'kid', x: 250, y: 320, h: 87, wander: { x: [216, 300], y: [292, 346] }, lines: ['Are you one of them? The cell?', 'I can run messages. I\u2019m fast.', 'My dad worked the casting floor. Before.', 'The guard\u2019s scared of the dark. I saw him.'] },
     { id: 'worker', x: 500, y: 300, h: 134, lines: ['Double shift again. The quota went up.', 'Crawler\u2019s been broken for a month. They fine us for it.', 'Heard someone hit the garrison last night. Wasn\u2019t me.', 'Don\u2019t stand near the vent. It bites.'] },
   ],
@@ -81,7 +81,8 @@ export const PLACES = {
     terminal: { npc: { id: 'dispatcher', x: 470, h: 156 }, spawn: 130, exit: [0, 62], lights: [{ x: 344, y: 70, r: 150, color: '#9fc4ff', kind: 'lamp' }, { x: 560, y: 150, r: 70, color: '#59c7ff', kind: 'neon' }] },
     market: { npc: { id: 'marrow', x: 480, h: 160 }, spawn: 130, exit: [0, 62], lights: [{ x: 330, y: 80, r: 130, color: '#ffb066', kind: 'lamp' }, { x: 580, y: 140, r: 70, color: '#ff3d7a', kind: 'neon' }] },
     clinic: { npc: { id: 'ilse', x: 470, h: 152 }, spawn: 130, exit: [0, 62], lights: [{ x: 350, y: 66, r: 150, color: '#c8ffe6', kind: 'lamp' }] },
-    safehouse: { npc: { id: 'handler', x: 470, h: 158 }, spawn: 130, exit: [0, 62], lights: [{ x: 340, y: 90, r: 130, color: '#ffc27a', kind: 'fire' }] },
+    safehouse: { npc: { id: 'handler', x: 470, h: 158 }, spawn: 110, exit: [0, 62], lights: [{ x: 240, y: 130, r: 120, color: '#ffc27a', kind: 'fire' }, { x: 640, y: 215, r: 50, color: '#ff9a4a', kind: 'fire' }] },
+    lantern: { npc: { id: 'keg7', x: 545, h: 150 }, also: { id: 'croupier', x: 285, h: 156, opens: 'wheel' }, spawn: 110, exit: [0, 62], lights: [{ x: 300, y: 70, r: 150, color: '#ff8a3c', kind: 'fire' }, { x: 120, y: 60, r: 80, color: '#ff4a3a', kind: 'neon' }, { x: 560, y: 110, r: 110, color: '#ffc27a', kind: 'lamp' }] },
   },
 };
 
@@ -100,21 +101,26 @@ export const SHOPS = {
   terminal: { name: 'Freight terminal', opens: 'missions', label: 'Missions', auto: true },
   market: { name: 'Marrow\u2019s container', opens: 'market', label: 'Black Market' },
   clinic: { name: 'Doc Ilse\u2019s clinic', opens: 'clinic', label: 'Clinic' },
-  safehouse: { name: 'The safehouse', opens: 'character', label: 'Character & Resolve' },
+  safehouse: { name: 'The hideout', opens: 'character', label: 'Character & Resolve' },
+  lantern: { name: 'The Lantern', opens: 'bar', label: 'The Lantern' },
   barracks: { name: 'Directorate barracks', hotspot: 'barracks' },
   tenement_a: { name: 'Tenement', hotspot: 'tenement_a' },
   tenement_b: { name: 'Tenement', hotspot: 'tenement_b' },
 };
 // Which sign a partner's open menu belongs to.
-const MENU_SIGN = { missions: 'terminal', market: 'market', clinic: 'clinic', character: 'safehouse', gear: 'safehouse' };
+const MENU_SIGN = { missions: 'terminal', market: 'market', clinic: 'clinic', character: 'safehouse', gear: 'safehouse', bar: 'lantern', wheel: 'lantern' };
 // Interior NPC one-liners.
 const INSIDE = {
   marrow: ['No receipts. No refunds. No questions.', 'Fresh stock after every job you pull.', 'I don\u2019t buy. I sell. Old kit goes on the heap.'],
   ilse: ['Sit. Don\u2019t bleed on the floor.', 'Hardware under the skin costs extra.', 'You again. Good. Means you\u2019re alive.'],
-  handler: ['The cell remembers. Spend what you\u2019ve earned.', 'Training keeps the next one alive.', 'Too many eyes on you? I can make you disappear. For a price.'],
+  handler: ['Door shut behind you? Good. They\u2019ve walked over this floor twice and never knocked.', 'The cell remembers. Spend what you\u2019ve earned.', 'Training keeps the next one alive.', 'Too many eyes on you? I can make you disappear. For a price.'],
+  keg7: ['KEG-7 slides a glass down the bar and says nothing.', 'KEG-7 wipes the same spot on the bar. One drink per raid.', 'A servo whirs. It might be a greeting.'],
+  croupier: ['Place your bet. The wheel doesn\u2019t care who you were.', 'Red, black or the long shot. Your funeral.', 'House rules: no credit, no crying.'],
   dispatcher: ['Freight manifests, patrol rotas, the lot. Pick a target.', 'Contracts on the board. The cell pays.', 'The lift port\u2019s open once you\u2019ve been deep enough.'],
 };
-const NPC_NAMES = { marrow: 'Marrow', ilse: 'Doc Ilse', handler: 'Cass', dispatcher: 'the dispatcher' };
+const NPC_NAMES = { marrow: 'Marrow', ilse: 'Doc Ilse', handler: 'Cass', dispatcher: 'the dispatcher', keg7: 'KEG-7', croupier: 'the croupier' };
+// People in the Lantern wear art from the rest of the cast: a loader droid for KEG-7, the interrogator's coat for the croupier.
+const NPC_ART = { keg7: 'loader', croupier: 'interrogator' };
 const npcName = (id) => NPC_NAMES[id] || id;
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -272,7 +278,7 @@ export class Town {
   fit() {
     const raw = window.devicePixelRatio || 1, dpr = clamp(raw, 1, 2);
     // A phone held sideways: fill the height of the screen so nothing scrolls. Otherwise the height is chosen to fit the art exactly.
-    const sideways = window.innerHeight <= 500 && window.innerWidth > window.innerHeight;
+    const sideways = matchMedia('(orientation: landscape) and (max-height: 600px), (orientation: landscape) and (pointer: coarse) and (max-height: 820px)').matches;
     const roomH = sideways ? Math.max(120, Math.floor(window.innerHeight - this.el.getBoundingClientRect().top - 10)) : 0;
     const cw = this.el.clientWidth;
     // On a bigger screen, take the art's full shape unless that would push the page into scrolling: then bars at the sides instead.
@@ -301,7 +307,7 @@ export class Town {
   async loadArt() {
     this.sprites = { shadow: softBlack() };
     this.baked = {}; this.art = {};
-    for (const key of ['yard', 'int_terminal', 'int_market', 'int_clinic', 'int_safehouse']) {
+    for (const key of ['yard', 'int_terminal', 'int_market', 'int_clinic', 'int_safehouse', 'int_lantern']) {
       this.art[key] = 'loading';
       // A slow connection gets the placeholder after a few seconds; the real picture still replaces it when it arrives.
       setTimeout(() => { if (this.art[key] === 'loading') { this.art[key] = 'failed'; this.bake(key, null); } }, 4000);
@@ -317,7 +323,7 @@ export class Town {
   }
   // The stage's sheets arrive after the page starts and may not exist at all, so this asks every time.
   hdOf(id) {
-    const sh = id === 'player' ? this.playerHd : id === 'partner' ? this.partnerHd : sheetOf(id);
+    const sh = id === 'player' ? this.playerHd : id === 'partner' ? this.partnerHd : sheetOf(NPC_ART[id] || id);
     return sh && sh.hd && sh.anims && sh.anims.idle && sh.fig ? sh : null;
   }
   // The old small sheets, fetched only for someone who has no high-res art.
@@ -399,6 +405,7 @@ export class Town {
     this.setScene(`interior:${door.id}`);
     const p = this.player;
     p.x = it.spawn; p.y = MID_Y; p.dir = 'right'; p.face = it.npc.x > it.spawn ? 1 : -1; p.path = null; p.then = null; this.say = null;
+    for (const n of [it.npc, it.also]) if (n && NPC_ART[n.id]) ensureSheet(NPC_ART[n.id]);
     const shop = SHOPS[door.id];
     // Only the freight terminal opens its menu as you walk in; everywhere else you talk to the person inside.
     if (shop && shop.auto && this.onOpen) setTimeout(() => this.onOpen(shop.opens, door.id), 180);
@@ -474,6 +481,7 @@ export class Town {
     if (m && this.onPartner && m.scene === this.scene && Math.abs(p.x - m.x) < 50 && Math.abs(p.y - m.y) < 40) offer(Math.hypot(p.x - m.x, p.y - m.y) * 0.2, { kind: 'partner', who: m }); // walking up to each other beats whatever is nearby
     if (it) {
       if (Math.abs(p.x - it.npc.x) < 72) offer(Math.abs(p.x - it.npc.x) * 0.5, { kind: 'npc', id: it.npc.id, x: it.npc.x, y: it.npc.y || MID_Y, opens: SHOPS[this.interiorId].opens });
+      if (it.also && Math.abs(p.x - it.also.x) < 72) offer(Math.abs(p.x - it.also.x) * 0.5, { kind: 'npc', id: it.also.id, x: it.also.x, y: it.also.y || MID_Y, opens: it.also.opens, also: true });
       return best;
     }
     const folkNear = (f) => { const d = Math.hypot(p.x - f.x, p.y - f.y); if (d < 46) offer(d * 0.5, { kind: 'folk', who: f }); };
@@ -506,11 +514,7 @@ export class Town {
       if (this.onOpen) this.onOpen(n.opens, this.interiorId);
     } else if (n.kind === 'folk') {
       const f = n.who;
-      if (f.talk === 'noodles') {
-        const can = this.onAction ? this.onAction('noodles:can') : null;
-        if (can && can.ok) { this.speak(f.id, `A bowl? ${can.text}`, f.x, f.y, 6000); this.offer = { accept: () => { const r = this.onAction('noodles'); this.speak(f.id, r ? r.text : 'Yum.', f.x, f.y); play('coin'); } }; }
-        else this.speak(f.id, can ? can.text : pick(f.lines), f.x, f.y);
-      } else this.speak(f.id, pick(f.lines), f.x, f.y);
+      this.speak(f.id, pick(f.lines), f.x, f.y);
       play('click');
     } else if (n.kind === 'spot') {
       const h = n.spot;
@@ -532,6 +536,8 @@ export class Town {
     if (it) {
       const n = it.npc;
       if (onFigure({ x: n.x, y: n.y || MID_Y }, n.h)) { this.walkTo(beside(n), MID_Y, () => this.use({ kind: 'npc', id: n.id, x: n.x, y: n.y || MID_Y, opens: SHOPS[this.interiorId].opens })); return; }
+      const o = it.also;
+      if (o && (onFigure({ x: o.x, y: o.y || MID_Y }, o.h) || (Math.abs(x - o.x) < 90 && y < MID_Y))) { this.walkTo(beside(o), MID_Y, () => this.use({ kind: 'npc', id: o.id, x: o.x, y: o.y || MID_Y, opens: o.opens, also: true })); return; }
       if (this.offer) { this.offer = null; this.say = null; }
       if (x >= it.exit[0] && x <= it.exit[1]) { this.walkTo(it.exit[0] < 1 ? 0 : VIEW_W, MID_Y); return; }
       this.walkTo(x, y);
@@ -892,7 +898,7 @@ export class Town {
     list.length = 0;
     const add = (id, x, y, h, moving, dir, face, time, native) => { list.push({ id, x, y, h, moving, dir, face, t: time, native }); };
     const toward = (x, near, dflt) => (Math.abs(p.x - x) < near ? (p.x < x ? -1 : 1) : dflt);
-    if (it) { const n = it.npc; add(n.id, n.x, n.y || MID_Y - 8, n.h, false, 'down', toward(n.x, 9999, -1), t + 0.4, -1); }
+    if (it) { const n = it.npc; add(n.id, n.x, n.y || MID_Y - 8, n.h, false, 'down', toward(n.x, 9999, -1), t + 0.4, -1); if (it.also) add(it.also.id, it.also.x, it.also.y || MID_Y - 8, it.also.h, false, 'down', toward(it.also.x, 9999, -1), t + 1.1, -1); }
     else {
       for (const f of this.folk) add(f.id, f.x, f.y, f.h * depthAt(f.y), f.moving, f.dir, f.moving ? f.face : toward(f.x, 150, f.face), f.t, -1);
       const gd = this.patrol;
@@ -1002,7 +1008,7 @@ export class Town {
     let text = '', act = true;
     if (this.offer) text = coarse ? 'Tap here \u00B7 yes \u00B7 tap the yard \u00B7 no' : 'Enter \u00B7 yes \u00B7 Esc \u00B7 no';
     else if (n && n.kind === 'partner') text = `${E} \u00B7 trade or give to ${n.who.name || 'your partner'}`;
-    else if (n && n.kind === 'npc') text = `${E} \u00B7 talk to ${npcName(n.id)} (${SHOPS[this.interiorId].label})`;
+    else if (n && n.kind === 'npc') text = `${E} \u00B7 talk to ${npcName(n.id)} (${n.also ? 'Wheel' : this.interiorId === 'lantern' ? 'Bar' : SHOPS[this.interiorId].label})`;
     else if (n && n.kind === 'folk') text = n.who.talk ? `${E} \u00B7 talk to the vendor` : `${E} \u00B7 talk`;
     else if (n && n.kind === 'spot') text = `${E} \u00B7 ${n.spot.prompt}`;
     else if (n && n.kind === 'door') { const sh = SHOPS[n.door.id]; text = `${E} \u00B7 go in \u00B7 ${sh.label}`; }

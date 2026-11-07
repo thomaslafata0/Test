@@ -30,13 +30,6 @@ require('fs').mkdirSync(OUT, { recursive: true });
     await page.evaluate(() => { const t = globalThis.cinderTown; t.player.x = 120; });
     await page.keyboard.down('ArrowLeft'); await page.waitForTimeout(900); await page.keyboard.up('ArrowLeft'); await page.waitForTimeout(400);
     console.log(width, 'back outside via the door:', (await T()).scene);
-    // 2) teleport next to the vendor and buy noodles
-    await page.evaluate(() => { const t = globalThis.cinderTown; const f = t.folk.find((q) => q.id === 'vendor'); t.player.x = f.x + 20; t.player.y = f.y; });
-    await page.waitForTimeout(200); await page.keyboard.press('e'); await page.waitForTimeout(200);
-    console.log(width, 'vendor offer:', JSON.stringify(await T()));
-    await page.keyboard.press('Enter'); await page.waitForTimeout(300);
-    s = await save(); console.log(width, 'fed:', s.char.fed, 'credits', s.char.credits, 'say:', (await T()).say);
-    await page.screenshot({ path: `${OUT}/t2-noodles-${width}.png` });
     // 3) tenement knock
     await page.evaluate(() => { const t = globalThis.cinderTown; const d = t.doors.find((x) => x.id === 'tenement_a'); t.player.x = d.front[0]; t.player.y = d.front[1]; });
     await page.waitForTimeout(200); await page.keyboard.press('e'); await page.waitForTimeout(200);

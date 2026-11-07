@@ -874,14 +874,6 @@ export function respec(s) {
   return true;
 }
 
-// Noodles: a hot meal before the raid. +5% XP until you're next back in town.
-export const noodleCost = (s) => Math.ceil(2.2 * consumableScale(s.char));
-export function buyNoodles(s) {
-  const c = s.char;
-  if (c.fed || c.credits < noodleCost(s)) return false;
-  c.credits -= noodleCost(s); c.fed = true;
-  return true;
-}
 // A neighbour in the tenement slips you a stim, once per operative.
 export function tenementGift(s) {
   const c = s.char;
@@ -1171,7 +1163,9 @@ function beginSector(s, rng) {
       log(s, r.areaLine.text, 'sys');
     } }
   // Boss sectors and the opening sector stay clear; everything else rolls a condition.
-  r.cond = r.sector === 1 || isBossSector(r.sector) ? 'none' : pickWeighted(rng, D.SECTOR_CONDS.map((x) => [x.id, x.weight]));
+  // A newcomer's first raid keeps its first two sectors plain, so the first banking choice isn't decided by a bad roll.
+  const newcomer = s.meta.operatives <= 1 && (s.meta.stats.raids || 0) <= 1 && r.sector <= 2;
+  r.cond = r.sector === 1 || newcomer || isBossSector(r.sector) ? 'none' : pickWeighted(rng, D.SECTOR_CONDS.map((x) => [x.id, x.weight]));
   if (r.cond !== 'none') log(s, `${condOf(r).name}: ${condOf(r).desc}`, 'info');
   for (const b of Object.values(r.cb || {})) { b.cooldowns = {}; b.usedThisFight = []; }
   offerRoute(s, rng);
@@ -1477,16 +1471,17 @@ export function incomingRange(s) {
   return { min: droneShield(c, min), max: hiNow, defMin: guarded(min), defMax: guarded(max), lethal: hiNow >= c.hp };
 }
 // Auto battle: a fixed, sensible routine. Never runs or uses smoke.
-export function autoAction(s) {
+// opts: stimReserve (stims it must leave alone), items (false keeps thermals and ion pulses out of it).
+export function autoAction(s, { stimReserve = 0, items = true } = {}) {
   const r = s.run, e = r.enemy, c = s.char, st = stats(s), free = e.stun > 0;
   if (canUse(s, 'revive')) return 'revive';
-  if (c.hp < st.maxHp * 0.35 && c.items.stim > 0) return 'stim';
+  if (c.hp < st.maxHp * 0.35 && c.items.stim > stimReserve) return 'stim';
   if (!free && mechanicOf(r) === 'vents' && r.vent === 1) return 'defend';
   const adv = sigAdvice(s), blind = intentHidden(s);
   if (!free && adv.act) return adv.act;
   if (!free && !blind && (e.intent === 'heavy' || (e.intent === 'special' && D.SPECIALS[e.id] && D.SPECIALS[e.id].status))) return 'defend';
-  if ((e.boss || e.elite) && c.items.thermal > 0 && e.hp > e.maxHp * 0.3) return 'thermal';
-  if (e.tags.includes('droid') && c.items.ion > 0 && !free && e.hp > e.maxHp * 0.5) return 'ion';
+  if (items && (e.boss || e.elite) && c.items.thermal > 0 && e.hp > e.maxHp * 0.3) return 'thermal';
+  if (items && e.tags.includes('droid') && c.items.ion > 0 && !free && e.hp > e.maxHp * 0.5) return 'ion';
   if (canUse(s, 'intimidate') && intimidateChance(s) > 0.5) return 'intimidate';
   const hit = adv.hit || bestAttack(s);
   if (!free && !blind && e.intent === 'guard' && hit === 'shoot') return 'defend';
@@ -2850,6 +2845,8 @@ function reallyDie(s, foe) {
   c.fed = false;
   const record = { uid: c.uid, name: c.name, number: c.number, level: c.level, sector: r.sector, map: r.map, killer: foe.name, killerId: foe.id, killerPortrait: foe.portrait, credits: c.credits, background: c.background, look: c.look || null, marks: [...(c.marks || [])] };
   s.meta.fallen.unshift(record); feat(s, 'fallen');
+  // The first loss always leaves enough for one rank of training, so the cell's first death buys something.
+  if (fallenCount(s) === 1 && s.meta.resolve < trainingCost(0)) { const gift = trainingCost(0) - s.meta.resolve; s.meta.resolve += gift; s.meta.totalResolve += gift; record.firstGift = gift; }
   s.meta.fallen = s.meta.fallen.slice(0, 12);
   record.perks = (c.perks || []).length;
   record.boardId = recordCareer(s, c, 'died', foe);

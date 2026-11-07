@@ -43,7 +43,7 @@ function shop(s, rng, b) {
     if (!slot || !E.upgradeItem(s, slot)) break;
   }
   E.buyDrink(s, DRINK[b.attrs[0]] || 'gin');
-  E.buyNoodles(s);
+
 }
 // Called when autoplay stops, so an operative is never left in town with points or credits it would have spent.
 export function autoFinish(s, rng, o) {

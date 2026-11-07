@@ -248,7 +248,7 @@ export function sheetStill(id) {
 }
 
 // ---------- helpers ----------
-const phoneView = () => typeof matchMedia !== 'undefined' && matchMedia('(max-height: 500px) and (orientation: landscape)').matches;
+const phoneView = () => typeof matchMedia !== 'undefined' && matchMedia('(orientation: landscape) and (max-height: 600px), (orientation: landscape) and (pointer: coarse) and (max-height: 820px)').matches;
 const ease = (p) => 1 - Math.pow(1 - p, 3);
 function seeded(seed) { let a = seed >>> 0; return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
@@ -329,7 +329,7 @@ export class Stage {
       const b = ev.target.closest('[data-speed]');
       if (!b) return;
       // On a phone only the current mode shows, and tapping it moves to the next.
-      this.setMode(b.dataset.speed === this.mode && matchMedia('(max-height: 500px) and (orientation: landscape)').matches ? { manual: 'auto1', auto1: 'auto2', auto2: 'manual' }[this.mode] : b.dataset.speed);
+      this.setMode(b.dataset.speed === this.mode && matchMedia('(orientation: landscape) and (max-height: 600px), (orientation: landscape) and (pointer: coarse) and (max-height: 820px)').matches ? { manual: 'auto1', auto1: 'auto2', auto2: 'manual' }[this.mode] : b.dataset.speed);
     });
     this.syncSpeed();
     onArtChange((id) => { if (id === '*' && this.enemy) ensureSheet(this.enemy.id); this.refreshArt(); });

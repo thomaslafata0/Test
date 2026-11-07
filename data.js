@@ -775,8 +775,8 @@ export const CONTRACTS = [
   { kind: 'kill',   tag: 'droid', n: 6,  text: 'Scrap {n} droids in the {map}' },
   { kind: 'kill',   tag: 'human', n: 6,  text: 'Take down {n} Directorate personnel in the {map}' },
   { kind: 'kill',   tag: 'elite', n: 2,  text: 'Defeat {n} veterans in the {map}' },
-  { kind: 'sector', n: 4,           text: 'Reach sector {n} in the {map}' },
-  { kind: 'sector', n: 7,           text: 'Reach sector {n} in the {map}' },
+  { kind: 'sector', n: 4,           text: 'Clear sector {n} in the {map}' },
+  { kind: 'sector', n: 7,           text: 'Clear sector {n} in the {map}' },
   { kind: 'boss',   n: 1,           text: 'Bring down a boss in the {map}' },
   { kind: 'allies', n: 2,           text: 'Bring {n} freed prisoners home', map: 'detention' },
   { kind: 'haul',   n: 300,         text: 'Extract carrying at least {n} credits' },
@@ -886,7 +886,7 @@ export const ORBIT_SHAKEDOWN = { shipName: 'Limping Cutter', hull: 26, atk: 6, s
 export const ORBIT_INTENTS = { fire: { label: 'Firing', desc: 'A normal volley.' }, volley: { label: 'Full broadside', desc: 'x1.8 damage. Evade it.' }, lock: { label: 'Target lock', desc: 'Its next shot cannot miss and ignores half your deflector.' }, repair: { label: 'Damage control', desc: 'It repairs 15% of its hull. Hit it hard now.' } };
 // Ventures: the cell's money working while operatives die. Ticked after every raid.
 export const VENTURES = [
-  { id: 'stall', name: 'Noodle stall share', rate: 0.06, bust: 0.04, loss: 0.25, min: 50, cap: 500, unlock: 0, desc: 'A quiet cut of the vendor\u2019s broth money. +6% per raid; a 4% chance per raid that a Directorate inspection costs a quarter of it. Holds up to 500.' },
+  { id: 'stall', name: 'Lantern house share', rate: 0.06, bust: 0.04, loss: 0.25, min: 50, cap: 500, unlock: 0, desc: 'A quiet cut of the Lantern\u2019s take. +6% per raid; a 4% chance per raid that a Directorate inspection costs a quarter of it. Holds up to 500.' },
   { id: 'consignment', name: 'Marrow\u2019s consignment', rate: 0.12, bust: 0.1, loss: 0.4, min: 100, cap: 1500, unlock: 5, desc: 'Marrow moves your goods through the market. +12% per raid; a 10% chance per raid that a raid on the stall costs 40% of it. Holds up to 1,500.' },
   { id: 'bond', name: 'Smuggler\u2019s bond', rate: 0.18, bust: 0.14, loss: 0.5, min: 150, cap: 3000, unlock: 10, desc: 'A share in a lift-corridor run. +18% per raid; a 14% chance per raid that a ship is seized and half the stake goes with it. Holds up to 3,000.' },
 ];

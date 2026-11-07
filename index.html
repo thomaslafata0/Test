@@ -969,7 +969,7 @@ html.calm .btn:active, html.calm .door:active, html.calm .tab:active, html.calm 
 .sk-brief, .it-brief, .statline .ph { display: none; }
 .art-wait { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); z-index: 3; padding: 4px 12px; font-family: var(--mono); font-size: max(12px, .8rem); letter-spacing: .08em; text-transform: uppercase; color: var(--fg); background: #000000b0; border: 1px solid var(--line); white-space: nowrap; pointer-events: none; animation: pulse 1.2s ease-in-out infinite; }
 .art-wait[hidden] { display: none; }
-@media (max-height: 500px) and (orientation: landscape) {
+@media (orientation: landscape) and (max-height: 600px), (orientation: landscape) and (pointer: coarse) and (max-height: 820px) {
   html { font-size: clamp(14px, calc((100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)) * .02), 16px); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   html, body { height: 100dvh; overflow: hidden; overscroll-behavior: none; }
   body { box-sizing: border-box; margin: 0; padding: max(4px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px)) max(4px, calc(env(safe-area-inset-bottom, 0px) * .4)) max(8px, env(safe-area-inset-left, 0px)); }
@@ -1423,6 +1423,44 @@ html.calm .btn:active, html.calm .door:active, html.calm .tab:active, html.calm 
   .tabs .tab { min-height: 40px; }
   .tool { min-height: 36px; }
 }
+
+/* Laptops and desktops: a fight fits the window. The scene on the left, commands and the log on the right. */
+@media (min-width: 900px) and (min-height: 601px) and (pointer: fine), (min-width: 900px) and (min-height: 821px) {
+  html:has(.columns.fight) { overflow: hidden; min-height: 0; height: 100dvh; }
+  body:has(.columns.fight) { overflow: hidden; }
+  body:has(.columns.fight) { margin: 0; padding-top: 8px; padding-bottom: 8px; min-height: 0; height: 100dvh; box-sizing: border-box; }
+  #app:has(> .columns.fight) { display: flex; flex-direction: column; height: calc(100dvh - 16px); margin-block: 0; padding-block: 0; max-width: 1500px; gap: 6px; }
+  #app:has(> .columns.fight) > .status { flex: none; }
+  .columns.fight { flex: 1 1 0; min-height: 0; grid-template-columns: minmax(0, 1fr) 320px; grid-template-rows: minmax(0, auto) minmax(90px, 1fr); gap: 6px 10px; align-items: stretch; }
+  .columns.fight > .combat { display: contents; }
+  .columns.fight .c-left { grid-column: 1; grid-row: 1 / 3; display: flex; flex-direction: column; gap: 6px; min-width: 0; min-height: 0; overflow: hidden; background: var(--panel); border: 1px solid var(--line); padding: 8px 10px; }
+  .columns.fight .c-left > .stage-box { flex: 1 1 0; min-height: 0; container-type: size; display: grid; place-items: center; }
+  .columns.fight .stage, .columns.fight #stage-slot { width: min(100cqw, calc(100cqh * 1.7778)); margin: 0; }
+  .columns.fight .c-right { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; gap: 6px; min-height: 0; overflow-y: auto; background: var(--panel); border: 1px solid var(--line); padding: 8px; }
+  .columns.fight > aside { grid-column: 2; grid-row: 2; display: flex; flex-direction: column; min-height: 0; padding: 6px 8px; }
+  .columns.fight .log { flex: 1 1 0; min-height: 0; max-height: none; }
+  .columns.fight .actions { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+  .columns.fight .actions .btn { padding: 5px 4px; font-size: 1rem; min-height: 46px; flex-direction: column; gap: 0; }
+  .columns.fight .actions .btn:last-child { grid-column: 1 / -1; min-height: 34px; }
+  .columns.fight .skills { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+  .columns.fight .skills .btn { padding: 4px 6px; min-height: 46px; }
+  .columns.fight .sk-note { font-size: .72rem; line-height: 1.2; }
+  .columns.fight .sk-full { display: none; }
+  .columns.fight .items { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+  .columns.fight .items .btn { padding: 4px; font-size: .8rem; min-height: 36px; }
+  .columns.fight .items .it-full, .columns.fight .items .bs { display: none; }
+  .columns.fight .items .it-brief { display: inline; }
+  .columns.fight .btn .k { margin-left: 3px; }
+  .columns.fight .tipbox { padding: 6px 8px; font-size: .8rem; }
+  .columns.fight .intent { padding: 6px 10px; }
+}
+/* One short line of coaching in the first fights. */
+.stage-box { position: relative; }
+.coach { position: absolute; left: 10px; bottom: 10px; max-width: 52%; z-index: 4; pointer-events: none; padding: 5px 9px; font-size: .85rem; line-height: 1.25; color: #15110a; background: var(--sodium); box-shadow: 0 2px 8px #0009; }
+@media (orientation: landscape) and (max-height: 600px), (orientation: landscape) and (pointer: coarse) and (max-height: 820px) { .coach { left: 3px; bottom: auto; top: 3px; max-width: 58%; font-size: 12px; padding: 3px 7px; } }
+.modal:focus, [role="dialog"]:focus, [role="alertdialog"]:focus { outline: none; }
+.feat-filter { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0; }
+@media (pointer: coarse) { .actions .btn:disabled, .skills .btn:disabled, .items .btn:disabled { pointer-events: none; } }
 </style>
 
 <div class="rotate-note"><b>Turn your phone sideways</b><span class="muted">Cinder Cell plays in landscape.</span><div><button class="btn" onclick="this.closest('.rotate-note').remove()">Play upright anyway</button></div></div>
@@ -1461,6 +1499,7 @@ const S = D.SETTING;
 let state;
 let confirmReset = false;
 let modal = null; // 'manual' | 'settings' | null
+let featFilter = 'All';
 let toast = null;
 
 // An error shouldn't leave anyone staring at a dead screen: say so, and keep the save reachable.
@@ -1516,7 +1555,9 @@ document.addEventListener('click', (ev) => {
 
 // This device's own choices. They don't travel with the save or to a co-op partner.
 const UI_KEY = 'cinder-cell-ui';
-const uiPrefs = { autoStims: true, autoStop: true, fastAnim: false, calm: false, lefty: false };
+const uiPrefs = { autoStims: true, autoStop: true, autoStim: 'any', autoItems: true, autoElite: false, fastAnim: false, calm: false, lefty: false };
+const AUTO_STIM = { any: ['Any', 0], keep1: ['Keep 1', 1], none: ['None', Infinity] };
+const autoOpts = () => ({ stimReserve: (AUTO_STIM[uiPrefs.autoStim] || AUTO_STIM.any)[1], items: uiPrefs.autoItems });
 try { Object.assign(uiPrefs, JSON.parse(localStorage.getItem(UI_KEY)) || {}); } catch (e) {}
 const calmNow = () => uiPrefs.calm || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
 const juice = { wipes: 0, levelFlashes: 0, rareDrops: 0 }; // read by tests/juice.cjs
@@ -1775,7 +1816,7 @@ const isHost = () => !!net && net.role === 'host';
 const myIdx = () => (isGuest() ? 1 : 0);
 // Actions that only touch this screen, never the game.
 const DOWNTIME = new Set(['drink', 'bet', 'stake', 'spin', 'invest', 'withdraw', 'shippart', 'shipcell', 'orbitgo', 'orbitact', 'orbitclose']);
-const LOCAL = new Set(['stimprompt', 'draftdrone', 'randomize', 'missiontab', 'markettab', 'chartab', 'continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm', 'cloudcopy', 'cloudload', 'cloudversions', 'cloudrestore', 'cloudkeep', 'devunlock', 'devoff', 'dev', 'autostart']);
+const LOCAL = new Set(['autostim', 'featfilter', 'stimprompt', 'draftdrone', 'randomize', 'missiontab', 'markettab', 'chartab', 'continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm', 'cloudcopy', 'cloudload', 'cloudversions', 'cloudrestore', 'cloudkeep', 'devunlock', 'devoff', 'dev', 'autostart']);
 function coopChip() {
   if (!net) return '';
   const who = net.peerName || (isHost() ? 'friend' : 'host');
@@ -2172,7 +2213,7 @@ function createScreen() {
   const nav = (back, next) => `<div class="btnrow create-nav">${back ? `<button class="btn" data-a="step" data-v="${back}">Back</button>` : ''}<button class="btn primary big" data-a="step" data-v="${next[0]}">Next: ${next[1]}</button></div>`;
   let body = '';
   if (d.step === 1) {
-    const sw = (list, key, cur) => `<div class="swatches">${list.map((c, i) => `<button class="swatch ${i === cur ? 'on' : ''}" data-a="look" data-v="${key}" data-k="${i}" style="background:${c[1]}" aria-label="${key} ${i + 1}"></button>`).join('')}</div>`;
+    const sw = (list, key, cur) => `<div class="swatches">${list.map((c, i) => `<button class="swatch ${i === cur ? 'on' : ''}" data-a="look" data-v="${key}" data-k="${i}" style="background:${c[1]}" aria-label="${key === 'skin' ? 'Skin tone' : 'Hair colour'} ${i + 1}" aria-pressed="${i === cur}"></button>`).join('')}</div>`;
     const sexes = BODIES.map((b) => `<button class="btn sex-pick ${b.id === d.look.body ? 'primary' : ''}" data-a="look" data-v="body" data-k="${b.id}" aria-pressed="${b.id === d.look.body}">${esc(b.name)}</button>`).join('');
     body = `<div class="look-step">
       <div class="look-big"><img src="${still}" alt="" width="128" height="128"></div>
@@ -2211,7 +2252,7 @@ function createScreen() {
   return `<section class="panel create-panel">
     <div class="create-head"><div style="display:grid;gap:4px"><span class="label">New operative \u00B7 #${state.meta.operatives + 1}</span><h2>Who walks through the gate?</h2></div>${d.step === 1 ? '' : preview}</div>
     ${notice()}
-    <div class="create-tabs"><nav class="tabs">${steps}</nav><button class="btn create-random" data-a="randomize">Randomize</button></div>
+    <div class="create-tabs"><nav class="tabs">${steps}</nav><span class="btnrow">${isGuest() ? '' : `<button class="btn ${state.meta.operatives ? '' : 'primary'}" data-a="quickstart" title="A sturdy Foundry Hand with a Hornet drone, Overload and a strong arm. Everything can be chosen by hand instead.">Quick start</button>`}<button class="btn create-random" data-a="randomize">Randomize</button></span></div>
     <div class="create-summary"><span class="chip">${sexOf(d.look) === 'f' ? 'Female' : 'Male'}</span><span class="chip">${esc(bg.name)}</span><span class="chip">${esc(d.name || 'unnamed')}</span></div>
     ${body}
   </section>`;
@@ -2633,14 +2674,14 @@ function character() {
     const lvl = m.training[k], cost = E.trainingCost(lvl), maxed = lvl >= t.max;
     return `<div class="row i">${ico(`train:${k}`)}<div><div class="name">${esc(t.label)} <span class="num muted" style="font-size:.8rem">+${t.per} ${t.stat} per rank</span></div>
       <div class="desc">${esc(t.note)}</div><div class="pips ${t.max > 10 ? 'long' : ''}" style="--n:${t.max}" aria-label="rank ${lvl} of ${t.max}" title="Rank ${lvl} of ${t.max}">${Array.from({ length: t.max }, (_, i) => `<i class="${i < lvl ? 'on' : ''}"></i>`).join('')}</div></div>
-      ${maxed ? '<span class="label">mastered</span>' : `<button class="btn ${m.resolve >= cost ? 'primary' : ''}" data-a="train" data-v="${k}" ${m.resolve < cost ? 'disabled' : ''}>${cost} ${esc(S.meta)}</button>`}</div>`;
+      ${maxed ? '<span class="label">mastered</span>' : `<button class="btn ${m.resolve >= cost ? 'primary' : ''}" data-a="train" data-v="${k}" aria-label="Train ${esc(t.label)}: ${cost} ${esc(S.meta)}" ${m.resolve < cost ? 'disabled' : ''}>${cost} ${esc(S.meta)}</button>`}</div>`;
   }).join('');
   const cell = D.CELL.map((u) => {
     const lv = E.cellLevel(m, u.id), now = lv ? u.levels[Math.min(lv, u.levels.length) - 1] : null, next = u.levels[lv];
     const cellIco = ico(`cell:${u.id}`);
     const pips = u.levels.length > 1 ? `<div class="pips" style="--n:${u.levels.length}" aria-label="level ${lv} of ${u.levels.length}" title="Level ${lv} of ${u.levels.length}">${u.levels.map((_, i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('')}</div>` : '';
     const text = next ? `${now ? `Now: ${now.desc} ` : ''}<span class="cell-next">${now ? 'Next: ' : ''}${esc(next.desc)}</span>` : esc(now.desc);
-    return `<div class="row ${cellIco ? 'i' : ''} ${next ? '' : 'owned'}">${cellIco}<div><div class="name">${esc(u.name)}</div><div class="desc">${text}</div>${pips}</div>${next ? `<button class="btn ${m.resolve >= next.cost ? 'primary' : ''}" data-a="cell" data-v="${u.id}" ${m.resolve < next.cost ? 'disabled' : ''}>${next.cost} ${esc(S.meta)}</button>` : '<span class="label">maxed</span>'}</div>`;
+    return `<div class="row ${cellIco ? 'i' : ''} ${next ? '' : 'owned'}">${cellIco}<div><div class="name">${esc(u.name)}</div><div class="desc">${text}</div>${pips}</div>${next ? `<button class="btn ${m.resolve >= next.cost ? 'primary' : ''}" data-a="cell" data-v="${u.id}" aria-label="Buy ${esc(u.name)}: ${next.cost} ${esc(S.meta)}" ${m.resolve < next.cost ? 'disabled' : ''}>${next.cost} ${esc(S.meta)}</button>` : '<span class="label">maxed</span>'}</div>`;
   }).join('');
   const wall = m.fallen.length ? m.fallen.map((f) => `<div><span>${esc(f.name)} <span class="muted">\u00B7 Lv ${f.level}</span></span><span class="muted">${esc(E.sectorName(f.sector, f.map))}, ${esc(f.killer)}</span></div>`).join('') : '<p class="muted">No names yet. Keep it that way.</p>';
   const bg = D.BACKGROUNDS.find((b) => b.id === c.background);
@@ -2766,9 +2807,9 @@ function combatScreen() {
     `<span class="s-atk">ATK <b>${e.atk}</b></span>`, `<span class="s-def">DEF <b>${e.def}</b></span>`, `<span class="s-spd">SPD <b>${e.spd}</b></span>`,
     `<span class="s-dodge">Dodge <b>${pct(E.dodgeChance(st, e))}</b></span>`, `<span class="s-run">Run <b>${pct(E.runChance(state))}</b></span>`,
     c.drone ? `<span class="s-drone ${c.drone.damaged ? 'danger-text' : ''}" title="${esc(`${D.DRONES[c.drone.type].name}, rank ${c.drone.rank}. ${c.drone.damaged ? 'Offline until repaired in town.' : D.DRONES[c.drone.type].effect(E.droneValue(c.drone))}`)}">${esc(D.DRONES[c.drone.type].name)} <b>${c.drone.damaged ? 'off' : `R${c.drone.rank}`}</b></span>` : ''].join('');
-  return `<div class="columns"><section class="panel combat"><div class="c-left">
+  return `<div class="columns fight"><section class="panel combat"><div class="c-left">
     <div class="combat-head"><span class="label">${esc(E.mapById(r.map).name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${stage.auto ? '<span class="auto-note">Auto battle \u00B7 change the mode to take over</span>' : ''}${roomPips(r)}</div>
-    <div class="stage-box"><div id="stage-slot"></div></div>
+    <div class="stage-box"><div id="stage-slot"></div>${coachView(e, mine)}</div>
     <div class="intent ${intent.tone} ${e.intent === 'sig' ? 'sigi' : ''} ${fx.length ? 'fx' : ''}" data-tip="${esc(intentTip)}"><span class="dot"></span><b>${esc(intent.label)}</b><span class="tip">${esc(intent.tip)}${st.scan && e.next && !(e.boss && E.intentHidden(state)) ? ` <span class="next-intent">Scanner: then ${esc(intentLabel(e, e.next))}</span>` : ''}</span><span class="intent-side">${incChip}${fx.map((x) => `<span class="chip bad" data-tip="${esc(x.tip)}" title="${esc(x.tip)}">${esc(x.label)}</span>`).join('')}${mechanicChip(r)}${r.ready ? `<span class="chip good">Aim +${E.hasPerk(c, 'steady') ? 100 : 50}%</span>` : ''}${r.momentum ? `<span class="chip good">Momentum +${Math.round(E.TUNE.momentum * 100)}%</span>` : ''}</span></div>
     <div class="statline" data-tip="${esc(rowTip)}">${meta}</div>
     ${(() => { const trait = (cls, t) => (t ? `<div class="quirk-line"><span class="chip ${cls}" data-tip="${esc(`${t.name}: ${t.desc}`)}">${esc(t.name)}</span><span>${esc(t.desc)}</span></div>` : ''); const all = trait('quirk', e.quirk && E.quirkById(e.quirk)) + trait('bad', D.MELEE_COUNTER[e.id]) + trait('bad', e.affix && D.AFFIXES[e.affix]); return all ? `<div class="quirk-row">${all}</div>` : ''; })()}
@@ -2961,6 +3002,14 @@ function endingScreen() {
   </section>`;
 }
 
+function sealedLabel(x) {
+  const u = x.unlock || {};
+  if (u.kind === 'fallen') return 'From the wall';
+  if (u.kind === 'bossRepeat') return 'A grudge';
+  if (u.kind === 'ending') return 'The last page';
+  if (u.kind === 'boss') return u.map ? `${E.mapById(u.map).name} file` : 'A warden\u2019s file';
+  return 'Cell record';
+}
 function modalView() {
   if (!modal) return '';
   if (['bar', 'wheel', 'orbit', 'ventures'].includes(modal)) return downtimeView();
@@ -2974,9 +3023,15 @@ function modalView() {
   if (modal === 'dev') return devOn && !isGuest() ? devView() : '';
   const body = modal === 'manual' ? `
     <div class="manual">
+      <section><h3>Your first raid</h3><ul>
+        <li>Tap <b>Missions</b> in the yard, or walk to its door, and deploy to the Garrison.</li>
+        <li>Pick a door. In a fight, read the line under the scene: it says what the enemy does next.</li>
+        <li><b>Defend</b> heavy hits, <b>Strike</b> enemies in cover, heal with a <b>Stim</b> before you need it.</li>
+        <li>Between sectors, push on or extract. Dying loses what you carry, but Resolve stays. Spend it on Character.</li></ul></section>
+      <section><h3>Controls</h3><p>Phone: tap to walk or pick a sign; hold any button to read it. Keyboard: <b>WASD</b> walk, <b>E</b> talk, <b>Tab</b> battle mode, <b>A F D S R</b> shoot, strike, defend, stim, run. Each button shows its key; skill keys follow the skill\u2019s slot, so they can change with your build.</p></section>
       <section><h3>The goal</h3><p>Beat the sector 15 boss in all four districts. Operatives die; the cell remembers.</p></section>
       <section><h3>A raid</h3><p>Three rooms per sector, choosing one of two doors each time. A boss every fifth sector. After each sector, push deeper or extract.</p></section>
-      <section><h3>Getting out</h3><p>Credits and XP stay <b>unsecured</b> until you beat a boss or leave, and levels only come then. Extracting costs 80%, 65%, 50%, then 40% of what\u2019s unsecured, by sector; nothing after a boss. Running mid-fight costs 90% to 60%. What you walked in with is safe.</p></section>
+      <section><h3>Getting out</h3><p>Credits and XP stay <b>unsecured</b> until you beat a boss or leave, and levels only come then. Extracting costs a share of what\u2019s unsecured, by sector: 1, 6, 11: 80%. 2, 7, 12: 65%. 3, 8, 13: 50%. 4, 9, 14: 40%. Nothing after a boss. So 200 credits and 40 XP banked at sector 2 pays 70 credits and 14 XP. Risky extraction can also fail (${Math.round(E.TUNE.extractFail * 100)}%), and then you go one sector deeper. Running mid-fight costs 90% to 60%. What you walked in with is safe.</p></section>
       <section><h3>Your turn</h3><ul>
         <li><b>Shoot</b>: steady, and you take 15% less that turn.</li>
         <li><b>Strike</b>: swingy, ignores cover, next hit +15%. Some enemies hit back.</li>
@@ -3002,7 +3057,9 @@ function modalView() {
     <div class="settings">
       <h3>Gameplay</h3>
       <div class="set-grid">
-      ${[['autoStims', 'Pause auto battle when out of stims'], ['autoStop', 'Stop auto battle at low HP with no stims'], ['fastAnim', 'Faster fight animations'], ['calm', 'Reduce motion'], ...(matchMedia('(pointer: coarse)').matches ? [['lefty', 'Left-handed fights']] : [])].map(([k, l]) => `<label class="set-row"><span>${l}</span><button class="btn" data-a="uipref" data-v="${k}" aria-pressed="${uiPrefs[k]}">${uiPrefs[k] ? 'On' : 'Off'}</button></label>`).join('')}
+      <p class="muted small" style="margin:0">Auto battle heals below 35% HP, defends heavy hits, and throws thermals at elites and bosses and ion pulses at droids. It never runs or uses smoke.</p>
+      <div class="set-row"><span>Stims auto battle may use</span><span class="btnrow">${Object.entries(AUTO_STIM).map(([k, [l]]) => `<button class="btn" data-a="autostim" data-v="${k}" aria-pressed="${uiPrefs.autoStim === k}">${uiPrefs.autoStim === k ? `<b>${l}</b>` : l}</button>`).join('')}</span></div>
+      ${[['autoItems', 'Auto battle uses thermals and ion pulses'], ['autoElite', 'Pause auto battle before elites and bosses'], ['autoStims', 'Pause auto battle when out of stims'], ['autoStop', 'Stop auto battle at low HP with no usable stims'], ['fastAnim', 'Faster fight animations'], ['calm', 'Reduce motion'], ...(matchMedia('(pointer: coarse)').matches ? [['lefty', 'Left-handed fights']] : [])].map(([k, l]) => `<label class="set-row"><span>${l}</span><button class="btn" data-a="uipref" data-v="${k}" aria-pressed="${uiPrefs[k]}">${uiPrefs[k] ? 'On' : 'Off'}</button></label>`).join('')}
       ${isGuest() ? '' : '<div class="set-row"><span>Tips you dismissed</span><button class="btn" data-a="tipsreset">Show again</button></div>'}
       </div>
       <h3>Sound</h3>
@@ -3029,8 +3086,8 @@ function modalView() {
       </div>`}
       <h3>Cloud save</h3>
       ${cloudSection()}
-      <h3>Dev mode</h3>
-      ${devOn ? '<div class="set-row"><span>Dev mode is on.</span><button class="btn" data-a="modal" data-v="dev">Open</button></div>' : '<div class="set-row"><span class="btnrow" style="flex:1"><input id="dev-code" class="text" inputmode="numeric" maxlength="8" placeholder="Dev code" style="flex:1;min-width:100px"><button class="btn" data-a="devunlock">Enter</button></span></div>'}
+       <details class="dev-fold" ${devOn ? 'open' : ''}><summary class="muted small">Developer</summary>
+      ${devOn ? '<div class="set-row"><span>Dev mode is on.</span><button class="btn" data-a="modal" data-v="dev">Open</button></div>' : '<div class="set-row"><span class="btnrow" style="flex:1"><input id="dev-code" class="text" inputmode="numeric" maxlength="8" placeholder="Dev code" style="flex:1;min-width:100px"><button class="btn" data-a="devunlock">Enter</button></span></div>'}</details>
       <h3>Save by hand</h3>
       <div class="set-row"><span>Save code</span><button class="btn" data-a="savecode">Copy save code</button></div>
       <div class="set-row"><span class="btnrow" style="flex:1"><input id="load-code" class="text" placeholder="Paste a save code" style="flex:1;min-width:120px"><button class="btn" data-a="loadcode">Load</button></span></div>
@@ -3052,7 +3109,7 @@ function codexView() {
   const list = E.codexEntries(state, isGuest() && home ? home.meta : null), fresh = state.meta.codexNew || [], open = list.filter((x) => x.open).length;
   return `<div class="modal-wrap" data-a="closemodal"><div class="modal codex" role="dialog" aria-modal="true" aria-label="Codex">
     <div class="pop-head"><h2>Codex</h2><span class="muted small">${open} of ${list.length}</span><button class="tool close" data-a="closemodal" aria-label="Close">Close</button></div>
-    ${list.map(({ entry: x, open: on }) => `<section class="codex-entry ${on ? '' : 'locked'}"><h3>${on ? esc(x.title) : 'Sealed'}${on && !isGuest() && fresh.includes(x.id) ? ' <span class="chip good">New</span>' : ''}</h3><p>${esc(on ? x.text.join(' ') : x.hint)}</p></section>`).join('')}
+    ${list.map(({ entry: x, open: on }) => `<section class="codex-entry ${on ? '' : 'locked'}"><h3>${on ? esc(x.title) : `Sealed \u00b7 ${esc(sealedLabel(x))}`}${on && !isGuest() && fresh.includes(x.id) ? ' <span class="chip good">New</span>' : ''}</h3><p>${esc(on ? x.text.join(' ') : x.hint)}</p></section>`).join('')}
   </div></div>`;
 }
 
@@ -3116,7 +3173,13 @@ function featsView() {
     <div class="pop-head"><h2>Achievements <span class="num muted h2-note">the cell\u2019s record</span></h2><button class="tool close" data-a="closemodal" aria-label="Close">Close</button></div>
     <p class="muted" style="font-size:.9rem">Everything the cell does counts, across every operative. Each achievement has six tiers; every tier adds a small permanent edge, and each tier adds a little less than the last. The top tiers of the big ones also pay ${esc(S.meta)}.</p>
     ${totals.length ? `<div class="chips">${totals.join('')}</div>` : '<p class="muted small">No tiers yet. Go and do something.</p>'}
-    ${order.filter((g) => groups[g]).map((g) => `<h3>${esc(g)}</h3><div class="feat-grid">${groups[g].map(row).join('')}</div>`).join('')}
+    <div class="feat-filter">${['All', 'Closest', 'Complete', ...order.filter((g) => groups[g])].map((g) => `<button class="tool" data-a="featfilter" data-v="${esc(g)}" aria-pressed="${featFilter === g}" ${featFilter === g ? 'style="color:var(--sodium);border-color:var(--sodium)"' : ''}>${esc(g)}</button>`).join('')}</div>
+    ${(() => {
+      const all = Object.values(E.FEAT_DEFS), tier = (d) => F.tiers[d.id] || 0, left = (d) => { const t = tier(d); if (t >= d.tiers.length) return -1; const p = t ? d.tiers[t - 1] : 0; return ((F.counters[d.id] || 0) - p) / (d.tiers[t] - p); };
+      if (featFilter === 'Closest') return `<div class="feat-grid">${all.filter((d) => left(d) >= 0).sort((a, b) => left(b) - left(a)).slice(0, 12).map(row).join('')}</div>`;
+      if (featFilter === 'Complete') { const done = all.filter((d) => tier(d) >= d.tiers.length); return done.length ? `<div class="feat-grid">${done.map(row).join('')}</div>` : '<p class="muted small">None complete yet.</p>'; }
+      return order.filter((g) => groups[g] && (featFilter === 'All' || featFilter === g)).map((g) => `<h3>${esc(g)}</h3><div class="feat-grid">${groups[g].map(row).join('')}</div>`).join('');
+    })()}
   </div></div>`;
 }
 // The global leaderboard: every raid by anyone (coop/worker.js, Board). Falls back to this device's best raids when it can't be reached.
@@ -3364,7 +3427,7 @@ function deathScreen() {
       <div${dl(620)}><span class="label">${o.orbit ? 'Lost to' : 'Killed by'}</span><b>${esc(o.killer)}</b></div>
     </div>
     <p class="story"${dl(450)}>Operative ${o.number} ${o.orbit ? `was lost in orbit when a ${esc(o.killer)} broke the shuttle apart` : `went down in the ${esc(E.sectorName(o.sector, o.map))}${o.killerId ? `, killed by a ${esc(o.killer)}` : `, taken by ${esc(o.killer)}`}`}. The ${o.credits.toLocaleString()} ${S.currency}, the gear, ${o.perks ? `${o.perks} piece${o.perks > 1 ? 's' : ''} of contraband, ` : ''}the implants and level ${o.level} went with them.</p>
-    ${o.wipe ? `<p class="notice lose"${dl()}>A wipe. Both of you fell on this raid, and everything you carried went with you.</p>` : ''}<dl class="kv"${dl()}><dt>${esc(S.meta)} to spend</dt><dd style="color:var(--sodium)">${state.meta.resolve}</dd><dt>Deepest ever</dt><dd>Sector ${state.meta.bestSector}</dd>${o.score ? `<dt>Final score</dt><dd>${o.score.toLocaleString()} points${o.boardRank ? `, <b style="color:var(--sodium)">#${o.boardRank.toLocaleString()} of ${o.boardTotal.toLocaleString()}</b> worldwide` : ''} <button class="btn" data-a="modal" data-v="board" style="margin-left:8px">View</button></dd>` : ''}</dl>
+    ${o.wipe ? `<p class="notice lose"${dl()}>A wipe. Both of you fell on this raid, and everything you carried went with you.</p>` : ''}${o.firstGift ? `<p class="muted"${dl()}>The cell takes its first loss hard: +${o.firstGift} ${esc(S.meta)}, enough for a rank of training.</p>` : ''}<dl class="kv"${dl()}><dt>${esc(S.meta)} to spend</dt><dd style="color:var(--sodium)">${state.meta.resolve}</dd><dt>Deepest ever</dt><dd>Sector ${state.meta.bestSector}</dd>${o.score ? `<dt>Final score</dt><dd>${o.score.toLocaleString()} points${o.boardRank ? `, <b style="color:var(--sodium)">#${o.boardRank.toLocaleString()} of ${o.boardTotal.toLocaleString()}</b> worldwide` : ''} <button class="btn" data-a="modal" data-v="board" style="margin-left:8px">View</button></dd>` : ''}</dl>
     ${(() => { const h = heirloomPick(); return h ? `<div${dl()}>${h}</div>` : ''; })()}
     <p class="muted" style="font-size:.88rem"${dl()}>Spend Resolve at the safehouse once your next operative is in town.</p>
     <div${dl()}><button class="btn primary big" data-a="recruit">Build the next operative</button></div>
@@ -3392,6 +3455,53 @@ function screenWipe() {
 const BOSS_SEEN_KEY = 'cinder-cell-boss-seen';
 let bossShowing = null;
 let lastLootKey = '';
+// First fights: one concrete thing to try, shown until the player has acted on it once.
+let coachKey = null;
+function coachView(e, mine) {
+  coachKey = null;
+  const m = state.meta;
+  if (isGuest() || !mine || stage.auto || E.isCoop(state) || m.operatives > 2) return '';
+  const done = m.coach || {};
+  let k = null, text = '';
+  if (e.stun > 0) return '';
+  if (e.intent === 'heavy' && !done.heavy) { k = 'heavy'; text = 'Heavy strike coming. Defend takes about a third of it.'; }
+  else if (e.intent === 'guard' && !done.guard) { k = 'guard'; text = 'It\u2019s in cover, so shots deal half. Strike ignores cover.'; }
+  else if (e.tags.includes('droid') && state.char.items.ion > 0 && !done.droid) { k = 'droid'; text = 'A droid: an Ion Pulse stuns it.'; }
+  else if (matchMedia('(pointer: coarse)').matches && !done.hold) { k = 'hold'; text = 'Hold any button to read what it does.'; }
+  if (!k) return '';
+  coachKey = k;
+  return `<div class="coach" role="status">${esc(text)}</div>`;
+}
+function coachSeen() { if (coachKey && state.meta) { state.meta.coach = { ...(state.meta.coach || {}), [coachKey]: true }; coachKey = null; } }
+// Dialogs: the page behind goes inert, focus moves in, Tab stays in, and closing returns focus to whatever opened it.
+let dialogKey = null, dialogOpener = null;
+const keyOfButton = (b) => [b.dataset.a, b.dataset.v || '', b.dataset.k || ''].join('|');
+function topDialog() { const all = document.querySelectorAll('#app [aria-modal="true"], #app [role="alertdialog"]'); return all.length ? all[all.length - 1] : null; }
+function syncDialog(foKey) {
+  const app = document.getElementById('app'), d = topDialog();
+  if (d) for (let el = d; el && el !== app && el.parentElement; el = el.parentElement) for (const sib of el.parentElement.children) if (sib !== el && !sib.classList.contains('toast')) sib.inert = true;
+  const key = d ? d.getAttribute('aria-label') || d.className : null;
+  if (d) {
+    if (key !== dialogKey) { if (!dialogKey) dialogOpener = foKey; dialogKey = key; d.tabIndex = -1; d.focus({ preventScroll: true }); }
+    else if (!d.contains(document.activeElement)) { d.tabIndex = -1; d.focus({ preventScroll: true }); }
+  } else if (dialogKey) {
+    dialogKey = null;
+    const back = dialogOpener && [...app.querySelectorAll('button[data-a]')].find((x) => keyOfButton(x) === dialogOpener);
+    dialogOpener = null;
+    if (back && !back.disabled) back.focus({ preventScroll: true });
+  }
+}
+function trapTab(ev) {
+  const d = topDialog();
+  if (!d) return false;
+  ev.preventDefault();
+  const list = [...d.querySelectorAll('button:not(:disabled), input:not(:disabled), select, textarea, a[href], summary')].filter((x) => x.offsetParent !== null);
+  if (!list.length) return true;
+  const i = list.indexOf(document.activeElement);
+  list[ev.shiftKey ? (i <= 0 ? list.length - 1 : i - 1) : (i + 1) % list.length].focus({ preventScroll: true });
+  return true;
+}
+
 function render() {
   if (!appReadySent) { appReadySent = true; const r = appBridge('ready'); if (r) requestAnimationFrame(() => setTimeout(() => { try { r.postMessage(1); } catch (e) {} }, 80)); }
   if (isGuest() && (!hostSynced || (!state.char && home && home.char))) {
@@ -3466,6 +3576,7 @@ function render() {
     for (const el of app.querySelectorAll('.modal, .log')) { const k = kept.find((x) => x.cls === el.className && !seen[x.cls]); if (k) { seen[k.cls] = true; el.scrollTop = k.top; } }
     if (foKey) { const b = [...app.querySelectorAll('button[data-a]')].find((x) => [x.dataset.a, x.dataset.v || '', x.dataset.k || ''].join('|') === foKey); if (b && !b.disabled) b.focus({ preventScroll: true }); }
   } else app.classList.remove('still');
+  syncDialog(foKey);
   A.setAmbience(state.run ? E.mapById(state.run.map).theme : 'town');
   A.setMusic(state.run ? 'raid' : 'town');
   applyLook();
@@ -3548,20 +3659,32 @@ function stimPromptView() {
     <div class="btnrow"><button class="btn primary big" data-a="stimprompt" data-v="continue">Continue auto</button><button class="btn big" data-a="stimprompt" data-v="manual">Take over</button><button class="btn big" data-a="stimprompt" data-v="run" ${E.canUse(state, 'run') ? '' : 'disabled'}>Run \u00B7 ${Math.round(E.runChance(state) * 100)}%, lose ${Math.round(E.runShare(state) * 100)}%</button></div></div></div>`;
 }
 function autoSafetyStop() {
-  const c = state.char, danger = uiPrefs.autoStop && !c.items.stim && c.hp < E.stats(state).maxHp * 0.3;
+  const c = state.char, danger = uiPrefs.autoStop && c.items.stim <= autoOpts().stimReserve && c.hp < E.stats(state).maxHp * 0.3;
   if (!danger) { autoStopped = false; return false; }
   if (autoStopped) return false;
-  autoStopped = true; stage.setMode('manual'); hint('Auto battle stopped: low HP and no stims left.');
+  autoStopped = true; stage.setMode('manual'); hint(c.items.stim ? 'Auto battle stopped: low HP, and your stim setting keeps the rest for you.' : 'Auto battle stopped: low HP and no stims left.');
+  return true;
+}
+// Optional: hand back control when a tougher fight starts.
+let autoEliteSeen = '';
+function autoElitePause() {
+  const r = state.run, e = r.enemy, k = `${r.sector}.${r.room}.${e.id}`;
+  if (!uiPrefs.autoElite || !(e.elite || e.boss) || autoEliteSeen === k) return false;
+  autoEliteSeen = k; stage.setMode('manual'); hint(`Auto battle paused: ${e.boss ? 'a boss' : 'an elite'}. Pick Auto again to carry on.`);
   return true;
 }
 function scheduleAuto() {
   if (autoTimer || stimPrompt || !stage.auto || busy || modal || titleOpen || !state || state.screen !== 'combat' || !state.run || !state.run.enemy) return;
   autoTimer = setTimeout(() => {
     autoTimer = null;
-    if (stage.auto && !busy && !modal && !titleOpen && state.screen === 'combat' && state.run && state.run.enemy && (!E.isCoop(state) || state.run.actor === myIdx()) && !autoStimPause() && !autoSafetyStop()) fight(E.autoAction(state), isGuest() ? 1 : 0);
+    if (stage.auto && !busy && !modal && !titleOpen && state.screen === 'combat' && state.run && state.run.enemy && (!E.isCoop(state) || state.run.actor === myIdx()) && !autoStimPause() && !autoSafetyStop() && !autoElitePause()) fight(E.autoAction(state, autoOpts()), isGuest() ? 1 : 0);
   }, 350);
 }
-document.addEventListener('automode', () => { A.play('click'); if (state.screen === 'combat') render(); });
+document.addEventListener('automode', (ev) => {
+  A.play('click');
+  if (ev.detail && state.meta && !isGuest() && !(state.meta.coach || {}).auto) { state.meta.coach = { ...(state.meta.coach || {}), auto: true }; hint('Auto battle spends stims and items. Set what it may use in Settings.'); }
+  if (state.screen === 'combat') render();
+});
 
 // ---------- input ----------
 const stage = new Stage();
@@ -3576,13 +3699,11 @@ globalThis.cinderTown = town; // handy for debugging in the console
 globalThis.cinderGame = { state: () => state, rng: () => rng, after: () => { save(); if (isHost()) broadcast(); render(); }, stage, juice, audio: A, death: deathReveal }; // for tests/coop-wipe.cjs, tests/juice.cjs
 let lastScreen = null, lastView = '';
 // Walking into a building (or talking to its NPC) opens that building's menu.
-town.onOpen = (id) => { if (state.screen !== 'town' || modal) return; state.popup = id; state.notice = null; A.play('click'); render(); };
-// Things in the yard that touch the game: noodles, the vending terminal, doors with no inside.
+town.onOpen = (id) => { if (state.screen !== 'town' || modal) return; if (id === 'bar' || id === 'wheel') { modal = id; state.notice = null; A.play('click'); render(); return; } state.popup = id; state.notice = null; A.play('click'); render(); };
+// Things in the yard that touch the game: the vending terminal, doors with no inside.
 town.onAction = (id) => {
   const c = state.char;
   if (!c || state.screen !== 'town') return null;
-  if (id === 'noodles:can') return c.fed ? { ok: false, text: 'You\u2019ve eaten. Go on, before it gets cold out there.' } : c.credits < E.noodleCost(state) ? { ok: false, text: `${E.noodleCost(state)} credits. You\u2019ve got ${c.credits}. Come back when you\u2019ve robbed someone.` } : { ok: true, text: `${E.noodleCost(state)} ${S.cur}. Hot broth, +5% XP until you\u2019re next back in the yard.` };
-  if (id === 'noodles') { const ok = E.buyNoodles(state); save(); render(); return { text: ok ? 'Yum. That\u2019ll keep you warm. +5% XP this raid.' : 'No sale.' }; }
   if (id === 'vending') {
     if (c.credits < 1) return { text: 'The terminal wants 1 credit. You have none. It plays a sad little tune.', sfx: 'denied' };
     c.credits -= 1; save(); render();
@@ -3596,6 +3717,7 @@ let busy = false;
 
 async function fight(v, who = 0) {
   if (busy || awaitingHost || !state.run || !state.run.enemy) return;
+  coachSeen();
   if (isGuest()) {
     if (!net.online || !net.peer) { hint('Not connected to the host right now.'); A.play('denied'); return; }
     if (E.isCoop(state) && state.run.actor !== 1) return;
@@ -3644,6 +3766,8 @@ function act(a, v, k) {
     if (v === 'run') return fight('run', isGuest() ? 1 : 0);
     return;
   }
+  if (a === 'autostim') { uiPrefs.autoStim = v; try { localStorage.setItem(UI_KEY, JSON.stringify(uiPrefs)); } catch (e) {} A.play('click'); render(); return; }
+  if (a === 'featfilter') { featFilter = v; A.play('click'); render(); return; }
   if (a === 'uipref') { uiPrefs[v] = !uiPrefs[v]; try { localStorage.setItem(UI_KEY, JSON.stringify(uiPrefs)); } catch (e) {} applyUi(); A.play('click'); render(); return; }
   if (busy && !modal) return;
   if (a === 'act') return fight(v);
@@ -3786,6 +3910,14 @@ function applyAct(a, v, k) {
       sfx('click'); break;
     }
     case 'randname': state.draft.name = D.OPERATIVE_NAMES[Math.floor(rng() * D.OPERATIVE_NAMES.length)]; break;
+    case 'quickstart': {
+      const d = state.draft;
+      d.background = 'foundry'; d.drone = 'hornet';
+      for (const k of Object.keys(D.ATTRS)) while (E.draftAdjust(d, k, -1));
+      E.draftAdjust(d, 'int', 1); E.draftAdjust(d, 'int', 1);
+      for (let i = 0; i < 20 && d.points > 0; i++) if (!E.draftAdjust(d, 'str', 1) && !E.draftAdjust(d, 'agi', 1)) break;
+      E.createChar(state, rng); state.gateMap = 'garrison'; state.popup = null; fallenScene(state, state.char); break;
+    }
     case 'create': E.createChar(state, rng); state.gateMap = 'garrison'; state.popup = null; fallenScene(state, state.char); break;
     case 'tab': case 'popup': state.popup = v === 'gate' ? 'missions' : v === 'safehouse' ? 'character' : v; if (k && state.popup === 'character') state.charTab = k; state.notice = null; break;
     case 'closepopup': state.popup = null; state.notice = null; state.compare = null; break;
@@ -3870,6 +4002,11 @@ document.addEventListener('click', (ev) => {
   if (ev.target.classList && ev.target.classList.contains('cmp-pop')) { act('closecompare'); return; }
   if (ev.target.classList && ev.target.classList.contains('town-pop')) { act('closepopup'); return; }
   const b = ev.target.closest('button[data-a]');
+  // A greyed-out command lets taps through to its row: say why it can't be used.
+  if (!b && ev.target.matches && ev.target.matches('.actions, .skills, .items')) {
+    const off = [...ev.target.querySelectorAll('.btn:disabled')].find((x) => { const q = x.getBoundingClientRect(); return ev.clientX >= q.left && ev.clientX <= q.right && ev.clientY >= q.top && ev.clientY <= q.bottom; });
+    if (off) { const why = off.querySelector('.sk-status'); hint(`${off.title}${why ? ` (${why.textContent})` : ''}`); return; }
+  }
   // No hover on a touch screen: tapping something with a tooltip shows it.
   if (!b && ev.target.closest && matchMedia('(pointer: coarse)').matches) { const h = ev.target.closest('[title]'); if (h && !busy) { toast = h.title; render(); return; } }
   if (!b || b.disabled) return;
@@ -3883,6 +4020,7 @@ document.addEventListener('input', (ev) => {
 document.addEventListener('change', (ev) => { if (ev.target.id === 'vol') A.play('click'); });
 
 document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Tab' && trapTab(ev)) return;
   if (sceneLocal && !modal && !(titleOpen && !isGuest())) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); sceneNext(); } else if (ev.key === 'Escape') sceneEnd(); return; }
   if (deathReveal.playing && !modal && ['Enter', ' ', 'Escape'].includes(ev.key)) { ev.preventDefault(); deathEnd(); return; }
   if (ev.key === 'Escape' && modal) { act('closemodal'); return; }
