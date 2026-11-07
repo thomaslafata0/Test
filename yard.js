@@ -762,7 +762,7 @@ export class Town {
     const hd = this.hdOf(id);
     if (hd) {
       const walk = moving && hd.anims.walk, a = walk || hd.anims.idle, fw = a.img.width / a.frames, k = h / hd.fig;
-      const f = reduceMotion && !moving ? 0 : Math.floor(t * (a.fps || 8)) % a.frames;
+      const f = reduceMotion && !moving ? 0 : walk ? Math.floor(t * (a.fps || 8)) % a.frames : a.frames >= 6 ? [0, 1, 2, 1][Math.floor(t * 2) % 4] : Math.floor(t * (a.fps || 8)) % a.frames; // standing: a slow, small breath, not the whole idle cycle
       const bob = moving && !walk && !reduceMotion ? -Math.abs(Math.sin(t * 9)) * 5 : 0;
       return { img: a.img, sx: Math.round(f * fw), sw: fw, sh: a.img.height, k, pad: a.pad || 0, mirror: face !== native, bob, smooth: true };
     }

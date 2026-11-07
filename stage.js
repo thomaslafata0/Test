@@ -275,6 +275,8 @@ class Actor {
     let a = this.sheet.anims[this.anim] || this.sheet.anims.idle;
     let f = Math.max(0, Math.floor(((t - this.animStart) / 1000) * a.fps)); // never negative: the clock stands still during hit-stop
     if (a.loop && this.anim === 'charge' && this.sheet.hd && !CHARGE_LOOPS.has(this.id) && a.frames >= 6) { if (f >= a.frames) f = a.frames - 1 - [3, 2, 1, 0, 1, 2][(f - a.frames) % 6]; }
+    // Standing still: a slow, small breath over the first few frames, not the whole idle cycle, which reads as swaying.
+    else if (a.loop && this.anim === 'idle' && this.sheet.hd && a.frames >= 6) f = [0, 1, 2, 1][Math.max(0, Math.floor(((t - this.animStart) / 1000) * 2)) % 4];
     else if (a.loop) f %= a.frames;
     else if (f >= a.frames) {
       if (this.anim === 'death') f = a.frames - 1;
@@ -1564,7 +1566,8 @@ export class Stage {
     if (!f.img) return; // art still loading
     const w = Math.round(f.sw * s), h = Math.round(f.sh * s);
     let bob = 0;
-    if (!reduceMotion) bob = actor.side === 'enemy' ? Math.sin(t / (HOVER.has(actor.id) ? 380 : 650)) * (HOVER.has(actor.id) ? 3 : 1) : Math.sin(t / 720) * 1.2;
+    if (!reduceMotion && HOVER.has(actor.id)) bob = Math.sin(t / 380) * 3;
+    else if (!reduceMotion && !(actor.sheet && actor.sheet.hd)) bob = actor.side === 'enemy' ? Math.sin(t / 650) : Math.sin(t / 720) * 1.2;
     const feet = actor.sheet && actor.sheet.hd ? (f.pad || 0) * s : this.footPad(actor);
     const x = Math.round(a.x + actor.ox - w / 2), y = Math.round(a.y + actor.oy - h + feet + bob);
     g.globalAlpha = actor.alpha;
