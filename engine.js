@@ -65,7 +65,8 @@ export const extractRate = (sector) => TUNE.extractRates[(sector - 1) % 5];
 export const escapeRate = (sector) => TUNE.escapeRates[(sector - 1) % 5];
 export const isBossSector = (n) => n % 5 === 0;
 // Optional credit accounting for the simulators: set s.ledger = {} and every credit gain or spend is tallied by source.
-const ledger = (s, k, n) => { if (s.ledger && n) s.ledger[k] = (s.ledger[k] || 0) + n; };
+// Every credit earned goes to a debt first. Spending never touches it.
+const ledger = (s, k, n) => { if (s.ledger && n) s.ledger[k] = (s.ledger[k] || 0) + n; if (n > 0 && !String(k).startsWith('spend')) { settleDebt(s.char); settleDebt(s.char2); } };
 export const mapById = (id) => D.MAPS.find((m) => m.id === id) || D.MAPS[0];
 export const sectorName = (n, mapId = 'garrison') => {
   const list = mapById(mapId).sectors, len = list.length;
@@ -2619,27 +2620,47 @@ function winFight(s, rng, fled = false) {
 export const PERK_CAP_MAX = 99, PERK_CAP_BASE = 120, PERK_CAP_STEP = 1.08;
 export const perkCap = (c) => Math.min(PERK_CAP_MAX, 3 + ((c && c.perkCapUp) || 0));
 export const perkCapCost = (s) => Math.ceil(price(s, PERK_CAP_BASE * Math.pow(PERK_CAP_STEP, s.char.perkCapUp || 0)));
-export function buyPerkCap(s) {
+// Debt: an operative can borrow the shortfall on a contraband raise, up to a ceiling that grows with level. Whatever it earns
+// pays the debt off first (ledger). It dies with the operative.
+export const debtMax = (c) => 600 + 150 * ((c && c.level) || 1);
+export const debtOf = (c) => (c && c.debt) || 0;
+export function settleDebt(c) {
+  if (!c || !(c.debt > 0) || !(c.credits > 0)) return 0;
+  const p = Math.min(c.debt, c.credits); c.debt -= p; c.credits -= p;
+  return p;
+}
+// Can this operative afford the next raise, by paying or by borrowing the rest?
+export function capRaiseWay(s) {
   const c = s.char, cost = perkCapCost(s);
-  if (perkCap(c) >= PERK_CAP_MAX || c.credits < cost) return false;
-  c.credits -= cost; c.perkCapUp = (c.perkCapUp || 0) + 1; ledger(s, 'spend:contraband', cost);
+  if (perkCap(c) >= PERK_CAP_MAX) return null;
+  if (c.credits >= cost) return { cost, owe: 0 };
+  const owe = cost - Math.max(0, c.credits);
+  return debtOf(c) + owe <= debtMax(c) ? { cost, owe } : null;
+}
+export function buyPerkCap(s, borrow = false) {
+  const c = s.char, way = capRaiseWay(s);
+  if (!way || (way.owe && !borrow)) return false;
+  const paid = way.cost - way.owe;
+  c.credits -= paid; c.debt = debtOf(c) + way.owe; c.perkCapUp = (c.perkCapUp || 0) + 1; ledger(s, 'spend:contraband', paid);
   s.notice = `You can carry ${perkCap(c)} of each piece of contraband now.`;
   return true;
 }
 function offerPerks(s, rng, boss) {
-  const c = s.char, pool = D.PERKS.filter((p) => perkStacks(c, p.id) < perkCap(c)), out = [];
+  const c = s.char, pool = D.PERKS.slice(), out = []; // pieces at the cap still turn up: the screen offers to raise it
   const weight = (p) => (p.rare ? (boss ? 2 : 1) : 3) * (hasPerk(c, p.id) ? 3 : 1);
   const take = (list) => { const it = pickWeighted(rng, list.map((p) => [p, weight(p)])); out.push(it.id); pool.splice(pool.indexOf(it), 1); };
   if (boss && pool.some((p) => p.rare)) take(pool.filter((p) => p.rare));
   while (out.length < (has(c, 'broker') ? 4 : 3) && pool.length) take(pool);
   return out;
 }
-export function choosePerk(s, id, rng, who = actorIdx(s)) {
-  return withActor(s, who, () => choosePerkInner(s, id, rng));
+export function choosePerk(s, id, rng, who = actorIdx(s), raise = '') {
+  return withActor(s, who, () => choosePerkInner(s, id, rng, raise));
 }
-function choosePerkInner(s, id, rng) {
+// raise: 'pay' or 'borrow' buys one more copy of room on the spot when the piece is at the cap.
+function choosePerkInner(s, id, rng, raise = '') {
   const r = s.run, c = s.char;
   if (!r || !r.perkOffer) return false;
+  if (id && r.perkOffer.includes(id) && perkStacks(c, id) >= perkCap(c)) { if (!raise || !buyPerkCap(s, raise === 'borrow')) return false; }
   if (id && r.perkOffer.includes(id) && perkStacks(c, id) < perkCap(c)) {
     c.perkN = c.perkN || {};
     c.perkN[id] = (c.perkN[id] || 0) + 1;

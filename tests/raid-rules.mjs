@@ -65,6 +65,20 @@ for (const [sector, want] of [[1, 0.8], [2, 0.65], [3, 0.5], [4, 0.4], [5, 0], [
   ok('a copy stacks instead of duplicating, up to 3', s.char.perkN.ironlung === 3 && s.char.perks.filter((x) => x === 'ironlung').length === 1, `${s.char.perkN.ironlung}`);
   s.char.credits = 99999; const before = E.perkCap(s.char), c1 = E.perkCapCost(s); ok('the cap can be raised for credits', E.buyPerkCap(s) && E.perkCap(s.char) === before + 1 && E.perkCapCost(s) > c1);
   s.run.perkOffer = ['ironlung']; s.screen = 'perk'; E.choosePerk(s, 'ironlung', rng); ok('a raised cap takes one more', s.char.perkN.ironlung === 4);
+  // At the cap the piece is still offered, and can be taken by paying or borrowing for more room on the spot.
+  { const g2 = game(31), s2 = g2.s; s2.char.perkN = { ironlung: 3 }; s2.char.perks = ['ironlung'];
+    E.deploy(s2, 'garrison', 1, g2.rng); s2.run.perkOffer = ['ironlung']; s2.screen = 'perk';
+    s2.char.credits = 0; ok('a capped piece can\u2019t be taken for nothing', E.choosePerk(s2, 'ironlung', g2.rng, 0, '') === false && s2.char.perkN.ironlung === 3);
+    const cost = E.perkCapCost(s2); s2.char.credits = 40;
+    ok('paying needs the credits', E.choosePerk(s2, 'ironlung', g2.rng, 0, 'pay') === false);
+    s2.run.perkOffer = ['ironlung']; s2.screen = 'perk';
+    ok('borrowing takes it', E.choosePerk(s2, 'ironlung', g2.rng, 0, 'borrow') !== false && s2.char.perkN.ironlung === 4 && E.perkCap(s2.char) === 4);
+    ok('the shortfall becomes debt', s2.char.credits === 0 && E.debtOf(s2.char) === cost - 40, `${E.debtOf(s2.char)} vs ${cost - 40}`);
+    const owed = E.debtOf(s2.char); s2.ledger = s2.ledger || {}; s2.char.credits += owed + 25; E.settleDebt(s2.char);
+    ok('earnings pay the debt first', E.debtOf(s2.char) === 0 && s2.char.credits === 25, `${E.debtOf(s2.char)} ${s2.char.credits}`);
+    s2.char.debt = E.debtMax(s2.char); s2.char.credits = 0; s2.run.perkOffer = ['ironlung']; s2.screen = 'perk';
+    ok('no borrowing past the limit', E.choosePerk(s2, 'ironlung', g2.rng, 0, 'borrow') === false);
+  }
   // Old saves: a tier becomes that many copies.
   const old = game(14); old.s.char.perks = ['chit', 'hollow']; old.s.char.perkLv = { chit: 3 }; delete old.s.char.perkN;
   const m = E.migrate(old.s, old.rng);

@@ -1489,6 +1489,9 @@ html.calm .btn:active, html.calm .door:active, html.calm .tab:active, html.calm 
   .news-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; padding: 8px 14px; } .news-item span { font-size: 12px; }
   .news-go { padding: 8px 14px 8px; }
 }
+.debt-tag { display: block; font-size: 11px; line-height: 1.1; color: var(--danger); font-family: var(--mono); white-space: nowrap; }
+.perk.capped { cursor: default; display: grid; gap: 4px; }
+.perk.capped .btn { margin-top: 4px; }
 </style>
 
 <div class="rotate-note"><b>Turn your phone sideways</b><span class="muted">Cinder Cell plays in landscape.</span><div><button class="btn" onclick="this.closest('.rotate-note').remove()">Play upright anyway</button></div></div>
@@ -2145,7 +2148,7 @@ function statusStrip() {
     <div class="stat hp"><span class="label">HP</span><span class="v">${Math.max(0, c.hp)} / ${st.maxHp}</span>${bar(c.hp, st.maxHp)}</div>
     ${mateStat}
     ${[['Shoot', st.atk], ['Strike', st.atkM], ['DEF', st.def, 'minor'], ['SPD', st.spd, 'minor']].map(([k, v, cls]) => `<div class="stat num-stat ${cls || ''}"><span class="label">${k}</span><span class="v">${v}</span></div>`).join('')}
-    <div class="stat cred-stat"><span class="label">${esc(S.currency)}</span><span class="v">${cntSpan('credits', c.credits)}</span></div>
+    <div class="stat cred-stat"><span class="label">${esc(S.currency)}</span><span class="v">${cntSpan('credits', c.credits)}</span>${E.debtOf(c) ? `<span class="debt-tag" title="Owed to Marrow. Everything you earn pays this first.">owe ${E.debtOf(c).toLocaleString()}</span>` : ''}</div>
     ${state.run ? `<div class="stat unsec-stat" title="Earned this stretch. It becomes levels when you beat the boss or get out, and leaving early costs a share."><span class="label">Unsecured</span><span class="v" style="color:var(--sodium)">${cntSpan('unsec', E.unsecured(state))} ${esc(S.cur)} \u00B7 ${cntSpan('xpbank', c.xpBank || 0)} XP</span></div>` : ''}
     ${state.screen === 'town' ? `<button class="stat resolve-link" data-a="tab" data-v="character" data-k="resolve" title="Spend Resolve on the Character tab"><span class="label">${esc(S.meta)} \u00B7 spend</span><span class="v" style="color:var(--sodium)">${state.meta.resolve}</span></button>` : `<div class="stat res-stat"><span class="label">${esc(S.meta)}</span><span class="v" style="color:var(--sodium)">${state.meta.resolve}</span></div>`}
     </div>
@@ -2749,7 +2752,7 @@ function character() {
       <div style="display:grid;gap:14px;align-content:start;min-width:0">
         <span class="label">Marks \u00B7 ${(c.marks || []).length} / 5 \u00B7 earned in orbit</span>${(c.marks || []).length ? `<div class="perk-list">${c.marks.map((id) => { const mk = D.MARKS[id]; return `<div class="perk-mini rare">${ico(`mark:${id}`, 'sm2')}<div><b>${esc(mk.name)}</b><span>${esc(mk.desc)}</span></div></div>`; }).join('')}</div>` : '<p class="muted">None yet. Fly the shuttle (Orbit, after curfew) on the harder runs.</p>'}
         ${(() => { const fb = E.featBuffs(m), t = Object.entries(fb).filter(([k, v]) => k !== 'vs' && v > 0), vs = Object.keys(fb.vs).length; return `<span class="label">Achievements \u00B7 the cell\u2019s permanent edges</span>${t.length || vs ? `<div class="chips">${t.map(([k, v]) => `<span class="chip good">+${(v * 100).toFixed(1).replace(/\.0$/, '')}% ${esc(E.BUFF_NAMES[k])}</span>`).join('')}${vs ? `<span class="chip good">bonus damage vs ${vs} enemy type${vs > 1 ? 's' : ''}</span>` : ''}<button class="btn" data-a="modal" data-v="feats" style="margin-left:4px">All feats</button></div>` : '<p class="muted">No tiers yet. Everything the cell does counts: see <button class="btn" data-a="modal" data-v="feats">Feats</button>.</p>'}`; })()}
-        <span class="label">Contraband \u00B7 ${c.perks.reduce((t, id) => t + E.perkStacks(c, id), 0)} carried \u00B7 up to ${E.perkCap(c)} of each</span>${E.perkCap(c) < E.PERK_CAP_MAX ? `<div class="set-row"><span class="muted small">Marrow can hide more on you: carry ${E.perkCap(c) + 1} of each.</span><button class="btn" data-a="perkcap" ${c.credits < E.perkCapCost(state) ? 'disabled' : ''}>${cr(E.perkCapCost(state))}</button></div>` : ''}${c.perks.length ? `<div class="perk-list">${c.perks.map((id) => { const pk = { ...E.perkById(id), name: E.perkName(id, E.perkStacks(c, id)), desc: E.perkText(id, E.perkStacks(c, id)) }; return `<div class="perk-mini ${pk.rare ? 'rare' : ''}">${ico(`perk:${id}`, 'sm2')}<div><b>${esc(pk.name)}</b><span>${esc(pk.desc)}</span></div></div>`; }).join('')}</div>` : '<p class="muted">None yet. Bosses always carry it; other enemies sometimes do.</p>'}
+        <span class="label">Contraband \u00B7 ${c.perks.reduce((t, id) => t + E.perkStacks(c, id), 0)} carried \u00B7 up to ${E.perkCap(c)} of each</span>${E.perkCap(c) < E.PERK_CAP_MAX ? `<div class="set-row"><span class="muted small">Marrow can hide more on you: carry ${E.perkCap(c) + 1} of each.</span>${(() => { const way = E.capRaiseWay(state); return way && way.owe ? `<button class="btn" data-a="perkcap" data-v="borrow" title="Pay what you have and owe the rest. Everything you earn pays it off first.">Borrow ${cr(way.owe)}</button>` : `<button class="btn" data-a="perkcap" ${way ? '' : 'disabled'}>${cr(E.perkCapCost(state))}</button>`; })()}</div>${E.debtOf(c) ? `<p class="muted small">You owe Marrow ${cr(E.debtOf(c))} (limit ${cr(E.debtMax(c))}). Everything you earn pays this first.</p>` : ''}` : ''}${c.perks.length ? `<div class="perk-list">${c.perks.map((id) => { const pk = { ...E.perkById(id), name: E.perkName(id, E.perkStacks(c, id)), desc: E.perkText(id, E.perkStacks(c, id)) }; return `<div class="perk-mini ${pk.rare ? 'rare' : ''}">${ico(`perk:${id}`, 'sm2')}<div><b>${esc(pk.name)}</b><span>${esc(pk.desc)}</span></div></div>`; }).join('')}</div>` : '<p class="muted">None yet. Bosses always carry it; other enemies sometimes do.</p>'}
       </div>
       <div style="display:grid;gap:14px;align-content:start;min-width:0">
         <span class="label">Choices that changed you</span><div class="wall">${history}</div>
@@ -3015,6 +3018,12 @@ function perkScreen() {
   const r = state.run, c = state.char;
   const cards = r.perkOffer.map((id, i) => {
     const p = E.perkById(id), have = E.perkStacks(c, id), now = have ? E.perkValue(id, have) : null, next = E.perkValue(id, have + 1);
+    if (have >= E.perkCap(c)) {
+      const way = E.capRaiseWay(state);
+      const btn = !way ? `<span class="muted small">At your limit of ${have}. ${E.perkCap(c) >= E.PERK_CAP_MAX ? 'This is the most anyone can carry.' : `Marrow wants ${cr(E.perkCapCost(state))} to make room, and you can\u2019t cover it.`}</span>`
+        : `<button class="btn ${way.owe ? '' : 'primary'}" data-a="perk" data-v="${id}" data-k="${way.owe ? 'borrow' : 'pay'}">${way.owe ? `Borrow ${cr(way.owe)} and take it` : `Pay ${cr(way.cost)} and take it`}</button>`;
+      return `<div class="perk capped ${p.rare ? 'rare' : ''}">${ico(`perk:${id}`, 'lg')}<span class="label">At your limit: x${have} <span class="k">${i + 1}</span></span><b>${esc(p.name)}</b><span class="desc">${esc(E.perkText(id, have + 1))}</span><span class="small">Make room for one more${way && way.owe ? `: you pay ${cr(way.cost - way.owe)} and owe ${cr(way.owe)}, paid from what you earn next` : ''}.</span>${btn}</div>`;
+    }
     return `<button class="perk ${p.rare ? 'rare' : ''}" data-a="perk" data-v="${id}">${ico(`perk:${id}`, 'lg')}<span class="label">${have ? `You have x${have}` : p.rare ? 'Rare' : 'New'} <span class="k">${i + 1}</span></span><b>${esc(p.name)}</b><span class="desc">${esc(E.perkText(id, have + 1))}</span>${have && now !== next ? `<span class="stack-up">${now} \u2192 ${next}</span>` : have ? '<span class="stack-up">Builds toward the next step</span>' : ''}</button>`;
   }).join('');
   return popupView(`
@@ -4037,7 +4046,7 @@ function applyAct(a, v, k) {
     case 'tip': state.meta.tips[v] = true; sfx('click'); break;
     case 'threat': state.meta.threat = +v; sfx('click'); break;
     case 'perk':
-      E.choosePerk(state, v, rng, actingAs); if (v) sfx('perk'); break;
+      { const okp = E.choosePerk(state, v, rng, actingAs, k || ''); if (v && okp !== false) sfx(k ? 'buy' : 'perk'); else if (v) sfx('denied'); } break;
     case 'ending': state.meta.endingSeen = true; state.screen = 'town'; break;
     case 'begin': state.screen = 'create'; if (!state.draft) state.draft = E.newDraft(state.meta, rng); break;
     case 'bg': state.draft.background = v; { for (const key of Object.keys(D.ATTRS)) while (E.draftAttr(state.draft, key) > D.ATTR_CREATE_MAX) E.draftAdjust(state.draft, key, -1); } break;
@@ -4096,7 +4105,7 @@ function applyAct(a, v, k) {
     case 'markettab': state.marketTab = v; sfx('click'); break;
     case 'chartab': state.charTab = v; sfx('click'); break;
     case 'train': ok = E.train(state, v); break;
-    case 'perkcap': ok = E.buyPerkCap(state); if (ok) sfx('buy'); break;
+    case 'perkcap': ok = E.buyPerkCap(state, v === 'borrow'); if (ok) sfx('buy'); break;
     case 'cell': ok = E.buyCell(state, v); break;
     case 'spend': ok = E.spendAttr(state, v); break;
     case 'respec': ok = E.respec(state); break;
