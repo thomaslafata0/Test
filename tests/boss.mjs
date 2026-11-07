@@ -417,5 +417,18 @@ const act = (t, a) => { E.playerAct(t.s, a, t.rng, 0); hold(t.s); };
   }
 }
 
+// Regular enemies run less: a Cowardly one holds until 20% HP, and scaring one off is never certain.
+{ const q = E.quirkById ? E.quirkById('coward') : null; if (q) ok('Cowardly runs below 20%', /20%/.test(q.desc)); }
+// Bosses never flee, whatever the roll or the gear.
+for (const id of ['kell', 'halvek', 'brask']) for (const key of [false, true]) {
+  const v = boss(id); const c = v.s.char;
+  c.attrs.cha = 10; c.hp = c.maxHp = 99999; v.e.hp = Math.floor(v.e.maxHp * 0.6);
+  if (key) c.gear.gadget = { base: 'kellkey', unique: 'kell', rarity: 'unique', bonuses: [] };
+  ok(`${id}${key ? ' with the key' : ''}: no chance of it running`, E.intimidateChance(v.s) === 0);
+  const hp = v.e.hp;
+  for (let i = 0; i < 2; i++) { v.s.run.cooldowns.intimidate = 0; v.e.intent = 'attack'; v.e.sig = null; if (E.canUse(v.s, 'intimidate')) E.playerAct(v.s, 'intimidate', () => 0, 0); if (!v.s.run || v.s.run.enemy !== v.e) break; }
+  ok(`${id}${key ? ' with the key' : ''}: Intimidate never ends the fight`, !!v.s.run && v.s.run.enemy === v.e && v.e.hp > 0 && v.e.shaken === true, `${v.s.screen} ${hp}`);
+}
+
 console.log(fails ? `${fails} failed` : 'no errors');
 process.exit(fails ? 1 : 0);

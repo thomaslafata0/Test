@@ -75,7 +75,7 @@ function act(s, st, b, who = 0) {
   if (danger && (!E.isCoop(s) || r.lastAttacker === who)) return 'defend';
   if ((e.boss || e.elite) && c.items.thermal) return 'thermal';
   if (e.tags.includes('droid') && c.items.ion && !free && e.hp > e.maxHp * 0.5) return 'ion';
-  if (E.canUse(s, 'intimidate') && E.intimidateChance(s) > 0.45) return 'intimidate';
+  if (E.canUse(s, 'intimidate') && e.tags.includes('human') && (e.boss ? !e.shaken && e.hp > e.maxHp * 0.3 : E.intimidateChance(s) > 0.3)) return 'intimidate';
   const hit = adv.hit || G.attackChoice(s, b.style);
   if (!free && !blind && e.intent === 'guard' && hit !== 'strike') return 'defend';
   for (const k of ['overload', 'smash', 'aimed', 'blast', 'burst', 'suppress']) if (E.canUse(s, k) && G.skillAllowed(b.style, k) && !(k === 'smash' && D.MELEE_COUNTER[e.id] && !free) && !(adv.hit === 'strike' && k !== 'smash' && k !== 'overload') && !(adv.hit === 'shoot' && k === 'smash')) return k;

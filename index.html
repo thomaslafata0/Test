@@ -2793,7 +2793,7 @@ function combatScreen() {
       <span class="bs">${id === 'smoke' && confirmSmoke ? 'Tap again to try to escape' : esc(D.ITEMS[id].short)}</span></button>`).join('');
   const skills = E.skillsOf(c).slice(0, 4).map((k, i) => {
     const cd = r.cooldowns[k] || 0, sk = D.SKILLS[k];
-    const status = k === 'intimidate' ? (cd ? 'used this sector' : e.tags.includes('human') ? `${pct(E.intimidateChance(state))} chance` : 'humans only') : cd ? `ready in ${cd}` : 'ready';
+    const status = k === 'intimidate' ? (cd ? 'used this sector' : e.boss && e.tags.includes('human') ? 'shakes aim' : e.tags.includes('human') ? `${pct(E.intimidateChance(state))} chance` : 'humans only') : cd ? `ready in ${cd}` : 'ready';
     const note = `<span class="sk-full">${esc(sk.short)}</span><span class="sk-brief">${k === 'intimidate' ? status : SKILL_BRIEF[k] || esc(sk.short)}</span> <span class="sk-status">${status}</span>`;
     return `<button class="btn skill ${cd ? '' : 'ready'}" data-a="act" data-v="${k}" title="${esc(sk.desc)}" ${E.canUse(state, k) && !(k === 'intimidate' && !e.tags.includes('human')) ? '' : 'disabled'}>
       <span class="sk-name">${ico(`skill:${k}`, 'sm')}${esc(sk.name)}<span class="k">${SKILL_KEYS[i].toUpperCase()}</span></span><span class="sk-note">${note}</span></button>`;
@@ -2825,7 +2825,7 @@ function combatScreen() {
     ${party}${waiting}${reviveBtn}
     <div class="actions ${mine ? '' : 'locked'}">
       <button class="btn primary twoline atk" data-a="act" data-v="shoot" title="${esc(E.weaponOf(c).name)}: ${st.atk} ATK, ${pct(E.critChance(st, e))} crit. Steady damage; cover halves it. You keep your distance, so you take ${Math.round(E.TUNE.shootGuard * 100)}% less damage this turn."><span class="bt">Shoot<span class="k">A</span></span><span class="wpn">${esc(E.weaponOf(c).name)}</span><span class="bs"><b class="rng">${sr[0]}\u2013${sr[1]}</b> dmg${e.intent === 'guard' && !e.stun ? ' (cover)' : ''}</span></button>
-      <button class="btn twoline atk ${D.MELEE_COUNTER[e.id] ? 'warn' : ''}" data-a="act" data-v="strike" title="${esc(E.meleeOf(c).name)}: ${st.atkM} ATK, ${pct(E.critChance(st, e, true))} crit. Swingy damage, ignores cover, and your next attack hits ${Math.round(E.TUNE.momentum * 100)}% harder."><span class="bt">Strike<span class="k">F</span></span><span class="wpn">${esc(E.meleeOf(c).name)}</span><span class="bs"><b class="rng">${mr[0]}\u2013${mr[1]}</b> dmg${D.MELEE_COUNTER[e.id] ? ' \u00B7 hits back!' : ''}</span></button>
+      <button class="btn twoline atk ${D.MELEE_COUNTER[e.id] ? 'warn' : ''}" data-a="act" data-v="strike" title="${esc(E.meleeOf(c).name)}: ${st.atkM} ATK, ${pct(E.critChance(st, e, true))} crit. Hits harder than a shot but swingy, ignores cover, stops a repair, and your next attack hits ${Math.round(E.TUNE.momentum * 100)}% harder."><span class="bt">Strike<span class="k">F</span></span><span class="wpn">${esc(E.meleeOf(c).name)}</span><span class="bs"><b class="rng">${mr[0]}\u2013${mr[1]}</b> dmg${D.MELEE_COUNTER[e.id] ? ' \u00B7 hits back!' : ''}</span></button>
       <button class="btn twoline" data-a="act" data-v="defend" title="Take half damage, about a third from a heavy strike, and steady your next shot."><span class="bt">Defend<span class="k">D</span></span><span class="bs">${inc ? `Take ${inc.defMin}-${inc.defMax}` : 'Half damage'}</span></button>
       <button class="btn twoline" data-a="act" data-v="stim" title="${esc(D.ITEMS.stim.desc)}" ${c.items.stim ? '' : 'disabled'}><span class="bt">${ico('item:stim', 'sm')}Stim <span class="num">\u00D7${c.items.stim}</span><span class="k">S</span></span><span class="bs">${esc(D.ITEMS.stim.short)}</span></button>
       <button class="btn twoline" data-a="act" data-v="run" ${E.canUse(state, 'run') ? '' : 'disabled'} title="Getting away drops ${Math.round(E.runShare(state) * 100)}% of unsecured credits and XP. Failing gives the enemy a free turn."><span class="bt">Run<span class="k">R</span></span><span class="bs" title="Getting away drops ${Math.round(E.runShare(state) * 100)}% of unsecured credits and XP">${E.runBlocked(state) ? esc(E.runBlocked(state)) : `${pct(E.runChance(state))}, lose ${Math.round(E.runShare(state) * 100)}%`}</span></button>
@@ -3040,8 +3040,8 @@ function modalView() {
       <section><h3>A raid</h3><p>Three rooms per sector, choosing one of two doors each time. A boss every fifth sector. After each sector, push deeper or extract.</p></section>
       <section><h3>Getting out</h3><p>Credits and XP stay <b>unsecured</b> until you beat a boss or leave, and levels only come then. Extracting costs a share of what\u2019s unsecured, by sector: 1, 6, 11: 80%. 2, 7, 12: 65%. 3, 8, 13: 50%. 4, 9, 14: 40%. Nothing after a boss. So 200 credits and 40 XP banked at sector 2 pays 70 credits and 14 XP. Risky extraction can also fail (${Math.round(E.TUNE.extractFail * 100)}%), and then you go one sector deeper. Running mid-fight costs 90% to 60%. What you walked in with is safe.</p></section>
       <section><h3>Your turn</h3><ul>
-        <li><b>Shoot</b>: steady, and you take 15% less that turn.</li>
-        <li><b>Strike</b>: swingy, ignores cover, next hit +15%. Some enemies hit back.</li>
+        <li><b>Shoot</b>: the safe choice. Steady damage, and you take 15% less that turn.</li>
+        <li><b>Strike</b>: 25% more damage but swingy, ignores cover, stops a repair, next hit +15%. You give up Shoot\u2019s protection, and some enemies hit back.</li>
         <li><b>Defend</b>: half damage, next shot +50%.</li>
         <li><b>Skills</b>: cooldowns last across a sector.</li></ul></section>
       <section><h3>Enemy moves</h3><ul>

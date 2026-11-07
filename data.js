@@ -35,20 +35,20 @@ export const ATTR_START = 1, ATTR_POINTS = 4, ATTR_CREATE_MAX = 5, ATTR_MAX = 10
 
 export const BACKGROUNDS = [
   { id: 'foundry', name: 'Foundry Hand', attrs: { str: 2 }, start: { gear: { melee: 'wrench' } },
-    perks: ['+15 max HP, +2 per level', '+1 DEF', 'Foundry Wrench: Power Strike'],
-    perk: 'Tough: +15 max HP, plus 2 more every level, and +1 DEF. Starts with a Foundry Wrench (melee, Power Strike).',
+    perks: ['Strike hits +15% harder', 'Heal 6% HP on every kill', '+25 max HP, +3 per level, +2 DEF', 'Foundry Wrench: Power Strike'],
+    perk: 'Brawler: Strike hits +15% harder and every kill heals 6% of your HP. +25 max HP, plus 3 more every level, and +2 DEF. Starts with a Foundry Wrench (melee, Power Strike).',
     desc: 'Twelve years on the casting floor before the Directorate came. Strong back, short temper.' },
   { id: 'runner', name: 'Market Runner', attrs: { agi: 2 }, start: { smoke: 1, gear: { ranged: 'slugpistol' } },
-    perks: ['+25% escape', '+1 SPD, +5% dodge', 'Slug Pistol and a smoke'],
-    perk: 'Slippery: +25% escape chance, +1 SPD and +5% dodge. Starts with a Slug Pistol and a smoke canister.',
+    perks: ['First hit of every fight crits', '+2 SPD, +10% dodge', '+35% escape', 'Slug Pistol and a smoke'],
+    perk: 'Ambusher: your first hit of every fight is a critical. +2 SPD, +10% dodge and +35% escape chance. Starts with a Slug Pistol and a smoke canister.',
     desc: 'Grew up moving goods past checkpoints. Knows every gap in every fence.' },
   { id: 'clerk', name: 'Defector Clerk', attrs: { int: 2 }, start: { ion: 1, gear: { gadget: 'datapad' } },
-    perks: ['+15% on INT checks', '+1 implant slot', 'Datapad: see next move, items +15%'],
-    perk: 'Codes: +15% on Intellect checks and one extra implant slot. Starts with a Directorate Datapad (see the enemy\u2019s next move, items +15%).',
+    perks: ['Always see the next enemy move', 'Skills recharge 1 turn faster', 'Items and stims +25%', '+1 implant slot, +25% on INT checks', 'Datapad: items +15% more'],
+    perk: 'Insider: always see the enemy\u2019s next move, skills recharge a turn faster, and items and stims work 25% better. +25% on Intellect checks and one extra implant slot. Starts with a Directorate Datapad (items +15% more).',
     desc: 'Filed the arrest orders for two years. Still remembers the passwords.' },
   { id: 'preacher', name: 'Street Preacher', attrs: { cha: 2 }, start: { credits: 40 }, follower: true,
-    perks: ['+1 Resolve per boss', '10% off the market', 'A follower fights beside you', '+40 credits'],
-    perk: 'Voice: +1 Resolve from every boss and 10% off at the market. A follower walks into every raid with you and fights at your side.',
+    perks: ['A follower fights beside you, and hits hard', '+2 Resolve per boss', '+15% credits, 15% off the market', '+40 credits'],
+    perk: 'Voice: a follower walks into every raid with you, and everyone at your side hits two-thirds harder. +2 Resolve from every boss, +15% credits and 15% off at the market.',
     desc: 'People listen when they talk. The Directorate has noticed.' },
 ];
 
@@ -61,7 +61,7 @@ export const SKILLS = {
   smash:     { name: 'Power Strike',    short: 'Melee: heavy hit, ignores \u00BD armour', cd: 3, desc: 'Uses your melee weapon. x1.6 damage plus 1 per STR, ignores half of armour and the enemy\u2019s cover.', from: 'Melee weapons, or STR 6' },
   overload:  { name: 'Overload',        short: 'Tech blast, stuns droids', cd: 4, desc: 'Tech burst: 6 + 5 per INT, ignores armour. Droids take double and are stunned.', from: 'Tech weapons, the Arc Coil, or INT 3' },
   suppress:  { name: 'Suppressing Fire', short: 'Pins it in cover', cd: 3, desc: '60% damage and pins the enemy: its next move is forced to be taking cover.', from: 'AGI 4' },
-  intimidate:{ name: 'Intimidate',      short: 'Scare a human off', cd: 99, desc: 'Once per sector. A human enemy may run. If not, its ATK drops 25% for the fight.', from: 'CHA 3' },
+  intimidate:{ name: 'Intimidate',      short: 'Scare a human off', cd: 99, desc: 'Once per sector. A human enemy may run. If not, its ATK drops 25% for the fight, up to 40% with high CHA. Bosses never run, so a boss just loses the ATK.', from: 'CHA 3' },
 };
 export const WEAPON_SKILL = { pistol: 'aimed', rifle: 'aimed', carbine: 'burst', scatter: 'blast', heavy: 'blast', tech: 'overload' };
 // Power Strike comes from any real melee weapon (not the starter knife) or STR 6.
@@ -158,7 +158,7 @@ export const GEAR = {
   braskhammer:  { slot: 'melee', tier: 4, unique: 'brask', name: 'Brask\u2019s Hammer Fist', type: 'melee', atk: 11, cost: 800, bonuses: [['healkill', 4]], desc: 'Power Strike stuns for a turn.' },
   crucibleplate:{ slot: 'chest', tier: 4, unique: 'crucible', name: 'Crucible Core Plate', def: 9, cost: 900, bonuses: [['hp', 10]], desc: 'Your Strikes set enemies Burning. Burning enemies take +25% damage.' },
   crawlertreads:{ slot: 'legs', tier: 4, unique: 'crawler', name: 'Crawler Tread Greaves', def: 4, cost: 800, bonuses: [['resist', 25]], desc: 'You can\u2019t be set Burning. Furnace vents and snipers deal half.' },
-  kellkey:      { slot: 'gadget', tier: 3, unique: 'kell', name: 'Kell\u2019s Cell Key', cost: 700, bonuses: [['credits', 10]], desc: 'Intimidate works on bosses at full odds and on beasts.' },
+  kellkey:      { slot: 'gadget', tier: 3, unique: 'kell', name: 'Kell\u2019s Cell Key', cost: 700, bonuses: [['credits', 10]], desc: 'Intimidate takes 40% of a boss\u2019s ATK instead of 25%, and works on beasts.' },
   ostranepad:   { slot: 'gadget', tier: 5, unique: 'ostrane', name: 'Ostrane\u2019s Datapad', cost: 1100, scan: true, bonuses: [['cooldown', 25]], desc: 'Shows the enemy\u2019s next two moves. Your first hit each fight is a critical.' },
 };
 // Which unique each boss drops.
@@ -813,7 +813,7 @@ export const QUIRKS = [
     barks: ['\u201CI knew it. I KNEW someone was there.\u201D', '\u201CThey said I was crazy.\u201D'] },
   { id: 'corrupt', name: 'Corrupt', tags: ['human'], desc: '+80% credits. Much easier to Intimidate.', mods: {}, cr: 1.8, bribable: true,
     barks: ['\u201CMaybe we can come to an... arrangement.\u201D', 'Its pockets jingle.'] },
-  { id: 'coward', name: 'Cowardly', tags: ['human'], desc: 'Runs when below 40% HP (you get half its credits).', mods: { hp: 0.9 }, flee: true,
+  { id: 'coward', name: 'Cowardly', tags: ['human'], desc: 'Runs when below 20% HP (you get half its credits).', mods: { hp: 0.9 }, flee: true,
     barks: ['\u201CI don\u2019t get paid enough for this.\u201D', 'Its knees are visibly shaking.'] },
   { id: 'decorated', name: 'Decorated', tags: ['human'], desc: '+20% HP, +15% ATK. +50% XP, +20% credits.', mods: { hp: 1.2, atk: 1.15 }, xp: 1.5, cr: 1.2,
     barks: ['\u201CFourteen commendations. You\u2019ll be fifteen.\u201D', 'Its medals clink as it squares up.'] },

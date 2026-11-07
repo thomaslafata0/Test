@@ -61,7 +61,7 @@ function act(s, st, b) {
   if ((e.intent === 'heavy' || (e.intent === 'special' && D.SPECIALS[e.id].status)) && !e.stun) return 'defend';
   if ((e.boss || e.elite) && c.items.thermal) return 'thermal';
   if (e.tags.includes('droid') && c.items.ion && !e.stun && e.hp > e.maxHp * 0.5) return 'ion';
-  if (E.canUse(s, 'intimidate') && E.intimidateChance(s) > 0.45) return 'intimidate';
+  if (E.canUse(s, 'intimidate') && e.tags.includes('human') && (e.boss ? !e.shaken && e.hp > e.maxHp * 0.3 : E.intimidateChance(s) > 0.3)) return 'intimidate';
   const hit = G.attackChoice(s, b.style);
   if (e.intent === 'guard' && !e.stun && hit !== 'strike') return 'defend';
   for (const k of ['overload', 'smash', 'aimed', 'blast', 'burst', 'suppress']) if (E.canUse(s, k) && G.skillAllowed(b.style, k)) return k;

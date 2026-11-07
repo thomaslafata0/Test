@@ -49,7 +49,7 @@ export const TUNE = { hpLin: 0.34, hpQuad: 0.02, atkLin: 0.2, atkQuad: 0.012, bo
   earlyCurve: [1, 0.95, 0.88, 0.84, 0.85, 0.95, 0.95, 0.95, 0.95, 0.95],
   // Rewards shrink once an operative is more than overFree levels above the sector. reinforce: enemy strength by districts already freed.
   extractFail: 0.15, droneAtk: 1, droneShield: 1, droneHeal: 1, droneTech: 1, overFree: 2, overStep: 0.2, overMin: 0.25, defendHeavy: 0.35, smokeEscape: 0.7, priceAll: 1.265, trainBase: 3, trainStep: 1, fightDrop: FIGHT_DROP, eliteDrop: ELITE_DROP, coopCr: 1, repeatPay: 2, reinforce: [0, 0.5, 0.5, 0.35], bossRepeatXp: 0.5, bossRepeatResolve: 1,
-  rangedSpread: 0.15, meleeSpread: 0.3, shootGuard: 0.15, momentum: 0.15, coopHp: 2.1, coopAtk: 1.4, coopExtra: 3, reviveHp: 0.2, reviveAfter: 0.15, downsPerRaid: 1, bleedRounds: 3,
+  rangedSpread: 0.15, meleeSpread: 0.3, shootGuard: 0.15, momentum: 0.15, strikeBonus: 0.25, foundryStrike: 0.15, coopHp: 2.1, coopAtk: 1.4, coopExtra: 3, reviveHp: 0.2, reviveAfter: 0.15, downsPerRaid: 1, bleedRounds: 3,
   // Share of unsecured credits and XP lost, by position in the five-sector run to the next boss. Beating the boss secures everything.
   extractRates: [0.8, 0.65, 0.5, 0.4, 0], escapeRates: [0.9, 0.85, 0.75, 0.65, 0.6],
   itemScale: 0.3, allyGrit: 3 };
@@ -733,22 +733,22 @@ export function statsOf(meta, c) {
   const common = B.atk + t.atk * D.TRAINING.atk.per + (c.level - 1) + (has(c, 'drill') ? 2 : 0);
   const rMain = (mainStat(gearIn(c, 'ranged')) || { v: 0 }).v, mMain = (mainStat(gearIn(c, 'melee')) || { v: 0 }).v;
   const optic = hasImp(c, 'optic') ? 0.08 : 0, gadget = baseOf(gearIn(c, 'gadget')) || {};
-  const hp = B.hp + t.hp * D.TRAINING.hp.per + (c.level - 1) * 5 + Math.round(str * TUNE.strHp) + (c.background === 'foundry' ? 15 + 2 * (c.level - 1) : 0) + (hasImp(c, 'pain') ? 20 : 0) + gearBonus(c, 'hp');
+  const hp = B.hp + t.hp * D.TRAINING.hp.per + (c.level - 1) * 5 + Math.round(str * TUNE.strHp) + (c.background === 'foundry' ? 25 + 3 * (c.level - 1) : 0) + (hasImp(c, 'pain') ? 20 : 0) + gearBonus(c, 'hp');
   const mk = markSum(c), drink = drinkOf(c) || {}, fb = featBuffs(meta), dAtk = drink.atk || 0, dCrit = drink.crit || 0;
   return {
     maxHp: Math.round(hp * (hasTrait(c, 'stalwart') ? 1.12 : 1) * (1 + pv(c, 'ironlung') / 100) * (1 + mk.hp + fb.hp) * (1 + (drink.hp || 0))),
     atk: common + rMain + dAtk + (w.type === 'heavy' ? Math.floor(str * TUNE.strAtk) : Math.floor(agi * TUNE.agiAtk)),
     atkM: common + mMain + dAtk + Math.floor(str * TUNE.strAtk),
-    def: B.def + (c.background === 'foundry' ? 1 : 0) + t.def * D.TRAINING.def.per + Math.floor((c.level - 1) / 2) + def + gearBonus(c, 'def') + (hasImp(c, 'dermal') ? 3 : 0) + (has(c, 'lining') ? 2 : 0) + mk.def + pv(c, 'padding') + (drink.def || 0),
-    spd: B.spd + (c.background === 'runner' ? 1 : 0) + t.spd * D.TRAINING.spd.per + Math.floor((c.level - 1) / 3) + agi + (hasImp(c, 'reflex') ? 3 : 0) + spd + gearBonus(c, 'spd') + mk.spd + (drink.spd || 0),
-    dodge: (agi - 1) * TUNE.agiDodge + (c.background === 'runner' ? 0.05 : 0) + fb.dodge + pv(c, 'ghost') / 100,
+    def: B.def + (c.background === 'foundry' ? 2 : 0) + t.def * D.TRAINING.def.per + Math.floor((c.level - 1) / 2) + def + gearBonus(c, 'def') + (hasImp(c, 'dermal') ? 3 : 0) + (has(c, 'lining') ? 2 : 0) + mk.def + pv(c, 'padding') + (drink.def || 0),
+    spd: B.spd + (c.background === 'runner' ? 2 : 0) + t.spd * D.TRAINING.spd.per + Math.floor((c.level - 1) / 3) + agi + (hasImp(c, 'reflex') ? 3 : 0) + spd + gearBonus(c, 'spd') + mk.spd + (drink.spd || 0),
+    dodge: (agi - 1) * TUNE.agiDodge + (c.background === 'runner' ? 0.1 : 0) + fb.dodge + pv(c, 'ghost') / 100,
     crit: 0.05 + (w.crit || 0) + critAll + optic + (agi - 1) * TUNE.agiCrit + gearBonus(c, 'crit', 'ranged') / 100 + mk.crit + dCrit + fb.crit,
     critM: 0.05 + (mw.crit || 0) + critAll + optic + gearBonus(c, 'crit', 'melee') / 100 + mk.crit + dCrit + fb.crit,
     carry: 4 + (has(c, 'belt') ? 3 : 0) + carry,
     slots: 2 + (has(c, 'ripper') ? 1 : 0) + (attr(c, 'int') >= 4 ? 1 : 0) + (attr(c, 'int') >= 8 ? 1 : 0) + (c.background === 'clerk' ? 1 : 0),
-    tech: (1 + 0.1 * attr(c, 'int')) * (hasTrait(c, 'overcharge') ? 1.2 : 1) * (1 + (gadget.techBoost || 0)) * (1 + (drink.tech || 0)),
+    tech: (1 + 0.1 * attr(c, 'int')) * (c.background === 'clerk' ? 1.25 : 1) * (hasTrait(c, 'overcharge') ? 1.2 : 1) * (1 + (gadget.techBoost || 0)) * (1 + (drink.tech || 0)),
     stimBoost: (gadget.stimBoost || 0) + fb.stim + (has(c, 'corpsman') ? 0.25 : 0),
-    scan: !!gadget.scan || has(c, 'informant'),
+    scan: !!gadget.scan || has(c, 'informant') || c.background === 'clerk',
   };
 }
 export const stats = (s) => statsOf(s.meta, s.char);
@@ -760,7 +760,7 @@ export function markSum(c) {
   for (const id of c.marks || []) { const m = D.MARKS[id]; if (m) for (const k of Object.keys(t)) t[k] += m[k] || 0; }
   return t;
 }
-export const price = (s, cost) => Math.ceil(cost * hard(s).price * TUNE.priceAll * Math.max(0.6, 1 - 0.04 * (attr(s.char, 'cha') - 1)) * (s.char.background === 'preacher' ? 0.9 : 1) * (has(s.char, 'favour') ? 0.9 : 1));
+export const price = (s, cost) => Math.ceil(cost * hard(s).price * TUNE.priceAll * Math.max(0.6, 1 - 0.04 * (attr(s.char, 'cha') - 1)) * (s.char.background === 'preacher' ? 0.85 : 1) * (has(s.char, 'favour') ? 0.9 : 1));
 export const meetsReq = (c, req) => !req || Object.entries(req).every(([k, v]) => attr(c, k) >= v);
 export const reqText = (req) => req ? Object.entries(req).map(([k, v]) => `${D.ATTRS[k].short} ${v}`).join(', ') : '';
 
@@ -774,7 +774,7 @@ export function skillsOf(c) {
   if (attr(c, 'cha') >= 3) out.push('intimidate');
   return out;
 }
-export const skillCd = (c, id) => Math.max(1, D.SKILLS[id].cd - (hasImp(c, 'synapse') && id !== 'intimidate' ? 1 : 0));
+export const skillCd = (c, id) => Math.max(1, D.SKILLS[id].cd - (id === 'intimidate' ? 0 : (hasImp(c, 'synapse') ? 1 : 0) + (c.background === 'clerk' ? 1 : 0)));
 
 // Battle events for the animated stage. Only recorded when the UI sets s.events = [] before a turn,
 // so the balance simulator pays nothing for them.
@@ -1073,7 +1073,7 @@ export function buyCell(s, id) {
 export function creditMult(s) {
   const c = s.char, t = s.run ? s.run.threat : s.meta.threat || 0;
   const b = s.run ? s.run.bulletin : null;
-  const cha = 1 + TUNE.chaCredits * (attr(c, 'cha') - 1);
+  const cha = (1 + TUNE.chaCredits * (attr(c, 'cha') - 1)) * (c.background === 'preacher' ? 1.15 : 1);
   return cha * (has(c, 'fence') ? 1.25 : 1) * (1 + pv(c, 'chit') / 100) * (1 + gearBonus(c, 'credits') / 100) * (1 + 0.15 * t) * (1 + markSum(c).credits + featBuffs(s.meta).credits) * (1 + ((drinkOf(c) || {}).credits || 0)) * (b === 'payday' ? 1.3 : b === 'lockdown' ? 1.25 : 1) * condCredits(s.run);
 }
 const condCredits = (r) => (!r ? 1 : r.cond === 'toxic' ? 1.25 : r.cond === 'patrol' ? 1.3 : r.cond === 'lockdown' ? 1.2 : 1);
@@ -1447,7 +1447,7 @@ export function bestAttack(s) {
   const guard = e.intent === 'guard' && !e.stun, counter = D.MELEE_COUNTER[e.id] && !e.stun;
   const heavyNext = e.intent === 'heavy' || e.intent === 'special';
   const r = st.atk * (1 + critChance(st, e) * 0.6) * (guard ? TUNE.cover : 1) * (heavyNext ? 1.1 : 1);
-  const m = st.atkM * (1 + critChance(st, e, true) * 0.6) * (counter ? 0.65 : 1) * (1 + TUNE.momentum * 0.5);
+  const m = st.atkM * (1 + TUNE.strikeBonus + (s.char.background === 'foundry' ? TUNE.foundryStrike : 0)) * (1 + critChance(st, e, true) * 0.6) * (counter ? 0.65 : 1) * (1 + TUNE.momentum * 0.5);
   return m > r ? 'strike' : 'shoot';
 }
 // What the enemy's telegraphed attack can do, by the same sums as the attack itself. Null when the next move isn't a plain attack.
@@ -1482,7 +1482,8 @@ export function autoAction(s, { stimReserve = 0, items = true } = {}) {
   if (!free && !blind && (e.intent === 'heavy' || (e.intent === 'special' && D.SPECIALS[e.id] && D.SPECIALS[e.id].status))) return 'defend';
   if (items && (e.boss || e.elite) && c.items.thermal > 0 && e.hp > e.maxHp * 0.3) return 'thermal';
   if (items && e.tags.includes('droid') && c.items.ion > 0 && !free && e.hp > e.maxHp * 0.5) return 'ion';
-  if (canUse(s, 'intimidate') && intimidateChance(s) > 0.5) return 'intimidate';
+  // A boss can't be scared off, but losing a quarter of its ATK is worth the turn while it's still healthy.
+  if (canUse(s, 'intimidate') && e.tags.includes('human') && (e.boss ? !e.shaken && e.hp > e.maxHp * 0.3 : intimidateChance(s) > 0.5)) return 'intimidate';
   const hit = adv.hit || bestAttack(s);
   if (!free && !blind && e.intent === 'guard' && hit === 'shoot') return 'defend';
   for (const k of ['overload', 'smash', 'aimed', 'blast', 'burst', 'suppress']) {
@@ -1495,7 +1496,7 @@ export function autoAction(s, { stimReserve = 0, items = true } = {}) {
 }
 export function runChance(s) {
   const st = stats(s), e = s.run.enemy;
-  const ch = clamp(0.45 + (st.spd - e.spd) * 0.06 + (s.char.background === 'runner' ? 0.25 : 0) + markSum(s.char).escape + featBuffs(s.meta).escape + (has(s.char, 'driver') ? 0.15 : 0), 0.1, 0.95);
+  const ch = clamp(0.45 + (st.spd - e.spd) * 0.06 + (s.char.background === 'runner' ? 0.35 : 0) + markSum(s.char).escape + featBuffs(s.meta).escape + (has(s.char, 'driver') ? 0.15 : 0), 0.1, 0.95);
   return e.boss ? ch * 0.5 : ch;
 }
 export function dodgeChance(st, e) { return clamp(0.05 + (st.spd - e.spd) * 0.03 + (st.dodge || 0), 0, 0.45); }
@@ -1503,9 +1504,10 @@ export function critChance(st, e, melee = false) { return clamp((melee ? st.crit
 export function intimidateChance(s) {
   const e = s.run.enemy;
   const key = hasUnique(s.char, 'kell');
+  if (e.boss) return 0; // bosses never run: Intimidate only shakes their aim
   if (!e.tags.includes('human') && !(key && e.tags.includes('beast'))) return 0;
-  const bribe = e.quirk && quirkById(e.quirk).bribable ? 0.35 : 0;
-  return clamp(0.15 + 0.07 * attr(s.char, 'cha') - (e.boss && !key ? 0.35 : 0) + (1 - e.hp / e.maxHp) * 0.3 + bribe, 0, 0.95);
+  const bribe = e.quirk && quirkById(e.quirk).bribable ? 0.25 : 0;
+  return clamp(0.05 + 0.05 * attr(s.char, 'cha') + (1 - e.hp / e.maxHp) * 0.2 + bribe, 0, 0.75);
 }
 
 export const partnerDown = (s) => { const pc = isCoop(s) ? charAt(s, 1 - actorIdx(s)) : null; return pc && pc.downed > 0 ? pc : null; };
@@ -1525,6 +1527,7 @@ function hitMult(s, melee, { mult = 1, unarmoredBonus = 1 } = {}) {
   const fb = featBuffs(s.meta);
   mult *= 1 + fb.atk + (melee ? fb.melee : fb.ranged) + (fb.vs[e.id] || 0);
   if (r.ready) mult *= hasPerk(c, 'steady') ? 1 + pv(c, 'steady') / 100 : 1.5;
+  if (melee) mult *= 1 + TUNE.strikeBonus + (c.background === 'foundry' ? TUNE.foundryStrike : 0); // up close hits harder; Shoot is the safe option
   if (r.momentum) mult *= 1 + TUNE.momentum;
   if (w.type === 'tech' && droid) mult *= 1.5;
   if (w.droid && droid) mult *= 1 + w.droid;
@@ -1555,7 +1558,7 @@ function strike(s, rng, { mult = 1, critBonus = 0, pierce = 0, unarmoredBonus = 
   r.momentum = false;
   // Lights Out: a shot in the dark can go anywhere. A swing can't.
   if (!melee && e.bs && e.bs.lights > 0 && rng() < D.BOSS_KIT.kell.moves.lights.miss) { r.struck = true; feat(s, 'shots'); return { dmg: 0, crit: false, missed: true }; }
-  const crit = forceCrit || (!melee && e.sig && e.sig.id === 'salute') || (first && hasUnique(c, 'ostrane')) || rng() < critChance(st, e, melee) + critBonus;
+  const crit = forceCrit || (!melee && e.sig && e.sig.id === 'salute') || (first && (hasUnique(c, 'ostrane') || c.background === 'runner')) || rng() < critChance(st, e, melee) + critBonus;
   if (crit) mult *= hasPerk(c, 'hollow') ? pv(c, 'hollow') : 1.6;
   if (w.type === 'tech') pierce = Math.max(pierce, 0.5);
   r.struck = true;
@@ -1645,6 +1648,8 @@ function playerActInner(s, act, rng, who) {
       r.ready = false; r.momentum = true;
       fx(s, { who: 'player', type: 'strike', dmg, crit, ready: wasReady });
       log(s, `${wasReady ? 'Braced. ' : ''}${crit ? 'Critical! ' : ''}You strike ${e.name} with the ${meleeOf(c).name} for ${dmg}${guarded ? ', straight past their cover' : ''}.`, crit ? 'crit' : 'hit');
+      // A repair needs both hands: a hit up close stops it.
+      if (e.intent === 'repair' && e.stun === 0 && e.hp > 0) { e.intent = 'attack'; log(s, `You knock the tools out of ${e.name}\u2019s hands. No repair this turn.`, 'good'); }
       meleeCounter(s, rng);
       break;
     }
@@ -1701,8 +1706,10 @@ function playerActInner(s, act, rng, who) {
       const ok = rng() < intimidateChance(s);
       fx(s, { who: 'player', type: 'intimidate', ok });
       if (ok) { log(s, `${e.name} breaks and runs.`, 'good'); return winFight(s, rng, true); }
-      e.atk = Math.max(1, Math.round(e.atk * 0.75)); e.shaken = true;
-      log(s, `${e.name} doesn\u2019t run, but their aim is shaking. ATK \u221225%.`, 'info');
+      const keyed = e.boss && hasUnique(c, 'kell'); // Kell's Cell Key: a boss won't run, but it shakes them harder
+      const drop = keyed ? 0.4 : Math.min(0.4, 0.25 + 0.02 * Math.max(0, attr(c, 'cha') - 3)); // the louder the voice, the worse their aim
+      e.atk = Math.max(1, Math.round(e.atk * (1 - drop))); e.shaken = true;
+      log(s, `${e.name} ${e.boss ? 'will never run' : 'doesn\u2019t run'}, but their aim is shaking. ATK \u2212${Math.round(drop * 100)}%.`, 'info');
       break;
     }
     case 'defend':
@@ -1765,7 +1772,7 @@ function playerActInner(s, act, rng, who) {
   r.dmgDone = (r.dmgDone || 0) + Math.max(0, hpBefore - e.hp); // for the payout tally only
   if (c.hp <= 0 && !lethalSave(s)) return die(s, e);
   if (e.hp <= 0) return winFight(s, rng);
-  if (e.quirk && quirkById(e.quirk).flee && e.hp < e.maxHp * 0.4) {
+  if (!e.boss && e.quirk && quirkById(e.quirk).flee && e.hp < e.maxHp * 0.2) {
     fx(s, { who: 'enemy', type: 'quirk', text: 'Nope!' });
     log(s, `${e.name} decides this isn\u2019t worth it and runs.`, 'good');
     return winFight(s, rng, true);
@@ -1782,7 +1789,7 @@ function playerActInner(s, act, rng, who) {
   }
   if (r.allies > 0 && !(e.bs && e.bs.count > 0)) {
     for (let i = 0; i < r.allies && e.hp > 0; i++) {
-      const dmg = mitigate(st.atk * 0.3 * (0.85 + rng() * 0.3), e.def);
+      const dmg = mitigate(st.atk * (c.background === 'preacher' ? 0.5 : 0.3) * (0.85 + rng() * 0.3), e.def);
       e.hp -= dmg;
       fx(s, { who: 'ally', type: 'shoot', dmg });
       log(s, `A freed prisoner hits ${e.name} for ${dmg}.`, 'hit');
@@ -2508,7 +2515,7 @@ function winFight(s, rng, fled = false) {
     if (c.items[it] < stats(s).carry) { c.items[it] += 1; out.items.push(D.ITEMS[it].name); }
   }
   if (r.cond === 'toxic' && !fled) { const st = stats(s), d = Math.round(st.maxHp * 0.04); c.hp = Math.max(1, c.hp - d); log(s, `The coolant leak burns your lungs: \u2212${d} HP.`, 'hurt'); }
-  const hk = gearBonus(c, 'healkill') + pv(c, 'tithe');
+  const hk = gearBonus(c, 'healkill') + pv(c, 'tithe') + (c.background === 'foundry' ? 6 : 0);
   if (hk && !fled) { const st = stats(s), h = Math.min(st.maxHp - c.hp, Math.round(st.maxHp * hk / 100)); c.hp += h; out.healed += h; }
   if (hasPerk(c, 'quickdraw')) for (const k of Object.keys(r.cooldowns)) if (r.cooldowns[k] < 50) r.cooldowns[k] = Math.max(0, r.cooldowns[k] - pv(c, 'quickdraw'));
   // Co-op: the partner gets the same credits and XP.
@@ -2522,7 +2529,7 @@ function winFight(s, rng, fled = false) {
   contractEvent(s, 'kill', { enemy: e });
   if (e.boss) {
     const t = r.threat;
-    out.resolve = beaten ? TUNE.bossRepeatResolve : 3 + (c.background === 'preacher' ? 1 : 0) + (t >= 4 ? 2 : t >= 2 ? 1 : 0);
+    out.resolve = beaten ? TUNE.bossRepeatResolve : 3 + (c.background === 'preacher' ? 2 : 0) + (t >= 4 ? 2 : t >= 2 ? 1 : 0);
     m.resolve += out.resolve; m.totalResolve += out.resolve; m.stats.bosses += 1;
     earnInsertion(c, r.map, r.threat, r.sector + 1);
     contractEvent(s, 'boss', {});
@@ -2586,7 +2593,7 @@ export function continueAfterVictory(s, rng) {
 export const eventById = (id) => D.EVENTS.find((e) => e.id === id);
 export function checkChance(s, check) {
   if (!check) return 1;
-  const bonus = s.char.background === 'clerk' && check.attr === 'int' ? 0.15 : 0;
+  const bonus = s.char.background === 'clerk' && check.attr === 'int' ? 0.25 : 0;
   return clamp(check.base + check.per * attr(s.char, check.attr) + bonus, 0.05, 0.95);
 }
 export function optionAvailable(s, opt) {
