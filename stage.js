@@ -244,6 +244,28 @@ export class Stage {
     if (this.skip) { fn(1); return Promise.resolve(); }
     return new Promise((done) => this.tweens.push({ start: performance.now(), dur: ms / this.speed, fn, done }));
   }
+  // A melee hit in three beats: a low dash that stops at arm's length, the swing, then a hop back. The blow lands on the swing's contact frame.
+  async meleeIn(actor, target) {
+    const hd = actor.sheet && actor.sheet.hd, fromLeft = actor.side !== 'enemy';
+    const anim = hd && actor.sheet.anims.attackM ? 'attackM' : 'attack';
+    const a = this.anchor(actor.side, actor), b = this.anchor(target.side, target);
+    // Stop short of the target by both figures' half widths, on its line of depth.
+    const gap = Math.max(46, (target.tall || 80) * 0.3 + (actor.tall || 100) * 0.26);
+    const x = (b.x - a.x) + (fromLeft ? -gap : gap), y = Math.max(-46, Math.min(46, (b.y - a.y) * 0.8));
+    if (hd && actor.sheet.anims.walk) actor.setAnim('walk', performance.now());
+    if (!reduceMotion) this.burst(a.x + actor.ox, a.y + actor.oy - 2, 5, C.smoke, 0.7, 320, -0.02, 2);
+    await this.move(actor, x, y, 190);
+    actor.setAnim(anim, performance.now());
+    const clip = actor.sheet && actor.sheet.anims[anim];
+    // Most swings connect around the middle of the row.
+    if (clip && actor.sheet.hd) await this.wait(Math.floor(clip.frames * 0.45) * 1000 / clip.fps);
+    await this.move(actor, x + (fromLeft ? 8 : -8), y, 50);
+  }
+  async meleeOut(actor) {
+    await this.wait(90);
+    if (actor.sheet && actor.sheet.anims.idle) actor.setAnim('idle', performance.now());
+    await this.move(actor, 0, 0, 230);
+  }
   move(actor, x, y, ms) { const x0 = actor.ox, y0 = actor.oy; return this.tween(ms, (p) => { const e = ease(p); actor.ox = x0 + (x - x0) * e; actor.oy = y0 + (y - y0) * e; }); }
 
   // ---------- scene ----------
@@ -276,8 +298,15 @@ export class Stage {
     const hf = droneHiFrame(info.type, t, !!info.damaged, this.droneAct && this.droneAct.get(actor));
     if (hf) {
       // Sized from the idle frame so the drone doesn't jump when its ability plays; a little larger while acting, so the move reads.
-      const k = Math.min(34 / hf.idleH, 50 / hf.idleW) * (hf.acting ? 1.35 : 1), tall = hf.sh * k, wide = hf.sw * k;
-      g.drawImage(hf.img, hf.sx, 0, hf.sw, hf.sh, Math.round(p.x - wide / 2), Math.round(p.y + (hf.idleH * k) / 2 - tall), Math.round(wide), Math.round(tall));
+      // While it acts the drone swoops forward, grows and glows, so the move reads at phone size.
+      const start = this.droneAct && this.droneAct.get(actor), swing = hf.acting ? Math.sin(Math.min(1, (t - start) / 820) * Math.PI) : 0;
+      const k = Math.min(34 / hf.idleH, 50 / hf.idleW) * (1 + 0.75 * swing), tall = hf.sh * k, wide = hf.sw * k, px = p.x + 30 * swing, py = p.y + 6 * swing;
+      if (swing > 0.02) {
+        const col = { hornet: '255,150,70', aegis: '120,210,255', mender: '130,240,150', magpie: '255,225,120' }[info.type] || '255,255,255';
+        const gl = g.createRadialGradient(px, py, 2, px, py, 46); gl.addColorStop(0, `rgba(${col},${0.42 * swing})`); gl.addColorStop(1, `rgba(${col},0)`);
+        g.fillStyle = gl; g.fillRect(px - 46, py - 46, 92, 92);
+      }
+      g.drawImage(hf.img, hf.sx, 0, hf.sw, hf.sh, Math.round(px - wide / 2), Math.round(py + (hf.idleH * k) / 2 - tall), Math.round(wide), Math.round(tall));
     }
     else g.drawImage(droneCanvas(info.type, Math.floor(t / 70), !!info.damaged), p.x - w / 2, p.y - h / 2, w, h);
     g.restore();
@@ -695,13 +724,12 @@ export class Stage {
         break;
       }
       case 'player:strike': {
-        P.setAnim(P.sheet && P.sheet.anims.attackM ? 'attackM' : 'attack', now());
-        await this.move(P, 130, -60, 170);
+        await this.meleeIn(P, E);
         const c = this.center(E);
         this.ring(c.x, c.y, 18, ev.crit ? C.crit : C.amber, 180, 2);
         this.setHp('enemy', ev.ehp);
         await this.hit(E, ev.dmg, { crit: ev.crit });
-        await this.move(P, 0, 0, 220);
+        await this.meleeOut(P);
         break;
       }
       case 'enemy:counter': {
@@ -896,10 +924,10 @@ export class Stage {
       case 'enemy:heavy': {
         const heavy = ev.type === 'heavy';
         if (heavy) { this.heavyBoost = true; this.flash(E, C.red, 250); await this.wait(380); }
-        E.setAnim('attack', now());
         if (MELEE.has(E.id)) {
-          await this.move(E, -80, 50, heavy ? 140 : 180);
+          await this.meleeIn(E, P);
         } else {
+          E.setAnim('attack', now());
           await this.aim(E);
           const m = this.muzzle(E), target = ev.ally ? { x: 30, y: 160 } : this.center(P);
           this.burst(m.x, m.y, 6, C.red, 1.5, 120, 0);
@@ -925,7 +953,7 @@ export class Stage {
           this.setHp('player', ev.php);
           await this.hit(P, ev.dmg, { heavy, note: ev.blocked ? '(blocked)' : '' });
         }
-        if (MELEE.has(E.id)) await this.move(E, 0, 0, 220);
+        if (MELEE.has(E.id)) await this.meleeOut(E);
         break;
       }
       case 'enemy:stunned': {
@@ -955,14 +983,13 @@ export class Stage {
         this.popup('enemy', ev.name, 'info');
         play('heavyCharge');
         await this.wait(380);
-        E.setAnim(E.sheet && E.sheet.anims.special ? 'special' : 'attack', now());
-        await this.aim(E);
-        if (MELEE.has(E.id)) { play('whoosh'); await this.move(E, -80, 50, 170); }
+        if (!MELEE.has(E.id)) { E.setAnim(E.sheet && E.sheet.anims.special ? 'special' : 'attack', now()); await this.aim(E); }
+        if (MELEE.has(E.id)) { play('whoosh'); await this.meleeIn(E, P); if (E.sheet && E.sheet.anims.special) { E.setAnim('special', now()); } }
         else { const m = this.muzzle(E); play('enemyShot'); this.burst(m.x, m.y, 8, col, 1.5, 150, 0); await this.bolt(m, this.center(P), col, 3, 200); }
         if (ev.blocked) { const c = this.center(P); this.ring(c.x + 18, c.y - 10, 30, C.ion, 260, 2); play('block'); this.popup('player', 'Blocked', 'info'); }
         if (ev.dmg) { this.setHp('player', ev.php); await this.hit(P, ev.dmg, { note: ev.blocked ? '(blocked)' : '' }); }
         for (const st of ev.statuses || []) { play('status'); this.popup('player', st.toUpperCase(), `st-${st}`); this.flash(P, col, 300); }
-        if (MELEE.has(E.id)) await this.move(E, 0, 0, 220);
+        if (MELEE.has(E.id)) await this.meleeOut(E);
         await this.wait(200);
         break;
       }
