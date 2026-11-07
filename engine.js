@@ -107,6 +107,15 @@ export function newMeta() {
 
 // Season 2 (the 20-sector districts) started everyone over. Older saves are set aside by the page, not migrated.
 export const SEASON = 2;
+// A unique operative opens once the cell has done the thing it asks.
+export function bgUnlocked(meta, b) {
+  if (!b || !b.unique) return true;
+  if ((meta.unlockedOps || []).includes(b.id)) return true; // the balance sims and tests open them directly
+  const u = b.unlock || {};
+  if (u.kind === 'wheel') return ((meta.wheel || {}).best || 0) >= u.best;
+  if (u.kind === 'liberated') return !!(meta.liberated || {})[u.map];
+  return false;
+}
 export function newGame(rng) {
   const meta = newMeta(); meta.season = SEASON;
   const s = { v: VERSION, meta, char: null, run: null, screen: 'intro', tab: 'market', log: [], notice: null, outcome: null };
@@ -193,8 +202,8 @@ function migrateOld(s, rng) {
 // s.char is the host's operative, s.char2 the friend's. The engine always acts on s.char, so to act as the
 // friend we swap the two references (and the per-operative combat fields in s.run) for the duration of a call.
 // Saves are always written with s.actorIdx === 0, so the swap never leaks into a save.
-const BAG = ['pst', 'pfresh', 'defending', 'ready', 'momentum', 'keepDistance', 'struck', 'cooldowns', 'usedThisFight', 'adrenalUsed', 'deadmanUsed', 'lootOffer', 'perkOffer'];
-const freshBag = () => ({ pst: {}, pfresh: [], defending: false, ready: false, momentum: false, keepDistance: false, struck: false, cooldowns: {}, usedThisFight: [], adrenalUsed: false, deadmanUsed: false, lootOffer: null, perkOffer: null });
+const BAG = ['card', 'suit', 'pst', 'pfresh', 'defending', 'ready', 'momentum', 'keepDistance', 'struck', 'cooldowns', 'usedThisFight', 'adrenalUsed', 'deadmanUsed', 'lootOffer', 'perkOffer'];
+const freshBag = () => ({ card: null, suit: null, pst: {}, pfresh: [], defending: false, ready: false, momentum: false, keepDistance: false, struck: false, cooldowns: {}, usedThisFight: [], adrenalUsed: false, deadmanUsed: false, lootOffer: null, perkOffer: null });
 const saveBag = (r) => { const b = {}; for (const k of BAG) b[k] = r[k]; return b; };
 const loadBag = (r, b) => { for (const k of BAG) r[k] = b[k]; };
 export const isCoop = (s) => !!(s.coop && s.char && s.char2);
@@ -251,7 +260,9 @@ export function draftAdjust(draft, k, delta) {
 // Identifies an operative across saves, so a co-op partner's copy can be matched up with the real one.
 const newUid = () => `${Date.now().toString(36)}${Math.floor(Math.random() * 1e9).toString(36)}`;
 export function createChar(s, rng, draft = null, slot = 'char') {
-  const m = s.meta, d = draft || s.draft, bg = D.BACKGROUNDS.find((b) => b.id === d.background);
+  const m = s.meta, d = draft || s.draft;
+  if (!bgUnlocked(m, D.BACKGROUNDS.find((b) => b.id === d.background))) d.background = 'foundry';
+  const bg = D.BACKGROUNDS.find((b) => b.id === d.background);
   m.operatives += 1;
   const attrs = {};
   for (const k of Object.keys(D.ATTRS)) attrs[k] = draftAttr(d, k);
@@ -778,7 +789,7 @@ export const meetsReq = (c, req) => !req || Object.entries(req).every(([k, v]) =
 export const reqText = (req) => req ? Object.entries(req).map(([k, v]) => `${D.ATTRS[k].short} ${v}`).join(', ') : '';
 
 export function skillsOf(c) {
-  const out = [];
+  const out = c.background === 'dealer' ? ['pickcard'] : c.background === 'ghost' ? ['overhaul'] : [];
   const w = weaponOf(c), ws = D.WEAPON_SKILL[w.type], mw = meleeOf(c), gad = baseOf(gearIn(c, 'gadget'));
   if (ws) out.push(ws);
   if ((!mw.noSkill || attr(c, 'str') >= 6) && !out.includes('smash')) out.push('smash');
@@ -1017,7 +1028,7 @@ function droneTurn(s, rng, who) {
     }
   }
 }
-const droneShield = (c, dmg) => { const d = droneOf(c); return d && d.type === 'aegis' && dmg > 0 ? Math.max(1, Math.round(dmg * (1 - droneValue(d) / 100 * TUNE.droneShield))) : dmg; };
+const droneShield = (c, dmg) => { if (dmg > 0 && c.fightGuard && c.fightGuard < 1) dmg = Math.max(1, Math.round(dmg * c.fightGuard)); const d = droneOf(c); return d && d.type === 'aegis' && dmg > 0 ? Math.max(1, Math.round(dmg * (1 - droneValue(d) / 100 * TUNE.droneShield))) : dmg; };
 export function restockStims(s) {
   let n = 0;
   while (buyItem(s, 'stim')) n++;
@@ -1203,12 +1214,13 @@ function roomWeights(r, map) {
 // Offer two doors (or the boss). At least one door is always a fight.
 export function offerRoute(s, rng) {
   const r = s.run, map = mapById(r.map);
+  r.lastChoices = r.choices && r.choices.length ? r.choices.slice() : r.lastChoices;
   r.enemy = null;
   if (r.room >= FIGHTS_PER_SECTOR) return clearSector(s, rng);
   const remaining = FIGHTS_PER_SECTOR - r.room, needed = MIN_FIGHTS - (r.fightsDone || 0);
   r.forced = false; r.votes = null;
   if (r.room === FIGHTS_PER_SECTOR - 1 && isBossSector(r.sector)) r.choices = ['boss'];
-  else if (remaining <= needed) { r.choices = ['fight', 'elite']; r.forced = true; }
+  else if (remaining <= needed) { r.choices = r.sector > 1 && r.lastChoices && r.lastChoices.join() === 'fight,elite' ? ['fight', 'bounty'] : ['fight', 'elite']; r.forced = true; }
   else {
     r.forced = false;
     const entries = roomWeights(r, map);
@@ -1336,6 +1348,15 @@ function startFight(s, rng, kind) {
   r.actor = livingActors(s)[0] || 0; r.acted = {}; r.round = 0; r.lastAttacker = r.actor;
   for (const b of Object.values(r.cb || {})) { const cd = b.cooldowns || {}; for (const k of b.usedThisFight || []) if (cd[k] < 50) cd[k] = Math.max(cd[k] || 0, CARRY_CD); Object.assign(b, freshBag(), { cooldowns: cd }); }
   r.enemy = e; r.defending = false; r.ready = false; r.momentum = false; r.keepDistance = false; r.adrenalUsed = false; r.vent = 3; r.turns = 0; r.alarmRaised = false; r.struck = false;
+  // Unique operatives' passives, set per fighter: the Dealer cuts the deck, the Ghost shrugs off droids.
+  forEachActor(s, (a) => {
+    a.fightGuard = a.background === 'ghost' && e.tags.includes('droid') ? 0.8 : 1;
+    if (a.background === 'dealer') {
+      r.card = pick(rng, ['red', 'black', 'face']); r.suit = pick(rng, ['hearts', 'spades', 'diamonds']);
+      if (r.card === 'black') a.fightGuard *= 0.85;
+      log(s, `${a.name} cuts the deck: ${r.card === 'red' ? 'red, +15% damage' : r.card === 'black' ? 'black, 15% less damage taken' : 'a face card, the first hit lands critical'}.`, 'good');
+    }
+  });
   // Skills used last fight are still recharging when the next one starts (at least 2 turns), so you can't open every fight with them.
   for (const k of r.usedThisFight || []) if (r.cooldowns[k] < 50) r.cooldowns[k] = Math.max(r.cooldowns[k] || 0, CARRY_CD);
   r.usedThisFight = [];
@@ -1472,6 +1493,12 @@ export function bestAttack(s) {
   return m > r ? 'strike' : 'shoot';
 }
 // What the enemy's telegraphed attack can do, by the same sums as the attack itself. Null when the next move isn't a plain attack.
+export function nextBossPreview(s) {
+  const r = s.run; if (!r) return null;
+  const next = r.sector + 1; if (!isBossSector(next)) return null;
+  const e = makeEnemy(next, true, seededRng(next * 31 + 7), r.map, r.threat || 0, r.reinforced || 0, Math.max(0, (s.char.level || 1) - 4));
+  return { name: e.name, hp: e.maxHp, atk: e.atk };
+}
 export function dotDamage(s) {
   const r = s.run, st = stats(s); if (!r || !r.pst) return 0;
   return (r.pst.bleed > 0 ? Math.max(1, Math.round(st.maxHp * 0.06)) : 0) + (r.pst.burn > 0 ? Math.max(1, Math.round(st.maxHp * 0.08)) : 0);
@@ -1501,7 +1528,10 @@ export function incomingRange(s) {
   const min = mitigate(base * 0.85 * (q && q.gamble ? 0.5 : 1), st.def), max = mitigate(base * 1.15 * (q && q.gamble ? 1.8 : 1), st.def);
   const guarded = (n) => droneShield(c, Math.max(1, Math.round(n * (heavy ? TUNE.defendHeavy : 0.5) * (hasTrait(c, 'bulwark') ? 0.7 : 1))));
   const hiNow = droneShield(c, max);
-  return { min: droneShield(c, min), max: hiNow, defMin: guarded(min), defMax: guarded(max), lethal: hiNow >= c.hp };
+  // A boss over half health that your best hit could push under it gains +20% ATK before it swings.
+  const reach = Math.max(attackRange(s, false)[1], attackRange(s, true)[1]);
+  const phaseMax = e.boss && !e.phase2 && e.hp > e.maxHp * 0.5 && e.hp - reach <= e.maxHp * 0.5 ? droneShield(c, mitigate(base * 1.2 * 1.15 * (q && q.gamble ? 1.8 : 1), st.def)) : 0;
+  return { min: droneShield(c, min), max: hiNow, defMin: guarded(min), defMax: guarded(max), phaseMax, phaseDefMax: phaseMax ? guarded(mitigate(base * 1.2 * 1.15, st.def)) : 0, lethal: Math.max(hiNow, phaseMax) >= c.hp };
 }
 // Auto battle: a fixed, sensible routine. Never runs or uses smoke.
 // opts: stimReserve (stims it must leave alone), items (false keeps thermals and ion pulses out of it).
@@ -1519,7 +1549,7 @@ export function autoAction(s, { stimReserve = 0, items = true } = {}) {
   if (canUse(s, 'intimidate') && e.tags.includes('human') && (e.boss ? !e.shaken && e.hp > e.maxHp * 0.3 : intimidateChance(s) > 0.5)) return 'intimidate';
   const hit = adv.hit || bestAttack(s);
   if (!free && !blind && e.intent === 'guard' && hit === 'shoot') return 'defend';
-  for (const k of ['overload', 'smash', 'aimed', 'blast', 'burst', 'suppress']) {
+  for (const k of ['overhaul', 'pickcard', 'overload', 'smash', 'aimed', 'blast', 'burst', 'suppress']) {
     if (!canUse(s, k) || !skillsOf(c).includes(k)) continue;
     if (k === 'smash' && D.MELEE_COUNTER[e.id] && !free) continue;
     if (!skillFits(k, adv.hit)) continue;
@@ -1560,6 +1590,7 @@ function hitMult(s, melee, { mult = 1, unarmoredBonus = 1 } = {}) {
   const fb = featBuffs(s.meta);
   mult *= 1 + fb.atk + (melee ? fb.melee : fb.ranged) + (fb.vs[e.id] || 0);
   if (r.ready) mult *= hasPerk(c, 'steady') ? 1 + pv(c, 'steady') / 100 : 1.5;
+  if (r.card === 'red') mult *= 1.15;
   if (melee) mult *= 1 + TUNE.strikeBonus + (c.background === 'foundry' ? TUNE.foundryStrike : 0); // up close hits harder; Shoot is the safe option
   if (r.momentum) mult *= 1 + TUNE.momentum;
   if (w.type === 'tech' && droid) mult *= 1.5;
@@ -1591,7 +1622,7 @@ function strike(s, rng, { mult = 1, critBonus = 0, pierce = 0, unarmoredBonus = 
   r.momentum = false;
   // Lights Out: a shot in the dark can go anywhere. A swing can't.
   if (!melee && e.bs && e.bs.lights > 0 && rng() < kitOf(e).moves.lights.miss) { r.struck = true; feat(s, 'shots'); return { dmg: 0, crit: false, missed: true }; }
-  const crit = forceCrit || (!melee && e.sig && e.sig.id === 'salute') || (first && (hasUnique(c, 'ostrane') || c.background === 'runner')) || rng() < critChance(st, e, melee) + critBonus;
+  const crit = forceCrit || (!melee && e.sig && e.sig.id === 'salute') || (first && (hasUnique(c, 'ostrane') || c.background === 'runner' || (c.background === 'dealer' && r.card === 'face'))) || rng() < critChance(st, e, melee) + critBonus;
   if (crit) mult *= hasPerk(c, 'hollow') ? pv(c, 'hollow') : 1.6;
   if (w.type === 'tech') pierce = Math.max(pierce, 0.5);
   r.struck = true;
@@ -1681,6 +1712,7 @@ function playerActInner(s, act, rng, who) {
       r.ready = false; r.momentum = true;
       fx(s, { who: 'player', type: 'strike', dmg, crit, ready: wasReady });
       log(s, `${wasReady ? 'Braced. ' : ''}${crit ? 'Critical! ' : ''}You strike ${e.name} with the ${meleeOf(c).name} for ${dmg}${guarded ? ', straight past their cover' : ''}.`, crit ? 'crit' : 'hit');
+      if (c.background === 'ghost' && e.hp > 0 && e.def > 0 && (e.cracked || 0) < 3) { e.def -= 1; e.cracked = (e.cracked || 0) + 1; log(s, `The loader arm cracks ${e.name}\u2019s armour: DEF \u22121.`, 'good'); }
       // A repair needs both hands: a hit up close stops it.
       if (e.intent === 'repair' && e.stun === 0 && e.hp > 0) { e.intent = 'attack'; log(s, `You knock the tools out of ${e.name}\u2019s hands. No repair this turn.`, 'good'); }
       meleeCounter(s, rng);
@@ -1705,6 +1737,30 @@ function playerActInner(s, act, rng, who) {
       r.ready = false;
       fx(s, { who: 'player', type: 'blast', dmg, crit, guarded });
       log(s, `Scatter blast: ${dmg} damage${e.tags.includes('armored') ? ' (armour absorbs the spread)' : ''}.`, crit ? 'crit' : 'hit');
+      break;
+    }
+    case 'pickcard': {
+      const suit = r.suit || 'hearts', { dmg, crit } = strike(s, rng, { mult: 1.25 });
+      r.ready = false;
+      let note = '';
+      if (e.hp > 0 && suit === 'hearts') { e.stun = Math.max(e.stun, 1); note = 'Hearts: it reels, stunned.'; }
+      if (e.hp > 0 && suit === 'spades') { addStatus(e.st, e.fresh, { bleed: 3 }); note = 'Spades: it bleeds.'; }
+      if (suit === 'diamonds') { const take = Math.max(3, Math.round(4 * payDepth(r) * creditMult(s))); c.credits += take; r.sectorCredits = (r.sectorCredits || 0) + take; ledger(s, 'fights', take); note = `Diamonds: you lift ${take} ${D.SETTING.cur}.`; }
+      fx(s, { who: 'player', type: 'shoot', skill: act, dmg, crit, guarded, ready: wasReady });
+      log(s, `Pick a card${crit ? ', critical' : ''}: ${dmg} damage. ${note}`, crit ? 'crit' : 'hit');
+      r.suit = pick(rng, ['hearts', 'spades', 'diamonds']);
+      break;
+    }
+    case 'overhaul': {
+      const { dmg, crit } = strike(s, rng, { mult: 1.3, melee: true });
+      r.ready = false;
+      const heal = Math.min(st.maxHp - c.hp, Math.round(st.maxHp * 0.12)); c.hp += heal;
+      let note = '';
+      if (e.hp > 0 && e.tags.includes('droid') && (e.overhauled || 0) < 2) { e.atk = Math.max(1, Math.round(e.atk * 0.85)); e.overhauled = (e.overhauled || 0) + 1; note = ' A part comes away in the arm: ATK \u221215%.'; }
+      else if (e.hp > 0 && !e.tags.includes('droid')) { e.def = Math.max(0, e.def - 2); note = ' Their kit tears: DEF \u22122.'; }
+      fx(s, { who: 'player', type: 'smash', skill: act, dmg, crit });
+      log(s, `Overhaul${crit ? ', critical' : ''}: ${dmg} damage, +${heal} HP.${note}`, crit ? 'crit' : 'hit');
+      meleeCounter(s, rng);
       break;
     }
     case 'smash': {
@@ -1925,7 +1981,7 @@ function envTurn(s, rng, enemyToo = true) {
     if (enemyToo) { r.vent -= 1; r.ventNow = r.vent <= 0; if (r.ventNow) r.vent = 3; }
     if (r.ventNow) {
       const pdmg = r.defending ? 0 : Math.round(st.maxHp * 0.1 * (hasUnique(c, 'crawler') ? 0.5 : 1));
-      const edmg = enemyToo ? Math.round(e.maxHp * (e.tags.includes('droid') ? 0.06 : 0.12)) : 0;
+      const edmg = enemyToo ? Math.round(e.maxHp * (e.boss ? 0.04 : e.tags.includes('droid') ? 0.06 : 0.12)) : 0;
       c.hp -= pdmg; e.hp -= edmg;
       fx(s, { who: 'env', type: 'vent', pdmg, edmg, blocked: r.defending });
       log(s, `The furnace vents blast the floor.${pdmg ? ` You take ${pdmg}.` : ' You were behind cover.'}${edmg ? ` ${e.name} takes ${edmg}.` : ''}`, 'bad');
@@ -2320,7 +2376,7 @@ export function bossEffects(s) {
   if (b.shutter > 0) add(`${chip('shutter', 'Shutter')} ${b.shutter}`, `${moveName(e, 'shutter')}: shots deal half, and you can\u2019t Run.`);
   if (b.noRun && !(b.shutter > 0)) add('No Run', nr ? nr[1] : 'The shutter stays down. No Run for the rest of the fight.');
   if (b.floor > 0) add(`${chip('floor', 'Slag')} ${b.floor}`, `${moveName(e, 'floor')}: each Strike costs 5% of your max HP and burns. Shoot is safe.`);
-  if (b.front > 0) add(`${chip('front', 'Workers')} ${b.front}`, `${moveName(e, 'front')}: shots deal half.${b.frontFired ? '' : ' Hold your fire throughout for +1 Resolve on the kill.'} Intimidate clears them.`);
+  if (b.front > 0) add(`${chip('front', 'Workers')} ${b.front}`, `${moveName(e, 'front')}: shots deal half.${b.frontFired ? '' : ' Hold your fire throughout for +1 Resolve on the kill.'}${canUse(s, 'intimidate') ? ' Intimidate clears them.' : skillsOf(s.char).includes('intimidate') ? ' Intimidate is spent for this sector: Strike reaches past them.' : ' Strike reaches past them.'}`);
   if (b.frontHeld) add('+1 Resolve', `You held your fire. +1 Resolve when ${w.short} goes down.`);
   if (b.count > 0) add(`${chip('count', 'Count')} ${b.count}`, `${moveName(e, 'count')}: freed prisoners do nothing. Intimidate breaks it.`);
   if (b.lights > 0) add(`${chip('lights', 'Dark')} ${b.lights}`, `${moveName(e, 'lights')}: ${w.his} moves are hidden unless you have a scanner, and shots miss 25% of the time. Strike can\u2019t miss.`);
@@ -2669,6 +2725,11 @@ function offerPerks(s, rng, boss) {
   if (boss && pool.some((p) => p.rare)) take(pool.filter((p) => p.rare));
   while (out.length < (has(c, 'broker') ? 4 : 3) && pool.length) take(pool);
   return out;
+}
+// For bots and auto-accept: a piece already carried if there's room for it, else any piece with room, else leave it ('').
+export function bestPerkPick(s) {
+  const c = s.char, offer = (s.run && s.run.perkOffer) || [], room = offer.filter((id) => perkStacks(c, id) < perkCap(c));
+  return room.find((id) => c.perks.includes(id)) || room[0] || '';
 }
 export function choosePerk(s, id, rng, who = actorIdx(s), raise = '') {
   return withActor(s, who, () => choosePerkInner(s, id, rng, raise));

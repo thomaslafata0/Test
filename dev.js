@@ -96,7 +96,7 @@ export function autoStep(s, rng, o, watching = false) {
     case 'perk': {
       const c = s.char, offer = s.run.perkOffer;
       if (!offer) { E.continueAfterVictory(s, rng); return null; }
-      E.choosePerk(s, offer.find((id) => c.perks.includes(id)) || offer[0], rng);
+      E.choosePerk(s, E.bestPerkPick(s), rng);
       return null;
     }
     case 'event': {

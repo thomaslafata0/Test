@@ -2869,5 +2869,143 @@
   "size": 256,
   "feetY": 244,
   "fig": 232
+ },
+ "dealer": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 5
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 5,
+    "tip": [
+     72,
+     -154
+    ]
+   },
+   "attackM": {
+    "frames": 9,
+    "fps": 12,
+    "loop": false,
+    "pad": 5,
+    "tip": [
+     91,
+     -140
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 5
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 5
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 5
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 5
+   },
+   "special": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 5
+   },
+   "walk": {
+    "frames": 9,
+    "fps": 11,
+    "loop": true,
+    "pad": 5
+   }
+  },
+  "size": 256,
+  "feetY": 250,
+  "fig": 241
+ },
+ "ghost": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 9
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 9,
+    "tip": [
+     98,
+     -148
+    ]
+   },
+   "attackM": {
+    "frames": 9,
+    "fps": 12,
+    "loop": false,
+    "pad": 9,
+    "tip": [
+     86,
+     -203
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 9
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 9
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 9
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 9
+   },
+   "special": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 9
+   },
+   "walk": {
+    "frames": 8,
+    "fps": 11,
+    "loop": true,
+    "pad": 9
+   }
+  },
+  "size": 256,
+  "feetY": 246,
+  "fig": 237
  }
 }

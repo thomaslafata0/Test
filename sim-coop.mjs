@@ -50,7 +50,7 @@ for (let k = 0; k < CAMPAIGNS; k++) {
         // Each operative picks for themselves.
         const i = E.livingActors(s).find((n) => E.withActor(s, n, () => s.run.lootOffer || s.run.perkOffer));
         if (i === undefined) { E.continueAfterVictory(s, rng); continue; }
-        E.withActor(s, i, () => { if (s.run.lootOffer) G.lootChoice(s, rng, i ? 'rangedFocus' : 'auto'); else E.choosePerk(s, s.run.perkOffer[0], rng); });
+        E.withActor(s, i, () => { if (s.run.lootOffer) G.lootChoice(s, rng, i ? 'rangedFocus' : 'auto'); else E.choosePerk(s, E.bestPerkPick(s), rng); });
       }
       else if (s.screen === 'route') { const ch = s.run.choices, pref = ['rest', 'supply', 'cells', 'cargo', 'event', 'fight', 'elite', 'boss']; E.enterRoom(s, ch.map((x) => pref.indexOf(x)).reduce((bi, v, i, arr) => (v < arr[bi] ? i : bi), 0), rng); }
       else if (s.screen === 'room') E.offerRoute(s, rng);

@@ -81,7 +81,7 @@ function playOperative(s, rng, b, st, map = 'garrison') {
       if (s.screen === 'combat') { const a = act(s, st, b); if (a === 'smoke' || a === 'run') escapes++; E.playerAct(s, a, rng); }
       else if (s.screen === 'victory') E.continueAfterVictory(s, rng);
       else if (s.screen === 'loot') G.lootChoice(s, rng, b.style, b.noArmor ? ARMOR_SLOTS : [], b.w || {});
-      else if (s.screen === 'perk') E.choosePerk(s, s.run.perkOffer[0], rng);
+      else if (s.screen === 'perk') E.choosePerk(s, E.bestPerkPick(s), rng);
       else if (s.screen === 'route') {
         const ch = s.run.choices, low = s.char.hp < E.stats(s).maxHp * 0.5;
         const pref = low ? ['rest', 'supply', 'cells', 'cargo', 'event', 'fight', 'elite', 'boss'] : ['cells', 'supply', 'event', 'cargo', 'fight', 'rest', 'elite', 'boss'];

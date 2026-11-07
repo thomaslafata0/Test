@@ -77,7 +77,7 @@ function playLife(s, rng, stats) {
       if (s.screen === 'combat') E.playerAct(s, combatBot(s), rng);
       else if (s.screen === 'victory') E.continueAfterVictory(s, rng);
       else if (s.screen === 'loot') G.lootChoice(s, rng, STYLE);
-      else if (s.screen === 'perk') E.choosePerk(s, s.run.perkOffer[0], rng);
+      else if (s.screen === 'perk') E.choosePerk(s, E.bestPerkPick(s), rng);
       else if (s.screen === 'event') {
         const ev = E.eventById(s.event);
         let best = 0, bestCh = -1;

@@ -21,6 +21,8 @@ const BUILDS = {
   glass:      { bg: 'runner',   attrs: ['agi', 'agi', 'str'], style: 'ranged', implants: ['optic', 'reflex', 'synapse'], noArmor: true, drink: 'sour' },
   meleeOnly:  { bg: 'foundry',  attrs: ['str', 'str', 'agi'], style: 'melee', implants: ['myomer', 'dermal', 'pain', 'adrenal'], drink: 'gin' },
   rangedOnly: { bg: 'runner',   attrs: ['agi', 'agi', 'str'], style: 'ranged', implants: ['reflex', 'optic', 'dermal', 'adrenal'], drink: 'gin' },
+  dealer:     { bg: 'dealer',   attrs: ['cha', 'agi'], style: 'auto', implants: ['voice', 'reflex', 'dermal', 'adrenal'], drink: 'rum' },
+  ghost:      { bg: 'ghost',    attrs: ['str'], style: 'auto', implants: ['myomer', 'pain', 'dermal', 'adrenal'], drink: 'gin' },
   hybrid:     { bg: 'foundry',  attrs: ['str', 'agi'], style: 'hybrid', implants: ['dermal', 'reflex', 'pain', 'adrenal'], drink: 'gin' },
   critStack:  { bg: 'runner',   attrs: ['agi', 'agi', 'str'], style: 'rangedFocus', implants: ['optic', 'reflex', 'dermal', 'adrenal'], w: { crit: 3, human: 2 }, drink: 'sour' },
   tank:       { bg: 'foundry',  attrs: ['str', 'str', 'cha'], style: 'auto', implants: ['dermal', 'pain', 'adrenal', 'myomer'], w: { def: 2.5, hp: 2, resist: 3, healkill: 2 }, drink: 'whisky' },
@@ -39,6 +41,7 @@ const STYLES = {
 };
 const skipOf = (b) => (b.noArmor ? ARMOR : []);
 function draft(s, rng, b) {
+  if (D.BACKGROUNDS.find((x) => x.id === b.bg && x.unique)) s.meta.unlockedOps = [...new Set([...(s.meta.unlockedOps || []), b.bg])];
   const d = E.newDraft(s.meta, rng); d.background = b.bg; d.drone = b.drone || D.DRONE_ORDER[Math.floor(rng() * 4)];
   for (let i = 0; i < 16 && d.points > 0; i++) if (!E.draftAdjust(d, b.attrs[i % b.attrs.length], 1)) { let ok = false; for (const k of Object.keys(D.ATTRS)) if (E.draftAdjust(d, k, 1)) { ok = true; break; } if (!ok) break; }
   return d;
@@ -84,7 +87,7 @@ function act(s, st, b, who = 0) {
 // Stacks what it already carries when it can, as a player chasing a build would.
 function pickPerk(s, rng) {
   const c = s.char, offer = s.run.perkOffer;
-  E.choosePerk(s, offer.find((id) => c.perks.includes(id)) || offer[0], rng);
+  E.choosePerk(s, E.bestPerkPick(s), rng);
 }
 function route(s, rng) {
   const ch = s.run.choices, low = E.livingActors(s).some((i) => E.withActor(s, i, () => s.char.hp < E.stats(s).maxHp * 0.5));
@@ -162,7 +165,7 @@ const header = () => console.log(`${''.padEnd(26)} ops raids ${'  '}| ops raids 
 // A short difficulty check: careful and standard play, solo and co-op. Careful play is closest to how people actually play.
 if (SECTIONS.includes('check')) {
   header();
-  for (const b of ['strength', 'strAgi', 'agility', 'intellect', 'charisma']) for (const st of ['cautious', 'standard']) row(`${b} / ${st}`, [BUILDS[b]], st);
+  for (const b of ['strength', 'strAgi', 'agility', 'intellect', 'charisma', 'dealer', 'ghost']) for (const st of ['cautious', 'standard']) row(`${b} / ${st}`, [BUILDS[b]], st);
   for (const [x, y] of [['strength', 'agility'], ['intellect', 'charisma']]) for (const st of ['cautious', 'standard']) row(`${x} + ${y} / ${st}`, [BUILDS[x], BUILDS[y]], st);
 }
 // Each drone against no drone, on the same seeds and training, at each rank. Repaired free before each raid, so this shows strength alone.

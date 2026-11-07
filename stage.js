@@ -837,7 +837,7 @@ export class Stage {
     if (k === 'enemy:attack' || k === 'enemy:heavy') play(ev.type === 'heavy' ? 'heavyCharge' : MELEE.has(E.id) ? 'whoosh' : 'enemyShot');
     switch (`${ev.who}:${ev.type}`) {
       case 'player:shoot': {
-        P.setAnim('attack', now());
+        P.setAnim(ev.skill === 'pickcard' && P.sheet && P.sheet.anims.special ? 'special' : 'attack', now());
         await this.aim(P);
         await this.move(P, 6, -4, 70);
         const m = this.muzzle(P);
@@ -885,7 +885,7 @@ export class Stage {
         break;
       }
       case 'player:smash': {
-        P.setAnim(P.sheet && P.sheet.anims.attackM ? 'attackM' : 'attack', now());
+        P.setAnim(ev.skill === 'overhaul' && P.sheet && P.sheet.anims.special ? 'special' : P.sheet && P.sheet.anims.attackM ? 'attackM' : 'attack', now());
         await this.move(P, 150, -70, 200);
         const c = this.center(E);
         this.ring(c.x, c.y, 34, C.amber, 260, 3);

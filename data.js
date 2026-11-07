@@ -50,6 +50,17 @@ export const BACKGROUNDS = [
     perks: ['A follower fights beside you, and hits hard', '+2 Resolve per boss', '+15% credits, 15% off the market', '+40 credits'],
     perk: 'Voice: a follower walks into every raid with you, and everyone at your side hits two-thirds harder. +2 Resolve from every boss, +15% credits and 15% off at the market.',
     desc: 'People listen when they talk. The Directorate has noticed.' },
+  // Unique operatives: a fixed look of their own (sprite), unlocked by the cell, with a signature skill.
+  { id: 'dealer', name: 'The Dealer', unique: true, sprite: 'dealer', attrs: { cha: 1, agi: 1 }, start: { gear: { ranged: 'deck', melee: 'cardedge' } },
+    unlock: { kind: 'wheel', best: 100, text: 'Win 100 or more on one spin of the Lantern\u2019s wheel.' },
+    perks: ['Each fight, cut the deck: red +15% damage, black \u221215% damage taken, a face card makes your first hit critical', 'Pick a Card: you see the suit, then throw it (stun, bleed or steal credits)', 'Steel-edged deck and a card edge'],
+    perk: 'Stacked deck: every fight starts with a cut. Red: +15% damage. Black: you take 15% less. A face card: your first hit is critical. Signature skill Pick a Card: the next suit is always showing. Hearts stun, spades bleed, diamonds steal credits.',
+    desc: 'Ran the tables under the Lantern for the officers. Learned which of them cheat, and how.' },
+  { id: 'ghost', name: 'The Foreman\u2019s Ghost', unique: true, sprite: 'ghost', attrs: { str: 2 }, start: { gear: { ranged: 'holdout', melee: 'loaderarm' } },
+    unlock: { kind: 'liberated', map: 'foundry', text: 'Free the Foundry Works (beat its sector-20 boss).' },
+    perks: ['Takes 20% less damage from droids', 'Strikes crack armour: \u22121 DEF a hit, up to \u22123', 'Overhaul: tear a part off, heal 12%, droids lose 15% ATK', 'Loader arm (melee)'],
+    perk: 'Scrap-built: droids deal 20% less damage to you, and every Strike cracks the target\u2019s armour (\u22121 DEF, up to \u22123). Signature skill Overhaul: a heavy grab that heals you 12% and, on a droid, rips out 15% of its ATK.',
+    desc: 'Was crushed under a loader on the casting floor and walked out three days later with its arm.' },
 ];
 
 // ---------- skills (combat abilities beyond Attack / Defend / Run) ----------
@@ -61,6 +72,8 @@ export const SKILLS = {
   smash:     { name: 'Power Strike',    short: 'Melee: heavy hit, ignores \u00BD armour', cd: 3, desc: 'Uses your melee weapon. x1.6 damage plus 1 per STR, ignores half of armour and the enemy\u2019s cover.', from: 'Melee weapons, or STR 6' },
   overload:  { name: 'Overload',        short: 'Tech blast, stuns droids', cd: 4, desc: 'Tech burst: 6 + 5 per INT, ignores armour. Droids take double and are stunned.', from: 'Tech weapons, the Arc Coil, or INT 3' },
   suppress:  { name: 'Suppressing Fire', short: 'Pins it in cover', cd: 3, desc: '60% damage and pins the enemy: its next move is forced to be taking cover.', from: 'AGI 4' },
+  pickcard:  { name: 'Pick a Card',     short: 'Throw the showing suit', cd: 3, desc: 'A hard card throw (x1.25). The suit is always showing before you throw: hearts stun 1 turn, spades bleed 3 turns, diamonds steal credits.', from: 'The Dealer' },
+  overhaul:  { name: 'Overhaul',        short: 'Grab, heal, weaken', cd: 4, desc: 'A heavy grab with the loader arm (x1.3, melee). Heals you 12% of max HP. A droid loses 15% ATK (twice at most); anything else loses 2 DEF.', from: 'The Foreman\u2019s Ghost' },
   intimidate:{ name: 'Intimidate',      short: 'Scare a human off', cd: 99, desc: 'Once per sector. A human enemy may run. If not, its ATK drops 25% for the fight, up to 40% with high CHA. Bosses never run, so a boss just loses the ATK.', from: 'CHA 3' },
 };
 export const WEAPON_SKILL = { pistol: 'aimed', rifle: 'aimed', carbine: 'burst', scatter: 'blast', heavy: 'blast', tech: 'overload' };
@@ -95,6 +108,9 @@ export const GEAR = {
   marksman: { slot: 'ranged', tier: 5, name: 'Directorate Long Rifle', type: 'rifle',  atk: 17, cost: 760,  req: { agi: 6 }, crit: 0.15, desc: '+15% crit chance. Officer issue.' },
   cannon:   { slot: 'ranged', tier: 5, name: 'Shoulder Cannon',       type: 'heavy',   atk: 17, cost: 1000, req: { str: 7 }, spd: -1, desc: '\u22121 SPD. Adds STR to ATK like a melee weapon.' },
   // melee
+  deck:     { slot: 'ranged', tier: 0, name: 'Steel-Edged Deck',       type: 'pistol', atk: 4, cost: 0, crit: 0.08, desc: 'Fifty-two cards with ground edges. +8% crit. The Dealer\u2019s starting weapon.' },
+  cardedge: { slot: 'melee', tier: 0, name: 'Card Edge',              type: 'melee', atk: 1, cost: 0, crit: 0.08, desc: 'A single card between two fingers. +8% crit.' },
+  loaderarm:{ slot: 'melee', tier: 0, name: 'Loader Arm',             type: 'melee', atk: 4, cost: 0, desc: 'Welded on. It doesn\u2019t come off. The Ghost\u2019s starting weapon.' },
   wrench:   { slot: 'melee', tier: 0, name: 'Foundry Wrench',         type: 'melee', atk: 2,  cost: 0,   desc: 'Two kilos of steel and a grudge. Foundry Hand starting gear.' },
   knife:    { slot: 'melee', tier: 0, name: 'Kitchen Knife',          type: 'melee', atk: 0,  cost: 0,   noSkill: true, desc: 'From the canteen. Better than nothing, barely.' },
   baton:    { slot: 'melee', tier: 1, name: 'Shock Baton',            type: 'melee', atk: 2,  cost: 50,  desc: 'Stolen off a riot cop.' },

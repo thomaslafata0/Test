@@ -1461,7 +1461,7 @@ html.calm .btn:active, html.calm .door:active, html.calm .tab:active, html.calm 
 /* One short line of coaching in the first fights. */
 .stage-box { position: relative; }
 .coach { position: absolute; left: 10px; bottom: 10px; max-width: 52%; z-index: 4; pointer-events: none; padding: 5px 9px; font-size: .85rem; line-height: 1.25; color: #15110a; background: var(--sodium); box-shadow: 0 2px 8px #0009; }
-@media (orientation: landscape) and (max-height: 600px), (orientation: landscape) and (pointer: coarse) and (max-height: 820px) { .coach { left: 3px; bottom: auto; top: 3px; max-width: 58%; font-size: 12px; padding: 3px 7px; } }
+@media (orientation: landscape) and (max-height: 600px), (orientation: landscape) and (pointer: coarse) and (max-height: 820px) { .coach { left: 50%; right: auto; transform: translateX(-50%); top: auto; bottom: 34px; max-width: 70%; width: max-content; text-align: center; font-size: 12px; padding: 3px 8px; } }
 .modal:focus, [role="dialog"]:focus, [role="alertdialog"]:focus { outline: none; }
 .feat-filter { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0; }
 @media (pointer: coarse) { .actions .btn:disabled, .skills .btn:disabled, .items .btn:disabled { pointer-events: none; } }
@@ -1495,7 +1495,7 @@ html.calm .btn:active, html.calm .door:active, html.calm .tab:active, html.calm 
 .take-over { width: 100%; display: grid; gap: 0; }
 .take-over .bs { font-size: .75rem; opacity: .8; }
 .chip[data-tip], .intent[data-tip] b, .statline[data-tip] .chip { text-decoration: underline dotted 1px; text-underline-offset: 3px; }
-@media (orientation: landscape) and (max-height: 600px), (orientation: landscape) and (pointer: coarse) and (max-height: 820px) { .coach { max-width: 44%; } }
+
 @media (orientation: landscape) and (max-height: 360px) {
   .title-body { gap: 4px; padding: 6px 16px; }
   .title-body .title-logo { font-size: 2rem; line-height: 1; }
@@ -1504,6 +1504,20 @@ html.calm .btn:active, html.calm .door:active, html.calm .tab:active, html.calm 
   .title-menu .btn { padding: 4px 12px; min-height: 38px; font-size: .9rem; }
   .title-menu .sub { display: none; }
 }
+.choice.locked-op { opacity: .7; border-style: dashed; display: grid; gap: 6px; align-content: start; cursor: default; }
+.choice.unique-op { border-color: var(--sodium); }
+.choices.classes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (orientation: landscape) and (max-height: 600px), (orientation: landscape) and (pointer: coarse) and (max-height: 820px) {
+  .choices.four.classes { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); overflow: hidden; }
+  .choices.classes .choice { grid-template-rows: none; grid-auto-rows: auto; padding: 6px 10px; gap: 3px; min-height: 0; overflow: hidden; }
+  .choices.classes .bg-stats { font-size: 12px; gap: 2px; }
+  .choices.classes .bg-stats li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .choices.classes .bg-stats li:nth-child(n+3), .choices.classes .unique-op > .label, .choice.locked-op .muted:last-child { display: none; }
+  .choices.classes .choice b { font-size: 1.05rem; line-height: 1.1; }
+}
+.prep-sum { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .85rem; color: var(--muted); padding: 4px 0; }
+.prep-sum b { color: var(--fg); font-family: var(--mono); }
+.popup .btn.twoline[data-a^="extract"] .bs { font-size: max(11px, .75rem); }
 </style>
 
 <div class="rotate-note"><b>Turn your phone sideways</b><span class="muted">Cinder Cell plays in landscape.</span><div><button class="btn" onclick="this.closest('.rotate-note').remove()">Play upright anyway</button></div></div>
@@ -1866,7 +1880,7 @@ const myIdx = () => (isGuest() ? 1 : 0);
 const DOWNTIME = new Set(['drink', 'bet', 'stake', 'spin', 'invest', 'withdraw', 'shippart', 'shipcell', 'orbitgo', 'orbitact', 'orbitclose']);
 // The shuttle belongs to each player's own cell, so a friend in someone's room can't fly or fit it from here.
 const SHIP_ACTS = new Set(['shippart', 'shipcell', 'orbitarm', 'orbitgo', 'orbitact', 'orbitclose']);
-const LOCAL = new Set(['takeover', 'autoaccept', 'autostim', 'featfilter', 'stimprompt', 'draftdrone', 'randomize', 'missiontab', 'markettab', 'chartab', 'continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm', 'cloudcopy', 'cloudload', 'cloudversions', 'cloudrestore', 'cloudkeep', 'devunlock', 'devoff', 'dev', 'autostart']);
+const LOCAL = new Set(['firstraid', 'takeover', 'autoaccept', 'autostim', 'featfilter', 'stimprompt', 'draftdrone', 'randomize', 'missiontab', 'markettab', 'chartab', 'continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm', 'cloudcopy', 'cloudload', 'cloudversions', 'cloudrestore', 'cloudkeep', 'devunlock', 'devoff', 'dev', 'autostart']);
 function coopChip() {
   if (!net) return '';
   const who = net.peerName || (isHost() ? 'friend' : 'host');
@@ -2221,7 +2235,7 @@ function titleScreen() {
       <h1 class="big-title title-logo" data-text="${esc(S.title)}">${esc(S.title)}</h1>
       <p class="tagline">A resistance cell. One operative at a time.</p>
       <div class="title-menu">
-        ${hasRun ? `<button class="btn primary big" data-a="continue-title">${state.char && lookStill(state.char.look, state.char.background) ? `<img class="title-me" src="${lookStill(state.char.look, state.char.background)}" alt="" width="48" height="48">` : ''}Continue <span class="sub">${state.char ? `${esc(state.char.name)}, operative ${state.char.number}` : `${m.operatives} operative${m.operatives === 1 ? '' : 's'} so far`}</span></button>` : `<button class="btn primary big" data-a="continue-title">Begin</button>`}
+        ${hasRun ? `<button class="btn primary big" data-a="continue-title">${state.char && lookStill(state.char.look, state.char.background) ? `<img class="title-me" src="${lookStill(state.char.look, state.char.background)}" alt="" width="48" height="48">` : ''}Continue <span class="sub">${state.char ? `${esc(state.char.name)}, operative ${state.char.number}` : `${m.operatives} operative${m.operatives === 1 ? '' : 's'} so far`}</span></button>` : `<button class="btn primary big" data-a="firstraid">Play first raid <span class="sub">a ready operative, straight in</span></button><button class="btn big" data-a="continue-title">Build your own operative</button>`}
         ${hasRun ? `<button class="btn big" data-a="newcell">${confirmReset ? 'Click again: this erases everything' : 'New cell'}</button>` : ''}
         ${getLastRoom() && !net ? `<button class="btn big" data-a="coopresume">${getLastRoom().role === 'host' ? 'Host room' : 'Rejoin room'} ${esc(getLastRoom().code)}</button>` : ''}
         <button class="btn big" data-a="modal" data-v="board">Leaderboard</button>
@@ -2259,7 +2273,9 @@ function createScreen() {
   const fake = { attrs, level: 1, gear: E.startingGear(state.meta, d.background), upgrades: [], implants: [], background: d.background };
   const st = E.statsOf(state.meta, fake);
   const skills = E.skillsOf(fake);
-  const still = lookStill(d.look, d.background) || sheetStill('player') || portraitURL('player');
+  const ubg = D.BACKGROUNDS.find((b) => b.id === d.background), usprite = ubg && ubg.unique ? ubg.sprite : null;
+  if (usprite && !sheetOf(usprite)) ensureArt(usprite);
+  const still = (usprite && sheetStill(usprite)) || lookStill(d.look, d.background) || sheetStill('player') || portraitURL('player');
   const preview = `<div class="preview"><img src="${still}" alt="" width="128" height="128">${hasLayers() ? '' : '<span class="label">Preview art coming</span>'}</div>`;
   const steps = ['Look', 'Class', 'Drone', 'Stats'].map((l, i) => `<button class="tab" aria-selected="${d.step === i + 1}" data-a="step" data-v="${i + 1}">${i + 1}. ${l}</button>`).join('');
   const nav = (back, next) => `<div class="btnrow create-nav">${back ? `<button class="btn" data-a="step" data-v="${back}">Back</button>` : ''}<button class="btn primary big" data-a="step" data-v="${next[0]}">Next: ${next[1]}</button></div>`;
@@ -2267,15 +2283,16 @@ function createScreen() {
   if (d.step === 1) {
     const sw = (list, key, cur) => `<div class="swatches">${list.map((c, i) => `<button class="swatch ${i === cur ? 'on' : ''}" data-a="look" data-v="${key}" data-k="${i}" style="background:${c[1]}" aria-label="${key === 'skin' ? 'Skin tone' : 'Hair colour'} ${i + 1}" aria-pressed="${i === cur}"></button>`).join('')}</div>`;
     const sexes = BODIES.map((b) => `<button class="btn sex-pick ${b.id === d.look.body ? 'primary' : ''}" data-a="look" data-v="body" data-k="${b.id}" aria-pressed="${b.id === d.look.body}">${esc(b.name)}</button>`).join('');
-    body = `<div class="look-step">
+    if (usprite) body = `<div class="look-step"><div class="look-big"><img src="${still}" alt="" width="128" height="128"></div><div class="look-opts"><span class="label">${esc(ubg.name)}</span><p class="muted">This operative has their own look. Pick a regular class to choose a body, hair and skin.</p></div></div>${nav(0, [2, 'class'])}`;
+    else body = `<div class="look-step">
       <div class="look-big"><img src="${still}" alt="" width="128" height="128"></div>
       <div class="look-opts"><span class="label">Operative</span><div class="btnrow sex-row">${sexes}</div>
       <div class="look-colours"><div><span class="label">Hair colour</span>${sw(HAIRS, 'hairColor', d.look.hairColor)}</div><div><span class="label">Skin</span>${sw(SKINS, 'skin', d.look.skin)}</div></div></div>
     </div>${nav(0, [2, 'class'])}`;
   } else if (d.step === 2) {
-    body = `<div class="choices four classes">${D.BACKGROUNDS.map((b) => `<button class="choice ${b.id === d.background ? 'on' : ''}" data-a="bg" data-v="${b.id}" aria-pressed="${b.id === d.background}">
+    body = `<div class="choices four classes">${D.BACKGROUNDS.map((b) => (!E.bgUnlocked(state.meta, b) ? `<div class="choice locked-op"><b>${esc(b.name)}</b><span class="chip">Locked</span><span class="muted small">${esc(b.unlock.text)}</span><span class="muted small">${esc(b.desc)}</span></div>` : `<button class="choice ${b.id === d.background ? 'on' : ''} ${b.unique ? 'unique-op' : ''}" data-a="bg" data-v="${b.id}" aria-pressed="${b.id === d.background}" title="${esc(b.perk)}">${b.unique ? '<span class="label" style="color:var(--sodium)">Unique operative</span>' : ''}
       <b>${esc(b.name)}</b><span class="chip">${Object.entries(b.attrs).map(([k, v]) => `+${v} ${D.ATTRS[k].short}`).join(', ')}</span>
-      <ul class="bg-stats">${b.perks.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></button>`).join('')}</div>${nav(1, [3, 'drone'])}`;
+      <ul class="bg-stats">${b.perks.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></button>`)).join('')}</div>${nav(1, [3, 'drone'])}`;
   } else if (d.step === 3) {
     body = `<div class="choices four drones">${D.DRONE_ORDER.map((id) => { const t = D.DRONES[id]; return `<button class="choice drone-card ${(d.drone || 'hornet') === id ? 'on' : ''}" data-a="draftdrone" data-v="${id}" aria-pressed="${(d.drone || 'hornet') === id}">
       <img class="drone-pic" src="${droneIcon(id)}" alt="" width="64" height="48"><b>${esc(t.name)}</b><span class="chip">${esc(t.role)} \u00B7 rank ${E.droneRankOf(state.meta, id)}</span>
@@ -2796,8 +2813,9 @@ function gate() {
   const threat = mt > 0 ? `<div class="threat"><span class="label">Threat level</span><div class="btnrow">${D.THREAT.slice(0, mt + 1).map((t, i) => `<button class="btn ${m.threat === i ? 'primary' : ''}" data-a="threat" data-v="${i}" title="${esc(t.desc)}">${esc(t.name)}</button>`).join('')}</div><p class="muted" style="font-size:.84rem">${esc(D.THREAT[m.threat].desc)}${m.threat ? ' Starts again from sector 1.' : ''}</p></div>` : '';
   const contracts = (m.contracts || []).map((k) => `<div class="contract ${k.done ? 'done' : ''}"><div><b>${esc(k.text)}</b><span class="muted"> ${k.done ? 'Complete' : `${Math.min(k.progress, k.n)} / ${k.n}`}</span></div><span class="chip ${k.done ? 'good' : ''}">+${k.resolve} ${esc(S.meta)} \u00B7 +${k.credits} ${S.cur}</span></div>`).join('');
   const tabBtn = (k, label) => `<button class="tab" aria-selected="${tab === k}" data-a="missiontab" data-v="${k}">${label}</button>`;
-  const go = isGuest() ? `<div class="deploy-go">${warn}<span class="muted">The host picks the target.</span><button class="btn big ${state.guestReady ? 'primary' : ''}" data-a="coopready" aria-pressed="${!!state.guestReady}">${state.guestReady ? 'Ready \u00B7 waiting for the host' : 'Ready for the raid'}</button></div>`
-    : `<div class="deploy-go ${hurt && canHeal ? 'hurt' : ''}">${warn}${E.isCoop(state) ? `<span class="muted" style="font-size:.84rem">${state.guestReady ? `${esc(state.guestName || 'Your friend')} is ready.` : `Waiting for ${esc(state.guestName || 'your friend')} to press Ready.`}</span>` : ''}<span class="label">${ins.length > 1 ? 'Deploy \u00B7 pick where to start' : 'Deploy'}</span><div class="ins">${ins.map((n) => `<button class="btn big ${n === ins[ins.length - 1] ? 'primary' : ''}" data-a="deploy" data-v="${n}" ${E.isCoop(state) && !state.guestReady ? 'disabled' : ''}><span class="ins-n">Sector ${n}</span> <span class="ins-name">${esc(E.sectorName(n, sel.id))}</span></button>`).join('')}</div>${ins.length === 1 ? '<span class="muted ins-hint">Beat a boss to start deeper next time.</span>' : ''}</div>`;
+  const gin = E.drinkOf(c), prep = `<div class="prep-sum" aria-label="What you're bringing"><span><b>${c.hp}/${st.maxHp}</b> HP</span><span><b>${c.items.stim}/${st.carry}</b> stims</span><span><b>${st.atk}</b> shoot \u00b7 <b>${st.atkM}</b> strike</span><span><b>${st.def}</b> DEF</span>${gin ? `<span>${esc(gin.name)}: ${esc(gin.effect)}</span>` : ''}</div>`;
+  const go = isGuest() ? `<div class="deploy-go">${prep}${warn}<span class="muted">The host picks the target.</span><button class="btn big ${state.guestReady ? 'primary' : ''}" data-a="coopready" aria-pressed="${!!state.guestReady}">${state.guestReady ? 'Ready \u00B7 waiting for the host' : 'Ready for the raid'}</button></div>`
+    : `<div class="deploy-go ${hurt && canHeal ? 'hurt' : ''}">${prep}${warn}${E.isCoop(state) ? `<span class="muted" style="font-size:.84rem">${state.guestReady ? `${esc(state.guestName || 'Your friend')} is ready.` : `Waiting for ${esc(state.guestName || 'your friend')} to press Ready.`}</span>` : ''}<span class="label">${ins.length > 1 ? 'Deploy \u00B7 pick where to start' : 'Deploy'}</span><div class="ins">${ins.map((n) => `<button class="btn big ${n === ins[ins.length - 1] ? 'primary' : ''}" data-a="deploy" data-v="${n}" ${E.isCoop(state) && !state.guestReady ? 'disabled' : ''}><span class="ins-n">Sector ${n}</span> <span class="ins-name">${esc(E.sectorName(n, sel.id))}</span></button>`).join('')}</div>${ins.length === 1 ? '<span class="muted ins-hint">Beat a boss to start deeper next time.</span>' : ''}</div>`;
   return `<nav class="tabs pop-tabs">${tabBtn('deploy', 'Deploy')}${tabBtn('contracts', `Contracts ${(m.contracts || []).length}`)}</nav>
     ${tab === 'contracts' ? `<div class="contracts">${contracts || '<p class="muted">No jobs right now.</p>'}</div>` : `<div class="gate">
       <div class="gate-maps"><div class="maps">${cards}</div>${locked.length ? `<p class="muted maps-locked">Locked: ${locked.map((mp) => `${esc(mp.name)} (clear ${Object.entries(mp.unlock).map(([id, n]) => `${esc(E.mapById(id).name)} ${n}`).join(', ')})`).join(', ')}</p>` : ''}</div>
@@ -2815,19 +2833,19 @@ function intentLabel(e, k) { if (k.startsWith('sig:')) return BOSS_MOVES[e.id][k
 function intentInfo(e) {
   if (e.stun > 0) return { label: `Stunned \u00B7 ${e.stun} turn${e.stun > 1 ? 's' : ''}`, tone: 'calm', tip: 'It can\u2019t act. Free hits.' };
   if (e.boss && E.intentHidden(state)) return { label: 'Lights out', tone: 'danger', tip: 'You can\u2019t read her. Strike can\u2019t miss; shots miss 25% of the time.' };
-  if (e.intent === 'sig') return E.sigInfo(state) || { label: 'Thrown off', tone: 'calm', tip: 'You stopped the move. Its turn is wasted.' };
+  if (e.intent === 'sig') { const si = E.sigInfo(state); if (si && e.sig && e.sig.id === 'confiscate') { const c = state.char, it = c.items.stim > 0 ? 'stim' : ['thermal', 'ion', 'smoke'].find((k) => c.items[k] > 0); return { ...si, tip: it ? `Takes your ${D.ITEMS[it].name} (you have ${c.items[it]}). Strike stops him; using it now just means he takes the next one.` : 'Nothing left to take: he hits you instead.' }; } return si || { label: 'Thrown off', tone: 'calm', tip: 'You stopped the move. Its turn is wasted.' }; }
   if (e.intent === 'special') { const sp = D.SPECIALS[e.id]; return { label: sp.name, tone: 'danger', tip: sp.tip }; }
   return D.INTENTS[e.intent];
 }
 // What a phone has room to say on a skill or item button. The full wording is in the title, shown by holding.
-const SKILL_BRIEF = { aimed: 'x1.5, +25% crit', burst: '3 quick shots', blast: 'x2 vs unarmoured', smash: 'Melee, \u00BD armour', overload: 'Stuns droids', suppress: 'Pins it in cover' };
+const SKILL_BRIEF = { overhaul: 'Grab, heal 12%', aimed: 'x1.5, +25% crit', burst: '3 quick shots', blast: 'x2 vs unarmoured', smash: 'Melee, \u00BD armour', overload: 'Stuns droids', suppress: 'Pins it in cover' };
 const ITEM_BRIEF = { thermal: 'Thermal', ion: 'Ion', smoke: 'Smoke' };
 function combatScreen() {
   const r = state.run, e = r.enemy, c = state.char, st = E.stats(state);
   const intent = intentInfo(e);
   const sr = E.attackRange(state, false), mr = E.attackRange(state, true);
   const inc = E.incomingRange(state);
-  const incChip = inc ? `<span class="chip ${inc.lethal ? 'lethal' : 'bad'}" title="If it connects. Defend to take ${inc.defMin}-${inc.defMax}.">${inc.lethal ? 'Lethal ' : 'Hits '}${inc.min}-${inc.max}</span>` : '';
+  const incChip = inc ? `<span class="chip ${inc.lethal ? 'lethal' : 'bad'}" title="If it connects. Defend to take ${inc.defMin}-${inc.defMax}.${inc.phaseMax ? ` If your hit takes it under half health it hits harder first: up to ${inc.phaseMax}.` : ''}">${inc.lethal ? 'Lethal ' : 'Hits '}${inc.min}-${inc.phaseMax || inc.max}${inc.phaseMax ? '!' : ''}</span>` : '';
   const coop = E.isCoop(state), mine = !coop || r.actor === myIdx();
   const party = coop ? `<div class="party">${[0, 1].map((i) => { const pc = E.charAt(state, i); if (!pc) return ''; const pst = E.statsOf(state.meta, pc); return `<div class="pm ${r.actor === i ? 'turn' : ''} ${i === myIdx() ? 'me' : ''}"><span class="label">${i === myIdx() ? 'You' : esc(pc.name)}${r.actor === i ? ' \u00B7 acting' : ''}${pc.downed ? ` \u00B7 <span class="danger-text">down, ${pc.downed} round${pc.downed > 1 ? 's' : ''} left</span>` : ''}</span><b>${Math.max(0, pc.hp)} / ${pst.maxHp} <span class="pm-stim" title="Stims left">${ico('item:stim', 'sm')}\u00D7${pc.items.stim}</span></b>${bar(pc.hp, pst.maxHp)}</div>`; }).join('')}</div>` : '';
   const waiting = coop && !mine ? `<div class="notice ${c.downed || c.dead ? 'lose' : ''}">${c.dead ? `You\u2019re dead. ${esc(E.charAt(state, 1 - myIdx()).name)} is trying to get out alive.` : c.downed ? `You\u2019re down, bleeding out: ${c.downed} round${c.downed > 1 ? 's' : ''} left. ${esc(E.charAt(state, 1 - myIdx()).name)} can get you up.` : `Waiting for ${esc(E.charAt(state, 1 - myIdx()).name)} to act\u2026`}</div>` : '';
@@ -2839,7 +2857,7 @@ function combatScreen() {
       <span class="bs">${id === 'smoke' && confirmSmoke ? 'Tap again to try to escape' : esc(D.ITEMS[id].short)}</span></button>`).join('');
   const skills = E.skillsOf(c).slice(0, 4).map((k, i) => {
     const cd = r.cooldowns[k] || 0, sk = D.SKILLS[k];
-    const status = k === 'intimidate' ? (cd ? 'used this sector' : e.boss && e.tags.includes('human') ? 'shakes aim' : e.tags.includes('human') ? `${pct(E.intimidateChance(state))} chance` : 'humans only') : cd ? `ready in ${cd}` : 'ready';
+    const status = k === 'pickcard' && !cd ? `next: ${r.suit || 'hearts'} (${{ hearts: 'stun', spades: 'bleed', diamonds: 'steal' }[r.suit || 'hearts']})` : k === 'intimidate' ? (cd ? 'used this sector' : e.boss && e.tags.includes('human') ? 'shakes aim' : e.tags.includes('human') ? `${pct(E.intimidateChance(state))} chance` : 'humans only') : cd ? `ready in ${cd}` : 'ready';
     const note = `<span class="sk-full">${esc(sk.short)}</span><span class="sk-brief">${k === 'intimidate' ? status : SKILL_BRIEF[k] || esc(sk.short)}</span> <span class="sk-status">${status}</span>`;
     return `<button class="btn skill ${cd ? '' : 'ready'}" data-a="act" data-v="${k}" title="${esc(sk.desc)}" ${E.canUse(state, k) && !(k === 'intimidate' && !e.tags.includes('human')) ? '' : 'disabled'}>
       <span class="sk-name">${ico(`skill:${k}`, 'sm')}${esc(sk.name)}<span class="k" aria-hidden="true">${SKILL_KEYS[i].toUpperCase()}</span></span><span class="sk-note">${note}</span></button>`;
@@ -2848,6 +2866,7 @@ function combatScreen() {
   const scanned = st.scan && e.next && !(e.boss && E.intentHidden(state)) ? intentLabel(e, e.next) : '';
   const aimChip = r.ready ? `Aim +${E.hasPerk(c, 'steady') ? 100 : 50}%` : '', pushChip = r.momentum ? `Momentum +${Math.round(E.TUNE.momentum * 100)}%` : '';
   // A phone has one row for all of it. In order of need; what doesn't fit drops whole, and a tap on the row gives the full list.
+  const ventNow = E.mapById(r.map).mechanic.id === 'vents' && r.vent === 1 && e.stun === 0 ? { me: Math.round(st.maxHp * 0.08), them: Math.round(e.maxHp * (e.boss ? 0.04 : e.tags.includes('droid') ? 0.06 : 0.12)) } : null;
   const dot = E.dotDamage(state), pstChips = Object.entries(r.pst || {}).filter(([k, t]) => t > 0 && D.STATUSES[k]).map(([k, t]) => `<span class="chip ph bad" data-tip="${esc(`${D.STATUSES[k].name}, ${t} turn${t > 1 ? 's' : ''} left: ${D.STATUSES[k].desc}${k === 'bleed' || k === 'burn' ? ' A stim or a rest stops it.' : ''}`)}">${esc(D.STATUSES[k].short)} ${t}</span>`);
   const last = lastTurnChip();
   const phoneChips = [last, ...pstChips, (inc ? incChip.replace('class="chip', 'class="chip ph').replace(/(Hits|Lethal) ([0-9-]+)/, (m) => (dot ? `${m} +${dot} ${r.pst.bleed > 0 ? 'bleed' : 'burn'}` : m)) : ''),
@@ -2875,7 +2894,7 @@ function combatScreen() {
     <div class="actions ${mine ? '' : 'locked'}">
       <button class="btn primary twoline atk" data-a="act" data-v="shoot" title="${esc(E.weaponOf(c).name)}: ${st.atk} ATK, ${pct(E.critChance(st, e))} crit. Steady damage; cover halves it. You keep your distance, so you take ${Math.round(E.TUNE.shootGuard * 100)}% less damage this turn."><span class="bt">Shoot<span class="k" aria-hidden="true">A</span></span><span class="wpn">${esc(E.weaponOf(c).name)}</span><span class="bs"><b class="rng">${sr[0]}\u2013${sr[1]}</b> dmg${e.intent === 'guard' && !e.stun ? ' (cover)' : ''}</span></button>
       <button class="btn twoline atk ${D.MELEE_COUNTER[e.id] ? 'warn' : ''}" data-a="act" data-v="strike" title="${esc(E.meleeOf(c).name)}: ${st.atkM} ATK, ${pct(E.critChance(st, e, true))} crit. Hits harder than a shot but swingy, ignores cover, stops a repair, and your next attack hits ${Math.round(E.TUNE.momentum * 100)}% harder."><span class="bt">Strike<span class="k" aria-hidden="true">F</span></span><span class="wpn">${esc(E.meleeOf(c).name)}</span><span class="bs"><b class="rng">${mr[0]}\u2013${mr[1]}</b> dmg${D.MELEE_COUNTER[e.id] ? ' \u00B7 hits back!' : ''}</span></button>
-      <button class="btn twoline" data-a="act" data-v="defend" title="Take half damage, about a third from a heavy strike, and steady your next shot."><span class="bt">Defend<span class="k" aria-hidden="true">D</span></span><span class="bs">${inc ? `Take ${inc.defMin}-${inc.defMax}${dot ? ` +${dot}` : ''}` : 'Half damage'}</span></button>
+      <button class="btn twoline" data-a="act" data-v="defend" title="Take half damage, about a third from a heavy strike, and steady your next shot."><span class="bt">Defend<span class="k" aria-hidden="true">D</span></span><span class="bs">${ventNow ? `Blocks the vent (\u2212${ventNow.me})${inc ? ` \u00b7 take ${inc.defMin}-${inc.phaseDefMax || inc.defMax}` : ''}` : inc ? `Take ${inc.defMin}-${inc.phaseDefMax || inc.defMax}${dot ? ` +${dot}` : ''}` : 'Half damage'}</span></button>
       <button class="btn twoline" data-a="act" data-v="stim" title="${esc(D.ITEMS.stim.desc)}" ${c.items.stim ? '' : 'disabled'}><span class="bt">${ico('item:stim', 'sm')}Stim <span class="num">\u00D7${c.items.stim}</span><span class="k" aria-hidden="true">S</span></span><span class="bs">${esc(D.ITEMS.stim.short)}</span></button>
       <button class="btn twoline" data-a="act" data-v="run" ${E.canUse(state, 'run') ? '' : 'disabled'} title="Getting away drops ${Math.round(E.runShare(state) * 100)}% of unsecured credits and XP. Failing gives the enemy a free turn."><span class="bt">Run<span class="k" aria-hidden="true">R</span></span><span class="bs" title="Getting away drops ${Math.round(E.runShare(state) * 100)}% of unsecured credits and XP">${E.runBlocked(state) ? esc(E.runBlocked(state)) : `${pct(E.runChance(state))}, lose ${Math.round(E.runShare(state) * 100)}%`}</span></button>
     </div>
@@ -3113,7 +3132,7 @@ function modalView() {
         <li>Pick a door. In a fight, read the line under the scene: it says what the enemy does next.</li>
         <li><b>Defend</b> heavy hits, <b>Strike</b> enemies in cover, heal with a <b>Stim</b> before you need it.</li>
         <li>Between sectors, push on or extract. Dying loses what you carry, but Resolve stays. Spend it on Character.</li></ul></section>
-      <section><h3>Controls</h3><p>Phone: tap to walk or pick a sign; hold any button to read it. Keyboard: <b>WASD</b> walk, <b>E</b> talk, <b>Tab</b> battle mode, <b>A F D S R</b> shoot, strike, defend, stim, run. Each button shows its key; skill keys follow the skill\u2019s slot, so they can change with your build.</p></section>
+      <section><h3>Controls</h3><p>Phone: tap to walk or pick a sign; hold any button to read it. Keyboard: <b>WASD</b> walk, <b>E</b> talk, <b>X</b> battle mode, <b>A F D S R</b> shoot, strike, defend, stim, run. Each button shows its key; skill keys follow the skill\u2019s slot, so they can change with your build.</p></section>
       <section><h3>The goal</h3><p>Beat the sector 20 boss in all four districts. Each district opens once your operative has cleared far enough into the earlier ones, and each starts harder than the last. A new operative starts from the Garrison again; the cell remembers the rest.</p></section>
       <section><h3>A raid</h3><p>Three rooms per sector, choosing one of two doors each time. A boss every fifth sector. After each sector, push deeper or extract.</p></section>
       <section><h3>Getting out</h3><p>Credits and XP stay <b>unsecured</b> until you beat a boss or leave, and levels only come then. Risky extraction costs a share of what\u2019s unsecured, by place in each run of five: sectors 1, 6, 11, 16: 80%. 2, 7, 12, 17: 65%. 3, 8, 13, 18: 50%. 4, 9, 14, 19: 40%. Nothing after a boss. Safe extraction always works but forfeits the whole unsecured haul. So 200 credits and 40 XP banked at sector 2 pays 70 credits and 14 XP. Risky extraction can also fail (${Math.round(E.TUNE.extractFail * 100)}%), and then you go one sector deeper. Running mid-fight costs 90% to 60%. What you walked in with is safe.</p></section>
@@ -3137,7 +3156,7 @@ function modalView() {
       <section><h3>Drones</h3><p>Every operative flies one drone, and you can switch type for free in town. It can\u2019t be shot down. Clearing a sector has a 10% chance of knocking it offline until you repair it in town. Spend Resolve on the Drone tab of the safehouse: ranks 3 and 5 add abilities, and ranks stay with your cell for every operative who picks that type.</p></section>
       <section><h3>Co-op</h3><p>Host from <b>Settings</b> and share the link. <b>Auto-accept</b> (top of the screen) makes your votes and ready-ups follow your partner; if you both turn it on, the raid plays itself at half speed. You keep your own operative. Vote on doors, pick your own loot, and press <b>E</b> by your partner to trade. At 0 HP you go down and can be revived. If one of you dies, the other must win or run; if both fall, it\u2019s a wipe.</p></section>
       <section><h3>Saves</h3><p>Your cell backs up to the cloud. Enter its code from <b>Settings</b> on any device. Anyone with the code can load it, so keep it private.</p></section>
-      <section><h3>Controls</h3><p class="keys"><span><b>WASD</b> walk</span><span><b>E</b> talk</span><span><b>M B C G</b> town menus</span><span><b>Tab</b> battle mode</span><span><b>O</b> settings</span><span><b>A</b> shoot</span><span><b>F</b> strike</span><span><b>D</b> defend</span><span><b>S</b> stim</span><span><b>R</b> run</span><span><b>Q W E T</b> skills</span><span><b>2 3 4</b> items</span><span><b>1 2</b> doors</span><span><b>Enter</b> continue</span><span><b>Esc</b> close</span></p></section>
+      <section><h3>Controls</h3><p class="keys"><span><b>WASD</b> walk</span><span><b>E</b> talk</span><span><b>M B C G</b> town menus</span><span><b>X</b> battle mode</span><span><b>O</b> settings</span><span><b>A</b> shoot</span><span><b>F</b> strike</span><span><b>D</b> defend</span><span><b>S</b> stim</span><span><b>R</b> run</span><span><b>Q W E T</b> skills</span><span><b>2 3 4</b> items</span><span><b>1 2</b> doors</span><span><b>Enter</b> continue</span><span><b>Esc</b> close</span></p></section>
     </div>` : `
     <div class="settings">
       <h3>Gameplay</h3>
@@ -3345,7 +3364,7 @@ function orbitView() {
   const c = state.char, m = state.meta, o = state.orbit, me = E.shipStats(m);
   const marks = Object.entries(D.MARKS).map(([k, mk]) => `<div class="row i ${(c.marks || []).includes(k) ? 'owned' : ''}">${ico('mark:' + k)}<div><div class="name">${esc(mk.name)}</div><div class="desc">${esc(mk.desc)}</div></div><span class="label">${(c.marks || []).includes(k) ? 'earned' : ''}</span></div>`).join('');
   if (o) {
-    const t = D.ORBIT_TIERS.find((x) => x.id === o.tier), I = D.ORBIT_INTENTS[o.intent];
+    const t = o.shakedown ? { ...D.ORBIT_TIERS.find((x) => x.id === o.tier), ...D.ORBIT_SHAKEDOWN } : D.ORBIT_TIERS.find((x) => x.id === o.tier), I = D.ORBIT_INTENTS[o.intent];
     const log = o.log.slice(-6).map((l) => { const m2 = /^(\w+):(.*)$/.exec(l); return `<div class="${m2 ? m2[1] : ''}">${esc(m2 ? m2[2] : l)}</div>`; }).join('');
     const done = o.over;
     return `<div class="dt-orbit">
@@ -3434,11 +3453,12 @@ function sectorClearScreen() {
     <span class="label">Sector ${r.sector} cleared \u00B7 ${esc(E.mapById(r.map).name)}</span><h2>${esc(E.sectorName(r.sector, r.map))}</h2>
     <dl class="kv"><dt>Sector haul</dt><dd style="color:var(--sodium)">+${cr(o.credits)}</dd><dt>Carrying</dt><dd>${cr(c.credits)}</dd><dt>Condition</dt><dd class="${c.hp < st.maxHp * 0.4 ? 'danger-text' : ''}">${c.hp} / ${st.maxHp} HP \u00B7 ${c.items.stim} stims</dd>${o.resolve ? `<dt>${esc(S.meta)}</dt><dd style="color:var(--sodium)">+${o.resolve}</dd>` : ''}</dl>
     ${c.drone && c.drone.damaged && o.droneHit && o.droneHit.includes(myIdx()) ? `<div class="notice lose">${esc(D.DRONES[c.drone.type].name)} took a hit and went offline. ${E.droneRepairCost(state) ? `Repairing it in town costs ${cr(E.droneRepairCost(state))}.` : 'The first repair in town is free.'}</div>` : ''}
-    ${E.isBossSector(next) ? (() => { const bid = E.mapById(r.map).bosses[next / 5 - 1], be = bid && D.ENEMIES[bid]; return `<div class="notice" style="border-color:var(--danger);background:var(--danger-dim)"><b>Boss in sector ${next}${be ? `: ${esc(be.name)}` : ''}.</b> Bosses take far more to bring down than anything so far. If you\u2019re hurt or short of stims, extracting now banks your haul for gear and supplies.</div>`; })() : ''}
+    ${E.isBossSector(next) ? (() => { const bid = E.mapById(r.map).bosses[next / 5 - 1], be = bid && D.ENEMIES[bid]; return `<div class="notice" style="border-color:var(--danger);background:var(--danger-dim)"><b>Boss in sector ${next}${be ? `: ${esc(be.name)}` : ''}.</b> ${(() => { const bp = E.nextBossPreview(state); return bp ? `About ${bp.hp} HP, hitting for around ${bp.atk}. Go in near full HP with 3 or more stims, or bank what you have and gear up.` : 'Bosses take far more to bring down than anything so far.'; })()}</div>`; })() : ''}
     <div class="btnrow">
       <button class="btn primary big" data-a="deeper">Push to sector ${next}<span class="k" aria-hidden="true">1</span></button>
-      <button class="btn big" data-a="extract">${E.extractRate(r.sector) ? `Risky extract \u00B7 keep ${cr(c.credits - E.extractLoss(state))}` : `Extract with ${cr(c.credits)}`}<span class="k" aria-hidden="true">2</span></button>
-      ${E.extractRate(r.sector) ? `<button class="btn big" data-a="extractsafe">Safe extract \u00B7 keep ${cr(c.credits - E.unsecuredNow(state))}<span class="k" aria-hidden="true">3</span></button>` : ''}
+      ${(() => { const un = E.unsecuredNow(state), loss = E.extractLoss(state), rate = E.extractRate(r.sector), xpKeep = Math.round((c.xpBank || 0) * (1 - (un ? loss / un : rate))), fail = E.extractFailChance(state);
+        return `<button class="btn big twoline" data-a="extract"><span class="bt">${rate ? `Risky extract \u00B7 ${Math.round((1 - fail) * 100)}%` : 'Extract'}<span class="k" aria-hidden="true">2</span></span><span class="bs">Bank +${cr(un - loss)}, +${xpKeep} XP \u00b7 wallet ${cr(c.credits - loss)}</span></button>
+      ${rate ? `<button class="btn big twoline" data-a="extractsafe"><span class="bt">Safe extract \u00B7 always works<span class="k" aria-hidden="true">3</span></span><span class="bs">Bank nothing new \u00b7 wallet ${cr(c.credits - un)}</span></button>` : ''}`; })()}
     </div>
     ${exitVoteLine()}
     <p class="muted extract-note">${E.extractRate(r.sector) ? `<b>Risky</b> costs ${Math.round(E.leaveShare(state) * 100)}% of your unsecured haul and has a ${Math.round(E.TUNE.extractFail * 100)}% chance of failing, which forces you into sector ${next}. <b>Safe</b> always works, but you lose all ${cr(E.unsecuredNow(state))} and ${c.xpBank || 0} XP.` : 'Everything is secured, so leaving here costs nothing.'}</p>
@@ -3828,7 +3848,7 @@ function coopAutoTick() {
     return;
   }
   if (both && r.lootOffer && ['loot', 'perk'].includes(scr)) return coopAct('loot', lootWorthIt(r) ? 'loottake' : 'lootsell');
-  if (both && r.perkOffer && ['loot', 'perk'].includes(scr)) { const c2 = state.char, pick = r.perkOffer.find((id) => c2.perks.includes(id)) || r.perkOffer[0]; return coopAct('perk', 'perk', pick); }
+  if (both && r.perkOffer && ['loot', 'perk'].includes(scr)) return coopAct('perk', 'perk', E.bestPerkPick(state));
 }
 function coopAutoKick() { if (coopTimer || !coopAutoOn) return; coopTimer = setTimeout(coopAutoTick, bothAuto() ? 1600 : 900); }
 function scheduleAuto() {
@@ -4076,12 +4096,22 @@ function applyAct(a, v, k) {
     case 'perk':
       { const okp = E.choosePerk(state, v, rng, actingAs, k || ''); if (v && okp !== false) sfx(k ? 'buy' : 'perk'); else if (v) sfx('denied'); } break;
     case 'ending': state.meta.endingSeen = true; state.screen = 'town'; break;
+    case 'firstraid': {
+      titleOpen = false;
+      const d = state.draft = state.draft || E.newDraft(state.meta, rng);
+      d.background = 'foundry'; d.drone = 'hornet';
+      for (const k of Object.keys(D.ATTRS)) while (E.draftAdjust(d, k, -1));
+      E.draftAdjust(d, 'int', 1); E.draftAdjust(d, 'int', 1);
+      for (let i = 0; i < 20 && d.points > 0; i++) if (!E.draftAdjust(d, 'str', 1) && !E.draftAdjust(d, 'agi', 1)) break;
+      E.createChar(state, rng); state.gateMap = 'garrison'; state.popup = null; state.screen = 'town';
+      E.deploy(state, 'garrison', 1, rng); state.lastResult = null; sfx('door'); break;
+    }
     case 'begin': state.screen = 'create'; if (!state.draft) state.draft = E.newDraft(state.meta, rng); break;
-    case 'bg': state.draft.background = v; { for (const key of Object.keys(D.ATTRS)) while (E.draftAttr(state.draft, key) > D.ATTR_CREATE_MAX) E.draftAdjust(state.draft, key, -1); } break;
+    case 'bg': if (!E.bgUnlocked(state.meta, D.BACKGROUNDS.find((b) => b.id === v))) break; state.draft.background = v; { for (const key of Object.keys(D.ATTRS)) while (E.draftAttr(state.draft, key) > D.ATTR_CREATE_MAX) E.draftAdjust(state.draft, key, -1); } break;
     case 'attr': E.draftAdjust(state.draft, v, +k); break;
     case 'randomize': {
       const d = state.draft, any = (list) => list[Math.floor(rng() * list.length)];
-      d.background = any(D.BACKGROUNDS).id; d.name = any(D.OPERATIVE_NAMES); d.drone = any(D.DRONE_ORDER);
+      d.background = any(D.BACKGROUNDS.filter((b) => !b.unique)).id; d.name = any(D.OPERATIVE_NAMES); d.drone = any(D.DRONE_ORDER);
       const sexPick = any(BODIES); d.look = { ...(d.look || defaultLook()), body: sexPick.id, hair: HAIR_FOR[sexPick.sex], skin: Math.floor(rng() * SKINS.length), hairColor: Math.floor(rng() * HAIRS.length) };
       for (const k of Object.keys(D.ATTRS)) while (E.draftAdjust(d, k, -1));
       for (let i = 0; i < 80 && d.points > 0; i++) E.draftAdjust(d, any(Object.keys(D.ATTRS)), 1);
@@ -4215,7 +4245,7 @@ document.addEventListener('keydown', (ev) => {
   A.unlock();
   const key = ev.key.toLowerCase();
   if (key === 'o' && !titleOpen) { ev.preventDefault(); act('modal', 'settings'); return; }
-  if (key === 'tab' && state.screen === 'combat' && !titleOpen) { ev.preventDefault(); stage.cycleMode(); return; }
+  if (key === 'x' && state.screen === 'combat' && !titleOpen) { ev.preventDefault(); stage.cycleMode(); return; }
   const townMenu = { m: 'missions', b: 'market', c: 'character', g: 'gear' }[key];
   if (townMenu && state.screen === 'town' && state.char && !state.popup && !state.trade && !titleOpen) { ev.preventDefault(); act('popup', townMenu); return; }
   if (state.screen === 'combat') {
@@ -4243,13 +4273,15 @@ function applyLook() {
   if (!hasLayers() && !sheetOf('op_m') && !sheetOf('op_f')) return;
   const c = state.char, p = E.isCoop(state) ? E.charAt(state, 1 - myIdx()) : null;
   const wp = (ch) => [weaponLayer(E.baseOf(ch.gear.ranged)), weaponLayer(E.baseOf(ch.gear.melee))];
-  const key = JSON.stringify([c && [c.look, c.background, wp(c)], p && [p.look, p.background, wp(p)]]);
+  const key = JSON.stringify([c && [c.look, c.background, wp(c)], p && [p.look, p.background, wp(p)], !!sheetOf('dealer'), !!sheetOf('ghost')]);
   if (key === lookKey) return;
   lookKey = key;
+  const own = (ch) => { const b = ch && D.BACKGROUNDS.find((x) => x.id === ch.background); if (!b || !b.unique) return null; const sh = sheetOf(b.sprite); if (!sh) ensureArt(b.sprite); return sh || null; };
   const mine = c && c.look ? [c.look, c.background, ...wp(c)] : null, theirs = p && p.look ? [p.look, p.background, ...wp(p)] : null;
-  town.setPlayerSheets(mine ? townSheets(mine[0], mine[1]) : null, mine ? battleSheet(...mine) : null);
-  town.setPartnerSheets(theirs ? townSheets(theirs[0], theirs[1]) : null, theirs ? battleSheet(...theirs) : null);
-  setLookSheets(mine ? battleSheet(...mine) : null, theirs ? battleSheet(...theirs) : null);
+  const myOwn = own(c), theirOwn = own(p), mineB = myOwn || (mine ? battleSheet(...mine) : null), theirsB = theirOwn || (theirs ? battleSheet(...theirs) : null);
+  town.setPlayerSheets(mine && !myOwn ? townSheets(mine[0], mine[1]) : null, mineB);
+  town.setPartnerSheets(theirs && !theirOwn ? townSheets(theirs[0], theirs[1]) : null, theirsB);
+  setLookSheets(mineB, theirsB);
   stage.refreshArt();
 }
 // Sheets can arrive any time, retries included. Fighters on the stage swap in place, so a fight isn't re-rendered for it.
@@ -4259,6 +4291,7 @@ function artArrived(id) {
   const all = id === '*', ops = all || id.startsWith('op_'), drones = all || id.startsWith('drone_');
   if (drones) for (const k of D.DRONE_ORDER) setDroneArt(k, sheetOf(`drone_${k}`));
   if (ops) { setOpSheets(sheetOf('op_m'), sheetOf('op_f')); lookKey = ''; applyLook(); }
+  if (id === 'dealer' || id === 'ghost') { lookKey = ''; applyLook(); if (state.screen === 'create') { clearTimeout(artRenderTimer); artRenderTimer = setTimeout(render, 120); } return; }
   if (!ops && !drones) { if (modal === 'news') { clearTimeout(artRenderTimer); artRenderTimer = setTimeout(render, 120); } return; }
   clearTimeout(artRenderTimer);
   // Only where a still of them is on show. Anywhere else a re-render could cut an animation short for nothing.
@@ -4283,7 +4316,7 @@ async function start(data) {
   delete state.events;
   lastBody = bodyOf(state);
   if (pulledToast) toast = pulledToast;
-  try { if (localStorage.getItem(NEWS_KEY) !== NEWS_ID && !(data && data.state) && !new URLSearchParams(location.search).get('join') && !navigator.webdriver) modal = 'news'; } catch (e) {}
+  try { if (localStorage.getItem(NEWS_KEY) !== NEWS_ID && (seasonFresh || (state.meta && state.meta.operatives > 0)) && !(data && data.state) && !new URLSearchParams(location.search).get('join') && !navigator.webdriver) modal = 'news'; } catch (e) {}
   cloudStart();
   if (state.screen === 'create' && !state.draft) state.draft = E.newDraft(state.meta, rng);
   titleOpen = !(data && data.state);
