@@ -800,6 +800,8 @@ h3 { font-size: 1.05rem; }
 }
 .touch-only { display: none; }
 .menu-tool { display: none; }
+.tools .coop-auto { display: inline-block; }
+.tools .coop-auto.on { color: var(--sodium); border-color: var(--sodium); }
 .c-left, .c-right { display: contents; }
 .rotate-note { display: none; }
 .menu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
@@ -1009,6 +1011,8 @@ html.calm .btn:active, html.calm .door:active, html.calm .tab:active, html.calm 
   /* Header: one line. */
   .status { display: flex; align-items: center; flex-wrap: nowrap; padding: 0 0 2px; gap: 10px; container-type: inline-size; }
   .head-top { order: 2; margin-left: auto; flex: none; }
+  .tools { display: flex; gap: 5px; }
+  .tools .coop-auto { padding: 0 10px; white-space: nowrap; }
   .tools .menu-tool { display: block; padding: 0 16px; min-height: 36px; font-size: max(12px, .8rem); color: var(--fg); border-color: var(--muted); }
   .head-stats { flex-wrap: nowrap; gap: 0 16px; min-width: 0; align-items: center; overflow: hidden; }
   .head-stats .stat { flex: none; }
@@ -1818,7 +1822,7 @@ const myIdx = () => (isGuest() ? 1 : 0);
 const DOWNTIME = new Set(['drink', 'bet', 'stake', 'spin', 'invest', 'withdraw', 'shippart', 'shipcell', 'orbitgo', 'orbitact', 'orbitclose']);
 // The shuttle belongs to each player's own cell, so a friend in someone's room can't fly or fit it from here.
 const SHIP_ACTS = new Set(['shippart', 'shipcell', 'orbitarm', 'orbitgo', 'orbitact', 'orbitclose']);
-const LOCAL = new Set(['autostim', 'featfilter', 'stimprompt', 'draftdrone', 'randomize', 'missiontab', 'markettab', 'chartab', 'continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm', 'cloudcopy', 'cloudload', 'cloudversions', 'cloudrestore', 'cloudkeep', 'devunlock', 'devoff', 'dev', 'autostart']);
+const LOCAL = new Set(['autoaccept', 'autostim', 'featfilter', 'stimprompt', 'draftdrone', 'randomize', 'missiontab', 'markettab', 'chartab', 'continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm', 'cloudcopy', 'cloudload', 'cloudversions', 'cloudrestore', 'cloudkeep', 'devunlock', 'devoff', 'dev', 'autostart']);
 function coopChip() {
   if (!net) return '';
   const who = net.peerName || (isHost() ? 'friend' : 'host');
@@ -1966,7 +1970,8 @@ function startCoop(role, code, local) {
     const w = document.getElementById('coop-where'); if (w) w.textContent = partnerWhere();
   });
   net.on('say', (m) => { town.partnerSay(String(m.text || '').slice(0, 40)); A.play('click'); });
-  net.on('peer-left', () => { town.setPartner(null); });
+  net.on('peer-left', () => { town.setPartner(null); peerAuto = false; autoSent = null; coopAutoSync(); });
+  net.on('autoaccept', (m) => { peerAuto = !!m.on; coopAutoSync(); render(); });
   net.on('room-full', () => { leaveCoop('That room already has two players.'); });
   net.on('bye', () => {
     if (isGuest()) { leaveCoop('The host closed the room.'); return; }
@@ -2056,7 +2061,7 @@ const ico = (key, size = 'md') => { const src = iconURL(key); return src ? `<img
 
 function headerTools() {
   const p = A.getPrefs();
-  return `<div class="tools"><button class="tool menu-tool" data-a="modal" data-v="menu" aria-label="Menu">Menu</button><button class="tool" data-a="modal" data-v="manual" aria-label="Field manual">Manual</button>
+  return `<div class="tools">${net && net.peer && E.isCoop(state) ? `<button class="tool menu-tool coop-auto ${coopAutoOn ? 'on' : ''}" data-a="autoaccept" aria-pressed="${coopAutoOn}" title="${bothAuto() ? 'You both have auto-accept on: the game plays itself at half speed. Turn it off to take over.' : coopAutoOn ? 'Votes, ready-ups and Continue follow your partner. You still play your own turns and pick your own loot.' : 'Follow your partner: votes, ready-ups and Continue happen for you. If you both turn it on, the game plays itself at half speed.'}">${bothAuto() ? 'Both auto \u00b7 0.5x' : coopAutoOn ? 'Auto-accept on' : 'Auto-accept'}</button>` : ''}<button class="tool menu-tool" data-a="modal" data-v="menu" aria-label="Menu">Menu</button><button class="tool" data-a="modal" data-v="manual" aria-label="Field manual">Manual</button>
     <button class="tool" data-a="sound" aria-pressed="${!p.muted}" aria-label="Toggle all sound">${p.muted ? 'Sound off' : 'Sound on'}</button>
     <button class="tool" data-a="modal" data-v="board" aria-label="Leaderboard">Board</button>
     <button class="tool" data-a="modal" data-v="feats" aria-label="Achievements">Achievements</button>
@@ -3052,7 +3057,7 @@ function modalView() {
       <section><h3>After curfew</h3><p><b>Lantern</b>: one drink per raid. <b>Wheel</b>: roulette. <b>Orbit</b>: shuttle fights for credits and permanent Marks. <b>Ventures</b>: invest for a return each raid.</p></section>
       <section><h3>Threat and rewards</h3><p>Freeing a district opens Threat levels and reinforces the others. Sectors far below your level pay less, and a boss you\u2019ve beaten pays half XP.</p></section>
       <section><h3>Drones</h3><p>Every operative flies one drone, and you can switch type for free in town. It can\u2019t be shot down. Clearing a sector has a 10% chance of knocking it offline until you repair it in town. Spend Resolve on the Drone tab of the safehouse: ranks 3 and 5 add abilities, and ranks stay with your cell for every operative who picks that type.</p></section>
-      <section><h3>Co-op</h3><p>Host from <b>Settings</b> and share the link. You keep your own operative. Vote on doors, pick your own loot, and press <b>E</b> by your partner to trade. At 0 HP you go down and can be revived. If one of you dies, the other must win or run; if both fall, it\u2019s a wipe.</p></section>
+      <section><h3>Co-op</h3><p>Host from <b>Settings</b> and share the link. <b>Auto-accept</b> (top of the screen) makes your votes and ready-ups follow your partner; if you both turn it on, the raid plays itself at half speed. You keep your own operative. Vote on doors, pick your own loot, and press <b>E</b> by your partner to trade. At 0 HP you go down and can be revived. If one of you dies, the other must win or run; if both fall, it\u2019s a wipe.</p></section>
       <section><h3>Saves</h3><p>Your cell backs up to the cloud. Enter its code from <b>Settings</b> on any device. Anyone with the code can load it, so keep it private.</p></section>
       <section><h3>Controls</h3><p class="keys"><span><b>WASD</b> walk</span><span><b>E</b> talk</span><span><b>M B C G</b> town menus</span><span><b>Tab</b> battle mode</span><span><b>O</b> settings</span><span><b>A</b> shoot</span><span><b>F</b> strike</span><span><b>D</b> defend</span><span><b>S</b> stim</span><span><b>R</b> run</span><span><b>Q W E T</b> skills</span><span><b>2 3 4</b> items</span><span><b>1 2</b> doors</span><span><b>Enter</b> continue</span><span><b>Esc</b> close</span></p></section>
     </div>` : `
@@ -3579,6 +3584,7 @@ function render() {
     if (foKey) { const b = [...app.querySelectorAll('button[data-a]')].find((x) => [x.dataset.a, x.dataset.v || '', x.dataset.k || ''].join('|') === foKey); if (b && !b.disabled) b.focus({ preventScroll: true }); }
   } else app.classList.remove('still');
   syncDialog(foKey);
+  coopAutoSync(); coopAutoKick();
   A.setAmbience(state.run ? E.mapById(state.run.map).theme : 'town');
   A.setMusic(state.run ? 'raid' : 'town');
   applyLook();
@@ -3653,6 +3659,7 @@ let stimPrompt = false, stimPromptDone = false;
 function autoStimPause() {
   const c = state.char;
   if (c.items.stim > 0) { stimPromptDone = false; return false; }
+  if (bothAuto()) return false;
   if (!uiPrefs.autoStims || stimPromptDone || !c.stimsAtDeploy) return false;
   stimPrompt = true; A.play('denied'); render();
   return true;
@@ -3666,7 +3673,7 @@ function stimPromptView() {
 }
 function autoSafetyStop() {
   const c = state.char, danger = uiPrefs.autoStop && c.items.stim <= autoOpts().stimReserve && c.hp < E.stats(state).maxHp * 0.3;
-  if (!danger) { autoStopped = false; return false; }
+  if (!danger || bothAuto()) { autoStopped = false; return false; }
   if (autoStopped) return false;
   autoStopped = true; stage.setMode('manual'); hint(c.items.stim ? 'Auto battle stopped: low HP, and your stim setting keeps the rest for you.' : 'Auto battle stopped: low HP and no stims left.');
   return true;
@@ -3675,10 +3682,77 @@ function autoSafetyStop() {
 let autoEliteSeen = '';
 function autoElitePause() {
   const r = state.run, e = r.enemy, k = `${r.sector}.${r.room}.${e.id}`;
-  if (!uiPrefs.autoElite || !(e.elite || e.boss) || autoEliteSeen === k) return false;
+  if (bothAuto() || !uiPrefs.autoElite || !(e.elite || e.boss) || autoEliteSeen === k) return false;
   autoEliteSeen = k; stage.setMode('manual'); hint(`Auto battle paused: ${e.boss ? 'a boss' : 'an elite'}. Pick Auto again to carry on.`);
   return true;
 }
+// Co-op auto-accept. On for one player: their votes, ready-ups and Continue follow the partner, who still decides.
+// On for both: the raid plays itself on both screens at half speed, and either player turning it off takes over.
+let coopAutoOn = false, peerAuto = false, autoSent = null, autoSetting = false, autoModeBefore = null, coopTimer = null, coopLast = '', coopLastAt = 0, coopDeployAt = 0;
+const coopLive = () => !!(net && net.peer && state && state.char && E.isCoop(state));
+function bothAuto() { return coopAutoOn && peerAuto && coopLive(); }
+function coopAutoSync() {
+  if (net && net.peer && autoSent !== coopAutoOn) { autoSent = coopAutoOn; net.send({ t: 'autoaccept', on: coopAutoOn }); }
+  if (net && !net.peer) autoSent = null;
+  const both = bothAuto();
+  stage.setSlow(both);
+  autoSetting = true;
+  if (both && autoModeBefore === null) { autoModeBefore = stage.mode; stage.setMode('auto1'); }
+  else if (!both && autoModeBefore !== null) { stage.setMode(autoModeBefore); autoModeBefore = null; }
+  autoSetting = false;
+  if (!both) coopDeployAt = 0;
+}
+const doorRank = (k, hurt) => (hurt ? ['medbay', 'rest', 'supply', 'cargo', 'event', 'locker', 'cells', 'bench', 'vault', 'fence', 'fight', 'bounty', 'elite', 'boss'] : ['supply', 'cargo', 'locker', 'bench', 'vault', 'cells', 'event', 'fight', 'medbay', 'rest', 'fence', 'bounty', 'elite', 'boss']).indexOf(k);
+const lowestHp = () => Math.min(...[0, 1].map((i) => { const pc = E.charAt(state, i); return pc && !pc.dead ? pc.hp / E.statsOf(state.meta, pc).maxHp : 1; }));
+function coopAct(key, a, v, k) { const now = Date.now(); if (key === coopLast && now - coopLastAt < 2500) return; coopLast = key; coopLastAt = now; act(a, v, k); }
+const lootWorthIt = (r) => { const o = r.lootOffer, def = o && D.GEAR && D.GEAR[o.base], cur = def && state.char.gear[def.slot], rank = ['common', 'rare', 'elite', 'legendary', 'unique']; return !cur || rank.indexOf(o.rarity) > rank.indexOf(cur.rarity); };
+function coopAutoTick() {
+  coopTimer = null;
+  if (sceneLocal && bothAuto() && !busy && !modal && !titleOpen) { sceneEnd(); coopAutoKick(); return; }
+  if (!coopAutoOn || !coopLive() || busy || awaitingHost || modal || titleOpen || sceneLocal) { if (coopAutoOn) coopAutoKick(); return; }
+  const both = bothAuto(), me = myIdx(), them = 1 - me, r = state.run, c = state.char, host = isHost();
+  if (c.payout) return coopAct(`pay${r ? r.sector : ''}`, 'payoutclose');
+  const scr = state.screen;
+  if (scr === 'town') {
+    if (host && state.popup && !both) return;
+    if (isGuest()) { if (!state.guestReady) coopAct('ready', 'coopready'); }
+    if (both && c.hp < E.statsOf(state.meta, c).maxHp * 0.8 && c.credits >= E.healCost(state)) return coopAct('heal', 'heal');
+    if (host && state.guestReady && !state.popup) {
+      if (both && !coopDeployAt) { coopDeployAt = Date.now() + 6000; hint('Deploying in 6 seconds. Turn auto-accept off to stay and shop.'); }
+      if (!both || Date.now() >= coopDeployAt) {
+        const mp = state.gateMap || 'garrison', ins = E.insertionsAt(c, mp, state.meta.threat || 0);
+        coopDeployAt = 0;
+        return coopAct('deploy', 'deploy', String(Math.max(...ins)));
+      }
+    }
+    if (both) coopAutoKick();
+    return;
+  }
+  coopDeployAt = 0;
+  if (!r) return;
+  if (scr === 'route' && r.choices && r.choices.length) {
+    const v = r.votes || {};
+    if (v[me] !== undefined) return;
+    if (v[them] !== undefined) return coopAct(`door${v[them]}`, 'room', String(v[them]));
+    if (both && host) { const hurt = lowestHp() < 0.5; let best = 0; r.choices.forEach((k, i) => { if (doorRank(k, hurt) < doorRank(r.choices[best], hurt)) best = i; }); return coopAct(`door${best}`, 'room', String(best)); }
+    return;
+  }
+  if (scr === 'sectorClear') {
+    const v = r.exitVotes || {};
+    if (v[me] !== undefined) return;
+    if (v[them] !== undefined) return coopAct(`exit${v[them]}`, v[them]);
+    if (both && host) return coopAct('exitpick', lowestHp() < 0.35 && document.querySelector('button[data-a="extractsafe"]:not(:disabled)') ? 'extractsafe' : 'deeper');
+    return;
+  }
+  if (scr === 'event') {
+    if (state.eventResult) return coopAct('eventdone', 'eventDone');
+    if (both && host) { const ev = E.eventById(state.event), i = ev ? ev.options.findIndex((o) => E.optionAvailable(state, o)) : -1; if (i >= 0) return coopAct('event', 'event', String(i)); }
+    return;
+  }
+  if (both && r.lootOffer && ['loot', 'perk'].includes(scr)) return coopAct('loot', lootWorthIt(r) ? 'loottake' : 'lootsell');
+  if (both && r.perkOffer && ['loot', 'perk'].includes(scr)) { const c2 = state.char, pick = r.perkOffer.find((id) => c2.perks.includes(id)) || r.perkOffer[0]; return coopAct('perk', 'perk', pick); }
+}
+function coopAutoKick() { if (coopTimer || !coopAutoOn) return; coopTimer = setTimeout(coopAutoTick, bothAuto() ? 1600 : 900); }
 function scheduleAuto() {
   if (autoTimer || stimPrompt || !stage.auto || busy || modal || titleOpen || !state || state.screen !== 'combat' || !state.run || !state.run.enemy) return;
   autoTimer = setTimeout(() => {
@@ -3688,6 +3762,8 @@ function scheduleAuto() {
 }
 document.addEventListener('automode', (ev) => {
   A.play('click');
+  // Taking over the fight by hand turns the both-auto mode off.
+  if (!ev.detail && bothAuto() && !autoSetting) { coopAutoOn = false; hint('Auto-accept off. You have the controls.'); coopAutoSync(); }
   if (ev.detail && state.meta && !isGuest() && !(state.meta.coach || {}).auto) { state.meta.coach = { ...(state.meta.coach || {}), auto: true }; hint('Auto battle spends stims and items. Set what it may use in Settings.'); }
   if (state.screen === 'combat') render();
 });
@@ -3772,6 +3848,7 @@ function act(a, v, k) {
     if (v === 'run') return fight('run', isGuest() ? 1 : 0);
     return;
   }
+  if (a === 'autoaccept') { coopAutoOn = !coopAutoOn; A.play('click'); coopAutoSync(); hint(bothAuto() ? 'You both have auto-accept on. The game plays itself at half speed.' : coopAutoOn ? 'Auto-accept on: you follow your partner\u2019s votes and ready-ups.' : 'Auto-accept off.'); render(); return; }
   if (a === 'autostim') { uiPrefs.autoStim = v; try { localStorage.setItem(UI_KEY, JSON.stringify(uiPrefs)); } catch (e) {} A.play('click'); render(); return; }
   if (a === 'featfilter') { featFilter = v; A.play('click'); render(); return; }
   if (a === 'uipref') { uiPrefs[v] = !uiPrefs[v]; try { localStorage.setItem(UI_KEY, JSON.stringify(uiPrefs)); } catch (e) {} applyUi(); A.play('click'); render(); return; }
@@ -3970,12 +4047,12 @@ function applyAct(a, v, k) {
     case 'respec': ok = E.respec(state); break;
     case 'pickmap': state.gateMap = v; break;
     case 'deploy': if (E.isCoop(state) && !state.guestReady) { ok = false; break; } state.trade = null; state.popup = null; state.lastResult = null; E.deploy(state, state.gateMap || 'garrison', +v, rng); break;
-    case 'continue': E.continueAfterVictory(state, rng); break;
+    case 'continue': if (!['victory', 'room', 'loot', 'perk'].includes(state.screen)) break; E.continueAfterVictory(state, rng); break;
     case 'room': { if (E.isCoop(state) && net && net.peer) { if (!E.voteDoor(state, actingAs, +v, rng)) break; } else E.enterRoom(state, +v, rng); state.lastResult = null; } if (state.screen === 'room') { state.lastResult = { kind: 'room', ...state.roomResult }; E.continueAfterVictory(state, rng); } break;
     case 'dismissresult': state.lastResult = null; break;
     case 'roomDone': E.continueAfterVictory(state, rng); break;
     case 'event': E.resolveEvent(state, +v, rng, actingAs); break;
-    case 'eventDone': state.lastResult = null; E.nextEncounter(state, rng); break;
+    case 'eventDone': if (state.screen !== 'event') break; state.lastResult = null; E.nextEncounter(state, rng); break;
     case 'deeper': if (E.isCoop(state) && net && net.peer && !E.voteExit(state, actingAs, 'deeper')) break; state.lastResult = null; E.pushDeeper(state, rng); break;
     case 'extract': if (E.isCoop(state) && net && net.peer && !E.voteExit(state, actingAs, 'extract')) break; E.attemptExtract(state, rng); break;
     case 'extractsafe': if (E.isCoop(state) && net && net.peer && !E.voteExit(state, actingAs, 'extractsafe')) break; E.safeExtract(state, rng); break;

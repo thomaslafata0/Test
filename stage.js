@@ -345,7 +345,8 @@ export class Stage {
   }
   cycleMode() { this.setMode({ manual: 'auto1', auto1: 'auto2', auto2: 'manual' }[this.mode]); }
   setFast(on) { this.fast = on; this.applySpeed(); }
-  applySpeed() { this.speed = this.mode === 'auto2' ? 2 : this.fast ? 1.6 : 1; }
+  setSlow(on) { if (this.slow !== on) { this.slow = on; this.applySpeed(); } }
+  applySpeed() { this.speed = (this.mode === 'auto2' ? 2 : this.fast ? 1.6 : 1) * (this.slow ? 0.5 : 1); }
   syncSpeed() { this.el.querySelectorAll('[data-speed]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.speed === this.mode))); }
   get skip() { return false; }
   wait(ms) { return this.skip ? Promise.resolve() : new Promise((r) => setTimeout(r, ms / this.speed)); }
