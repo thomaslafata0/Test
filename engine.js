@@ -738,8 +738,10 @@ export function equipHeirloom(s) {
 // ---------- derived stats ----------
 export function attr(c, k) {
   const imp = { str: 'myomer', int: 'neural', cha: 'voice' }[k];
-  return Math.min(D.ATTR_MAX + 2, c.attrs[k] + (imp && hasImp(c, imp) ? 2 : 0));
+  return Math.max(1, Math.min(D.ATTR_MAX + 2, c.attrs[k] + (imp && hasImp(c, imp) ? 2 : 0) + favOf(c, k)));
 }
+// What the E-Girl Room has left on this operative: a sum of every night's marks. Kept on the operative, gone with them.
+export const favOf = (c, k) => (c && c.fav && c.fav[k]) || 0;
 
 export function statsOf(meta, c) {
   // A visiting co-op partner keeps their own cell's training.
@@ -758,14 +760,14 @@ export function statsOf(meta, c) {
   const rMain = (mainStat(gearIn(c, 'ranged')) || { v: 0 }).v, mMain = (mainStat(gearIn(c, 'melee')) || { v: 0 }).v;
   const optic = hasImp(c, 'optic') ? 0.08 : 0, gadget = baseOf(gearIn(c, 'gadget')) || {};
   const hp = Math.round(B.hp * 1.25) + t.hp * D.TRAINING.hp.per + (c.level - 1) * 6 + Math.round(str * TUNE.strHp) + (c.background === 'foundry' ? 25 + 3 * (c.level - 1) : 0) + (hasImp(c, 'pain') ? 20 : 0) + gearBonus(c, 'hp');
-  const mk = markSum(c), drink = drinkOf(c) || {}, fb = featBuffs(meta), dAtk = drink.atk || 0, dCrit = drink.crit || 0;
+  const mk = markSum(c), drink = drinkOf(c) || {}, fb = featBuffs(meta), dAtk = (drink.atk || 0) + favOf(c, 'atk'), dCrit = (drink.crit || 0) + favOf(c, 'crit');
   return {
-    maxHp: Math.round(hp * (hasTrait(c, 'stalwart') ? 1.12 : 1) * (1 + pv(c, 'ironlung') / 100) * (1 + mk.hp + fb.hp) * (1 + (drink.hp || 0))),
+    maxHp: Math.round(hp * (hasTrait(c, 'stalwart') ? 1.12 : 1) * (1 + pv(c, 'ironlung') / 100) * (1 + mk.hp + fb.hp) * (1 + (drink.hp || 0)) * Math.max(0.5, 1 + favOf(c, 'hp'))),
     atk: common + rMain + dAtk + (w.type === 'heavy' ? Math.floor(str * TUNE.strAtk) : Math.floor(agi * TUNE.agiAtk)),
     atkM: common + mMain + dAtk + Math.floor(str * TUNE.strAtk),
-    def: B.def + (c.background === 'foundry' ? 2 : 0) + t.def * D.TRAINING.def.per + Math.floor((c.level - 1) / 2) + def + gearBonus(c, 'def') + (hasImp(c, 'dermal') ? 3 : 0) + (has(c, 'lining') ? 2 : 0) + mk.def + pv(c, 'padding') + (drink.def || 0),
-    spd: B.spd + (c.background === 'runner' ? 2 : 0) + t.spd * D.TRAINING.spd.per + Math.floor((c.level - 1) / 3) + agi + (hasImp(c, 'reflex') ? 3 : 0) + spd + gearBonus(c, 'spd') + mk.spd + (drink.spd || 0),
-    dodge: (agi - 1) * TUNE.agiDodge + (c.background === 'runner' ? 0.1 : 0) + fb.dodge + pv(c, 'ghost') / 100,
+    def: B.def + (c.background === 'foundry' ? 2 : 0) + t.def * D.TRAINING.def.per + Math.floor((c.level - 1) / 2) + def + gearBonus(c, 'def') + (hasImp(c, 'dermal') ? 3 : 0) + (has(c, 'lining') ? 2 : 0) + mk.def + pv(c, 'padding') + (drink.def || 0) + favOf(c, 'def'),
+    spd: B.spd + (c.background === 'runner' ? 2 : 0) + t.spd * D.TRAINING.spd.per + Math.floor((c.level - 1) / 3) + agi + (hasImp(c, 'reflex') ? 3 : 0) + spd + gearBonus(c, 'spd') + mk.spd + (drink.spd || 0) + favOf(c, 'spd'),
+    dodge: (agi - 1) * TUNE.agiDodge + (c.background === 'runner' ? 0.1 : 0) + fb.dodge + pv(c, 'ghost') / 100 + favOf(c, 'dodge'),
     crit: 0.05 + (w.crit || 0) + critAll + optic + (agi - 1) * TUNE.agiCrit + gearBonus(c, 'crit', 'ranged') / 100 + mk.crit + dCrit + fb.crit,
     critM: 0.05 + (mw.crit || 0) + critAll + optic + gearBonus(c, 'crit', 'melee') / 100 + mk.crit + dCrit + fb.crit,
     carry: 4 + (has(c, 'belt') ? 3 : 0) + carry,
@@ -2915,7 +2917,7 @@ export function endRun(s, how, rngForRestock = Math.random) {
   const lost = r.safeExit ? settle(s, how, 1, true) : settle(s, how, how === 'extracted' ? extractRate(r.sector) : escapeRate(r.sector));
   forEachActor(s, (a) => {
     a.boardId = recordCareer(s, a, 'alive');
-    a.fed = false; a.drink = false;
+    a.fed = false; a.drink = false; a.booked = false; // the E-Girl Room takes bookings again
     a.hp = Math.min(a.hp, stats(s).maxHp); // a Rivet Stout wearing off
     if (rngForRestock) restockMarket(s, rngForRestock);
   });
@@ -3115,6 +3117,111 @@ export function buyDrink(s, id) {
   journal(s, `${c.name} orders a ${d.name} at the Lantern.`);
   return true;
 }
+// The E-Girl Room: 500 credits, one hostess, one permanent mark (about one night in four goes badly). Once per trip home.
+export const FAV_LABEL = { hp: ['max HP', true], crit: ['crit', true], dodge: ['dodge', true], atk: ['ATK'], def: ['DEF'], spd: ['SPD'], str: ['STR'], agi: ['AGI'], int: ['INT'], cha: ['CHA'] };
+export const favText = (fx) => Object.entries(fx || {}).filter(([, v]) => v).map(([k, v]) => { const [n, pct] = FAV_LABEL[k] || [k]; const x = pct ? Math.round(v * 100) : v; return `${x > 0 ? '+' : '\u2212'}${Math.abs(x)}${pct ? '%' : ''} ${n}`; }).join(', ');
+export const loungeCost = () => D.LOUNGE.cost;
+export function visitLounge(s, id, rng) {
+  const c = s.char, girl = D.LOUNGE.girls.find((x) => x.id === id), cost = loungeCost(s);
+  if (!girl || !inTown(s) || c.booked || c.credits < cost) return null;
+  let roll = rng() * girl.outcomes.reduce((a, o) => a + o.w, 0), out = girl.outcomes[0];
+  for (const o of girl.outcomes) { roll -= o.w; if (roll < 0) { out = o; break; } }
+  const before = stats(s).maxHp;
+  c.credits -= cost; c.booked = id; ledger(s, 'spend:lounge', cost);
+  c.fav = c.fav || {};
+  for (const [k, v] of Object.entries(out.fx)) c.fav[k] = Math.round(((c.fav[k] || 0) + v) * 1000) / 1000;
+  c.hp = Math.max(1, Math.min(stats(s).maxHp, c.hp + stats(s).maxHp - before));
+  c.favLog = [{ girl: girl.name, text: out.text, fx: out.fx, bad: !!out.bad }, ...(c.favLog || [])].slice(0, 8);
+  journal(s, `${c.name} spends a night with ${girl.name} at the Lantern. ${favText(out.fx)}.`, out.bad ? 'bad' : 'reward');
+  return { girl: girl.id, name: girl.name, text: out.text, fx: out.fx, bad: !!out.bad };
+}
+
+// ---------- The barracks ring: a co-op duel ----------
+// Both partners pick one of three ready-made loadouts (their own gear doesn't come in), then choose a move each round at
+// the same time. Strike beats Guard, Guard beats Shoot, Shoot catches a Strike on the way in. The winner takes one piece
+// of the loser's contraband; each needs at least one piece to step in. Runs on the host; the friend's moves arrive as acts.
+export const DUEL_BUILDS = {
+  bruiser: { name: 'Bruiser', desc: 'Big, slow, hits like a forklift. Haymaker: a huge Strike that ignores Guard.', hp: 138, shoot: 8, strike: 16, def: 3, crit: 0.08, special: 'Haymaker' },
+  gunner: { name: 'Gunslinger', desc: 'Glass and lead. Fan the Hammer: three quick shots.', hp: 118, shoot: 19, strike: 10, def: 3, crit: 0.2, special: 'Fan the Hammer' },
+  warden: { name: 'Warden', desc: 'Armour and patience. Second Wind: heals a fifth and guards the same turn.', hp: 132, shoot: 13, strike: 13, def: 6, crit: 0.06, special: 'Second Wind' },
+};
+export const DUEL_MOVES = { strike: 'Strike', shoot: 'Shoot', guard: 'Guard', special: 'Special' };
+const DUEL_HIT = { strike: { strike: 1, shoot: 0.7, guard: 1.15, special: 1 }, shoot: { strike: 1.15, shoot: 1, guard: 0.3, special: 1 } };
+const duelChar = (s, i) => (i === actorIdx(s) ? s.char : s.char2);
+export const duelReady = (s) => !s.run && isCoop(s) && [0, 1].every((i) => { const c = duelChar(s, i); return c && (c.perks || []).length > 0; });
+export function duelChallenge(s) {
+  if (!duelReady(s) || (s.duel && s.duel.phase !== 'done')) return false;
+  const me = actorIdx(s);
+  s.duel = { id: Date.now(), by: me, phase: 'invite', build: [null, null], hp: [0, 0], max: [0, 0], cd: [0, 0], move: [null, null], round: 1, log: [], winner: null, prize: null, names: [0, 1].map((i) => duelChar(s, i).name.split(' ')[0]) };
+  return true;
+}
+export function duelAnswer(s, yes) {
+  const d = s.duel;
+  if (!d || d.phase !== 'invite' || d.by === actorIdx(s)) return false;
+  if (!yes || !duelReady(s)) { s.duel = { ...d, phase: 'done', declined: true, winner: null }; return true; }
+  d.phase = 'pick'; return true;
+}
+export function duelPick(s, id) {
+  const d = s.duel, b = DUEL_BUILDS[id], me = actorIdx(s);
+  if (!d || d.phase !== 'pick' || !b || d.build[me]) return false;
+  d.build[me] = id;
+  if (d.build[0] && d.build[1]) { d.phase = 'fight'; d.max = d.build.map((k) => DUEL_BUILDS[k].hp); d.hp = [...d.max]; d.log.push('The ring clears. Somebody bangs a mess tin. Fight.'); }
+  return true;
+}
+export function duelMove(s, move, rng) {
+  const d = s.duel, me = actorIdx(s);
+  if (!d || d.phase !== 'fight' || !DUEL_MOVES[move] || d.move[me] || (move === 'special' && d.cd[me] > 0)) return false;
+  d.move[me] = move;
+  if (d.move[0] && d.move[1]) duelResolve(s, rng);
+  return true;
+}
+function duelResolve(s, rng) {
+  const d = s.duel, B = d.build.map((k) => DUEL_BUILDS[k]), M = [...d.move], dmg = [0, 0], line = [], pre = [...d.hp], fx = [{ hits: [], heal: 0 }, { hits: [], heal: 0 }];
+  const guarding = (j) => M[j] === 'guard' || (M[j] === 'special' && d.build[j] === 'warden');
+  for (const i of [0, 1]) {
+    const j = 1 - i, b = B[i], mv = M[i], foe = guarding(j) ? 'guard' : M[j] === 'special' ? 'special' : M[j];
+    const one = (kind, mult) => { const crit = rng() < b.crit, raw = b[kind] * mult * (crit ? 1.6 : 1) * (0.9 + rng() * 0.2); return { n: Math.max(1, Math.round(raw - B[j].def * (foe === 'guard' && kind === 'shoot' ? 1 : 0.5))), crit }; };
+    let hits = [];
+    if (mv === 'strike' || mv === 'shoot') hits = [one(mv, DUEL_HIT[mv][foe])];
+    else if (mv === 'special' && d.build[i] === 'bruiser') hits = [one('strike', 1.9 * (M[j] === 'shoot' ? 0.8 : 1))];
+    else if (mv === 'special' && d.build[i] === 'gunner') hits = [0, 1, 2].map(() => one('shoot', 0.7 * DUEL_HIT.shoot[foe]));
+    else if (mv === 'special' && d.build[i] === 'warden') { const h = Math.round(d.max[i] * 0.2); d.hp[i] = Math.min(d.max[i], d.hp[i] + h); fx[i].heal = h; line.push(`${d.names[i]} catches a second wind (+${h}).`); }
+    const total = hits.reduce((a, h) => a + h.n, 0);
+    fx[i].hits = hits; fx[i].guarded = foe === 'guard';
+    dmg[j] += total;
+    if (hits.length) line.push(`${d.names[i]} ${mv === 'special' ? `uses ${b.special}` : mv === 'strike' ? 'swings' : 'shoots'}${foe === 'guard' && mv !== 'special' ? ' into a guard' : ''}: ${total}${hits.some((h) => h.crit) ? ' (crit)' : ''}.`);
+    else if (mv === 'guard') line.push(`${d.names[i]} guards.`);
+    if (mv === 'special') d.cd[i] = 3; else if (d.cd[i] > 0) d.cd[i]--;
+  }
+  for (const i of [0, 1]) d.hp[i] = Math.max(0, d.hp[i] - dmg[i]);
+  d.log.push(`Round ${d.round}: ${line.join(' ')}`);
+  d.log = d.log.slice(-6);
+  d.last = { round: d.round, moves: M, builds: [...d.build], dmg, pre, fx, hp: [...d.hp] };
+  d.move = [null, null]; d.round++;
+  const out = d.hp.map((h) => h <= 0);
+  if (out[0] || out[1] || d.round > 12) {
+    const pct = d.hp.map((h, i) => h / d.max[i]);
+    d.winner = out[0] && out[1] ? null : out[0] ? 1 : out[1] ? 0 : pct[0] === pct[1] ? null : pct[0] > pct[1] ? 0 : 1;
+    if (d.round > 12 && !out[0] && !out[1]) d.log.push('The bell. Nobody\u2019s down, so it goes to points.');
+    d.phase = 'done';
+    if (d.winner !== null) d.prize = duelTakePrize(s, d.winner, rng);
+  }
+}
+// One piece of the loser's contraband changes hands: one the winner has room for, if there is one.
+function duelTakePrize(s, w, rng) {
+  const win = duelChar(s, w), lose = duelChar(s, 1 - w), pool = (lose.perks || []).filter((id) => perkStacks(lose, id) > 0);
+  if (!pool.length) return null;
+  const fits = pool.filter((id) => perkStacks(win, id) < perkCap(win)), from = fits.length ? fits : pool;
+  const id = from[Math.floor(rng() * from.length)];
+  lose.perkN[id] = perkStacks(lose, id) - 1;
+  if (lose.perkN[id] <= 0) { delete lose.perkN[id]; lose.perks = lose.perks.filter((x) => x !== id); }
+  win.perkN = win.perkN || {}; win.perkN[id] = perkStacks(win, id) + 1;
+  if (!win.perks.includes(id)) win.perks.push(id);
+  journal(s, `${win.name} wins a bout in the barracks ring and takes ${lose.name.split(' ')[0]}\u2019s ${perkById(id).name}.`, 'reward');
+  return id;
+}
+export const duelClose = (s) => { if (s.duel && (s.duel.phase === 'done' || (s.duel.phase === 'invite' && s.duel.by === actorIdx(s)))) { s.duel = null; return true; } return false; };
+
 export const drinkCost = (s, id) => Math.ceil(((D.BAR.menu.find((x) => x.id === id) || D.BAR.menu[0]).cost) * 1.1 * hard(s).price * consumableScale(s.char));
 // The Wheel: European roulette, one bet per spin.
 export const ROULETTE_RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);

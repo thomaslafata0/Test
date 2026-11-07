@@ -42,8 +42,8 @@ const DESK = { viewport: { width: 1280, height: 800 } };
   assert.strictEqual(await speed(t.page), 'manual', 'auto should drop to manual');
   assert(/stopped/i.test(await t.page.textContent('#hint')), 'should say why');
   console.log('PASS auto battle stops at low HP with no stims');
-  await t.page.keyboard.press('Tab');
-  assert.strictEqual(await speed(t.page), 'auto1', 'Tab cycles the battle mode');
+  await t.page.keyboard.press('x');
+  assert.strictEqual(await speed(t.page), 'auto1', 'X cycles the battle mode');
   await t.page.keyboard.press('Tab'); await t.page.keyboard.press('Tab');
   await t.ctx.close();
 

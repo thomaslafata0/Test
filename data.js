@@ -1020,6 +1020,41 @@ export const BAR = {
     { id: 'tonic', name: 'Clerk\u2019s Tonic', cost: 8, tech: 0.15, effect: 'Items +15%', desc: 'Bitter, bright and very good with instructions.' },
   ],
 };
+// The E-Girl Room, through the curtain at the back of the Lantern. 500 credits buys a night with one of three hostesses
+// and a permanent mark on that operative, usually good, sometimes not. One visit per trip home.
+// fx: hp, crit and dodge are fractions; atk, def and spd are flat; str, agi, int and cha are attribute points.
+export const LOUNGE = {
+  cost: 500,
+  girls: [
+    { id: 'vex', name: 'Vex', tag: 'Goth \u00b7 bites', desc: 'Black and pink twin-tails, a cat-ear headset and a stare that could strip paint. Charges by the hour, judges by the minute.',
+      outcomes: [
+        { w: 3, text: 'She bounces on it. You feel rested.', fx: { hp: 0.05 } },
+        { w: 2, text: 'She calls you \u201clittle guy\u201d all night. You have never wanted to win more.', fx: { str: 1 } },
+        { w: 2, text: 'She teaches you the glare she uses on her exes.', fx: { cha: 1 } },
+        { w: 1, text: 'She bites. Hard. You heal mean.', fx: { def: 1 } },
+        { w: 2, bad: true, text: 'She gives you something with a long name. The clinic won\u2019t touch you.', fx: { def: -1, cha: -1 } },
+        { w: 1, bad: true, text: 'She steals your heart. And a kidney, it turns out.', fx: { hp: -0.05 } },
+      ] },
+    { id: 'pixie', name: 'Pixie', tag: 'Streamer \u00b7 sweet', desc: 'Lavender bob, a hoodie three sizes too big and a bubble tea she never finishes. Says \u201cuwu\u201d unironically.',
+      outcomes: [
+        { w: 3, text: 'She sits on your lap and rates your setup ten out of ten.', fx: { crit: 0.03 } },
+        { w: 2, text: 'An hour of whispering in your ear. Your reflexes have never been better.', fx: { spd: 2 } },
+        { w: 2, text: 'A hug, a bubble tea and \u201cu got this.\u201d You do, actually.', fx: { dodge: 0.02 } },
+        { w: 1, text: 'She explains her gaming chair for two hours. You learn something.', fx: { int: 1 } },
+        { w: 2, bad: true, text: 'She was streaming the whole time. Forty thousand people saw it.', fx: { cha: -1 } },
+        { w: 1, bad: true, text: 'The hoodie was hiding a cold. A bad one.', fx: { hp: -0.04, spd: -1 } },
+      ] },
+    { id: 'rook', name: 'Rook', tag: 'Cyber-arm \u00b7 trouble', desc: 'Neon undercut, glowing tattoos and a chrome arm that does things to your back that should be illegal. Probably are.',
+      outcomes: [
+        { w: 3, text: 'The chrome arm finds a knot you didn\u2019t know you had. Something clicks into place.', fx: { def: 1 } },
+        { w: 2, text: 'She mixes you something blue. You wake up stronger and with a new tattoo.', fx: { atk: 1 } },
+        { w: 2, text: 'She ties a cherry stem in a knot with her tongue. Somehow that makes you smarter.', fx: { agi: 1 } },
+        { w: 1, text: 'She rides you like a stolen hover-bike. Your heart will never be the same.', fx: { hp: 0.06 } },
+        { w: 2, bad: true, text: 'You wake up in an alley with a sore neck and a weaker grip.', fx: { str: -1 } },
+        { w: 1, bad: true, text: 'Her arm glitches mid-massage. Something cracks that shouldn\u2019t.', fx: { def: -1, spd: -1 } },
+      ] },
+  ],
+};
 
 // ---------- Feats: cell-wide achievements with small permanent buffs ----------
 // Each feat has four tiers. buff: what every tier adds (shrinking: the per array is multiplied by [1, .8, .6, .4]).

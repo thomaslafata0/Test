@@ -603,6 +603,48 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .dt-drink.mine { background: #d9a53a2a; }
 .dt-keg { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
 .dt-drink { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--sodium); background: #d9a53a12; }
+.hostesses { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 10px 0; }
+.hostess-card { display: grid; gap: 6px; justify-items: center; text-align: center; padding: 12px 10px; border: 1px solid #ff5fa255; background: radial-gradient(120% 70% at 50% 30%, #ff5fa222, transparent 70%), var(--panel-2); }
+.hostess-card.mine { border-color: #ff5fa2; box-shadow: 0 0 18px #ff5fa244 inset; }
+.hostess-card p { margin: 0; }
+.hostess { image-rendering: pixelated; background-repeat: no-repeat; animation-name: hostess-loop; animation-iteration-count: infinite; animation-timing-function: steps(var(--n)); filter: drop-shadow(0 6px 10px #0009); }
+.hostess.ph { width: 110px; height: 200px; display: grid; place-items: center; font-family: var(--display); font-size: 2.4rem; color: #ff8fc0; background: linear-gradient(170deg, #3a1f33, #15111a); border-radius: 50% 50% 8px 8px / 30% 30% 8px 8px; }
+.hostess.ph.pixie { color: #c8b4ff; } .hostess.ph.rook { color: #5ff0e0; }
+@keyframes hostess-loop { from { background-position-x: 0; } to { background-position-x: var(--end); } }
+@media (prefers-reduced-motion: reduce) { .hostess { animation: none; } }
+.lounge-res.good { border-color: var(--ok); } .lounge-res.bad { border-color: var(--danger); }
+.modal.duel { width: min(760px, 100%); }
+.duel-builds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.duel-build { display: grid; gap: 4px; text-align: left; padding: 12px; border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); font: inherit; cursor: pointer; }
+.duel-build.on { border-color: var(--sodium); background: #d9a53a22; }
+.duel-build:disabled:not(.on) { opacity: .5; }
+.duel-sides { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: center; }
+.duel-side { padding: 10px 12px; border: 1px solid var(--line); background: var(--panel-2); display: grid; gap: 4px; }
+.duel-side.won { border-color: var(--ok); }
+.duel-vs { font-family: var(--display); font-size: 1.2rem; color: var(--sodium); text-align: center; }
+.duel-log { margin: 10px 0; padding: 8px 12px; border-left: 2px solid var(--sodium); background: #0003; font-size: .9rem; }
+.duel-log p { margin: 2px 0; }
+.duel-moves .btn { min-width: 6.5em; }
+.duel-arena { position: fixed; inset: 0; z-index: 60; background: #07090ce8; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 16px; overflow: auto; }
+.duel-arena .duel-top { width: min(960px, 100%); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.duel-arena .stage { width: min(960px, 100%, calc((100dvh - 190px) * 384 / 216)); flex: none; }
+.duel-arena .stage .speed { display: none; }
+.duel-ctl { width: min(960px, 100%); display: grid; gap: 8px; justify-items: center; text-align: center; }
+.duel-ctl .duel-moves { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; width: 100%; }
+.duel-ctl .notice { width: 100%; }
+.duel-line { margin: 0; font-size: .95rem; color: var(--muted, #aaa); }
+@media (orientation: landscape) and (max-height: 600px), (orientation: landscape) and (pointer: coarse) and (max-height: 820px) {
+  .duel-arena { flex-direction: row; flex-wrap: wrap; justify-content: center; padding: 6px 16px; gap: 6px; }
+  .duel-arena .duel-top { width: 100%; }
+  .duel-arena .stage { width: min(62vw, calc((100dvh - 50px) * 384 / 216)); }
+  .duel-ctl { width: min(34vw, 300px); align-self: center; }
+  .duel-ctl .duel-moves { grid-template-columns: 1fr 1fr; }
+}
+@media (orientation: landscape) and (max-height: 600px), (orientation: landscape) and (pointer: coarse) and (max-height: 820px) {
+  .hostess-card { padding: 6px; } .hostess-card p { display: none; } .hostess, .hostess.ph { zoom: .62; }
+  .duel-build .muted { display: none; }
+}
+@media (max-width: 560px) { .hostesses, .duel-builds { grid-template-columns: 1fr; } .duel-sides { grid-template-columns: 1fr; } }
 .dt-wheel { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 18px; align-items: start; }
 .dt-wheel-left { display: grid; gap: 8px; justify-items: center; text-align: center; }
 .wheel { width: 260px; height: 260px; }
@@ -1480,6 +1522,24 @@ html.calm .btn:active, html.calm .door:active, html.calm .tab:active, html.calm 
 .news-item { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; }
 .news-item b { display: block; font-family: var(--display); text-transform: uppercase; letter-spacing: .03em; font-size: .95rem; }
 .news-item span { color: var(--muted); font-size: .85rem; line-height: 1.35; }
+.news-hero-ah { background: linear-gradient(180deg, #0b0e1100 20%, #0b0e11f2 100%), url(bg/garrison_3.png) center / cover; }
+.news-girls { display: grid; grid-template-columns: repeat(3, auto) minmax(0, 1fr); gap: 4px 14px; align-items: end; padding: 12px 18px 0; background: radial-gradient(60% 90% at 25% 70%, #ff5fa226, #0000 70%); }
+.news-girls figure, .news-ops figure { margin: 0; display: grid; justify-items: center; text-align: center; }
+.news-girls figcaption, .news-ops figcaption { display: grid; font-size: .78rem; line-height: 1.2; } .news-girls figcaption span { color: var(--muted); }
+.news-girls-text { display: grid; gap: 4px; align-self: center; } .news-girls-text b, .news-card > b { font-family: var(--display); text-transform: uppercase; letter-spacing: .03em; }
+.news-girls-text span, .news-card > span { color: var(--muted); font-size: .85rem; line-height: 1.35; }
+.news-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 12px 18px 0; }
+.news-card { display: grid; gap: 4px; align-content: start; padding: 10px 12px; border: 1px solid var(--line); background: var(--panel-2); }
+.news-ops { display: flex; justify-content: center; gap: 4px; }
+.news-ring { display: flex; justify-content: center; align-items: end; gap: 0; height: 128px; background: linear-gradient(180deg, #0000 50%, #0009), url(bg/garrison_3.png) center 70% / cover; border: 1px solid var(--line); }
+.op-strip { image-rendering: pixelated; background-repeat: no-repeat; animation: hostess-loop 1.6s steps(3) infinite alternate; }
+.op-strip.flip { transform: scaleX(-1); }
+.news-also { padding: 8px 18px 0; margin: 0; }
+@media (prefers-reduced-motion: reduce) { .op-strip { animation: none; } }
+@media (max-width: 640px) { .news-girls { grid-template-columns: repeat(3, auto); justify-content: center; } .news-girls-text { grid-column: 1 / -1; } .news-cards { grid-template-columns: minmax(0, 1fr); } }
+@media (orientation: landscape) and (max-height: 600px), (orientation: landscape) and (pointer: coarse) and (max-height: 820px) {
+  .news-girls .hostess { zoom: .6; } .op-strip { zoom: .7; } .news-ring { height: 92px; } .news-card > span { font-size: 12px; }
+}
 .news-go { position: sticky; bottom: 0; padding: 10px 18px 14px; justify-content: flex-end; background: linear-gradient(180deg, #0000, var(--panel) 35%); }
 @media (max-width: 640px) { .news-grid { grid-template-columns: minmax(0, 1fr); } .news-bosses { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (orientation: landscape) and (max-height: 600px), (orientation: landscape) and (pointer: coarse) and (max-height: 820px) {
@@ -1552,7 +1612,8 @@ import { BODIES, HAIR_FOR, sexOf, setOpSheets, HAIR, HAIR_NAMES, SKINS, HAIRS, d
 
 const SAVE_KEY = 'cinder-cell-save-v1';
 const oldSeason = (s) => !!(s && s.meta && (s.meta.season || 1) < E.SEASON);
-const NEWS_KEY = 'cinder-cell-news', NEWS_ID = 'season2';
+const NEWS_KEY = 'cinder-cell-news', NEWS_ID = 'afterhours'; // bump to show the popup again
+let newsPage = 0;
 let seasonFresh = false;
 const rng = Math.random;
 const S = D.SETTING;
@@ -1880,7 +1941,7 @@ const myIdx = () => (isGuest() ? 1 : 0);
 const DOWNTIME = new Set(['drink', 'bet', 'stake', 'spin', 'invest', 'withdraw', 'shippart', 'shipcell', 'orbitgo', 'orbitact', 'orbitclose']);
 // The shuttle belongs to each player's own cell, so a friend in someone's room can't fly or fit it from here.
 const SHIP_ACTS = new Set(['shippart', 'shipcell', 'orbitarm', 'orbitgo', 'orbitact', 'orbitclose']);
-const LOCAL = new Set(['firstraid', 'takeover', 'autoaccept', 'autostim', 'featfilter', 'stimprompt', 'draftdrone', 'randomize', 'missiontab', 'markettab', 'chartab', 'continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm', 'cloudcopy', 'cloudload', 'cloudversions', 'cloudrestore', 'cloudkeep', 'devunlock', 'devoff', 'dev', 'autostart']);
+const LOCAL = new Set(['newspage', 'firstraid', 'takeover', 'autoaccept', 'autostim', 'featfilter', 'stimprompt', 'draftdrone', 'randomize', 'missiontab', 'markettab', 'chartab', 'continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm', 'cloudcopy', 'cloudload', 'cloudversions', 'cloudrestore', 'cloudkeep', 'devunlock', 'devoff', 'dev', 'autostart']);
 function coopChip() {
   if (!net) return '';
   const who = net.peerName || (isHost() ? 'friend' : 'host');
@@ -2034,7 +2095,7 @@ function startCoop(role, code, local) {
   net.on('bye', () => {
     if (isGuest()) { leaveCoop('The host closed the room.'); return; }
     if (state.run) { E.partnerGone(state); state.coop = false; if (['loot', 'perk'].includes(state.screen) && !E.rewardsPending(state)) E.continueAfterVictory(state, rng); }
-    state.guestReady = false; state.trade = null; state.char2 = null; state.char2Held = false; pendingGuest = null;
+    state.guestReady = false; state.trade = null; state.duel = null; state.char2 = null; state.char2Held = false; pendingGuest = null;
     toast = `${net.peerName || 'Your friend'} left the room.`;
     render();
   });
@@ -2084,7 +2145,7 @@ function leaveCoop(why) {
   net.close(); net = null; coopStatus = ''; setRoom(null); setLastRoom(null); inbox = []; guestQueue = []; setAwaiting(false); home = null; pendingGuest = null;
   // The friend's operative was theirs all along: they go back to their own game with it, in the yard.
   if (wasGuest) { state = wasLocal ? E.migrate(load(), rng) : mineHome; if (!state.char && !state.draft) state.draft = E.newDraft(state.meta, rng); if (!state.char && state.meta.operatives) state.screen = 'create'; state.popup = null; }
-  else { if (state.run) { E.partnerGone(state); if (['loot', 'perk'].includes(state.screen) && !E.rewardsPending(state)) { state.coop = false; E.continueAfterVictory(state, rng); } } state.coop = false; state.guestReady = false; state.trade = null; state.char2 = null; state.char2Held = false; }
+  else { if (state.run) { E.partnerGone(state); if (['loot', 'perk'].includes(state.screen) && !E.rewardsPending(state)) { state.coop = false; E.continueAfterVictory(state, rng); } } state.coop = false; state.guestReady = false; state.trade = null; state.duel = null; state.char2 = null; state.char2Held = false; }
   if (why) toast = why;
   render();
 }
@@ -2782,6 +2843,7 @@ function character() {
     ${charTab === 'record' ? `<div class="two-col">
       <div style="display:grid;gap:14px;align-content:start;min-width:0">
         <span class="label">Marks \u00B7 ${(c.marks || []).length} / 5 \u00B7 earned in orbit</span>${(c.marks || []).length ? `<div class="perk-list">${c.marks.map((id) => { const mk = D.MARKS[id]; return `<div class="perk-mini rare">${ico(`mark:${id}`, 'sm2')}<div><b>${esc(mk.name)}</b><span>${esc(mk.desc)}</span></div></div>`; }).join('')}</div>` : '<p class="muted">None yet. Fly the shuttle (Orbit, after curfew) on the harder runs.</p>'}
+        ${c.fav && E.favText(c.fav) ? `<span class="label">Lantern nights \u00B7 ${(c.favLog || []).length ? esc(c.favLog.map((x) => x.girl).slice(0, 3).join(', ')) : ''}</span><p class="small">${esc(E.favText(c.fav))}</p>` : ''}
         ${(() => { const fb = E.featBuffs(m), t = Object.entries(fb).filter(([k, v]) => k !== 'vs' && v > 0), vs = Object.keys(fb.vs).length; return `<span class="label">Achievements \u00B7 the cell\u2019s permanent edges</span>${t.length || vs ? `<div class="chips">${t.map(([k, v]) => `<span class="chip good">+${(v * 100).toFixed(1).replace(/\.0$/, '')}% ${esc(E.BUFF_NAMES[k])}</span>`).join('')}${vs ? `<span class="chip good">bonus damage vs ${vs} enemy type${vs > 1 ? 's' : ''}</span>` : ''}<button class="btn" data-a="modal" data-v="feats" style="margin-left:4px">All feats</button></div>` : '<p class="muted">No tiers yet. Everything the cell does counts: see <button class="btn" data-a="modal" data-v="feats">Feats</button>.</p>'}`; })()}
         <span class="label">Contraband \u00B7 ${c.perks.reduce((t, id) => t + E.perkStacks(c, id), 0)} carried \u00B7 up to ${E.perkCap(c)} of each</span>${E.perkCap(c) < E.PERK_CAP_MAX ? `<div class="set-row"><span class="muted small">Marrow can hide more on you: carry ${E.perkCap(c) + 1} of each.</span>${(() => { const way = E.capRaiseWay(state); return way && way.owe ? `<button class="btn" data-a="perkcap" data-v="borrow" title="Pay what you have and owe the rest. Everything you earn pays it off first.">Borrow ${cr(way.owe)}</button>` : `<button class="btn" data-a="perkcap" ${way ? '' : 'disabled'}>${cr(E.perkCapCost(state))}</button>`; })()}</div>${E.debtOf(c) ? `<p class="muted small">You owe Marrow ${cr(E.debtOf(c))}. Everything you earn pays this first, and he won\u2019t lend again until it\u2019s paid.</p>` : ''}` : ''}${c.perks.length ? `<div class="perk-list">${c.perks.map((id) => { const pk = { ...E.perkById(id), name: E.perkName(id, E.perkStacks(c, id)), desc: E.perkText(id, E.perkStacks(c, id)) }; return `<div class="perk-mini ${pk.rare ? 'rare' : ''}">${ico(`perk:${id}`, 'sm2')}<div><b>${esc(pk.name)}</b><span>${esc(pk.desc)}</span></div></div>`; }).join('')}</div>` : '<p class="muted">None yet. Bosses always carry it; other enemies sometimes do.</p>'}
       </div>
@@ -3092,13 +3154,31 @@ function sealedLabel(x) {
   return 'Cell record';
 }
 // What changed this season: shown once on opening the game, and from the menu.
+// An operative's idle frames as a CSS strip: the first three, there and back, so it breathes rather than sways.
+const opStrip = (id, h, flip = false) => `<div class="op-strip ${flip ? 'flip' : ''}" role="img" aria-label="${esc(id)}" style="width:${h}px;height:${h}px;background-image:url(sprites/${id}/idle.png);background-size:${h * 9}px ${h}px;--end:-${h * 3}px"></div>`;
 function newsView() {
+  if (newsPage === 0) {
+    const ops = ['dealer', 'ghost'].map((id) => D.BACKGROUNDS.find((b) => b.id === id)).filter(Boolean);
+    return `<div class="modal-wrap news-wrap" data-a="closemodal"><div class="modal news" role="dialog" aria-modal="true" aria-label="What's new">
+    <div class="news-hero news-hero-ah"><div class="news-hero-text"><span class="label">New \u00b7 1 of 2</span><h2>After hours</h2><p>Two new operatives, a back room at the Lantern, and a ring in the barracks.</p></div></div>
+    <div class="news-girls">${D.LOUNGE.girls.map((g) => `<figure>${hostessFig(g, 150)}<figcaption><b>${esc(g.name)}</b><span>${esc(g.tag)}</span></figcaption></figure>`).join('')}
+      <div class="news-girls-text"><b>The E-Girl Room</b><span>Through the curtain at the back of the Lantern. 500 credits a night buys a permanent mark on your operative: usually a good one, about one in four not.</span></div></div>
+    <div class="news-cards">
+      <div class="news-card"><div class="news-ops">${ops.map((b) => `<figure>${opStrip(b.sprite, 118)}<figcaption><b>${esc(b.name)}</b></figcaption></figure>`).join('')}</div>
+        <b>Two unique operatives</b><span>The Dealer flips cards for crits, bleeds and stolen credits. The Foreman\u2019s Ghost overhauls droids and shrugs off hits. ${ops.map((b) => `${esc(b.name)}: ${esc(b.unlock.text)}`).join(' ')}</span></div>
+      <div class="news-card"><div class="news-ring">${opStrip('dealer', 118)}${opStrip('ghost', 118, true)}</div>
+        <b>PvP in the barracks ring</b><span>Challenge your co-op partner. Pick one of three loadouts, everyone starts even, no stims or items. The winner takes one piece of the loser\u2019s contraband.</span></div>
+    </div>
+    <p class="muted small news-also">Also: Brask\u2019s foundry hands, the steel shutter and the crane\u2019s container are proper art now, and a few animated props turn up around the districts.</p>
+    <div class="btnrow news-go"><button class="btn" data-a="newsok">Skip</button><button class="btn primary big" data-a="newspage" data-v="1">Next: Season 2 recap</button></div>
+  </div></div>`;
+  }
   const finale = [['ostrane', 'Garrison'], ['hale', 'Foundry'], ['venn', 'Detention'], ['imre', 'Lift Port']];
   for (const [id] of finale) if (!sheetOf(id)) ensureArt(id); // their portraits fill in when the art arrives
   const face = (id, where) => { const en = D.ENEMIES[id]; if (!en) return ''; const img = portraitImg({ id, name: en.name }, 'news-face'); return `<figure class="news-boss">${img || `<div class="news-face blank">${ico('room:boss', 'lg')}</div>`}<figcaption><b>${esc(en.name)}</b><span>${esc(where)} \u00b7 sector 20</span></figcaption></figure>`; };
   const item = (icon, title, text) => `<div class="news-item">${ico(icon, 'md')}<div><b>${title}</b><span>${text}</span></div></div>`;
   return `<div class="modal-wrap news-wrap" data-a="closemodal"><div class="modal news" role="dialog" aria-modal="true" aria-label="What's new">
-    <div class="news-hero"><div class="news-hero-text"><span class="label">Season 2</span><h2>The deep districts</h2><p>Everyone starts fresh: new operatives, a new cell and a new leaderboard.</p></div></div>
+    <div class="news-hero"><div class="news-hero-text"><span class="label">Season 2 \u00b7 2 of 2</span><h2>The deep districts</h2><p>Everyone starts fresh: new operatives, a new cell and a new leaderboard.</p></div></div>
     <div class="news-bosses">${finale.map(([id, w]) => face(id, w)).join('')}</div>
     <div class="news-grid">
       ${item('room:boss', '9 new bosses, 20 sectors', 'Every district now runs to sector 20 with four bosses of its own. Nobody fights the same boss twice across districts.')}
@@ -3110,12 +3190,14 @@ function newsView() {
       ${item('train:spd', 'Co-op auto-accept', 'Follow your partner\u2019s votes, or both turn it on and watch the raid play itself.')}
       ${item('room:rest', 'A new yard', 'An open square you can see whole, the Lantern casino, and a proper hideout.')}
     </div>
-    <div class="btnrow news-go"><button class="btn primary big" data-a="newsok">Start the new season</button></div>
+    <div class="btnrow news-go"><button class="btn" data-a="newspage" data-v="0">Back</button><button class="btn primary big" data-a="newsok">Play</button></div>
   </div></div>`;
 }
 function modalView() {
   if (!modal) return '';
-  if (['bar', 'wheel', 'orbit', 'ventures'].includes(modal)) return downtimeView();
+  if (modal === 'lounge' && !loungeOpen()) modal = 'bar';
+  if (['bar', 'lounge', 'wheel', 'orbit', 'ventures'].includes(modal)) return downtimeView();
+  if (modal === 'duel') return duelView();
   const p = A.getPrefs();
   if (modal === 'news') return newsView();
   if (modal === 'menu') return `<div class="modal-wrap" data-a="closemodal"><div class="modal menu-modal" role="dialog" aria-modal="true" aria-label="Menu">
@@ -3148,10 +3230,10 @@ function modalView() {
         <li><b>Cover</b>: your shots deal half.</li>
         <li><b>Repair</b>: hit it before it heals.</li></ul></section>
       <section><h3>Status effects</h3><ul>${Object.values(D.STATUSES).map((x) => `<li><b>${esc(x.name)}</b>: ${esc(x.desc)}</li>`).join('')}</ul></section>
-      <section><h3>Contraband</h3><p>Bosses always carry it, elites often, others sometimes. Pick one of three. No limit, and copies stack, each adding a bit less than the last. Lost on death.</p></section>
+      <section><h3>Contraband</h3><p>Bosses always carry it, elites often, others sometimes. Pick one of three. Copies stack, each adding a bit less than the last, up to 3 of each; Marrow raises that limit for credits. Lost on death.</p></section>
       <section><h3>Gear</h3><p>Six slots. Rarer gear rolls more bonuses; bosses drop Uniques. The market restocks each raid, and nobody buys old gear. Upgrade and reroll on the Gear tab.</p></section>
       <section><h3>Getting stronger</h3><p><b>Lost on death</b>: levels, gear, implants, contraband, ventures. <b>Kept</b>: Resolve, training, cell upgrades, achievements, and one heirloom with that upgrade.</p></section>
-      <section><h3>After curfew</h3><p><b>Lantern</b>: one drink per raid. <b>Wheel</b>: roulette. <b>Orbit</b>: shuttle fights for credits and permanent Marks. <b>Ventures</b>: invest for a return each raid.</p></section>
+      <section><h3>After curfew</h3><p><b>Lantern</b>: one drink per raid. <b>E-Girl Room</b>: 500 credits a night for a permanent mark on this operative, usually good, about one in four bad; once per trip home. <b>Ring</b> (barracks, co-op only): duel your partner with a ready-made loadout; the winner takes one piece of the loser\u2019s contraband. <b>Wheel</b>: roulette. <b>Orbit</b>: shuttle fights for credits and permanent Marks. <b>Ventures</b>: invest for a return each raid.</p></section>
       <section><h3>Threat and rewards</h3><p>Freeing a district opens Threat levels and reinforces the others. Sectors far below your level pay less, and a boss you\u2019ve beaten pays half XP.</p></section>
       <section><h3>Drones</h3><p>Every operative flies one drone, and you can switch type for free in town. It can\u2019t be shot down. Clearing a sector has a 10% chance of knocking it offline until you repair it in town. Spend Resolve on the Drone tab of the safehouse: ranks 3 and 5 add abilities, and ranks stay with your cell for every operative who picks that type.</p></section>
       <section><h3>Co-op</h3><p>Host from <b>Settings</b> and share the link. <b>Auto-accept</b> (top of the screen) makes your votes and ready-ups follow your partner; if you both turn it on, the raid plays itself at half speed. You keep your own operative. Vote on doors, pick your own loot, and press <b>E</b> by your partner to trade. At 0 HP you go down and can be revived. If one of you dies, the other must win or run; if both fall, it\u2019s a wipe.</p></section>
@@ -3305,12 +3387,12 @@ function boardView() {
 }
 
 // ---------- Downtime screens ----------
-const DT_TITLES = { bar: ['The Lantern', 'Tenement basement \u00b7 after curfew'], wheel: ['The Wheel', 'Back room of the Lantern'], orbit: ['Orbit', 'The cell\u2019s shuttle \u00b7 lift corridor'], ventures: ['Ventures', 'Sable\u2019s ledger'] };
+const DT_TITLES = { bar: ['The Lantern', 'Tenement basement \u00b7 after curfew'], lounge: ['E-Girl Room', 'Through the curtain at the back'], wheel: ['The Wheel', 'Back room of the Lantern'], orbit: ['Orbit', 'The cell\u2019s shuttle \u00b7 lift corridor'], ventures: ['Ventures', 'Sable\u2019s ledger'] };
 function downtimeView() {
   const [title, where] = DT_TITLES[modal];
-  const body = modal === 'orbit' && isGuest() ? '<div class="notice">The shuttle stays with your own cell. Leave the room to fly it from your own game.</div>' : { bar: barView, wheel: wheelView, orbit: orbitView, ventures: venturesView }[modal]();
+  const body = modal === 'orbit' && isGuest() ? '<div class="notice">The shuttle stays with your own cell. Leave the room to fly it from your own game.</div>' : { bar: barView, lounge: loungeView, wheel: wheelView, orbit: orbitView, ventures: venturesView }[modal]();
   return `<div class="modal-wrap" data-a="closemodal"><div class="modal popup wide dt dtm-${modal}" role="dialog" aria-modal="true" aria-label="${esc(title)}">
-    <div class="pop-head"><div class="pop-title"><span class="label">${esc(where)}</span><h2>${esc(title)}</h2></div><nav class="tabs pop-tabs head-tabs">${['bar', 'wheel', 'orbit', 'ventures'].map((k) => `<button class="tab" aria-selected="${modal === k}" data-a="modal" data-v="${k}">${esc(DT_TITLES[k][0])}</button>`).join('')}</nav><button class="tool" data-a="closemodal" aria-label="Close">Close</button></div>
+    <div class="pop-head"><div class="pop-title"><span class="label">${esc(where)}</span><h2>${esc(title)}</h2></div><nav class="tabs pop-tabs head-tabs">${['bar', 'lounge', 'wheel', 'orbit', 'ventures'].filter((k) => k !== 'lounge' || loungeOpen()).map((k) => `<button class="tab" aria-selected="${modal === k}" data-a="modal" data-v="${k}">${esc(DT_TITLES[k][0])}</button>`).join('')}</nav><button class="tool" data-a="closemodal" aria-label="Close">Close</button></div>
     ${!E.inTown(state) ? '<p class="muted">Only between raids, and only in the yard.</p>' : body}
   </div></div>`;
 }
@@ -3326,6 +3408,68 @@ function barView() {
   return `<div class="dt-who dt-keg">${dtPortrait(B.bartender.id, B.bartender.name)}<div><div class="name">${esc(B.bartender.name)}</div><div class="muted small">${esc(B.bartender.desc)}</div></div></div>
     <p class="muted">One drink before each raid. It lasts until you come home.${cur ? ` You\u2019re drinking a <b>${esc(cur.name)}</b> (${esc(cur.effect)}).` : ''}</p>
     <div class="dt-bar">${B.menu.map(row).join('')}</div>`;
+}
+// The E-Girl Room: three hostesses, their idle loops played as CSS sprite strips once the art is in.
+let hostessArt = {};
+// The room opens once all three hostesses' art is in: no stand-ins on the live game.
+const loungeOpen = () => D.LOUNGE.girls.every((g) => hostessArt[g.id]);
+fetch('downtime/hostesses/manifest.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : {})).then((m) => { hostessArt = m || {}; if (state) render(); }).catch(() => {});
+function hostessFig(g, h = 200) {
+  const a = hostessArt[g.id];
+  if (!a) return `<div class="hostess ph ${g.id}" aria-hidden="true"><span>${esc(g.name[0])}</span></div>`;
+  const w = Math.round(h * a.w / a.h), n = a.frames || 1;
+  return `<div class="hostess" role="img" aria-label="${esc(g.name)}" style="width:${w}px;height:${h}px;background-image:url(downtime/hostesses/${g.id}.png);background-size:${w * n}px ${h}px;--end:-${w * n}px;--n:${n};animation-duration:${(n / (a.fps || 6)).toFixed(2)}s"></div>`;
+}
+function loungeView() {
+  const c = state.char, L = D.LOUNGE, cost = E.loungeCost(state), last = c.booked && c.favLog && c.favLog[0], total = E.favText(c.fav);
+  const card = (g) => `<div class="hostess-card ${c.booked === g.id ? 'mine' : ''}">${hostessFig(g)}
+      <div class="name">${esc(g.name)} <span class="muted small">${esc(g.tag)}</span></div><p class="muted small">${esc(g.desc)}</p>
+      <button class="btn ${c.booked ? '' : 'primary'}" data-a="lounge" data-v="${g.id}" ${c.booked || c.credits < cost ? 'disabled' : ''}>${c.booked === g.id ? 'Tonight' : `Spend the night \u00b7 ${cr(cost)}`}</button></div>`;
+  return `<p class="muted">${cost} credits a night. Every night leaves a permanent mark on ${esc(c.name.split(' ')[0])}: usually a good one, about one in four not. One visit per trip home.</p>
+    ${last ? `<div class="notice lounge-res ${last.bad ? 'bad' : 'good'}"><b>${esc(last.girl)}:</b> ${esc(last.text)} <b>${esc(E.favText(last.fx))}.</b></div>` : ''}
+    <div class="hostesses">${L.girls.map(card).join('')}</div>
+    <p class="muted small">${total ? `Marks on this operative: <b>${esc(total)}</b>. They stay until this operative is gone.` : 'No marks yet.'}${c.booked ? ' The girls are booked until you\u2019ve been out on another raid.' : ''}</p>`;
+}
+// The barracks ring: a duel with your co-op partner. Every screen draws it from state.duel, which the host keeps.
+let duelSeen = null, duelPlayed = null;
+function duelView() {
+  const d = state.duel, me = E.actorIdx(state), them = 1 - me, partner = net && net.peer && E.isCoop(state);
+  const other = partner ? (state.char2 ? state.char2.name.split(' ')[0] : 'your partner') : null;
+  const head = `<div class="pop-head"><div class="pop-title"><span class="label">Directorate barracks \u00b7 the ring</span><h2>Sparring</h2></div><button class="tool" data-a="closemodal" aria-label="Close">Close</button></div>`;
+  const wrap = (body) => `<div class="modal-wrap" data-a="closemodal"><div class="modal popup wide duel" role="dialog" aria-modal="true" aria-label="Barracks ring">${head}${body}</div></div>`;
+  const rules = '<p class="muted small">You each pick a loadout and start level: same HP and stats for the same loadout, and your own gear, stims and items stay outside. Then choose a move every round at the same time. <b>Strike</b> breaks a Guard, <b>Guard</b> soaks a Shot, a <b>Shot</b> catches a Strike on the way in. Specials need 3 rounds to come back. The winner takes one piece of the loser\u2019s contraband.</p>';
+  if (state.run) return wrap('<p class="muted">The ring\u2019s for between raids.</p>');
+  if (!partner) return wrap(`<p>The barracks has a chalk ring on the floor and odds on the wall. Nobody here will fight you for free.</p>${rules}<div class="notice">Bring a co-op partner (Settings \u00b7 Co-op). You each need at least one piece of contraband to step in.</div>`);
+  const mine = (state.char.perks || []).length, theirs = (state.char2.perks || []).length;
+  if (!d || (d.phase === 'done' && d.declined)) {
+    const why = !mine ? 'You need at least one piece of contraband to put up.' : !theirs ? `${esc(other)} has no contraband to put up.` : '';
+    return wrap(`${d && d.declined ? `<div class="notice">${esc(d.names[d.by === 0 ? 1 : 0])} turned the fight down.</div>` : ''}${rules}
+      <button class="btn primary big" data-a="duel" data-v="challenge" ${why ? 'disabled' : ''}>Challenge ${esc(other)}</button>${why ? `<p class="muted small">${why}</p>` : ''}`);
+  }
+  const n = d.names;
+  if (d.phase === 'invite') return wrap(d.by === me
+    ? `<p>You chalk ${esc(n[them])}\u2019s name on the board. Waiting for an answer\u2026</p><button class="btn" data-a="duel" data-v="close">Wipe it off</button>`
+    : `<p><b>${esc(n[d.by])}</b> wants you in the ring. Loser hands over one piece of contraband.</p>${rules}<div class="btnrow"><button class="btn primary" data-a="duel" data-v="yes">Step in</button><button class="btn" data-a="duel" data-v="no">Not tonight</button></div>`);
+  if (d.phase === 'pick') {
+    const pick = d.build[me];
+    return wrap(`<p>${pick ? `You\u2019re the <b>${esc(E.DUEL_BUILDS[pick].name)}</b>. Waiting for ${esc(n[them])} to pick\u2026` : 'Pick your loadout.'}</p>
+      <div class="duel-builds">${Object.entries(E.DUEL_BUILDS).map(([id, b]) => `<button class="duel-build ${pick === id ? 'on' : ''}" data-a="duel" data-v="pick" data-k="${id}" ${pick ? 'disabled' : ''}><b>${esc(b.name)}</b><span class="num small">${b.hp} HP \u00b7 Shoot ${b.shoot} \u00b7 Strike ${b.strike} \u00b7 DEF ${b.def}</span><span class="muted small">${esc(b.desc)}</span></button>`).join('')}</div>`);
+  }
+  // The fight itself: the battle stage, both operatives in their own art, moves underneath like a raid fight.
+  const B = (i) => E.DUEL_BUILDS[d.build[i]], playing = stage.duelBusy || (d.last && duelPlayed !== `${d.id}:${d.last.round}`);
+  const log = d.log.length ? `<p class="duel-line">${esc(d.log[d.log.length - 1])}</p>` : '';
+  let ctl;
+  if (playing) ctl = '<p class="muted duel-wait">\u2026</p>';
+  else if (d.phase === 'fight') {
+    const cd = d.cd[me], b = B(me);
+    ctl = d.move[me] ? `<p class="muted duel-wait">Locked in. Waiting for ${esc(n[them])}\u2026</p>`
+      : `<div class="actions duel-moves">${[['strike', `Strike \u00b7 ${b.strike}`, 'Breaks a Guard'], ['shoot', `Shoot \u00b7 ${b.shoot}`, 'Catches a Strike'], ['guard', 'Guard', 'Soaks a Shot']].map(([m, l, t]) => `<button class="btn primary" data-a="duel" data-v="move" data-k="${m}" title="${t}">${l}</button>`).join('')}<button class="btn" data-a="duel" data-v="move" data-k="special" ${cd ? 'disabled' : ''} title="${esc(b.desc)}">${esc(b.special)}${cd ? ` \u00b7 ${cd}` : ''}</button></div>`;
+  } else {
+    const prize = d.prize ? E.perkById(d.prize).name : null, won = d.winner === me;
+    ctl = `<div class="notice ${d.winner === null ? '' : won ? 'good' : 'bad'}"><b>${d.winner === null ? 'Draw.' : won ? 'You win.' : 'You lose.'}</b> ${d.winner === null ? 'Everybody keeps their contraband.' : won ? `You take ${esc(n[them])}\u2019s <b>${esc(prize || 'nothing')}</b>.` : `${esc(n[d.winner])} takes your <b>${esc(prize || 'nothing')}</b>.`}</div><button class="btn primary" data-a="duel" data-v="close">Leave the ring</button>`;
+  }
+  return `<div class="duel-arena" role="dialog" aria-modal="true" aria-label="Barracks ring"><div class="duel-top"><span class="label">Barracks ring \u00b7 ${esc(B(me).name)} vs ${esc(B(them).name)} \u00b7 round ${Math.min(d.round, 12)} of 12</span>${d.phase === 'done' ? '<button class="tool" data-a="closemodal" aria-label="Close">Close</button>' : ''}</div>
+    <div id="duel-slot"></div><div class="duel-ctl">${log}${ctl}</div></div>`;
 }
 let wheel = null, wheelBusy = false, guestWheelSeen = null;
 function wheelView() {
@@ -3614,6 +3758,9 @@ function render() {
     toast = null;
     return;
   }
+  // The ring: a bout never carries into a raid, and a fresh challenge opens the ring on both screens.
+  if (state.duel && state.run && !isGuest()) state.duel = null;
+  if (state.duel && state.duel.phase !== 'done' && state.duel.id !== duelSeen && state.screen === 'town' && !titleOpen) { duelSeen = state.duel.id; if (!modal) modal = 'duel'; }
   // A raid's end message goes to both players, and a friend who is around joins in once a solo raid is over.
   if (isHost()) {
     if (hadRun && !state.run) {
@@ -3709,6 +3856,15 @@ function render() {
     if ((state.popup || '') !== lastMenu) { lastMenu = state.popup || ''; town.resendMove(); }
   }
   lastScreen = state.screen;
+  // The ring borrows the battle stage between raids.
+  const dslot = document.getElementById('duel-slot'), dd = state.duel;
+  if (dslot && dd && dd.build[0] && dd.build[1]) {
+    dslot.replaceWith(stage.el);
+    const me = E.actorIdx(state), key = dd.last ? `${dd.id}:${dd.last.round}` : null, fresh = key && key !== duelPlayed, shown = fresh ? dd.last.pre : dd.hp;
+    const who = (i) => ({ name: dd.names[i], build: E.DUEL_BUILDS[dd.build[i]].name, hp: shown[i], max: dd.max[i] });
+    stage.syncDuel({ key: dd.id, me: who(me), foe: who(1 - me) });
+    if (fresh && !stage.duelBusy) { duelPlayed = key; stage.playDuel(dd.last, me).then(() => render()); }
+  } else if (stage.duelKey && !(modal === 'duel' && dd)) stage.leaveDuel();
   const slot = document.getElementById('stage-slot');
   if (slot) {
     slot.replaceWith(stage.el);
@@ -3890,6 +4046,8 @@ town.onAction = (id) => {
     return { text: ['A can of Directorate Fizz. It tastes like compliance.', 'It eats your credit and dispenses a leaflet about quotas.', 'A protein bar from before the occupation. Still fine. Probably.', 'The terminal thanks you for your loyalty and gives you nothing.'][Math.floor(rng() * 4)], sfx: 'coin' };
   }
   if (id === 'tenement_a') { if (E.tenementGift(state)) { save(); render(); return { text: 'The door opens a crack. An old woman presses a med stim into your hand. \u201CFor the floor. Don\u2019t come back.\u201D', sfx: 'heal' }; } return { text: ['Nobody answers. You hear a chair being pushed against the door.', 'A kid\u2019s voice: \u201CGran says we don\u2019t know you.\u201D', 'The slot opens, then shuts. Fair enough.'][Math.floor(rng() * 3)] }; }
+  if (id === 'barracks' && net && net.peer && E.isCoop(state)) { modal = 'duel'; render(); return { text: 'Chalk on the floor, odds on the wall. The ring is open.' }; }
+  if (id === 'barracks' && rng() < 0.5) return { text: 'A sergeant looks you over. \u201CThe ring\u2019s for pairs. Bring a partner and something worth losing.\u201D' };
   if (id === 'barracks') return { text: ['A voice from the hatch: \u201CDeliveries round the back. Everything else, go away.\u201D', 'Snoring. The Directorate\u2019s finest.', 'You knock. Something heavy falls over inside, and someone swears in three languages.'][Math.floor(rng() * 3)] };
   return null;
 };
@@ -3995,6 +4153,7 @@ function act(a, v, k) {
       home.meta.resolve -= cost; home.meta.droneRanks = { ...(home.meta.droneRanks || {}), [dr.type]: dr.rank + 1 }; save(); net.send({ t: 'act', a: 'droneupfree' }); net.send({ t: 'home', home: homeInfo() }); mirrorHome(); A.play('buy'); return;
     }
     if (a === 'recruit') { net.send({ t: 'recruit' }); state.coopFallen = null; A.play('click'); return; }
+    if (a === 'duel' && v === 'close') modal = null;
     if (a === 'pickmap') { toast = 'The host picks the target.'; A.play('denied'); render(); return; }
     if (a === 'deploy' || a === 'reset' || a === 'threat') { A.play('denied'); return; }
     net.send({ t: 'act', a, v, k }); A.play('click'); return;
@@ -4062,8 +4221,19 @@ function applyAct(a, v, k) {
     case 'coopjoin': { setCoopPrefs({ name: (document.getElementById('coop-name') || {}).value || '', relay: ((document.getElementById('coop-relay') || {}).value || '').trim() }); const code = ((document.getElementById('coop-code') || {}).value || '').trim().toUpperCase(); if (code.length >= 4) startCoop('guest', code, !getCoopPrefs().relay); else toast = 'Enter the room code.'; break; }
     case 'coopleave': leaveCoop(); return;
     case 'coopready': state.guestReady = !state.guestReady; if (net) net.send({ t: 'ready', on: state.guestReady }); sfx('click'); break;
-    case 'newsok': try { localStorage.setItem(NEWS_KEY, NEWS_ID); } catch (e) {} modal = null; sfx('click'); break;
+    case 'newspage': newsPage = +v; sfx('click'); break;
+    case 'newsok': newsPage = 0; try { localStorage.setItem(NEWS_KEY, NEWS_ID); } catch (e) {} modal = null; sfx('click'); break;
     case 'modal': modal = v; if (v === 'board') loadBoard(); sfx('click'); break;
+    case 'lounge': { const r = E.visitLounge(state, v, rng); ok = !!r; if (r) { sfx(r.bad ? 'denied' : 'perk'); if (!actingAs) toast = `${r.name}: ${r.text}`; } break; }
+    case 'duel': {
+      if (v === 'challenge') ok = E.duelChallenge(state);
+      else if (v === 'yes' || v === 'no') ok = E.duelAnswer(state, v === 'yes');
+      else if (v === 'pick') ok = E.duelPick(state, k);
+      else if (v === 'move') ok = E.duelMove(state, k, rng);
+      else if (v === 'close') { ok = E.duelClose(state); if (!actingAs) modal = null; }
+      if (ok) sfx(v === 'move' ? 'click' : 'door');
+      break;
+    }
     case 'drink': ok = E.buyDrink(state, v); if (ok) { toast = `KEG-7 slides you a ${E.drinkOf(state.char).name}.`; sfx('perk'); } break;
     case 'bet': (state.wheel || (state.wheel = { bet: 'red', stake: 10, pick: 7 })).bet = v; sfx('click'); break;
     case 'stake': (state.wheel || (state.wheel = { bet: 'red', stake: 10, pick: 7 })).stake = +v; sfx('click'); break;

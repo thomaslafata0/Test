@@ -276,6 +276,7 @@ class Actor {
     this.anim = 'idle'; this.animStart = 0; this.rest = 'idle';
   }
   get scale() {
+    if (this.fixedH && this.sheet && this.sheet.hd) return this.fixedH / this.sheet.fig;
     if (this.sheet && this.sheet.hd) return (HD_HEIGHT[this.side === 'enemy' ? this.id : this.side] || 112) / this.sheet.fig;
     // Sheet characters fill about half their frame, so they're drawn larger than the frame size.
     if (this.sheet) return this.side === 'player' ? 2 : this.side === 'partner' ? 1.7 : this.side === 'ally' ? 1.1 : this.sheet.size >= 128 ? 1.1 : 1.6;
@@ -301,6 +302,36 @@ class Actor {
     return { img: a.img, sx: f * fw, sw: fw, sh: a.img.height, pad: a.pad };
   }
 }
+
+// Boss-move art (bars, container, slag) and the props that stand about the floor. Each loads on first use; until it
+// arrives, the old code-drawn version stands in, so a slow connection never shows a hole.
+const FX_IMG = {};
+function fxImg(name) {
+  let e = FX_IMG[name];
+  if (!e) { e = FX_IMG[name] = { img: null }; const im = new Image(); im.onload = () => { e.img = im; }; im.onerror = () => {}; im.src = `sprites/fx/${name}.png`; }
+  return e.img;
+}
+let PROP_DEFS = null;
+function propDefs() {
+  if (PROP_DEFS) return PROP_DEFS;
+  PROP_DEFS = {};
+  fetch('sprites/props/manifest.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : {})).then((m) => {
+    for (const [id, d] of Object.entries(m || {})) { const im = new Image(); im.onload = () => { PROP_DEFS[id] = { ...d, id, img: im }; }; im.src = `sprites/props/${id}.png`; }
+  }).catch(() => {});
+  return PROP_DEFS;
+}
+// A few props per map, not every room: about half of the sectors get one, a few get two, boss arenas stay bare.
+const PROP_SPOTS = [{ x: 352, y: 158, h: 60 }, { x: 186, y: 140, h: 44 }];
+function propsFor(theme, sector, boss) {
+  const defs = Object.values(propDefs()).filter((d) => d.theme === theme);
+  if (boss || !defs.length) return [];
+  const rnd = seeded(sector * 7919 + theme.length * 131), r = rnd(), n = r < 0.14 ? 2 : r < 0.55 ? 1 : 0;
+  const out = [], pool = [...defs];
+  for (let i = 0; i < n && pool.length; i++) out.push({ ...PROP_SPOTS[i], d: pool.splice(Math.floor(rnd() * pool.length), 1)[0], phase: rnd() * 1000 });
+  return out;
+}
+// Who steps in front of a boss for 'front': foundry hands for Brask, conscripts for Dray.
+const FRONT_CREW = { brask: 'stoker', dray: 'patrol' };
 
 const SIG_COLOR = { shutter: '#9aa3ad', confiscate: '#e6d36a', anchor: '#c79a5a', siege: '#ffb347', roll: '#ff8a3c', floor: '#ff8a3c', overtime: '#d4483a', front: '#e6d36a', count: '#e6d36a', lights: '#73b6d4', crane: '#c79a5a', salute: '#fff1c9', redact: '#efe7d6', audit: '#ffffff' };
 
@@ -445,7 +476,7 @@ export class Stage {
   }
   muzzle(actor) {
     const a = this.anchor(actor.side, actor), s = actor.size, m = !actor.sheet && (MUZZLE[actor.id] || MUZZLE[STAND_IN[actor.id]]);
-    if (actor.sheet && actor.sheet.hd) { const at = actor.sheet.anims.attack, tip = at && at.tip; if (tip) return { x: a.x + actor.ox + tip[0] * actor.scale, y: a.y + actor.oy + tip[1] * actor.scale }; return { x: a.x + actor.ox + (actor.side === 'enemy' ? -1 : 1) * actor.tall * 0.25, y: a.y + actor.oy - actor.tall * 0.65 }; }
+    if (actor.sheet && actor.sheet.hd) { const at = actor.sheet.anims.attack, tip = at && at.tip; if (tip) return { x: a.x + actor.ox + (actor.mirror ? -1 : 1) * tip[0] * actor.scale, y: a.y + actor.oy + tip[1] * actor.scale }; return { x: a.x + actor.ox + (actor.side === 'enemy' ? -1 : 1) * actor.tall * 0.25, y: a.y + actor.oy - actor.tall * 0.65 }; }
     if (actor.sheet && actor.sheet.look && actor.sheet.anims.attack && actor.sheet.anims.attack.tip) { const tip = actor.sheet.anims.attack.tip[0] || actor.sheet.anims.attack.tip; if (tip && tip.length === 2) return { x: a.x + actor.ox - s / 2 + (tip[0] / 96) * s, y: a.y + actor.oy - s + (tip[1] / 96) * s + this.footPad(actor) }; }
     if (actor.sheet) return actor.side === 'player' ? { x: a.x + actor.ox + s * 0.18, y: a.y + actor.oy - s * 0.36 } : { x: a.x + actor.ox - s * 0.18, y: a.y + actor.oy - s * 0.36 };
     if (m) return { x: a.x + actor.ox - s / 2 + (m[0] / 40) * s, y: a.y + actor.oy - s + (m[1] / 40) * s };
@@ -483,6 +514,9 @@ export class Stage {
     this.setStatuses('enemy', est, affix, quirk);
     this.label = label;
     this.bfx = enemy.bs ? { shutter: enemy.bs.shutter, floor: enemy.bs.floor, front: enemy.bs.front, lights: enemy.bs.lights, wreck: enemy.bs.wreck, sig: enemy.sig ? enemy.sig.id : null, left: enemy.sig ? enemy.sig.left : 0 } : null;
+    this.crewId = FRONT_CREW[enemy.id] || null;
+    if (this.crewId) ensureSheet(this.crewId);
+    this.props = propsFor(theme, sector, boss);
     let isNewBoss = false, artWait = null;
     const enter = [], newFight = this.runRef !== run || !this.player || this.enemyRef !== enemy;
     if (this.runRef !== run || !this.player) {
@@ -516,12 +550,75 @@ export class Stage {
     return { isNewBoss, artWait };
   }
 
+  // The barracks ring: both operatives in their own art, the friend across the floor, facing you. No drones, no allies,
+  // no boss business. me / foe: { name, build, hp, max }. hp is what the bars show until the round plays.
+  syncDuel({ key, me, foe }) {
+    if (this.duelKey !== key || !this.enemy || !this.enemy.mirror) {
+      this.duelKey = key; this.runRef = null; this.enemyRef = null;
+      const P = this.player = new Actor('player', 'player', false);
+      const F = this.enemy = new Actor('player', 'partner', false); F.side = 'enemy'; F.mirror = true; F.fixedH = 128;
+      Object.assign(this, { partner: null, partnerInfo: null, allies: 0, allyActors: [], drone: null, partnerDrone: null, bfx: null, drop: null, props: [], crewId: null, intent: null, stun: 0, heavyBoost: false, boss: false, theme: 'garrison', sector: 6, enemyTags: [] });
+      P.ox = -150; P.alpha = 0; F.ox = 150; F.alpha = 0;
+      this.tween(500, (p) => { P.ox = -150 * (1 - ease(p)); P.alpha = p; F.ox = 150 * (1 - ease(p)); F.alpha = p; });
+      play('door');
+    }
+    this.max.enemy = foe.max; this.max.player = me.max;
+    if (!this.duelBusy) {
+      this.setHud('enemy', foe.name, foe.build.toUpperCase(), foe.hp); this.setHud('player', me.name, me.build.toUpperCase(), me.hp);
+      for (const [a, hp] of [[this.player, me.hp], [this.enemy, foe.hp]]) { if (hp <= 0 && a.anim !== 'death') a.setAnim('death', performance.now() - 100000); }
+    }
+    this.setStatuses('player', {}); this.setStatuses('enemy', {});
+    this.label = 'Barracks ring';
+  }
+  // One round of the ring, both sides' moves in turn. r is the engine's duel.last; me is this screen's fighter index.
+  async playDuel(r, me) {
+    this.duelBusy = true;
+    try {
+      const fighters = [this.player, this.enemy], side = (i) => (i === me ? 'player' : 'enemy'), actor = (i) => (i === me ? this.player : this.enemy);
+      const hpNow = [...r.pre];
+      for (const i of [me, 1 - me]) {
+        const A = actor(i), T = actor(1 - i), mv = r.moves[i], f = r.fx[i], build = r.builds[i], now = performance.now();
+        if (A.anim === 'death') continue;
+        if (mv === 'guard' || (mv === 'special' && build === 'warden')) {
+          const c = this.center(A); play('shield');
+          this.ring(c.x, c.y, 40, C.ion, 380, 2); this.popup(side(i), mv === 'guard' ? 'GUARD' : 'SECOND WIND', 'info');
+          if (f.heal) { hpNow[i] = Math.min(this.max[side(i)], hpNow[i] + f.heal); this.burst(c.x, c.y, 10, C.heal, 0.9, 500, -0.04, 1); play('heal'); this.popup(side(i), `+${f.heal}`, 'heal'); this.setHp(side(i), hpNow[i]); }
+          await this.wait(380);
+          continue;
+        }
+        const melee = mv === 'strike' || (mv === 'special' && build === 'bruiser');
+        if (melee) {
+          play('whoosh');
+          await this.meleeIn(A, T);
+          const c = this.center(T);
+          for (const h of f.hits) { this.ring(c.x, c.y, mv === 'special' ? 34 : 18, h.crit ? C.crit : C.amber, 220, 3); hpNow[1 - i] = Math.max(0, hpNow[1 - i] - h.n); this.setHp(side(1 - i), hpNow[1 - i]); await this.hit(T, h.n, { crit: h.crit, heavy: mv === 'special', note: f.guarded ? '(guard)' : '' }); }
+          if (mv === 'special') this.shake(7, 260);
+          await this.meleeOut(A);
+        } else {
+          A.setAnim('attack', now); await this.aim(A);
+          for (const h of f.hits) {
+            play('shot'); const m = this.muzzle(A); this.burst(m.x, m.y, 6, C.amber, 1.5, 120, 0); this.casing(A);
+            await this.bolt(m, this.center(T), h.crit ? C.crit : C.amber, mv === 'special' ? 2 : 3, 150);
+            hpNow[1 - i] = Math.max(0, hpNow[1 - i] - h.n); this.setHp(side(1 - i), hpNow[1 - i]);
+            await this.hit(T, h.n, { crit: h.crit, note: f.guarded ? '(guard)' : '' });
+          }
+        }
+        if (hpNow[1 - i] <= 0) { T.setAnim('death', performance.now()); play('death'); await this.wait(600); }
+        await this.wait(160);
+      }
+      for (const i of [0, 1]) this.setHp(side(i), r.hp[i]);
+      fighters.forEach((a) => { if (a.anim !== 'death') { a.ox = 0; a.oy = 0; } });
+    } finally { this.duelBusy = false; }
+  }
+  leaveDuel() { this.duelKey = null; if (this.enemy && this.enemy.mirror) { this.enemy = null; this.enemyRef = null; this.player = null; } }
+
   // Late art swaps into the fighters already on the stage, keeping what they are doing.
   refreshArt() {
     const swap = (a, sh) => { if (a && sh && sh !== a.sheet) { a.sheet = sh; a.drawn = null; } };
     swap(this.player, lookSheets.player || sheets.player);
     swap(this.partner, lookSheets.partner || sheets.player);
-    if (this.enemy) swap(this.enemy, tintedSheet(this.enemy.id, this.theme));
+    if (this.enemy && this.enemy.mirror) swap(this.enemy, lookSheets.partner || sheets.player);
+    else if (this.enemy) swap(this.enemy, tintedSheet(this.enemy.id, this.theme));
     for (const al of this.allyActors || []) swap(al, sheets.prisoner);
   }
   artMissing(a) {
@@ -1383,14 +1480,30 @@ export class Stage {
     if (!f && !D2) return;
     const pulse = reduceMotion ? 0.5 : 0.5 + 0.5 * Math.sin(t / 170);
     if (stage === 'under' && f) {
-      if (f.floor > 0) {
+      const slag = f.floor > 0 && fxImg('slag');
+      if (slag) {
+        // The molten floor: the painted strip, tiled, breathing brighter and dimmer, with a heat haze on top.
+        const h = 30, w = Math.round(slag.width * h / slag.height);
+        g.globalAlpha = 0.78 + 0.22 * pulse;
+        for (let x = -((t / 90) % w); x < W; x += w) g.drawImage(slag, Math.round(x), 186, w, h);
+        g.globalAlpha = 1;
+        const hz = g.createLinearGradient(0, 168, 0, 190); hz.addColorStop(0, 'rgba(255,140,50,0)'); hz.addColorStop(1, `rgba(255,140,50,${0.18 + 0.12 * pulse})`);
+        g.fillStyle = hz; g.fillRect(0, 168, W, 22);
+      } else if (f.floor > 0) {
         for (let i = 0; i < 16; i++) {
           const x = i * 25, wob = reduceMotion ? 0 : Math.sin(t / 240 + i * 1.7) * 2;
           g.fillStyle = i % 2 ? `rgba(255,120,40,${0.3 + 0.25 * pulse})` : `rgba(255,190,70,${0.22 + 0.2 * pulse})`;
           g.fillRect(x, 186 + wob, 26, 30 - wob);
         }
       }
-      if (f.wreck > 0) {
+      const box = f.wreck > 0 && fxImg('container');
+      if (box) {
+        // The dropped container lies where it landed, tipped a little, half in its own dust.
+        g.save(); g.translate(176, 190); g.rotate(-0.06);
+        const bw = 72, bh = Math.round(bw * box.height / box.width);
+        g.drawImage(box, -bw / 2, -bh, bw, bh); g.restore();
+        g.fillStyle = 'rgba(30,26,22,0.35)'; g.beginPath(); g.ellipse(176, 191, 42, 5, 0, 0, Math.PI * 2); g.fill();
+      } else if (f.wreck > 0) {
         g.fillStyle = '#5a3a26'; g.fillRect(146, 146, 58, 42);
         g.fillStyle = '#3a261a'; for (let x = 150; x < 204; x += 9) g.fillRect(x, 146, 2, 42);
         g.fillStyle = '#7d5335'; g.fillRect(146, 146, 58, 3);
@@ -1405,7 +1518,17 @@ export class Stage {
     if (stage !== 'over') return;
     if (f) {
       const c = this.center(E);
-      if (f.front > 0) {
+      const crew = f.front > 0 && this.crewId && sheetFor(this.crewId)[1];
+      if (crew) {
+        // The boss's people, in the real art: three of them shoulder to shoulder, a beat apart, between you and the boss.
+        const a = crew.anims.idle, fw = a.img.width / a.frames, hgt = crew.hd ? 64 : 58, sc = hgt / (crew.hd ? crew.fig : a.img.height * 0.8);
+        for (let i = 0; i < 3; i++) {
+          const fr = reduceMotion ? 0 : [0, 1, 2, 1][Math.floor(t / 520 + i * 1.3) % 4] % a.frames;
+          const w = Math.round(fw * sc), h = Math.round(a.img.height * sc), x = 204 + i * 22, feet = 186 - i % 2 * 3, pad = crew.hd ? (a.pad || 0) * sc : 8 * sc;
+          g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(x, feet + 1, 12, 3, 0, 0, Math.PI * 2); g.fill();
+          g.drawImage(a.img, fr * fw, 0, fw, a.img.height, Math.round(x - w / 2), Math.round(feet - h + pad), w, h);
+        }
+      } else if (f.front > 0) {
         for (let i = 0; i < 3; i++) {
           const x = 206 + i * 21, bob = reduceMotion ? 0 : Math.round(Math.sin(t / 420 + i * 2) * 1);
           g.fillStyle = '#14171b'; g.fillRect(x - 6, 124 + bob, 12, 42); g.fillRect(x - 4, 166, 3, 16); g.fillRect(x + 1, 166, 3, 16);
@@ -1426,17 +1549,45 @@ export class Stage {
       }
     }
     if (D2 && D2.kind === 'bars') this.drawBars(g, D2.p);
-    if (D2 && D2.kind === 'box') {
+    const fall = D2 && D2.kind === 'box' && fxImg('container');
+    if (fall) {
+      const bw = 76, bh = Math.round(bw * fall.height / fall.width), y = -bh + (200 - 0) * D2.p;
+      g.strokeStyle = '#2b3036'; g.lineWidth = 1; g.beginPath(); g.moveTo(D2.x - 20, 0); g.lineTo(D2.x - 20, y); g.moveTo(D2.x + 20, 0); g.lineTo(D2.x + 20, y); g.stroke();
+      g.drawImage(fall, Math.round(D2.x - bw / 2), Math.round(y), bw, bh);
+    } else if (D2 && D2.kind === 'box') {
       const y = -46 + 200 * D2.p;
       g.fillStyle = '#6d4a30'; g.fillRect(D2.x - 34, y, 68, 46);
       g.fillStyle = '#3a261a'; for (let x = D2.x - 30; x < D2.x + 34; x += 10) g.fillRect(x, y, 2, 46);
     }
   }
   drawBars(g, p) {
+    const img = fxImg('shutter');
+    if (img) {
+      // The shutter art slides down out of the ceiling; at the Port it's a hard-light gate, so it glows.
+      const w = 70, h = Math.round(w * img.height / img.width), bottom = 26 + 160 * p, y = Math.round(bottom - h);
+      g.save(); g.beginPath(); g.rect(196, 0, w + 8, bottom + 2); g.clip();
+      g.drawImage(img, 198, y, w, h);
+      if (this.theme === 'port') { g.globalCompositeOperation = 'lighter'; g.fillStyle = 'rgba(90,190,255,0.22)'; g.fillRect(198, Math.max(0, y), w, bottom - Math.max(0, y)); }
+      g.restore();
+      if (p >= 1) { g.fillStyle = 'rgba(0,0,0,0.4)'; g.beginPath(); g.ellipse(233, bottom + 1, 38, 3, 0, 0, Math.PI * 2); g.fill(); }
+      return;
+    }
     const bottom = 30 + 150 * p;
     g.fillStyle = '#6a747e'; for (let x = 204; x < 262; x += 9) g.fillRect(x, 26, 3, bottom - 26); g.fillStyle = '#2a3036'; for (let x = 207; x < 262; x += 9) g.fillRect(x, 26, 1, bottom - 26);
     g.fillStyle = '#8a949e'; g.fillRect(200, 22, 66, 5);
     if (p >= 1) g.fillRect(200, bottom - 3, 66, 4);
+  }
+
+  // Props on the floor behind the fighters. Their own frames play slowly; nothing here moves in calm mode.
+  drawProps(g, t) {
+    for (const p of this.props || []) {
+      const d = p.d, img = d.img;
+      if (!img) continue;
+      const n = d.frames || 1, fw = img.width / n, fr = reduceMotion || n < 2 ? 0 : Math.floor((t + p.phase) / 1000 * (d.fps || 6)) % n;
+      const h = p.h, w = Math.round(fw * h / img.height), cx = Math.min(p.x, W - 4 - w / 2), x = Math.round(cx - w / 2), y = Math.round(p.y - h);
+      g.fillStyle = 'rgba(0,0,0,0.3)'; g.beginPath(); g.ellipse(cx, p.y, w * 0.42, 3, 0, 0, Math.PI * 2); g.fill();
+      g.globalAlpha = 0.92; g.drawImage(img, fr * fw, 0, fw, img.height, x, y, w, h); g.globalAlpha = 1;
+    }
   }
 
   // ---------- drawing ----------
@@ -1587,6 +1738,7 @@ export class Stage {
     const feet = actor.sheet && actor.sheet.hd ? (f.pad || 0) * s : this.footPad(actor);
     const x = Math.round(a.x + actor.ox - w / 2), y = Math.round(a.y + actor.oy - h + feet + bob);
     g.globalAlpha = actor.alpha;
+    if (actor.mirror) { g.save(); g.translate(x * 2 + w, 0); g.scale(-1, 1); } // the far fighter in the ring faces left
     if (actor.flash > t) {
       const b = this.buf; b.width = f.sw; b.height = f.sh;
       const bg = b.getContext('2d');
@@ -1596,6 +1748,7 @@ export class Stage {
     } else {
       g.drawImage(f.img, f.sx, 0, f.sw, f.sh, x, y, w, h);
     }
+    if (actor.mirror) g.restore();
     g.globalAlpha = 1;
   }
 
@@ -1626,6 +1779,7 @@ export class Stage {
     // Rain outdoors; in the foundry, sparks. Under a roof, neither.
     if (!underRoof || this.theme === 'foundry') for (const d of reduceMotion ? [] : this.rain) { if (!frozen) { d.y += d.v; d.x -= d.v * 0.25; if (d.y > H) { d.y = -6; d.x = Math.random() * (W + 40); } } g.fillRect(Math.round(d.x), Math.round(d.y), 1, 4); }
 
+    this.drawProps(g, frozen ? this.stopAt : t);
     const ea = this.anchor('enemy');
     if (painted.canvas) this.groundShadow(ea.x, ea.y + 1, Math.max(26, (this.enemy ? this.enemy.tall : 100) * 0.5), 11); else this.pad(ea.x, ea.y + 1, 58, 11);
     const E = this.enemy, ec = this.center(E);
