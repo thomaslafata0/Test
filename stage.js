@@ -869,6 +869,8 @@ export class Stage {
     let any = false;
     for (const x of [a, b]) if (x.sheet && x.sheet.anims && x.sheet.anims[kind]) { x.setAnim(kind, performance.now()); any = true; }
     const ca = this.center(a), cb = this.center(b), mx = (ca.x + cb.x) / 2, my = Math.min(ca.y, cb.y) - 40;
+    // Heart hands: whoever stands in front turns round to face the other for the pose, then turns back to the fight.
+    if (kind === 'duo' && any) { const front = ca.x > cb.x ? a : b; front.mirror = true; setTimeout(() => { if (!front.side || front.side !== 'enemy') front.mirror = false; }, 1250); }
     if (kind === 'duo') { this.spark('heart_burst', mx, my, { color: '#ff8ad8', scale: 1.3 }); if (any) play('perk'); }
     else for (let i = 0; i < 8; i++) setTimeout(() => this.burst(mx + (Math.random() * 60 - 30), my, 2, i % 2 ? '#ff8ad8' : '#a8ffe0', 1.4, 700, -0.04, 2), i * 60);
   }
