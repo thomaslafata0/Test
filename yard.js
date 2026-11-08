@@ -31,7 +31,7 @@ export const PLACES = {
   depth: { yFar: 150, yNear: 384, far: 0.62, near: 1 },
   walk: {
     speed: 170, ySpeed: 0.8, near: 34, enter: 20,
-    area: [[222, 156], [300, 148], [410, 148], [490, 176], [530, 180], [548, 198], [560, 264], [592, 268], [628, 290], [640, 332], [622, 384], [118, 384], [122, 322], [160, 272], [168, 248], [192, 232], [192, 200], [200, 170]],
+    area: [[222, 156], [300, 148], [410, 148], [490, 176], [530, 180], [548, 198], [578, 212], [478, 238], [470, 350], [604, 374], [604, 384], [118, 384], [122, 322], [160, 272], [168, 248], [192, 232], [192, 200], [200, 170]],
     blocks: [],
   },
   // Checked in this order when tapped, so a box that overlaps another must come first.
@@ -39,17 +39,16 @@ export const PLACES = {
     { id: 'terminal', box: [258, 20, 445, 148], door: [355, 152], push: [0, -1], sign: { x: 355, y: 72 } },
     { id: 'barracks', box: [140, 75, 218, 150], door: [210, 168], push: [0, -1], sign: { x: 205, y: 84, text: 'Barracks', minor: true }, knock: { prompt: 'knock', action: 'barracks' } },
     { id: 'clinic', box: [480, 80, 610, 178], door: [518, 184], push: [0, -1], sign: { x: 525, y: 72 } },
-    { id: 'tenement_a', box: [566, 180, 598, 225], door: [546, 220], push: [1, 0], knock: { prompt: 'knock', action: 'tenement_a' } },
-    { id: 'safehouse', box: [565, 140, 688, 285], door: [590, 274], push: [0.6, -0.8], sign: { x: 632, y: 172, text: 'Character\n& Resolve' } },
-    { id: 'tenement_b', box: [219, 118, 250, 150], door: [238, 160], push: [0, -1], knock: { prompt: 'knock', lines: ['The door is welded shut. Curfew rules.', 'Someone inside is singing, badly. You leave them to it.', 'A note on the door: GONE TO THE FOUNDRY. BACK NEVER.'] } },
+    { id: 'safehouse', box: [598, 140, 688, 232], door: [570, 210], push: [1, -0.3], sign: { x: 632, y: 172, text: 'Character\n& Resolve' } },
+    { id: 'tenement_b', box: [219, 118, 250, 150], door: [238, 160], push: [0, -1], knock: { prompt: 'knock', action: 'tenement_a' } },
     { id: 'market', box: [28, 125, 188, 265], door: [172, 250], push: [-0.8, -0.5], sign: { x: 84, y: 118 } },
     { id: 'lantern', box: [0, 270, 140, 384], door: [122, 325], push: [-1, 0], sign: { x: 60, y: 246, text: 'The Lantern' } },
     // Club Velvet, bottom right of the square: the girls and the card table. Its facade is an overlay (town/street/club_ext.png).
-    { id: 'club', box: [500, 290, 688, 384], door: [548, 300], push: [-0.6, -0.8], sign: { x: 600, y: 262, text: 'Club Velvet' } },
+    { id: 'club', box: [478, 214, 688, 384], door: [566, 370], push: [0.4, -1], sign: { x: 548, y: 286, text: 'Club Velvet' } },
   ],
   spots: [
     { id: 'holosign', x: 118, y: 160, r: 26, stand: [194, 222], prompt: 'read the sign', lines: ['MARROW\u2019S. OPEN. (The word CLOSED flickers underneath.)', 'The sign buzzes: NO REFUNDS. NO RECEIPTS. NO RUNNING.'] },
-    { id: 'vent', x: 344, y: 262, r: 26, stand: [344, 296], prompt: 'look at the vent', lines: ['Steam. The foundry runs under half the town now.', 'The vent sighs. It sounds tired.'] },
+    { id: 'vent', x: 344, y: 268, r: 26, stand: [344, 300], prompt: 'look at the vent', lines: ['Steam. The foundry runs under half the town now.', 'The vent sighs. It sounds tired.'] },
     { id: 'lockers', x: 160, y: 130, r: 22, stand: [194, 195], prompt: 'check the lockers', lines: ['Shift lockers, padlocked. One has a name you recognise from the wall.', 'Empty. Someone has scratched a tally of days into the door. It stops at ninety.'] },
     { id: 'poster', x: 282, y: 118, r: 24, stand: [282, 156], prompt: 'read the poster', lines: ['\u201CPRODUCTIVITY IS LOYALTY.\u201D Someone has drawn a moustache on the Supervisor.', '\u201CREPORT UNUSUAL MOVEMENT.\u201D Below it, in marker: \u201Clike your bowels?\u201D', '\u201CCURFEW: DUSK.\u201D The word DUSK has been scratched out and replaced with NEVER.', 'A reward notice. The face is smudged. Could be anyone. Could be you.'] },
     { id: 'noticeboard', x: 425, y: 140, r: 22, stand: [428, 158], prompt: 'read the board (Missions)', open: 'missions' },
@@ -59,8 +58,9 @@ export const PLACES = {
   folk: [], // only people who belong to a building now
   patrol: { id: 'patrol', route: [[250, 200], [440, 190], [530, 300], [400, 360], [200, 340], [205, 260]], h: 140, lines: ['Papers.', 'Curfew\u2019s at dusk. Move along.', 'Keep walking, citizen.', 'Nothing to see. Keep moving.', 'Eyes down, citizen.', 'Did you hear something? No. You didn\u2019t.', 'This is a quiet yard. Keep it quiet.'] },
   lights: [
-    { x: 590, y: 300, r: 70, color: '#ff4fb8', kind: 'neon', a: 0.34 },
-    { x: 344, y: 262, r: 34, color: '#ffc27a', kind: 'lamp', a: 0.16 },
+    { x: 535, y: 305, r: 46, color: '#ff4fb8', kind: 'neon', a: 0.3 },
+    { x: 596, y: 352, r: 40, color: '#ff6ad5', kind: 'neon', a: 0.3 },
+    { x: 344, y: 268, r: 30, color: '#ffb066', kind: 'lamp', a: 0.14 },
     { x: 118, y: 160, r: 40, color: '#4fe0d0', kind: 'neon', a: 0.2 },
     { x: 549, y: 222, r: 28, color: '#ffc27a', kind: 'lamp', a: 0.28 },
     { x: 42, y: 332, r: 32, color: '#ffb066', kind: 'lamp', a: 0.24 },
@@ -70,10 +70,10 @@ export const PLACES = {
     { x: 410, y: 88, r: 18, color: '#4fe0d0', kind: 'neon', a: 0.22 },
     { x: 624, y: 200, r: 20, color: '#ffc27a', kind: 'lamp', a: 0.24 },
   ],
-  steam: [{ x: 344, y: 258, big: true }, { x: 88, y: 316 }],
+  steam: [{ x: 344, y: 262, big: true }, { x: 88, y: 316 }],
   embers: null,
   // Painted pieces laid over the yard picture: the club's front and the vent grate (each skipped until its file loads).
-  overlays: [{ key: 'club_ext', x: 458, y: 236 }, { key: 'vent', x: 312, y: 240 }],
+  overlays: [{ key: 'club_ext', x: 470, y: 200 }, { key: 'vent', x: 314, y: 246 }],
   puddles: [{ x: [270, 340], y: 300 }, { x: [430, 500], y: 345 }, { x: [230, 280], y: 230 }, { x: [500, 540], y: 250 }],
   // The E-Girl Room, through the curtain at the back of the Lantern: tonight's three girls stand at the slots; she walks you
   // out through the curtain on the right. Leaving by the left door goes back into the Lantern.

@@ -3626,5 +3626,52 @@
   "size": 256,
   "feetY": 246,
   "fig": 238
+ },
+ "pursuer": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 8
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 8,
+    "tip": [
+     -100,
+     -199
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 8
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 8
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 8
+   },
+   "special": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 8
+   }
+  },
+  "size": 256,
+  "feetY": 247,
+  "fig": 237
  }
 }

@@ -244,8 +244,13 @@ function tintRow(a, tint) {
 // Painted backdrops: per map, an area and then a boss arena for each stretch of five sectors. They load when needed; the code-drawn scene stands in until then.
 const BG_OPEN = new Set(['garrison_1', 'garrison_2', 'foundry_1', 'port_1', 'port_2']);
 const bgCache = new Map();
-function paintedBackdrop(theme, sector, boss) {
-  const band = Math.min(3, Math.floor((sector - 1) / 5)), key = `${theme}_${band * 2 + (boss ? 2 : 1)}`;
+// A raid's bulletin (Payday, Inspection Day...) has its own rooms on each map, listed in bg/bulletins.json as
+// { "garrison_payday": 1, ... } (how many variants). Boss arenas stay the map's own.
+let BULLETIN_BG = {};
+fetch('bg/bulletins.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : {})).then((m) => { BULLETIN_BG = m || {}; }).catch(() => {});
+function paintedBackdrop(theme, sector, boss, bulletin = null) {
+  const band = Math.min(3, Math.floor((sector - 1) / 5)), bk = bulletin && !boss && BULLETIN_BG[`${theme}_${bulletin}`];
+  const key = bk ? `${theme}_${bulletin}_${1 + ((sector - 1) % bk)}` : `${theme}_${band * 2 + (boss ? 2 : 1)}`;
   let e = bgCache.get(key);
   if (!e) {
     e = { canvas: null, open: BG_OPEN.has(key) };
@@ -508,6 +513,7 @@ export class Stage {
   // Called after every render of the combat screen.
   sync({ run, enemy, player, drone = null, partnerDrone = null, partner = null, sector, boss, theme = 'garrison', allies = 0, pst = {}, est = {}, affix = null, quirk = null, label = '' }) {
     const now = performance.now();
+    this.bulletin = (run && run.bulletin) || null;
     // Co-op: the friend's operative stands at your shoulder. partner = { idx, name, hp, maxHp, acting }.
     this.partnerInfo = partner;
     this.drone = drone; this.partnerDrone = partnerDrone;
@@ -1868,7 +1874,7 @@ export class Stage {
     const Z = this.zoom;
     if (Z) { g.fillStyle = '#000'; g.fillRect(0, 0, W, H); }
     if (Z && Z.k > 1.001) { g.translate(Z.x, Z.y); g.scale(Z.k, Z.k); g.translate(-Z.x, -Z.y); }
-    const painted = paintedBackdrop(this.theme, this.sector, this.boss);
+    const painted = paintedBackdrop(this.theme, this.sector, this.boss, this.bulletin);
     const backdrop = painted.canvas ? null : this.background(this.sector, this.boss, this.theme);
     if (painted.canvas) g.drawImage(painted.canvas, 0, 0, W, H); else g.drawImage(backdrop, 0, 0);
     const underRoof = painted.canvas ? !painted.open : backdrop.indoor;
