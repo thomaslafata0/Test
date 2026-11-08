@@ -32,6 +32,33 @@ export const setCalm = (on) => { reduceMotion = osCalm || on; };
 const MAX_PARTICLES = 260; // the stage draws at 3x on a phone: keep the sparks affordable
 const BLOOD = ['#a3261e', '#7d1a15', '#c23a2e'], FLECK = ['#9aa4ad', '#5f6a73', '#c6ced4'];
 const C = { amber: '#ffb35a', crit: '#fff1c9', red: '#ff5a44', ion: '#8fdcff', heal: '#9be08a', smoke: '#8b949c', spark: '#ffd27a', gas: '#9dff6a' };
+// ---------- special-move effects ----------
+// Each enemy special has a recipe: what flies (a lobbed grenade, a spat glob, a dart, a beam, nothing for melee) and what
+// lands (an explosion, a splash, a gas cloud, a claw swipe). Sprites come from vfx/ (manifest.json: { name: { w, h, frames, fps, loop } });
+// without them, the same recipe is drawn with particles in the recipe's colour.
+const FX_RECIPE = {
+  shock: { proj: 'grenade', arc: 70, hit: 'explosion', color: '#ff8a3c', sound: 'throw', boom: true },
+  patrol: { proj: 'grenade', arc: 60, hit: 'flash', color: '#ffffff', sound: 'throw' },
+  gunner: { proj: 'grenade', arc: 30, hit: 'explosion', color: '#ffb35a', boom: true },
+  gasbot: { cloud: 'gas', color: '#9dff6a' }, sedation: { proj: 'dart', hit: 'gas', color: '#9dff6a' },
+  slagrunt: { proj: 'slag', arc: 40, hit: 'slag_splash', color: '#ff7a2a' }, slagger: { proj: 'slag', arc: 30, hit: 'slag_splash', color: '#ff7a2a' },
+  stoker: { proj: 'slag', arc: 50, hit: 'slag_splash', color: '#ff5a22' }, crucible: { proj: 'slag', arc: 60, hit: 'slag_splash', color: '#ff5a22' }, slagmother: { proj: 'slag', arc: 70, hit: 'slag_splash', color: '#ff5a22' },
+  skitter: { proj: 'acid', arc: 30, hit: 'acid_splash', color: '#b6ff3a' }, broodqueen: { proj: 'acid', arc: 50, hit: 'acid_splash', color: '#b6ff3a' },
+  terraformer: { proj: 'spore', arc: 60, hit: 'gas', color: '#c58aff' },
+  cuffbot: { proj: 'cuffs', arc: 10, hit: 'zap', color: '#8fdcff' }, restraint: { proj: 'cuffs', arc: 10, hit: 'zap', color: '#8fdcff' },
+  orderly: { proj: 'dart', hit: 'gas', color: '#9dff6a' }, voight: { proj: 'dart', hit: 'gas', color: '#9dff6a' },
+  probe: { beam: '#ff3a3a', hit: 'zap' }, sentinel: { beam: '#ff3a3a', hit: 'zap' }, lancer: { beam: '#ff3a3a', hit: 'explosion', boom: true }, marksman: { beam: '#ff3a3a', hit: 'muzzle' },
+  dockguard: { proj: 'grenade', arc: 50, hit: 'flash', color: '#ff5a44' }, colonist: { proj: 'grenade', arc: 50, hit: 'flash', color: '#ff5a44' },
+  stalker: { melee: 'claw', color: '#ff3a3a' }, hound: { melee: 'claw', color: '#ff5a44' },
+  foreman: { melee: 'zap', color: '#8fdcff' }, jailer: { melee: 'zap', color: '#8fdcff' }, warder: { melee: 'zap', color: '#8fdcff' },
+  spotweld: { melee: 'slag_splash', color: '#ffd27a' }, welder: { beam: '#ffb35a', hit: 'slag_splash' }, crawler: { beam: '#ff7a2a', hit: 'slag_splash' },
+};
+// The district tactics (engine MAP_TACTIC) by the name they announce.
+const FX_BY_NAME = { 'Molten slag': FX_RECIPE.slagrunt, Flare: FX_RECIPE.colonist, Shackles: { proj: 'cuffs', arc: 10, hit: 'zap', color: '#8fdcff' }, 'Calling it in': { radio: true } };
+let VFX = {};
+fetch('vfx/manifest.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : {})).then((m) => {
+  for (const [k, v] of Object.entries(m || {})) { const im = new Image(); im.onload = () => { VFX[k] = { ...v, img: im }; }; im.src = `vfx/${v.file || k + '.png'}`; }
+}).catch(() => {});
 const HUFF_GROW = 1.45; // how much bigger a Gas Bot gets once it's high on its own supply
 
 // ---------- sprite sheets ----------
@@ -344,7 +371,7 @@ export class Stage {
     this.pops = this.el.querySelector('.pops');
     this.hud = { enemy: this.el.querySelector('.hud-enemy'), player: this.el.querySelector('.hud-player') };
     this.max = { enemy: 1, player: 1 };
-    this.particles = []; this.bolts = []; this.rings = []; this.projectiles = []; this.tweens = [];
+    this.particles = []; this.bolts = []; this.rings = []; this.projectiles = []; this.tweens = []; this.sprites = []; this.beams = [];
     this.shakeUntil = 0; this.shakeMag = 0; this.shakeLen = 1;
     this.stopAt = 0; this.stopUntil = 0; this.stopBudget = 0; this.frameFlash = null; this.zoom = null; this.enemyTags = [];
     this.sayN = 0; this.sigLog = []; this.bfx = null; this.drop = null; // boss moves: last line shown, animations played (tests/boss.cjs reads it), what's on the stage
@@ -816,6 +843,23 @@ export class Stage {
       this.particles.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - spd * 0.3, life: life * (0.6 + Math.random() * 0.6), born: performance.now(), color, g: grav, size });
     }
   }
+  // A one-shot sprite effect at x, y (a sprite from vfx/), or the particle version of it in color.
+  spark(kind, x, y, { color = C.amber, scale = 1, flip = false, loop = false, life = 1200 } = {}) {
+    if (this.skip) return;
+    if (VFX[kind]) { (this.sprites || (this.sprites = [])).push({ kind, x, y, scale, flip, loop, life, born: performance.now() }); return; }
+    const big = kind === 'explosion' || kind === 'flash';
+    this.ring(x, y, big ? 48 : 26, color, big ? 420 : 300, big ? 3 : 2);
+    this.burst(x, y, big ? 36 : 18, color, big ? 3.2 : 2, big ? 520 : 380, kind === 'gas' ? -0.02 : 0.05, kind === 'gas' ? 3 : 2);
+    if (kind === 'gas' || kind === 'explosion') this.burst(x, y, 14, kind === 'gas' ? color : C.smoke, 0.9, 900, -0.02, 3);
+  }
+  // Something thrown, spat or fired along an arc (arc 0: a straight line).
+  async lob(kind, from, to, { arc = 50, ms = 420, color, spin = false, flip = false, scale = 1 } = {}) {
+    const pr = { kind, x: from.x, y: from.y, color, spin, flip, scale, born: performance.now() };
+    this.projectiles.push(pr);
+    await this.tween(ms, (p) => { pr.x = from.x + (to.x - from.x) * p; pr.y = from.y + (to.y - from.y) * p - Math.sin(p * Math.PI) * arc; });
+    this.projectiles.splice(this.projectiles.indexOf(pr), 1);
+  }
+  beam(a, b, color, ms = 380) { if (!this.skip) (this.beams || (this.beams = [])).push({ a, b, color, born: performance.now(), life: ms / this.speed }); }
   ring(x, y, r1, color, ms = 400, w = 2) { if (!this.skip) this.rings.push({ x, y, r1, color, born: performance.now(), life: ms / this.speed, w }); }
   bolt(from, to, color, w = 2, ms = 170) {
     if (this.skip) return Promise.resolve();
@@ -923,6 +967,18 @@ export class Stage {
     if (k === 'enemy:attack' || k === 'enemy:heavy') play(ev.type === 'heavy' ? 'heavyCharge' : MELEE.has(E.id) ? 'whoosh' : 'enemyShot');
     switch (`${ev.who}:${ev.type}`) {
       case 'player:shoot': {
+        if (ev.skill === 'wink') {
+          // Blown Kiss: hand to the lips, a kiss, a heart floats over and pops on them. The shot rides with it.
+          P.setAnim(P.sheet && P.sheet.anims.special ? 'special' : 'attack', now());
+          play('heal'); await this.wait(380);
+          const m = this.muzzle(P), to = this.center(E);
+          for (let i = 0; i < 6; i++) setTimeout(() => this.burst(m.x, m.y - 6, 1, '#ff6ad5', 0.8, 700, -0.02, 2), i * 50);
+          await this.lob('heart', { x: m.x, y: m.y - 8 }, to, { arc: 30, ms: 520, color: '#ff6ad5', scale: 1.2 });
+          this.spark('heart_burst', to.x, to.y, { color: '#ff6ad5', scale: 1.3 });
+          this.setHp('enemy', ev.ehp);
+          await this.hit(E, ev.dmg, { crit: ev.crit });
+          break;
+        }
         P.setAnim(ev.skill === 'pickcard' && P.sheet && P.sheet.anims.special ? 'special' : 'attack', now());
         await this.aim(P);
         await this.move(P, 6, -4, 70);
@@ -1158,10 +1214,8 @@ export class Stage {
       case 'player:thermal': {
         P.setAnim('attack', now());
         const from = this.muzzle(P), to = this.center(E);
-        const pr = { x: from.x, y: from.y };
-        this.projectiles.push(pr);
-        await this.tween(420, (p) => { pr.x = from.x + (to.x - from.x) * p; pr.y = from.y + (to.y - from.y) * p - Math.sin(p * Math.PI) * 50; });
-        this.projectiles.splice(this.projectiles.indexOf(pr), 1);
+        await this.lob(VFX.grenade ? 'grenade' : null, from, to, { arc: 50, ms: 420, spin: true });
+        this.spark('explosion', to.x, to.y, { color: C.amber, scale: 1.4 });
         this.ring(to.x, to.y, 46, C.amber, 380, 3);
         play('explosion');
         this.burst(to.x, to.y, 40, C.amber, 3.5, 500, 0.06, 2);
@@ -1271,9 +1325,18 @@ export class Stage {
         this.popup('enemy', ev.name, 'info');
         play('heavyCharge');
         await this.wait(380);
-        if (!MELEE.has(E.id)) { E.setAnim(E.sheet && E.sheet.anims.special ? 'special' : 'attack', now()); await this.aim(E); }
-        if (MELEE.has(E.id)) { play('whoosh'); await this.meleeIn(E, P); if (E.sheet && E.sheet.anims.special) { E.setAnim('special', now()); } }
-        else { const m = this.muzzle(E); play('enemyShot'); this.burst(m.x, m.y, 8, col, 1.5, 150, 0); await this.bolt(m, this.center(P), col, 3, 200); }
+        const rx = FX_BY_NAME[ev.name] || FX_RECIPE[E.id] || null, pc = this.center(P);
+        if (rx && rx.radio) { E.setAnim(E.sheet && E.sheet.anims.charge ? 'charge' : 'idle', now()); const c = this.center(E); for (let i = 0; i < 3; i++) setTimeout(() => this.ring(c.x, c.y - 30, 18 + i * 12, C.ion, 500, 2), i * 160); play('zap'); await this.wait(500); }
+        else if (rx && (rx.melee || MELEE.has(E.id) && !rx.proj && !rx.beam && !rx.cloud)) { play('whoosh'); await this.meleeIn(E, P); if (E.sheet && E.sheet.anims.special) E.setAnim('special', now()); this.spark(rx.melee || 'zap', pc.x, pc.y - 10, { color: rx.color || col, scale: 1.2, flip: E.x > P.x }); }
+        else if (!rx && MELEE.has(E.id)) { play('whoosh'); await this.meleeIn(E, P); if (E.sheet && E.sheet.anims.special) { E.setAnim('special', now()); } }
+        else {
+          E.setAnim(E.sheet && E.sheet.anims.special ? 'special' : 'attack', now()); await this.aim(E);
+          const m = this.muzzle(E);
+          if (rx && rx.cloud) { play('vent'); this.spark('gas', pc.x, pc.y, { color: rx.color, scale: 1.6 }); this.burst(m.x, m.y, 10, rx.color, 1.2, 600, -0.02, 3); await this.wait(420); }
+          else if (rx && rx.beam) { play('zap'); this.beam(m, pc, rx.beam, 420); await this.wait(260); this.spark(rx.hit || 'zap', pc.x, pc.y, { color: rx.beam }); if (rx.boom) { play('explosion'); this.shake(6, 300); } }
+          else if (rx && rx.proj) { play(rx.sound || 'enemyShot'); this.burst(m.x, m.y, 6, rx.color, 1.2, 150, 0); await this.lob(rx.proj, m, pc, { arc: rx.arc || 0, ms: rx.proj === 'dart' ? 220 : 440, color: rx.color, spin: rx.proj === 'grenade' || rx.proj === 'cuffs', flip: E.x > P.x }); if (rx.boom) { play('explosion'); this.shake(7, 320); } this.spark(rx.hit, pc.x, pc.y, { color: rx.color, scale: rx.hit === 'explosion' ? 1.4 : 1.1 }); }
+          else { play('enemyShot'); this.burst(m.x, m.y, 8, col, 1.5, 150, 0); await this.bolt(m, pc, col, 3, 200); }
+        }
         if (ev.blocked) { const c = this.center(P); this.ring(c.x + 18, c.y - 10, 30, C.ion, 260, 2); play('block'); this.popup('player', 'Blocked', 'info'); }
         if (ev.dmg) { this.setHp('player', ev.php); await this.hit(P, ev.dmg, { note: ev.blocked ? '(blocked)' : '' }); }
         for (const st of ev.statuses || []) { play('status'); this.popup('player', st.toUpperCase(), `st-${st}`); this.flash(P, col, 300); }
@@ -1878,7 +1941,25 @@ export class Stage {
       g.globalAlpha = 1; g.lineWidth = b.w; g.beginPath(); g.moveTo(tx, ty); g.lineTo(hx, hy); g.stroke();
       g.strokeStyle = '#fff'; g.lineWidth = 1; g.beginPath(); g.moveTo((tx + hx) / 2, (ty + hy) / 2); g.lineTo(hx, hy); g.stroke();
     }
-    for (const pr of this.projectiles) { g.fillStyle = '#c39b45'; g.fillRect(Math.round(pr.x) - 2, Math.round(pr.y) - 2, 4, 4); g.fillStyle = '#ff5a44'; g.fillRect(Math.round(pr.x), Math.round(pr.y) - 2, 1, 1); }
+    for (const pr of this.projectiles) if (pr.kind) {
+      const v = VFX[pr.kind], age = t - pr.born;
+      if (v) { const f = Math.floor(age / 1000 * (v.fps || 12)) % v.frames, sc = pr.scale || 1; g.save(); g.translate(pr.x, pr.y); if (pr.spin) g.rotate(age / 90); if (pr.flip) g.scale(-1, 1); g.imageSmoothingEnabled = false; g.drawImage(v.img, f * v.w, 0, v.w, v.h, -v.w * sc / 2, -v.h * sc / 2, v.w * sc, v.h * sc); g.restore(); }
+      else { g.fillStyle = pr.color || '#c39b45'; g.globalAlpha = 0.35; g.beginPath(); g.arc(pr.x, pr.y, 6, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1; g.beginPath(); g.arc(pr.x, pr.y, pr.kind === 'heart' ? 4 : 3, 0, Math.PI * 2); g.fill(); }
+    }
+    for (const fx of [...(this.sprites || [])]) {
+      const v = VFX[fx.kind], age = (t - fx.born) * this.speed, f = v ? Math.floor(age / 1000 * (v.fps || 14)) : 0;
+      if (!v || (!fx.loop && f >= v.frames) || age > fx.life) { this.sprites.splice(this.sprites.indexOf(fx), 1); continue; }
+      const sc = fx.scale || 1; g.save(); g.globalAlpha = fx.loop ? Math.min(1, (fx.life - age) / 300) : 1; g.imageSmoothingEnabled = false; if (fx.flip) { g.translate(fx.x, 0); g.scale(-1, 1); g.translate(-fx.x, 0); }
+      g.drawImage(v.img, (f % v.frames) * v.w, 0, v.w, v.h, fx.x - v.w * sc / 2, fx.y - v.h * sc / 2, v.w * sc, v.h * sc); g.restore();
+    }
+    for (const bm of [...(this.beams || [])]) {
+      const p = (t - bm.born) / bm.life; if (p >= 1) { this.beams.splice(this.beams.indexOf(bm), 1); continue; }
+      const a = p < 0.15 ? p / 0.15 : 1 - (p - 0.15) / 0.85; g.save(); g.lineCap = 'round'; g.strokeStyle = bm.color;
+      g.globalAlpha = 0.3 * a; g.lineWidth = 9; g.beginPath(); g.moveTo(bm.a.x, bm.a.y); g.lineTo(bm.b.x, bm.b.y); g.stroke();
+      g.globalAlpha = a; g.lineWidth = 3; g.beginPath(); g.moveTo(bm.a.x, bm.a.y); g.lineTo(bm.b.x, bm.b.y); g.stroke();
+      g.strokeStyle = '#fff'; g.lineWidth = 1; g.beginPath(); g.moveTo(bm.a.x, bm.a.y); g.lineTo(bm.b.x, bm.b.y); g.stroke(); g.restore();
+    }
+    for (const pr of this.projectiles) if (!pr.kind) { g.fillStyle = '#c39b45'; g.fillRect(Math.round(pr.x) - 2, Math.round(pr.y) - 2, 4, 4); g.fillStyle = '#ff5a44'; g.fillRect(Math.round(pr.x), Math.round(pr.y) - 2, 1, 1); }
     for (const r of [...this.rings]) {
       const p = Math.max(0, (t - r.born) / r.life);
       if (p >= 1) { this.rings.splice(this.rings.indexOf(r), 1); continue; }
