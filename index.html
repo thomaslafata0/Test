@@ -767,6 +767,29 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .ct-spec { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; } .ct-spec span { display: grid; } .ct-spec i { font-style: normal; font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-family: var(--mono); } .ct-spec b { font-size: .88rem; }
 .ct-board { margin: 0; padding-left: 20px; font-size: .84rem; } .ct-board li { display: flex; gap: 8px; } .ct-board li span { flex: 1; } .ct-board i { font-style: normal; font-size: .72rem; }
 .ct-score { display: flex; gap: 12px; align-items: baseline; margin: 6px 0 10px; } .ct-score b { font-size: 2.2rem; color: var(--sodium); } .ct-score span { color: var(--muted); }
+.hd-room { position: relative; width: min(100%, 640px); margin-inline: auto; height: 0; padding-bottom: min(54.8%, 351px); flex: none; border-radius: 10px; overflow: hidden; background: url(hideout/hideout_bg.png) center / cover no-repeat, linear-gradient(#2a2622, #15120f); image-rendering: pixelated; border: 1px solid var(--line); margin-bottom: 8px; }
+.hd-room.bare { background: linear-gradient(180deg, #3a332c 0 62%, #24201c 62%); }
+.hd-piece { position: absolute; background-repeat: no-repeat; background-position: 0 0; image-rendering: pixelated; }
+.hd-piece.anim { animation: hd-anim calc(var(--n) * .25s) steps(var(--n)) infinite; } @keyframes hd-anim { to { background-position: 100% 0; } }
+.hd-piece.box { border: 1px dashed #e8973a88; background: #e8973a14; display: grid; place-items: center; font-size: .6rem; color: #e8c08a; text-align: center; }
+.cos-row .btn, .cos-tile .btn { padding: 4px 10px; font-size: .8rem; min-height: 0; }
+.goals { display: grid; gap: 6px; } .goal { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; }
+.goal.ready { border-color: var(--sodium); background: #e8973a14; } .goal.done { opacity: .6; } .goal-rw { display: grid; justify-items: end; gap: 4px; } .chip.cos { color: #ff9ae5; border-color: #ff6ad566; }
+.goal-bar { height: 5px; border-radius: 3px; background: #0006; margin: 4px 0 2px; overflow: hidden; } .goal-bar i { display: block; height: 100%; background: var(--sodium); }
+.cos-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px; }
+.cos-row { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; } .cos-row b { flex: 1; font-size: .88rem; } .cos-row .muted { flex: 1; }
+.wardrobe { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: start; } .wardrobe .cos-row { margin-bottom: 4px; }
+.dye-prev { width: 140px; height: 140px; object-fit: contain; image-rendering: pixelated; background: radial-gradient(circle at 50% 60%, #e8973a22, #0000 70%); }
+.dye-swatch { width: 18px; height: 18px; border-radius: 50%; background: hsl(var(--h) var(--s) 45%); border: 1px solid #fff3; }
+.cos-tiles { display: flex; flex-wrap: wrap; gap: 10px; margin: 6px 0 12px; } .cos-tile { display: grid; justify-items: center; gap: 4px; width: 112px; text-align: center; font-size: .8rem; }
+.felt-swatch { width: 92px; height: 64px; border-radius: 10px; border: 1px solid #fff2; }
+.back-circuit { background: repeating-linear-gradient(90deg, #0d2a2a 0 8px, #123838 8px 9px), #0d2a2a !important; --rc: #4ff0d0 !important; }
+.back-chrome { background: linear-gradient(135deg, #8c8f98, #e9ecf2 40%, #6d717a 60%, #c9ccd4) !important; --rc: #fff !important; } .back-chrome .heart { color: #ff3fb4; }
+.back-sunset { background: linear-gradient(180deg, #ff9a5a, #c5469a 55%, #3a1c5a) !important; --rc: #ffd36a !important; }
+.back-season { background: conic-gradient(from 45deg, #e8973a, #ff6ad5, #6ab8ff, #e8973a) !important; --rc: #fff !important; } .back-season .heart { color: #fff; }
+.felt-green, .tc-felt.felt-green { background: radial-gradient(ellipse at 50% 40%, #1f3a2c, #0b1510); } .felt-wine, .tc-felt.felt-wine { background: radial-gradient(ellipse at 50% 40%, #4a1424, #16060c) !important; border-color: #7a2a40 !important; }
+.felt-midnight, .tc-felt.felt-midnight { background: radial-gradient(ellipse at 50% 40%, #16264a, #060a16) !important; border-color: #2a4a7a !important; } .felt-velvet, .tc-felt.felt-velvet { background: radial-gradient(ellipse at 50% 30%, #8a1a3a, #2a0410 70%) !important; border-color: #e8b54a !important; }
+@media (max-width: 700px) { .wardrobe { grid-template-columns: 1fr; } .dye-prev { width: 96px; height: 96px; } }
 .board-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .board-table th { text-align: left; font-family: var(--mono); font-size: .66rem; letter-spacing: .1em; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); }
 .board-table td { padding: 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
@@ -1799,6 +1822,7 @@ function finishContract() {
   const rec = (state.meta.contractsDone = state.meta.contractsDone || {});
   rec[ct.id] = { kind: ct.kind, score: sc, done: !!t.done, at: Date.now() };
   for (const id of Object.keys(rec)) if (Object.keys(rec).length > 30) delete rec[id]; // keep the last few weeks
+  if (t.done) E.seasonTick(state, 'contract');
   if (t.done) { state.meta.resolve += ct.reward; state.meta.totalResolve += ct.reward; if (state.char) state.char.credits += ct.credits; }
   contractResult = { ...ct, tally: t, score: sc };
   modal = 'contractres'; lastBody = ''; writeSave(state);
@@ -1834,6 +1858,68 @@ function contractResView() {
     <div class="ct-spec"><span><i>Sectors</i><b>${t.sectors} / ${r.end}</b></span><span><i>Bosses</i><b>${t.bosses}</b></span><span><i>Kills</i><b>${t.kills}</b></span><span><i>Credits</i><b>${Math.max(0, t.credits)}</b></span></div>
     <p class="${t.done ? 'good-text' : 'muted'}">${t.done ? `Your cell gets +${r.reward} ${esc(S.meta)} and your operative +${r.credits} ${esc(S.cur)}.` : 'No payout this time. There\u2019s a new one tomorrow.'}</p>
     <div class="btnrow"><button class="btn primary" data-a="closemodal">Back to the yard</button></div></div></div>`;
+}
+
+// ---------- the hideout: decor, wardrobe, card table styles ----------
+// Art for the room and its pieces lives in hideout/ (manifest.json). Without it, pieces show as labelled boxes.
+let hideArt = null;
+const opStill = (c) => lookBattleStill(c.look, c.background, null) || '';
+fetch('hideout/manifest.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : null)).then((m) => { hideArt = m; if (state && state.popup === 'hideout') render(); }).catch(() => {});
+function hideoutRoom(cos) {
+  const pieces = D.DECOR.filter((d) => cos.decor[d.id]).sort((a, b) => a.layer - b.layer || a.y - b.y).map((d) => {
+    const t = cos.decor[d.id], file = t > 1 ? `${d.id}2` : d.id, a = hideArt && hideArt[file];
+    const w = a ? a.w : 70, h = a ? a.h : 60, n = (a && a.frames) || 1;
+    const style = `left:${(d.x / 688) * 100}%;top:${((d.y - h) / 377) * 100}%;width:${(w / 688) * 100}%;height:${(h / 377) * 100}%`;
+    return a ? `<div class="hd-piece ${n > 1 ? 'anim' : ''}" style="${style};background-image:url(hideout/${file}.png);background-size:${n * 100}% 100%;--n:${n}" title="${esc(d.tiers[t - 1])}"></div>`
+      : `<div class="hd-piece box" style="${style}" title="${esc(d.tiers[t - 1])}"><span>${esc(d.tiers[t - 1])}</span></div>`;
+  }).join('');
+  return `<div class="hd-room ${hideArt && hideArt.hideout_bg ? '' : 'bare'}">${pieces}</div>`;
+}
+function hideoutView() {
+  const m = state.meta, c = state.char, cos = E.cosmetics(m), tab = state.hideTab || 'room', guest = isGuest();
+  const tabBtn = (k, label) => `<button class="tab" aria-selected="${tab === k}" data-a="hidetab" data-v="${k}">${label}</button>`;
+  const nav = `<nav class="tabs pop-tabs">${tabBtn('room', 'Hideout')}${tabBtn('wardrobe', 'Wardrobe')}${tabBtn('table', 'Card table')}</nav>`;
+  const price = (n) => (n ? cr(n) : 'Free');
+  if (tab === 'wardrobe') {
+    const now = c.look && c.look.dye;
+    const rows = [{ id: '', name: 'No dye', cost: 0 }, ...D.DYES].map((d) => {
+      const own = !d.id || E.ownsCosmetic(m, 'dye', d.id), on = (now || '') === d.id;
+      const btn = on ? '<span class="chip good">Wearing</span>' : own ? `<button class="btn small" data-a="weardye" data-v="${d.id}" ${guest || !c.look ? 'disabled' : ''}>Wear</button>` : d.season ? '<span class="chip">Season goal</span>' : `<button class="btn small primary" data-a="buycos" data-v="dye:${d.id}" ${guest || c.credits < d.cost ? 'disabled' : ''}>Buy \u00b7 ${cr(d.cost)}</button>`;
+      return `<div class="cos-row"><span class="dye-swatch" style="--h:${d.hue || 0};--s:${d.id ? Math.min(100, (d.sat ?? 1) * 70) : 0}%"></span><b>${esc(d.name)}</b>${btn}</div>`;
+    }).join('');
+    const prev = c.look ? `<img class="dye-prev" src="${opStill(c)}" alt="">` : '';
+    return `${nav}<div class="wardrobe">${prev}<div><p class="muted small">Dyes recolour your operative\u2019s outfit in fights. Bought once for the cell; any operative can wear them.</p>${rows}</div></div>`;
+  }
+  if (tab === 'table') {
+    const list = (kind, items, cur) => items.map((d) => {
+      const own = E.ownsCosmetic(m, kind, d.id), on = cur === d.id;
+      const btn = on ? '<span class="chip good">In use</span>' : own ? `<button class="btn small" data-a="usecos" data-v="${kind}:${d.id}" ${guest ? 'disabled' : ''}>Use</button>` : d.season ? '<span class="chip">Season goal</span>' : `<button class="btn small primary" data-a="buycos" data-v="${kind}:${d.id}" ${guest || c.credits < d.cost ? 'disabled' : ''}>Buy \u00b7 ${cr(d.cost)}</button>`;
+      return `<div class="cos-tile">${kind === 'back' ? `<div class="tcard back back-${d.id} mini"><div class="tc-backmark"><span class="heart">&hearts;</span></div></div>` : `<div class="felt-swatch felt-${d.id}"></div>`}<b>${esc(d.name)}</b>${btn}</div>`;
+    }).join('');
+    return `${nav}<p class="muted small">How your Lantern Hearts table looks: the backs of the house\u2019s cards and the felt you play on.</p>
+      <span class="label">Card backs</span><div class="cos-tiles">${list('back', D.CARD_BACKS, m.cardBack || 'classic')}</div>
+      <span class="label">Table felts</span><div class="cos-tiles">${list('felt', D.FELTS, m.felt || 'green')}</div>`;
+  }
+  const rows = D.DECOR.map((d) => {
+    const t = cos.decor[d.id] || 0, next = d.tiers[t];
+    const btn = next ? `<button class="btn small ${t ? '' : 'primary'}" data-a="buydecor" data-v="${d.id}" ${guest || c.credits < d.cost[t] ? 'disabled' : ''}>${t ? 'Upgrade' : 'Buy'} \u00b7 ${cr(d.cost[t])}</button>` : '<span class="chip good">Done</span>';
+    return `<div class="cos-row"><b>${esc(t ? d.tiers[t - 1] : d.name)}</b>${next && t ? `<span class="muted small">\u2192 ${esc(next)}</span>` : ''}${btn}</div>`;
+  }).join('');
+  const worth = E.hideoutWorth(m);
+  return `${nav}${hideoutRoom(cos)}<p class="muted small">Your cell\u2019s basement. ${worth ? `${cr(worth)} sunk into it so far.` : 'Bare concrete for now.'} Everything here belongs to the cell and stays when operatives fall.</p><div class="cos-list">${rows}</div>`;
+}
+
+// ---------- season goals ----------
+const goalsReady = () => !!state.meta && D.SEASON_GOALS.some((g) => !E.seasonGoals(state.meta).claimed.includes(g.id) && E.goalProgress(state.meta, g) >= g.n);
+function rewardText(r) { return r.resolve ? `+${r.resolve} ${S.meta}` : r.dye ? `${D.DYES.find((x) => x.id === r.dye).name} dye` : r.back ? `${D.CARD_BACKS.find((x) => x.id === r.back).name} card back` : r.felt ? `${D.FELTS.find((x) => x.id === r.felt).name} felt` : ''; }
+function seasonView() {
+  const m = state.meta, g = E.seasonGoals(m), guest = isGuest();
+  const rows = D.SEASON_GOALS.map((goal) => {
+    const n = E.goalProgress(m, goal), done = g.claimed.includes(goal.id), ready = !done && n >= goal.n;
+    return `<div class="goal ${done ? 'done' : ready ? 'ready' : ''}"><div><b>${esc(goal.text)}</b><div class="goal-bar"><i style="width:${Math.round(100 * n / goal.n)}%"></i></div><span class="muted small">${n.toLocaleString()} / ${goal.n.toLocaleString()}</span></div>
+      <div class="goal-rw"><span class="chip ${goal.reward.resolve ? '' : 'cos'}">${esc(rewardText(goal.reward))}</span>${done ? '<span class="good-text small">Claimed</span>' : ready ? `<button class="btn small primary" data-a="claimgoal" data-v="${goal.id}" ${guest ? 'disabled' : ''}>Claim</button>` : ''}</div></div>`;
+  }).join('');
+  return `<p class="muted small">Season ${E.SEASON} goals for the whole cell. Progress counts from the start of the season; each pays once. Cosmetic rewards can\u2019t be bought.</p><div class="goals">${rows}</div>`;
 }
 
 // A short note over everything, for explanations that shouldn't disturb the screen behind them.
@@ -2622,6 +2708,7 @@ const POPUPS = {
   character: { label: 'Character', where: 'The safehouse \u00B7 Cass', body: () => character() },
   gear: { label: 'Gear', where: 'The safehouse \u00B7 your locker', body: () => `${tip('gear')}${gearTab()}` },
   lockup: { label: 'Lockup', where: 'The safehouse \u00B7 under the floor', body: () => lockupTab() },
+  hideout: { label: 'Hideout', where: 'The basement under the safehouse', body: () => hideoutView() },
   partner: { label: 'With your partner', where: 'In the yard', body: () => partnerMenu(), hidden: true },
 };
 const popupBadge = (id) => {
@@ -3104,8 +3191,8 @@ function gate() {
   const gin = E.drinkOf(c), prep = `<div class="prep-sum" aria-label="What you're bringing"><span><b>${c.hp}/${st.maxHp}</b> HP</span><span><b>${c.items.stim}/${st.carry}</b> stims</span><span><b>${st.atk}</b> shoot \u00b7 <b>${st.atkM}</b> strike</span><span><b>${st.def}</b> DEF</span>${gin ? `<span>${esc(gin.name)}: ${esc(gin.effect)}</span>` : ''}</div>`;
   const go = isGuest() ? `<div class="deploy-go">${prep}${warn}<span class="muted">The host picks the target.</span><button class="btn big ${state.guestReady ? 'primary' : ''}" data-a="coopready" aria-pressed="${!!state.guestReady}">${state.guestReady ? 'Ready \u00B7 waiting for the host' : 'Ready for the raid'}</button></div>`
     : `<div class="deploy-go ${hurt && canHeal ? 'hurt' : ''}">${prep}${warn}${E.isCoop(state) ? `<span class="muted" style="font-size:.84rem">${state.guestReady ? `${esc(state.guestName || 'Your friend')} is ready.` : state.hostWants ? `Deploying as soon as ${esc(state.guestName || 'your friend')} is ready\u2026` : peerAuto ? `${esc(state.guestName || 'Your friend')} has auto-accept on: press Deploy and they\u2019ll follow.` : `Waiting for ${esc(state.guestName || 'your friend')} to press Ready.`}</span>` : ''}<span class="label">${ins.length > 1 ? 'Deploy \u00B7 pick where to start' : 'Deploy'}</span><div class="ins">${ins.map((n) => `<button class="btn big ${n === ins[ins.length - 1] ? 'primary' : ''}" data-a="deploy" data-v="${n}" ${E.isCoop(state) && !state.guestReady && !peerAuto ? 'disabled' : ''}><span class="ins-n">Sector ${n}</span> <span class="ins-name">${esc(E.sectorName(n, sel.id))}</span></button>`).join('')}</div>${ins.length === 1 ? '<span class="muted ins-hint">Beat a boss to start deeper next time.</span>' : ''}</div>`;
-  return `<nav class="tabs pop-tabs">${tabBtn('deploy', 'Deploy')}${tabBtn('daily', 'Daily')}${tabBtn('contracts', `Contracts ${(m.contracts || []).length}`)}</nav>
-    ${tab === 'daily' ? contractsView() : tab === 'contracts' ? `<div class="contracts">${contracts || '<p class="muted">No jobs right now.</p>'}</div>` : `<div class="gate">
+  return `<nav class="tabs pop-tabs">${tabBtn('deploy', 'Deploy')}${tabBtn('daily', 'Daily')}${tabBtn('season', `Season${goalsReady() ? ' <span class="badge">!</span>' : ''}`)}${tabBtn('contracts', `Contracts ${(m.contracts || []).length}`)}</nav>
+    ${tab === 'season' ? seasonView() : tab === 'daily' ? contractsView() : tab === 'contracts' ? `<div class="contracts">${contracts || '<p class="muted">No jobs right now.</p>'}</div>` : `<div class="gate">
       <div class="gate-maps"><div class="maps">${cards}</div>${locked.length ? `<p class="muted maps-locked">Locked: ${locked.map((mp) => `${esc(mp.name)} (${mp.power ? 'free the other four' : `clear ${Object.entries(mp.unlock).map(([id, n]) => `${esc(E.mapById(id).name)} ${n}`).join(', ')}`})`).join(', ')}</p>` : ''}</div>
       <div class="gate-brief"><span class="label">${esc(sel.name)} \u00B7 what to expect</span><b class="mech-title">${esc(sel.mechanic.name)}</b> <span class="mech-line">${esc(sel.mechanic.desc)}</span>${traits.length ? `<div class="chips">${traits.map((x) => `<span class="chip">${esc(x)}</span>`).join('')}</div>` : ''}${threat}${mutView()}</div>
       ${go}
@@ -3675,7 +3762,7 @@ function tcard(key, { btn = '', cls = '', h = 86, cap = 5, call = null, count = 
     <div class="tc-top"><span class="tc-name">${esc(k.name)}</span>${gems(k.rank)}</div><div class="tc-rar">${esc(k.rarityName)}${k.capped ? ` <em>plays as ${esc(CARDS.RARITY[cap].name)}</em>` : ''}</div>
     <div class="tc-stats">${st}</div>${k.ability ? `<div class="tc-ab"><b>${esc(k.ability.name)}</b> ${esc(k.ability.text)}</div>` : ''}${count > 1 ? `<span class="tc-count">\u00d7${count}</span>` : ''}${btn}</div>`;
 }
-const tback = (cls = '') => `<div class="tcard back ${cls}"><div class="tc-backmark"><span class="heart">&hearts;</span><span>Lantern<br>Hearts</span></div></div>`;
+const tback = (cls = '') => `<div class="tcard back back-${(state && state.meta && state.meta.cardBack) || 'classic'} ${cls}"><div class="tc-backmark"><span class="heart">&hearts;</span><span>Lantern<br>Hearts</span></div></div>`;
 function cardsView() {
   const c = state.char, m = state.meta, g = state.cardMatch;
   if (g) return cardMatchView(g);
@@ -3751,7 +3838,8 @@ function cardMatchView(g) {
     <div class="tc-hand">${g.hand.map((k, i) => tcard(k, { cap: g.cap, call: stat, btn: `<button class="btn primary" data-a="cardpick" data-v="${i}">Play \u00b7 ${CARDS.score(k, stat, g.round, g.cap, null, wins, losses)}</button>` })).join('')}</div>`;
   const msg = g.result === 'won' ? `You take the pot: +${g.stake} credits.` : g.result === 'lost' ? `The house rakes in your ${g.stake}.` : 'A draw. Your stake comes back.';
   const end = g.over ? `<div class="notice ${g.result === 'won' ? 'good' : g.result === 'lost' ? 'lose' : ''} tc-end">${msg}</div><div class="btnrow"><button class="btn primary" data-a="cardplay" data-v="${t.id}" ${state.char.credits < t.stake ? 'disabled' : ''}>Deal again \u00b7 ${cr(t.stake)}</button><button class="btn" data-a="cardclose">Leave the table</button></div>` : '';
-  return `<div class="tc-felt t-${t.id}"><div class="tc-felt-head"><span class="label">${esc(t.name)} \u00b7 stake ${cr(g.stake)}</span><span class="tc-score">You <b>${wins}</b> \u2013 <b>${losses}</b> House</span></div>
+  const felt = state.meta.felt && state.meta.felt !== 'green' ? ` felt-${state.meta.felt}` : '';
+  return `<div class="tc-felt t-${t.id}${felt}"><div class="tc-felt-head"><span class="label">${esc(t.name)} \u00b7 stake ${cr(g.stake)}</span><span class="tc-score">You <b>${wins}</b> \u2013 <b>${losses}</b> House</span></div>
     <div class="tc-cols">${cols}</div></div>${hand}${end}`;
 }
 // After a night is booked: the room closes, she walks you out the back in town, then the card says what happened.
@@ -4632,6 +4720,12 @@ function applyAct(a, v, k) {
     case 'coopready': state.guestReady = !state.guestReady; if (net) net.send({ t: 'ready', on: state.guestReady, auto: !!coopReadyAuto }); sfx('click'); break;
     case 'newspage': newsPage = +v; sfx('click'); break;
     case 'mutator': ok = E.toggleMutator(state, v); sfx('click'); break;
+    case 'hidetab': state.hideTab = v; sfx('click'); break;
+    case 'claimgoal': { const gl = E.claimGoal(state, v); ok = !!gl; if (gl) { toast = `Season goal: ${rewardText(gl.reward)}.`; sfx('perk'); } break; }
+    case 'buycos': { const [kind, id] = String(v).split(':'); ok = E.buyCosmetic(state, kind, id); if (ok) { if (kind === 'dye') E.wearDye(state, id); else E.useTableStyle(state, kind, id); sfx('buy'); } break; }
+    case 'usecos': { const [kind, id] = String(v).split(':'); ok = E.useTableStyle(state, kind, id); sfx('click'); break; }
+    case 'weardye': ok = E.wearDye(state, v || null); sfx('click'); break;
+    case 'buydecor': ok = E.buyDecor(state, v); if (ok) sfx('buy'); break;
     case 'contractgo': ok = startContract(v); if (ok) sfx('door'); else hint(contractBlock(v) || 'Not now.'); break;
     case 'cardtab': cardTab = v; lastPack = null; sfx('click'); break;
     case 'mainmenu': if (isGuest()) break; save(); modal = null; titleOpen = true; sfx('door'); break;
@@ -4646,7 +4740,7 @@ function applyAct(a, v, k) {
     case 'cardout': ok = !!CARDS.deckOut(state, v); sfx('click'); break;
     case 'cardbest': CARDS.bestDeck(state); sfx('click'); break;
     case 'cardfuse': { const up = CARDS.fuse(state, v); ok = !!up; if (up) { toast = `Fused into ${CARDS.cardInfo(up).name}, ${CARDS.cardInfo(up).rarityName}.`; sfx('perk'); } break; }
-    case 'cardpick': { const g = CARDS.playCard(state, +v); ok = !!g; if (g) { const r = g.rounds[g.rounds.length - 1]; sfx(g.over ? (g.result === 'won' ? 'coin' : g.result === 'lost' ? 'denied' : 'click') : r.won > 0 ? 'perk' : r.won < 0 ? 'denied' : 'click'); } break; }
+    case 'cardpick': { const g = CARDS.playCard(state, +v); if (g && g.over && g.result === 'won' && g.table === 'high') E.seasonTick(state, 'highroller'); ok = !!g; if (g) { const r = g.rounds[g.rounds.length - 1]; sfx(g.over ? (g.result === 'won' ? 'coin' : g.result === 'lost' ? 'denied' : 'click') : r.won > 0 ? 'perk' : r.won < 0 ? 'denied' : 'click'); } break; }
     case 'cardclose': CARDS.closeMatch(state); break;
     case 'lounge': { const r = E.visitLounge(state, v, rng); ok = !!r; if (r) { sfx(r.bad ? 'denied' : 'perk'); if (!actingAs) walkOutBack(v, r); } break; }
     case 'duel': {

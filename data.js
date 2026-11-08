@@ -1109,6 +1109,62 @@ export const MUTATORS = [
   { id: 'grounded', name: 'Grounded', bonus: 0.1, desc: 'Your drone stays home.' },
 ];
 
+// Cosmetics: credit sinks for the late game. Bought once for the cell (meta.cosmetics), worn or placed for free after.
+// Dyes recolour an operative's outfit (hue in degrees; sat 0 strips the colour). season: only from a season goal.
+export const DYES = [
+  { id: 'crimson', name: 'Crimson', hue: 352, sat: 1, cost: 900 },
+  { id: 'teal', name: 'Teal', hue: 178, sat: 1, cost: 900 },
+  { id: 'violet', name: 'Violet', hue: 275, sat: 1, cost: 1400 },
+  { id: 'gold', name: 'Gilt', hue: 44, sat: 1.15, cost: 2200 },
+  { id: 'ghost', name: 'Ghost Grey', hue: 0, sat: 0, cost: 1800 },
+  { id: 'neon', name: 'Neon Pink', hue: 318, sat: 1.4, cost: 3200 },
+  { id: 'ember', name: 'Ember', hue: 18, sat: 1.3, cost: 0, season: true },
+];
+// Lantern Hearts card backs and table felts: pure CSS (index.html .back-<id>, .felt-<id>).
+export const CARD_BACKS = [
+  { id: 'classic', name: 'Lantern Classic', cost: 0 },
+  { id: 'circuit', name: 'Circuit', cost: 600 },
+  { id: 'chrome', name: 'Chrome Hearts', cost: 1200 },
+  { id: 'sunset', name: 'Reach Sunset', cost: 2000 },
+  { id: 'season', name: 'Season Two', cost: 0, season: true },
+];
+export const FELTS = [
+  { id: 'green', name: 'House Green', cost: 0 },
+  { id: 'wine', name: 'Wine', cost: 500 },
+  { id: 'midnight', name: 'Midnight', cost: 900 },
+  { id: 'velvet', name: 'Velvet Rope', cost: 0, season: true },
+];
+// The hideout: the cell's basement, furnished piece by piece. Each piece has up to two tiers; art in hideout/<id>.png and <id>2.png.
+// x, y: where it stands in the 688x377 room (feet at y). layer: 0 back wall, 1 floor.
+export const DECOR = [
+  { id: 'couch', name: 'Couch', tiers: ['Ratty couch', 'Leather couch'], cost: [400, 1800], x: 300, y: 330, layer: 1 },
+  { id: 'bed', name: 'Bed', tiers: ['Floor mattress', 'Proper bed'], cost: [300, 1500], x: 90, y: 340, layer: 1 },
+  { id: 'workbench', name: 'Workbench', tiers: ['Workbench', 'Machinist bench'], cost: [600, 2400], x: 560, y: 320, layer: 1 },
+  { id: 'rack', name: 'Weapon rack', tiers: ['Weapon rack', 'Armoury wall'], cost: [700, 2600], x: 470, y: 250, layer: 0 },
+  { id: 'neon', name: 'Neon sign', tiers: ['Neon heart'], cost: [1200], x: 330, y: 150, layer: 0 },
+  { id: 'plant', name: 'Plants', tiers: ['Dead plant', 'Hydroponics'], cost: [100, 1600], x: 640, y: 335, layer: 1 },
+  { id: 'arcade', name: 'Arcade cabinet', tiers: ['Arcade cabinet'], cost: [2500], x: 200, y: 320, layer: 1 },
+  { id: 'fridge', name: 'Fridge', tiers: ['Fridge', 'Stocked fridge'], cost: [350, 1100], x: 30, y: 300, layer: 1 },
+  { id: 'map', name: 'Wall map', tiers: ['Wall map'], cost: [500], x: 180, y: 190, layer: 0 },
+  { id: 'tv', name: 'TV', tiers: ['CRT stack'], cost: [900], x: 400, y: 320, layer: 1 },
+  { id: 'rug', name: 'Rug', tiers: ['Rug', 'Good rug'], cost: [250, 900], x: 330, y: 365, layer: 0.5 },
+  { id: 'poster', name: 'Poster', tiers: ['Poster'], cost: [150], x: 560, y: 170, layer: 0 },
+  { id: 'dock', name: 'Drone dock', tiers: ['Drone dock'], cost: [1500], x: 610, y: 210, layer: 0 },
+  { id: 'jukebox', name: 'Jukebox', tiers: ['Jukebox'], cost: [3000], x: 130, y: 320, layer: 1 },
+];
+// Season goals: progress counts from the start of the season (meta.seasonGoals); each pays once.
+// key: a feat counter (engine feat()) or a season event (engine seasonTick()). reward: Resolve, or a season cosmetic.
+export const SEASON_GOALS = [
+  { id: 'bosses', key: 'bosses', n: 15, text: 'Beat 15 bosses', reward: { resolve: 5 } },
+  { id: 'extract', key: 'extractions', n: 20, text: 'Extract 20 times', reward: { resolve: 4 } },
+  { id: 'elites', key: 'elites', n: 25, text: 'Take down 25 elites', reward: { dye: 'ember' } },
+  { id: 'contracts', key: 'contract', n: 5, text: 'Finish 5 daily or weekly contracts', reward: { back: 'season' } },
+  { id: 'highroller', key: 'highroller', n: 1, text: 'Win a pot at the High Roller table', reward: { felt: 'velvet' } },
+  { id: 'reachmedic', key: 'reachmedic', n: 1, text: 'Free Halcyon Reach with a Field Medic', reward: { resolve: 10 } },
+  { id: 'mutators', key: 'mutsector', n: 20, text: 'Clear 20 sectors with 3 or more mutators on', reward: { resolve: 6 } },
+  { id: 'kills', key: 'kills', n: 600, text: 'Kill 600 enemies', reward: { resolve: 4 } },
+];
+
 // ---------- Downtime: the after-curfew side of the yard ----------
 // Permanent marks an operative can earn in orbit. Five exist; an operative can hold all five.
 export const MARKS = {

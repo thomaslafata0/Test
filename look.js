@@ -1,4 +1,5 @@
 import { gunSprite, GUN_GRIP } from './guns.js';
+import { DYES } from './data.js';
 // Character looks: body, class outfit, hair, colours and held weapon, composited from the layered pack in chars2/
 // (manifest.json; see docs/CHARACTER_ART_PROMPT_CHATGPT.md). Every overlay was drawn on body_m1: see compose().
 // Without the pack, everything returns null and the game falls back to the single player sheet.
@@ -323,17 +324,18 @@ function findPistol(p, W, ox, fw, fh) {
   return null;
 }
 const hsv = (r, g, b) => { const mx = Math.max(r, g, b), mn = Math.min(r, g, b), c = mx - mn; let h = 0; if (c) h = mx === r ? ((g - b) / c) % 6 : mx === g ? (b - r) / c + 2 : (r - g) / c + 4; return [(h * 60 + 360) % 360, mx ? c / mx : 0, mx / 255]; };
+const hsvRgb = (h, s, v) => { const f = (n) => { const k = (n + h / 60) % 6; return Math.round(255 * (v - v * s * Math.max(0, Math.min(k, 4 - k, 1)))); }; return [f(5), f(3), f(1)]; };
 const rgb = (hex) => [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
 function hdSheet(look, ranged) {
   const op = ops[sexOf(look)];
   if (!op || !op.anims.idle) return null;
-  const gun = ranged && ranged !== 'wpn_pistol' ? ranged : null, key = `hd:${sexOf(look)}:${look.hairColor}:${look.skin}:${gun}`;
+  const gun = ranged && ranged !== 'wpn_pistol' ? ranged : null, key = `hd:${sexOf(look)}:${look.hairColor}:${look.skin}:${gun}:${look.dye || ''}`;
   if (sheetCache[key]) return sheetCache[key];
   const hair = look.hairColor !== NATURAL_HAIR && HAIRS[look.hairColor] ? rgb(HAIRS[look.hairColor][1]) : null;
   const skin = look.skin !== NATURAL_SKIN && SKINS[look.skin] ? rgb(SKINS[look.skin][2]) : null;
-  const art = gun ? gunSprite(gun) : null, grip = gun ? GUN_GRIP[gun] : null, anims = {};
+  const art = gun ? gunSprite(gun) : null, grip = gun ? GUN_GRIP[gun] : null, anims = {}, dye = look.dye && DYES.find((x) => x.id === look.dye);
   for (const [name, a] of Object.entries(op.anims)) {
-    if (!hair && !skin && !art) { anims[name] = a; continue; }
+    if (!hair && !skin && !art && !dye) { anims[name] = a; continue; }
     const fw = a.img.width / a.frames, fh = a.img.height, c = document.createElement('canvas'); c.width = a.img.width; c.height = fh;
     const g = c.getContext('2d', { willReadFrequently: true }); g.imageSmoothingEnabled = false; g.drawImage(a.img, 0, 0);
     const id = g.getImageData(0, 0, c.width, fh), p = id.data;
@@ -346,6 +348,8 @@ function hdSheet(look, ranged) {
         const [h, s, v] = hsv(p[o], p[o + 1], p[o + 2]);
         if (hair && y < top + 46 && (h < 30 || h > 350) && s > 0.56) { const k = Math.min(1.3, v * 1.5); for (let n = 0; n < 3; n++) p[o + n] = Math.min(255, hair[n] * k); }
         else if (skin && h > 8 && h < 36 && s > 0.2 && s < 0.56 && v > 0.55) { const k = Math.min(1.15, v * 1.12); for (let n = 0; n < 3; n++) p[o + n] = Math.min(255, skin[n] * k); }
+        // A dye: the outfit's coloured cloth takes the dye's hue (hair, skin and grey metal are left alone).
+        else if (dye && s > 0.2 && v > 0.1 && !(y < top + 46 && (h < 30 || h > 350) && s > 0.56) && !(h > 8 && h < 36 && s < 0.56 && v > 0.55)) { const [r, g2, b] = hsvRgb(dye.hue, Math.min(1, s * dye.sat), v); p[o] = r; p[o + 1] = g2; p[o + 2] = b; }
       }
     }
     const swaps = [];

@@ -2970,6 +2970,8 @@ export function clearSector(s, rng = Math.random) {
   c.credits += bonus; ledger(s, 'sector bonus', bonus); feat(s, 'credits', bonus);
   m.resolve += res; m.totalResolve += res;
   // Mutators: their bonus share of this sector's points goes on the operative's score, and of its Resolve into a bank that pays out whole points.
+  if ((r.mutators || []).length >= 3 && !r.daily) seasonTick(s, 'mutsector');
+  if (r.map === 'reach' && r.sector >= MAX_SECTOR) forEachActor(s, (a) => { if (a.background === 'medic') seasonTick(s, 'reachmedic'); });
   if (r.daily) { r.daily.sectors = Math.max(r.daily.sectors, r.sector - r.startSector + 1); if (isBossSector(r.sector)) r.daily.bosses += 1; if (r.sector >= r.daily.end) { r.daily.done = true; log(s, 'Contract complete. Turn it in.', 'reward'); } }
   const mb = r.daily ? 0 : mutBonus(r.mutators);
   if (mb > 0) {
@@ -3660,6 +3662,64 @@ export const featTierBuff = (def, i) => def.per * D.FEAT_FALLOFF[i];
 export const featTotal = (def, tier) => { let t = 0; for (let i = 0; i < tier; i++) t += featTierBuff(def, i); return t; };
 const fbCache = new WeakMap();
 // All active feat buffs for a cell, cached until a tier changes.
+// ---------- season goals ----------
+// Counts from the start of the season. Feat counters feed it (feat() calls this), and a few season-only events call it directly.
+export function seasonGoals(m) {
+  if (!m.seasonGoals || m.seasonGoals.season !== SEASON) m.seasonGoals = { season: SEASON, c: {}, claimed: [] };
+  return m.seasonGoals;
+}
+export function seasonTick(s, key, n = 1) {
+  if (!s || !s.meta || !D.SEASON_GOALS.some((g) => g.key === key)) return;
+  if (isCoop(s) && actorIdx(s) === 1) return; // a visiting partner's progress counts on their own cell
+  const g = seasonGoals(s.meta); g.c[key] = (g.c[key] || 0) + n;
+}
+export const goalProgress = (m, goal) => Math.min(goal.n, (seasonGoals(m).c[goal.key] || 0));
+export function claimGoal(s, id) {
+  const m = s.meta, goal = D.SEASON_GOALS.find((x) => x.id === id), g = seasonGoals(m);
+  if (!goal || g.claimed.includes(id) || goalProgress(m, goal) < goal.n) return null;
+  g.claimed.push(id);
+  const r = goal.reward, cos = cosmetics(m);
+  if (r.resolve) { m.resolve += r.resolve; m.totalResolve += r.resolve; }
+  if (r.dye && !cos.dye.includes(r.dye)) cos.dye.push(r.dye);
+  if (r.back && !cos.back.includes(r.back)) cos.back.push(r.back);
+  if (r.felt && !cos.felt.includes(r.felt)) cos.felt.push(r.felt);
+  return goal;
+}
+
+// ---------- cosmetics ----------
+// Owned by the cell: dyes, card backs, felts and hideout pieces (decor: { id: tier }). Paid from the operative's credits.
+export function cosmetics(m) {
+  const c = m.cosmetics || (m.cosmetics = {});
+  for (const k of ['dye', 'back', 'felt']) c[k] = c[k] || [];
+  c.decor = c.decor || {};
+  return c;
+}
+const COS = { dye: () => D.DYES, back: () => D.CARD_BACKS, felt: () => D.FELTS };
+export function buyCosmetic(s, kind, id) {
+  const ch = s.char, list = COS[kind] && COS[kind](), it = list && list.find((x) => x.id === id), cos = cosmetics(s.meta);
+  if (!ch || !it || it.season || cos[kind].includes(id) || ch.credits < it.cost) return false;
+  ch.credits -= it.cost; cos[kind].push(id); feat(s, 'upgrades');
+  ledger(s, 'cosmetic', -it.cost);
+  return true;
+}
+export const ownsCosmetic = (m, kind, id) => { const it = COS[kind]().find((x) => x.id === id); return !!it && (it.cost === 0 && !it.season || cosmetics(m)[kind].includes(id)); };
+// Wear a dye (or none) on the current operative.
+export function wearDye(s, id) {
+  const c = s.char; if (!c || !c.look) return false;
+  if (id && !ownsCosmetic(s.meta, 'dye', id)) return false;
+  if (id) c.look = { ...c.look, dye: id }; else { const { dye, ...rest } = c.look; c.look = rest; }
+  return true;
+}
+export function useTableStyle(s, kind, id) { if (!ownsCosmetic(s.meta, kind, id)) return false; s.meta[kind === 'back' ? 'cardBack' : 'felt'] = id; return true; }
+// Hideout pieces: buying the next tier of a piece.
+export function buyDecor(s, id) {
+  const ch = s.char, d = D.DECOR.find((x) => x.id === id), cos = cosmetics(s.meta), t = cos.decor[id] || 0;
+  if (!ch || !d || t >= d.tiers.length || ch.credits < d.cost[t]) return false;
+  ch.credits -= d.cost[t]; cos.decor[id] = t + 1; ledger(s, 'hideout', -d.cost[t]);
+  return true;
+}
+export const hideoutWorth = (m) => Object.entries(cosmetics(m).decor).reduce((n, [id, t]) => { const d = D.DECOR.find((x) => x.id === id); return n + (d ? d.cost.slice(0, t).reduce((a, b) => a + b, 0) : 0); }, 0);
+
 export function featBuffs(m) {
   const F = m.feats || { counters: {}, tiers: {}, v: 0 };
   const hit = fbCache.get(m);
@@ -3675,6 +3735,7 @@ export function featBuffs(m) {
 }
 // Counts progress; unlocks tiers; pays Resolve on the top tiers; queues a notice for the UI (s.featUnlocks).
 export function feat(s, key, n = 1) {
+  seasonTick(s, key, n);
   const def = FEAT_DEFS[key]; if (!def || !s.meta) return;
   const m = s.meta, F = m.feats || (m.feats = { counters: {}, tiers: {}, v: 0 });
   F.counters[key] = (F.counters[key] || 0) + n;
