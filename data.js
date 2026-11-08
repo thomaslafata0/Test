@@ -1109,6 +1109,19 @@ export const MUTATORS = [
   { id: 'grounded', name: 'Grounded', bonus: 0.1, desc: 'Your drone stays home.' },
 ];
 
+// Class mastery specialisations (engine masteryStats): pick one of two at mastery 2. fx: hp/atk/atkM fractions, def flat,
+// dodge/crit/stim/credits fractions.
+export const SPECS = {
+  foundry: [{ name: 'Iron Hide', text: '+2 DEF and +5% max HP.', fx: { def: 2, hp: 0.05 } }, { name: 'Heavy Hands', text: 'Strikes hit 10% harder.', fx: { atkM: 0.1 } }],
+  runner: [{ name: 'Fleet', text: '+5% dodge.', fx: { dodge: 0.05 } }, { name: 'Deadeye', text: '+6% crit chance.', fx: { crit: 0.06 } }],
+  clerk: [{ name: 'Overclock', text: 'Shots and strikes +6%.', fx: { atk: 0.06, atkM: 0.06 } }, { name: 'Pharmacist', text: 'Stims heal 15% more.', fx: { stim: 0.15 } }],
+  preacher: [{ name: 'Choir', text: '+6% max HP and +1 DEF.', fx: { hp: 0.06, def: 1 } }, { name: 'Collection Plate', text: '+10% credits.', fx: { credits: 0.1 } }],
+  medic: [{ name: 'Bulwark', text: '+2 DEF and +4% max HP.', fx: { def: 2, hp: 0.04 } }, { name: 'Combat Medic', text: 'Shots hit 10% harder.', fx: { atk: 0.1 } }],
+  dealer: [{ name: 'House Edge', text: '+5% crit chance.', fx: { crit: 0.05 } }, { name: 'Card Sharp', text: '+8% credits and +3% dodge.', fx: { credits: 0.08, dodge: 0.03 } }],
+  vex: [{ name: 'Femme Fatale', text: '+5% crit chance.', fx: { crit: 0.05 } }, { name: 'Untouchable', text: '+5% dodge.', fx: { dodge: 0.05 } }],
+  ghost: [{ name: 'Reinforced', text: '+2 DEF.', fx: { def: 2 } }, { name: 'Overdrive', text: 'Strikes +8%, shots +4%.', fx: { atkM: 0.08, atk: 0.04 } }],
+};
+
 // Cosmetics: credit sinks for the late game. Bought once for the cell (meta.cosmetics), worn or placed for free after.
 // Dyes recolour an operative's outfit (hue in degrees; sat 0 strips the colour). season: only from a season goal.
 export const DYES = [
@@ -1119,6 +1132,7 @@ export const DYES = [
   { id: 'ghost', name: 'Ghost Grey', hue: 0, sat: 0, cost: 1800 },
   { id: 'neon', name: 'Neon Pink', hue: 318, sat: 1.4, cost: 3200 },
   { id: 'ember', name: 'Ember', hue: 18, sat: 1.3, cost: 0, season: true },
+  { id: 'master', name: 'Master\u2019s Gold', hue: 48, sat: 1.35, cost: 0, season: true, mastery: true },
 ];
 // Lantern Hearts card backs and table felts: pure CSS (index.html .back-<id>, .felt-<id>).
 export const CARD_BACKS = [

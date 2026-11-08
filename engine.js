@@ -776,7 +776,7 @@ export function statsOf(meta, c) {
   const optic = hasImp(c, 'optic') ? 0.15 : 0, gadget = baseOf(gearIn(c, 'gadget')) || {};
   const hp = Math.round(B.hp * 1.25) + t.hp * D.TRAINING.hp.per + (c.level - 1) * 6 + Math.round(str * TUNE.strHp) + (c.background === 'foundry' ? 25 + 3 * (c.level - 1) : 0) + (TUNE.classHp[c.background] || 0) + (hasImp(c, 'pain') ? 40 : 0) + gearBonus(c, 'hp');
   const mk = markSum(c), drink = drinkOf(c) || {}, fb = featBuffs(meta), dAtk = (drink.atk || 0) + favOf(c, 'atk'), dCrit = (drink.crit || 0) + favOf(c, 'crit');
-  return {
+  const out = {
     maxHp: Math.round(hp * (c.mut && c.mut.includes('glass') ? 0.75 : 1) * (hasTrait(c, 'stalwart') ? 1.12 : 1) * (1 + pv(c, 'ironlung') / 100) * (1 + mk.hp + fb.hp) * (1 + (drink.hp || 0)) * Math.max(0.5, 1 + favOf(c, 'hp'))),
     atk: common + rMain + dAtk + (w.type === 'heavy' ? Math.floor(str * TUNE.strAtk) : Math.floor(agi * TUNE.agiAtk)),
     atkM: common + mMain + dAtk + Math.floor(str * TUNE.strAtk),
@@ -791,8 +791,47 @@ export function statsOf(meta, c) {
     stimBoost: (gadget.stimBoost || 0) + fb.stim + (has(c, 'corpsman') ? 0.25 : 0) + pv(c, 'stimsling') / 100,
     scan: !!gadget.scan || has(c, 'informant') || c.background === 'clerk',
   };
+  return masteryStats(meta, c, out);
 }
 export const stats = (s) => statsOf(s.meta, s.char);
+// ---------- class mastery ----------
+// Each class levels up for the cell as it's played: a sector cleared +1, a boss +3, a district freed +10.
+// 1: +3% max HP. 2: pick a specialisation (one of two). 3: +3% damage. 4: one more stim carried in. 5: the class's mastery dye.
+export const MASTERY_XP = [8, 25, 55, 95, 150];
+export const masteryOf = (m, cls) => { const x = ((m && m.mastery) || {})[cls] || 0; let l = 0; while (l < MASTERY_XP.length && x >= MASTERY_XP[l]) l++; return { xp: x, level: l, next: MASTERY_XP[l] || null, prev: l ? MASTERY_XP[l - 1] : 0 }; };
+export function masteryGain(s, n) {
+  forEachActor(s, (a) => {
+    // A visiting partner's mastery lives on their own cell: it goes home with them (index.html syncHome), and shows on their copy now.
+    if (a.home) { const g = s.guestMastery || (s.guestMastery = {}); g[a.background] = (g[a.background] || 0) + n; const hm = a.home.mastery || (a.home.mastery = {}); hm[a.background] = (hm[a.background] || 0) + n; return; }
+    const m = s.meta;
+    const ms = m.mastery || (m.mastery = {}), before = masteryOf(m, a.background).level;
+    ms[a.background] = (ms[a.background] || 0) + n;
+    const after = masteryOf(m, a.background).level;
+    if (after >= 5) { const cos = cosmetics(m); if (!cos.dye.includes('master')) cos.dye.push('master'); }
+    if (after > before) log(s, `${(D.BACKGROUNDS.find((b) => b.id === a.background) || {}).name} mastery ${after}: ${MASTERY_PERKS[after - 1]}`, 'reward');
+  });
+}
+export const MASTERY_PERKS = ['+3% max HP', 'pick a specialisation', '+3% damage', '+1 stim carried into every raid', 'the mastery dye'];
+export function pickSpec(s, cls, which) {
+  const m = s.meta; if (masteryOf(m, cls).level < 2 || !D.SPECS[cls] || ![0, 1].includes(which) || s.run) return false;
+  (m.specs || (m.specs = {}))[cls] = which; return true;
+}
+export const specOf = (m, c) => { const sp = D.SPECS[c.background], i = ((m && m.specs) || {})[c.background]; return sp && i !== undefined && masteryOf(m, c.background).level >= 2 ? sp[i] : null; };
+function masteryStats(meta, c, out) {
+  const home = c.home || meta, lv = masteryOf(home, c.background).level;
+  if (!lv) return out;
+  if (lv >= 1) out.maxHp = Math.round(out.maxHp * 1.03);
+  if (lv >= 3) { out.atk = Math.round(out.atk * 1.03); out.atkM = Math.round(out.atkM * 1.03); }
+  const sp = specOf(home, c), fx = (sp && sp.fx) || {};
+  if (fx.hp) out.maxHp = Math.round(out.maxHp * (1 + fx.hp));
+  if (fx.def) out.def += fx.def;
+  if (fx.dodge) out.dodge += fx.dodge;
+  if (fx.crit) { out.crit += fx.crit; out.critM += fx.crit; }
+  if (fx.atk) out.atk = Math.round(out.atk * (1 + fx.atk));
+  if (fx.atkM) out.atkM = Math.round(out.atkM * (1 + fx.atkM));
+  if (fx.stim) out.stimBoost += fx.stim;
+  return out;
+}
 // What this operative is drinking. Old saves hold `true`: that round was the gin.
 export const drinkOf = (c) => (c && c.drink ? D.BAR.menu.find((x) => x.id === c.drink) || D.BAR.menu[0] : null);
 // Sum of an operative's permanent Marks (won in orbit).
@@ -1129,7 +1168,7 @@ export function creditMult(s) {
   const c = s.char, t = s.run ? s.run.threat : s.meta.threat || 0;
   const b = s.run ? s.run.bulletin : null;
   const cha = (1 + TUNE.chaCredits * (attr(c, 'cha') - 1)) * (c.background === 'preacher' ? 1.15 : c.background === 'vex' ? 1.1 : 1);
-  return (mutOn(s.run, 'broke') ? 0.6 : 1) * cha * (has(c, 'fence') ? 1.25 : 1) * (1 + pv(c, 'chit') / 100) * (1 + gearBonus(c, 'credits') / 100) * (1 + 0.15 * t) * (1 + markSum(c).credits + featBuffs(s.meta).credits) * (1 + ((drinkOf(c) || {}).credits || 0)) * (b === 'payday' ? 1.3 : b === 'lockdown' ? 1.25 : 1) * condCredits(s.run);
+  return (1 + (((specOf(s.meta, c) || {}).fx || {}).credits || 0)) * (mutOn(s.run, 'broke') ? 0.6 : 1) * cha * (has(c, 'fence') ? 1.25 : 1) * (1 + pv(c, 'chit') / 100) * (1 + gearBonus(c, 'credits') / 100) * (1 + 0.15 * t) * (1 + markSum(c).credits + featBuffs(s.meta).credits) * (1 + ((drinkOf(c) || {}).credits || 0)) * (b === 'payday' ? 1.3 : b === 'lockdown' ? 1.25 : 1) * condCredits(s.run);
 }
 const condCredits = (r) => (!r ? 1 : r.cond === 'toxic' ? 1.25 : r.cond === 'patrol' ? 1.3 : r.cond === 'lockdown' ? 1.2 : 1);
 export const condOf = (r) => D.SECTOR_CONDS.find((x) => x.id === (r && r.cond)) || D.SECTOR_CONDS[0];
@@ -1189,6 +1228,7 @@ export function deploy(s, mapId, startSector, rng, opts = {}) {
     if (D.BACKGROUNDS.find((b) => b.id === c.background).follower) { s.run.allies = Math.min(2, s.run.allies + 1); s.run.follower = true; }
     if (hasTrait(c, 'surplus') && c.items.stim < stats(s).carry) c.items.stim += 1;
     if (has(c, 'quarter') && c.items.stim < stats(s).carry) c.items.stim += 1;
+    if (masteryOf(c.home || s.meta, c.background).level >= 4 && c.items.stim < stats(s).carry) c.items.stim += 1;
   });
   s.run.bulletin = pickWeighted(rng, D.BULLETINS.map((b) => [b.id, b.weight]));
   refreshContracts(s, rng);
@@ -2971,6 +3011,7 @@ export function clearSector(s, rng = Math.random) {
   m.resolve += res; m.totalResolve += res;
   // Mutators: their bonus share of this sector's points goes on the operative's score, and of its Resolve into a bank that pays out whole points.
   if ((r.mutators || []).length >= 3 && !r.daily) seasonTick(s, 'mutsector');
+  if (!r.daily) masteryGain(s, 1 + (isBossSector(r.sector) ? 2 : 0) + (r.sector >= MAX_SECTOR ? 10 : 0));
   if (r.map === 'reach' && r.sector >= MAX_SECTOR) forEachActor(s, (a) => { if (a.background === 'medic') seasonTick(s, 'reachmedic'); });
   if (r.daily) { r.daily.sectors = Math.max(r.daily.sectors, r.sector - r.startSector + 1); if (isBossSector(r.sector)) r.daily.bosses += 1; if (r.sector >= r.daily.end) { r.daily.done = true; log(s, 'Contract complete. Turn it in.', 'reward'); } }
   const mb = r.daily ? 0 : mutBonus(r.mutators);

@@ -2255,7 +2255,7 @@ function coopChip() {
 let home = null, lastHostResolve = null, pendingGuest = null;
 // Local test runs only: gives a friend's home cell some Resolve.
 if (location.hostname === 'localhost') globalThis.cinderTestHome = (n) => { if (home) { home.meta.resolve += n; mirrorHome(); render(); } };
-const homeInfo = () => (home ? { training: home.meta.training, cell: home.meta.cell, cellLv: home.meta.cellLv } : null);
+const homeInfo = () => (home ? { training: home.meta.training, cell: home.meta.cell, cellLv: home.meta.cellLv, mastery: home.meta.mastery || {}, specs: home.meta.specs || {} } : null);
 const travelCopy = (c) => { if (!c) return null; const o = JSON.parse(JSON.stringify(c)); delete o.home; delete o.coopName; delete o.payout; return o; };
 // The friend's screen shows their own cell's Resolve, training and upgrades, not the host's.
 function mirrorHome() {
@@ -2269,6 +2269,7 @@ function syncHome(hostMeta) {
   if (lastHostResolve !== null && hostMeta.totalResolve > lastHostResolve) { const d = hostMeta.totalResolve - lastHostResolve; m.resolve += d; m.totalResolve += d; }
   lastHostResolve = hostMeta.totalResolve;
   m.bestSector = Math.max(m.bestSector || 0, hostMeta.bestSector || 0);
+  if (state.guestMastery) { const ms = m.mastery || (m.mastery = {}); for (const [k, n] of Object.entries(state.guestMastery)) ms[k] = (ms[k] || 0) + n; state.guestMastery = null; }
   if (state.guestFeats) { for (const [k, n] of Object.entries(state.guestFeats)) E.feat(home, k, n); state.guestFeats = null; if (home.featUnlocks) { state.featUnlocks = home.featUnlocks; home.featUnlocks = null; } }
   const f = state.coopFallen;
   if (f && f.idx === 1 && home.char && f.record && f.record.uid === home.char.uid) {
@@ -2299,7 +2300,7 @@ function broadcast() {
   if (!isHost() || !net.peer) return;
   const copy = { ...state, meta: { ...state.meta, journal: undefined }, events: undefined, report: null, notice: guestView.notice || null, perkPick: guestView.perkPick || null, popup: null, compare: null, wheel: guestView.wheel || null, wheelResult: guestView.wheelResult || null };
   net.send({ t: 'state', s: JSON.stringify(copy), toast: guestToast });
-  guestToast = null; state.guestFeats = null;
+  guestToast = null; state.guestFeats = null; state.guestMastery = null;
 }
 // Run something as the friend's operative, with the friend's view in place of the host's.
 function asGuest(fn) {
