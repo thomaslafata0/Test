@@ -1,1 +1,146 @@
-{}
+{
+ "explosion": {
+  "file": "explosion.png",
+  "w": 96,
+  "h": 96,
+  "frames": 8,
+  "fps": 12,
+  "loop": false
+ },
+ "heart_burst": {
+  "file": "heart_burst.png",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "fps": 12,
+  "loop": false
+ },
+ "gas": {
+  "file": "gas.png",
+  "w": 96,
+  "h": 64,
+  "frames": 8,
+  "fps": 12,
+  "loop": false
+ },
+ "flash": {
+  "file": "flash.png",
+  "w": 96,
+  "h": 96,
+  "frames": 8,
+  "fps": 12,
+  "loop": false
+ },
+ "acid_splash": {
+  "file": "acid_splash.png",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "fps": 12,
+  "loop": false
+ },
+ "slag_splash": {
+  "file": "slag_splash.png",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "fps": 12,
+  "loop": false
+ },
+ "zap": {
+  "file": "zap.png",
+  "w": 64,
+  "h": 64,
+  "frames": 8,
+  "fps": 12,
+  "loop": false
+ },
+ "claw": {
+  "file": "claw.png",
+  "w": 96,
+  "h": 96,
+  "frames": 8,
+  "fps": 12,
+  "loop": false
+ },
+ "shield_bubble": {
+  "file": "shield_bubble.png",
+  "w": 128,
+  "h": 128,
+  "frames": 8,
+  "fps": 12,
+  "loop": true
+ },
+ "muzzle": {
+  "file": "muzzle.png",
+  "w": 48,
+  "h": 48,
+  "frames": 4,
+  "fps": 12,
+  "loop": false
+ },
+ "beam": {
+  "file": "beam.png",
+  "w": 64,
+  "h": 16,
+  "frames": 8,
+  "fps": 12,
+  "loop": true
+ },
+ "grenade": {
+  "file": "grenade.png",
+  "w": 24,
+  "h": 24,
+  "frames": 8,
+  "fps": 12,
+  "loop": true
+ },
+ "acid": {
+  "file": "acid.png",
+  "w": 24,
+  "h": 24,
+  "frames": 6,
+  "fps": 12,
+  "loop": true
+ },
+ "slag": {
+  "file": "slag.png",
+  "w": 24,
+  "h": 24,
+  "frames": 6,
+  "fps": 12,
+  "loop": true
+ },
+ "spore": {
+  "file": "spore.png",
+  "w": 24,
+  "h": 24,
+  "frames": 6,
+  "fps": 12,
+  "loop": true
+ },
+ "dart": {
+  "file": "dart.png",
+  "w": 24,
+  "h": 12,
+  "frames": 1,
+  "fps": 12,
+  "loop": false
+ },
+ "cuffs": {
+  "file": "cuffs.png",
+  "w": 32,
+  "h": 24,
+  "frames": 8,
+  "fps": 12,
+  "loop": true
+ },
+ "heart": {
+  "file": "heart.png",
+  "w": 32,
+  "h": 32,
+  "frames": 6,
+  "fps": 12,
+  "loop": true
+ }
+}

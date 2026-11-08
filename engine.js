@@ -1755,7 +1755,7 @@ function strike(s, rng, { mult = 1, critBonus = 0, pierce = 0, unarmoredBonus = 
   e.hp -= dmg;
   if (!melee && hasPerk(c, 'echo') && dmg > 0 && (r.echoN = (r.echoN || 0) + 1) % 3 === 0) { const x = Math.max(1, Math.round(dmg * pv(c, 'echo') / 100)); e.hp -= x; dmg += x; log(s, `Echo Chamber: a second round for ${x}.`, 'hit'); }
   if (hasPerk(c, 'thirst') && dmg > 0) c.hp = Math.min(st.maxHp, c.hp + Math.max(1, Math.round(dmg * pv(c, 'thirst') / 100)));
-  if (hasPerk(c, 'executioner') && e.hp > 0 && e.hp < e.maxHp * (e.boss ? 0.08 : pv(c, 'executioner') / 100)) { log(s, `Executioner’s Mark: ${e.name} is finished.`, 'crit'); dmg += e.hp; e.hp = 0; }
+  if (hasPerk(c, 'executioner') && e.hp > 0 && e.hp < e.maxHp * (e.boss ? 0.08 : pv(c, 'executioner') / 100)) { log(s, `Executioner\u2019s Mark: ${e.name} is finished.`, 'crit'); dmg += e.hp; e.hp = 0; }
   if (e.hp > 0) {
     const bleed = 1 - (1 - pv(c, 'serrated') / 100) * (1 - gearBonus(c, 'bleed', mode) / 100);
     if (bleed > 0 && rng() < bleed) addStatus(e.st, e.fresh, { bleed: 2 });

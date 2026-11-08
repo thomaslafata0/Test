@@ -1018,9 +1018,9 @@ export const PERKS = [
   // Relics: one of each, never stacked, offered only by bosses. Each changes how a run plays rather than adding a little.
   { id: 'echo',      name: 'Echo Chamber',       relic: true, per: 50, desc: 'Every third shot fires a second round for {v}% of the damage.' },
   { id: 'mirror',    name: 'Mirror Plate',       relic: true, per: 35, desc: 'While you Defend, {v}% of the damage you take goes back at the enemy.' },
-  { id: 'thirst',    name: 'Red Thirst',         relic: true, per: 12, desc: 'Heal {v}% of all the damage you deal. You can’t use stims.' },
+  { id: 'thirst',    name: 'Red Thirst',         relic: true, per: 12, desc: 'Heal {v}% of all the damage you deal. You can\u2019t use stims.' },
   { id: 'glassheart',name: 'Glass Heart',        relic: true, per: 40, desc: 'You deal +{v}% damage, but your max HP is 30% lower.' },
-  { id: 'executioner',name: 'Executioner’s Mark', relic: true, per: 18, desc: 'An enemy you hit below {v}% HP dies (bosses below 8%).' },
+  { id: 'executioner',name: 'Executioner\u2019s Mark', relic: true, per: 18, desc: 'An enemy you hit below {v}% HP dies (bosses below 8%).' },
   { id: 'overclock', name: 'Overclocker',        relic: true, per: 1, whole: true, desc: 'Your drone acts twice every turn.' },
   { id: 'loaded',    name: 'Loaded Die',         relic: true, per: 1.8, dp: 1, desc: 'Every hit lands for half or for x{v}, at even odds.' },
   { id: 'bloodprice',name: 'Blood Price',        relic: true, per: 7, desc: 'Skills have no cooldown, but each one costs {v}% of your max HP.' },
@@ -1250,7 +1250,7 @@ export const LOUNGE = {
   cost: 350, rise: 0.1, badOdds: 0.35, cure: 0.25, tonight: 3,
   girls: [
     { id: 'vex', name: 'Vex', tag: 'Goth \u00b7 bites', desc: 'Black and pink twin-tails, a cat-ear headset and a stare that could strip paint. Charges by the hour, judges by the minute.',
-      greet: ['\u201cOh. You again. Fine, I\u2019m bored.\u201d', '\u201cYou look like you need biting.\u201d'], walk: ['\u201cKeep up. Don\u2019t hold my hand like that, hold it like you mean it.\u201d', '\u201cOut back. Mind the puddle, it bites too.\u201d'],
+      greet: ['\u201cOh. You again. Fine, I\u2019m bored.\u201d', '\u201cYou look like you need biting.\u201d'], inside: ['\u201cDon\u2019t touch the setup. Sit.\u201d','\u201cMute the mic. Okay, now you can talk.\u201d'], walk: ['\u201cKeep up. Don\u2019t hold my hand like that, hold it like you mean it.\u201d', '\u201cOut back. Mind the puddle, it bites too.\u201d'],
       outcomes: [
         { w: 3, text: 'She bounces on it. You feel rested.', fx: { hp: 0.05 } },
         { w: 2, text: 'She calls you \u201clittle guy\u201d all night. You have never wanted to win more.', fx: { str: 1 } },
@@ -1260,7 +1260,7 @@ export const LOUNGE = {
         { w: 1, bad: true, text: 'She steals your heart. And a kidney, it turns out.', fx: { hp: -0.05 } },
       ] },
     { id: 'pixie', name: 'Pixie', tag: 'Streamer \u00b7 sweet', desc: 'Lavender bob, a hoodie three sizes too big and a bubble tea she never finishes. Says \u201cuwu\u201d unironically.',
-      greet: ['\u201cHiiii! Omg you came back!\u201d', '\u201cChat, look who it is!\u201d'], walk: ['\u201cThis way! Hold on, I\u2019m sooo clumsy.\u201d', '\u201cDon\u2019t worry, the stream\u2019s off. Probably.\u201d'],
+      greet: ['\u201cHiiii! Omg you came back!\u201d', '\u201cChat, look who it is!\u201d'], inside: ['\u201cShoes off! The plushies are sensitive.\u201d','\u201cWant a boba? I have like forty.\u201d'], walk: ['\u201cThis way! Hold on, I\u2019m sooo clumsy.\u201d', '\u201cDon\u2019t worry, the stream\u2019s off. Probably.\u201d'],
       outcomes: [
         { w: 3, text: 'She sits on your lap and rates your setup ten out of ten.', fx: { crit: 0.03 } },
         { w: 2, text: 'An hour of whispering in your ear. Your reflexes have never been better.', fx: { spd: 2 } },
@@ -1270,7 +1270,7 @@ export const LOUNGE = {
         { w: 1, bad: true, text: 'The hoodie was hiding a cold. A bad one.', fx: { hp: -0.04, spd: -1 } },
       ] },
     { id: 'rook', name: 'Rook', tag: 'Cyber-arm \u00b7 trouble', desc: 'Neon undercut, glowing tattoos and a chrome arm that does things to your back that should be illegal. Probably are.',
-      greet: ['\u201cYou\u2019re carrying a lot of tension, operative.\u201d', '\u201cBack for the arm?\u201d'], walk: ['The chrome hand closes round yours. Gently, for now.', '\u201cBack door. The landlord doesn\u2019t ask.\u201d'],
+      greet: ['\u201cYou\u2019re carrying a lot of tension, operative.\u201d', '\u201cBack for the arm?\u201d'], inside: ['\u201cChair\u2019s clean. Mostly. Lie down.\u201d','\u201cMind the arm, it\u2019s still warm.\u201d'], walk: ['The chrome hand closes round yours. Gently, for now.', '\u201cBack door. The landlord doesn\u2019t ask.\u201d'],
       outcomes: [
         { w: 3, text: 'The chrome arm finds a knot you didn\u2019t know you had. Something clicks into place.', fx: { def: 1 } },
         { w: 2, text: 'She mixes you something blue. You wake up stronger and with a new tattoo.', fx: { atk: 1 } },
@@ -1280,7 +1280,7 @@ export const LOUNGE = {
         { w: 1, bad: true, text: 'Her arm glitches mid-massage. Something cracks that shouldn\u2019t.', fx: { def: -1, spd: -1 } },
       ] },
     { id: 'jinx', name: 'Jinx', tag: 'Cyberpunk \u00b7 hacker', desc: 'Pink-and-blue hair, an LED choker that scrolls your name, and a holo jacket that never sits still. Already in your phone.',
-      greet: ['\u201cI already read your file. It\u2019s cute.\u201d', 'Her choker scrolls HELLO OPERATIVE in pink.'], walk: ['\u201cThe back door\u2019s camera loops for nine minutes. Walk fast.\u201d', 'She laces her fingers through yours and doesn\u2019t look back.'],
+      greet: ['\u201cI already read your file. It\u2019s cute.\u201d', 'Her choker scrolls HELLO OPERATIVE in pink.'], inside: ['\u201cRing light off. You\u2019re welcome.\u201d','\u201cSay hi to chat. Kidding. Maybe.\u201d'], walk: ['\u201cThe back door\u2019s camera loops for nine minutes. Walk fast.\u201d', 'She laces her fingers through yours and doesn\u2019t look back.'],
       outcomes: [
         { w: 3, text: 'She overclocks your nerves with something from her jacket. Everything is faster.', fx: { spd: 2 } },
         { w: 2, text: 'She patches your targeting app. You didn\u2019t know you had one.', fx: { crit: 0.03 } },
@@ -1290,7 +1290,7 @@ export const LOUNGE = {
         { w: 1, bad: true, text: 'Your face is on a dating app now. With your real name.', fx: { cha: -1 } },
       ] },
     { id: 'luna', name: 'Luna', tag: 'Gamer \u00b7 cosy', desc: 'Pastel cat-ear hoodie, thigh-high socks and a voice like warm milk. Fourteen hours into a cosy farming game and not stopping.',
-      greet: ['\u201cOh! Sit, sit. I saved you a seat on the beanbag.\u201d', 'She pauses the game. For you. That never happens.'], walk: ['She takes your hand like it\u2019s the most normal thing. \u201cIt\u2019s quieter out back.\u201d', '\u201cCareful, the step\u2019s wobbly. I\u2019ve got you.\u201d'],
+      greet: ['\u201cOh! Sit, sit. I saved you a seat on the beanbag.\u201d', 'She pauses the game. For you. That never happens.'], inside: ['\u201cShh, the cat\u2019s asleep. Blanket?\u201d','\u201cI saved the game for you. Sit.\u201d'], walk: ['She takes your hand like it\u2019s the most normal thing. \u201cIt\u2019s quieter out back.\u201d', '\u201cCareful, the step\u2019s wobbly. I\u2019ve got you.\u201d'],
       outcomes: [
         { w: 3, text: 'You nap on her shoulder for eleven hours. You wake up new.', fx: { hp: 0.06 } },
         { w: 2, text: 'She feeds you soup and tells you you\u2019re doing great.', fx: { def: 1 } },
@@ -1300,7 +1300,7 @@ export const LOUNGE = {
         { w: 1, bad: true, text: 'Her cat sleeps on your chest all night. You\u2019re allergic.', fx: { hp: -0.04 } },
       ] },
     { id: 'nova', name: 'Nova', tag: 'Alt \u00b7 dangerous', desc: 'Red hair, tattoos down both arms, fishnet sleeves and a leather jacket with the Directorate\u2019s crest burned out of it.',
-      greet: ['\u201cYou look like you\u2019ve been shot at. Good. I like that.\u201d', 'She flicks a lighter. \u201cWell? Pick me.\u201d'], walk: ['She drags you out by the collar, grinning.', '\u201cOut back. Bring your nerve.\u201d'],
+      greet: ['\u201cYou look like you\u2019ve been shot at. Good. I like that.\u201d', 'She flicks a lighter. \u201cWell? Pick me.\u201d'], inside: ['\u201cDon\u2019t mind the amp. Or the flag.\u201d','\u201cCouch is leather. Wipe your boots.\u201d'], walk: ['She drags you out by the collar, grinning.', '\u201cOut back. Bring your nerve.\u201d'],
       outcomes: [
         { w: 3, text: 'She teaches you to throw a punch properly. And then to take one.', fx: { str: 1 } },
         { w: 2, text: 'A tattoo for luck. It works, somehow.', fx: { crit: 0.03 } },

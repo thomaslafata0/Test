@@ -788,7 +788,7 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .lounge-walk { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin: 8px 0; }
 .girl-card { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; align-items: center; max-width: 620px; background: radial-gradient(80% 120% at 15% 80%, #ff4fb833, #0000 60%), var(--panel); border-color: #ff6ad588; }
 .girl-card-art { display: grid; place-items: end center; min-width: 120px; } .girl-card h2 { margin: 2px 0 6px; } .girl-card .hostess-greet { font-style: italic; color: #ffb3e6; }
-.modal.lounge-result.night { background: linear-gradient(90deg, #0b0612ee 0 52%, #0b061299), url(town/street/night.png) center / cover no-repeat, #120a18; border-color: #ff6ad588; image-rendering: pixelated; animation: night-in .9s ease-out; }
+.modal.lounge-result.night { background: linear-gradient(90deg, #0b0612ee 0 52%, #0b061299), var(--room, none) center / cover no-repeat, url(town/street/night.png) center / cover no-repeat, #120a18; border-color: #ff6ad588; image-rendering: pixelated; animation: night-in .9s ease-out; }
 @keyframes night-in { from { opacity: 0; filter: brightness(2.2) saturate(.4); } to { opacity: 1; filter: none; } }
 @media (max-width: 560px), (max-height: 500px) { .girl-card { grid-template-columns: 1fr; } .girl-card-art .hostess { height: 140px !important; width: auto !important; } }
 .cos-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px; }
@@ -3881,16 +3881,17 @@ function walkOutBack(id, r) {
   modal = null;
   // The modal closes first so the yard is live again (a covered yard skips the walk), then she takes your hand.
   render();
-  setTimeout(() => town.escort(id, line, () => { modal = 'loungeres'; render(); }), 60);
+  const inside = g.inside && g.inside.length ? g.inside[Math.floor(Math.random() * g.inside.length)] : '\u201cMake yourself at home.\u201d';
+  setTimeout(() => town.escort(id, line, () => { modal = 'loungeres'; render(); }, inside), 60);
 }
 function loungeResView() {
   const r = loungeResult; if (!r) { modal = null; return ''; }
   const g = D.LOUNGE.girls.find((x) => x.id === r.girl) || { name: r.name };
-  return `<div class="modal-wrap night-wrap" data-a="closemodal"><div class="modal lounge-result night ${r.bad ? 'bad' : 'good'}" role="dialog" aria-modal="true" aria-label="The night with ${esc(g.name)}">
-    <div class="pop-head"><div class="pop-title"><span class="label">Out back of the Lantern</span><h2>A night with ${esc(g.name)}</h2></div><button class="tool close" data-a="closemodal" aria-label="Close">Close</button></div>
+  return `<div class="modal-wrap night-wrap" data-a="closemodal"><div class="modal lounge-result night ${r.bad ? 'bad' : 'good'}" style="--room:url(town/street/int_room_${esc(g.id)}.png)" role="dialog" aria-modal="true" aria-label="The night with ${esc(g.name)}">
+    <div class="pop-head"><div class="pop-title"><span class="label">${town.interiorId === `room_${g.id}` ? esc(town.interior.name) : 'Out back of the Lantern'}</span><h2>A night with ${esc(g.name)}</h2></div><button class="tool close" data-a="closemodal" aria-label="Close">Close</button></div>
     <div class="lounge-res-body">${hostessArt[g.id] ? hostessFig(g, 180) : ''}<div><p>${esc(r.text)}</p><p class="${r.bad ? 'danger-text' : 'good-text'}"><b>${esc(E.favText(r.fx))}</b>${r.cured ? ` <span class="good-text">and ${esc(E.favText(r.cured))} back</span>` : ''}</p>
     <p class="muted small">${r.bad ? 'Not every night goes well.' : 'She waves you off at the door.'} It stays with this operative.</p></div></div>
-    <div class="btnrow"><button class="btn primary" data-a="closemodal">Back to the yard</button></div></div></div>`;
+    <div class="btnrow"><button class="btn primary" data-a="closemodal">${town.interiorId === `room_${g.id}` ? 'Say goodnight' : 'Back to the yard'}</button></div></div></div>`;
 }
 // Her card, when you walk up to her in the back room: who she is, what tonight costs, and the choice.
 function girlView() {

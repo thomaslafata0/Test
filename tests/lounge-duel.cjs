@@ -24,7 +24,7 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   await host.click(`button[data-a="lounge"][data-v="${pickH}"]`); await host.waitForTimeout(2500);
   const st = await host.evaluate(() => { const s = cinderGame.state(); return { cr: s.char.credits, fav: s.char.fav, booked: s.char.booked }; });
   check('a night costs 350 and leaves a mark', st.cr === 1050 && st.booked === pickH && st.fav && Object.keys(st.fav).length, JSON.stringify(st));
-  check('she walks you out and the result card shows', await host.locator('.lounge-result').count() === 1);
+  check('she walks you out and the result card shows', await host.waitForSelector('.lounge-result', { timeout: 15000 }).then(() => true).catch(() => false));
   await host.screenshot({ path: `${OUT}/lounge.png` });
   await host.click('.lounge-result button[data-a="closemodal"]'); await host.waitForTimeout(200);
   await host.click('.shortcuts button[data-v="bar"]'); await host.waitForTimeout(250); await host.click('.pop-tabs [data-v="lounge"]'); await host.waitForTimeout(300);
