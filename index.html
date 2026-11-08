@@ -5214,7 +5214,7 @@ function applyLook() {
   if (!hasLayers() && !sheetOf('op_m') && !sheetOf('op_f')) return;
   const c = state.char, p = E.isCoop(state) ? E.charAt(state, 1 - myIdx()) : null;
   const wp = (ch) => [weaponLayer(E.baseOf(ch.gear.ranged)), weaponLayer(E.baseOf(ch.gear.melee))];
-  const key = JSON.stringify([c && [c.look, c.background, wp(c)], p && [p.look, p.background, wp(p)], !!sheetOf('dealer'), !!sheetOf('ghost'), !!sheetOf('op_vex')]);
+  const key = JSON.stringify([c && [c.look, c.background, wp(c)], p && [p.look, p.background, wp(p)], !!sheetOf('dealer'), !!sheetOf('ghost'), !!sheetOf('op_vex'), !!sheetOf('op_mochi')]);
   if (key === lookKey) return;
   lookKey = key;
   const own = (ch) => { const b = ch && D.BACKGROUNDS.find((x) => x.id === ch.background); if (!b || !b.unique) return null; const sh = sheetOf(b.sprite); if (!sh) ensureArt(b.sprite); return sh || null; };
@@ -5232,7 +5232,7 @@ function artArrived(id) {
   const all = id === '*', ops = all || id.startsWith('op_'), drones = all || id.startsWith('drone_');
   if (drones) for (const k of D.DRONE_ORDER) setDroneArt(k, sheetOf(`drone_${k}`));
   if (ops) { setOpSheets(sheetOf('op_m'), sheetOf('op_f')); lookKey = ''; applyLook(); }
-  if (id === 'dealer' || id === 'ghost' || id === 'op_vex') { lookKey = ''; applyLook(); if (state.screen === 'create') { clearTimeout(artRenderTimer); artRenderTimer = setTimeout(render, 120); } return; }
+  if (id === 'dealer' || id === 'ghost' || id === 'op_vex' || id === 'op_mochi') { lookKey = ''; applyLook(); if (state.screen === 'create') { clearTimeout(artRenderTimer); artRenderTimer = setTimeout(render, 120); } return; }
   if (!ops && !drones) { if (modal === 'news') { clearTimeout(artRenderTimer); artRenderTimer = setTimeout(render, 120); } return; }
   clearTimeout(artRenderTimer);
   // Only where a still of them is on show. Anywhere else a re-render could cut an animation short for nothing.

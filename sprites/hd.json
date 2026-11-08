@@ -643,6 +643,12 @@
     "fps": 11,
     "loop": false,
     "pad": 9
+   },
+   "walk": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 9
    }
   },
   "size": 256,
@@ -3339,6 +3345,18 @@
     "fps": 11,
     "loop": true,
     "pad": 4
+   },
+   "duo": {
+    "frames": 9,
+    "fps": 8,
+    "loop": false,
+    "pad": 4
+   },
+   "cheer": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 4
    }
   },
   "size": 256,
@@ -3673,5 +3691,86 @@
   "size": 256,
   "feetY": 247,
   "fig": 237
+ },
+ "op_mochi": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 11
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 11,
+    "tip": [
+     55,
+     -183
+    ]
+   },
+   "attackM": {
+    "frames": 9,
+    "fps": 12,
+    "loop": false,
+    "pad": 11,
+    "tip": [
+     73,
+     -167
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 11
+   },
+   "cheer": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 11
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 11
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 11
+   },
+   "duo": {
+    "frames": 9,
+    "fps": 8,
+    "loop": false,
+    "pad": 11
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 11
+   },
+   "special": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 11
+   },
+   "walk": {
+    "frames": 9,
+    "fps": 11,
+    "loop": true,
+    "pad": 11
+   }
+  },
+  "size": 256,
+  "feetY": 244,
+  "fig": 233
  }
 }
