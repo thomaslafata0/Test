@@ -31,12 +31,12 @@ export const ABILITY = {
   luna: { name: 'Comeback', text: '+3 while you are behind.' },
   nova: { name: 'Spotlight', text: '+2 when the call is her best stat.' },
 };
-// Tables: stake, the strongest rarity a card plays at, and the house's printings there (mostly at the cap, now and then one below).
-// tests/cards-sim.mjs: a deck maxed for a table wins about 52% there, one rarity short about 34%.
+// Tables: stake, the strongest rarity a card plays at, and the house's printings there (always at the cap).
+// tests/cards-sim.mjs with all six girls: a deck maxed for a table wins about 52% there, one rarity short about 35%.
 export const TABLES = [
-  { id: 'booth', name: 'Back Booth', stake: 25, cap: 1, house: [0, 1, 1, 1] },
-  { id: 'floor', name: 'Main Floor', stake: 100, cap: 3, house: [2, 3, 3, 3] },
-  { id: 'high', name: 'High Roller', stake: 300, cap: 5, house: [4, 5, 5, 5] },
+  { id: 'booth', name: 'Back Booth', stake: 25, cap: 1, house: [1] },
+  { id: 'floor', name: 'Main Floor', stake: 100, cap: 3, house: [3] },
+  { id: 'high', name: 'High Roller', stake: 300, cap: 5, house: [5] },
 ];
 export const SPARK = +(globalThis.process?.env?.SPARK ?? 3); // the crowd adds 0..SPARK to each card every round
 export const HOUSE_TIES = (globalThis.process?.env?.TIES ?? '1') === '1';
