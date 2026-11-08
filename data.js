@@ -1010,6 +1010,15 @@ export const PERKS = [
   { id: 'flashbang', name: 'Flashbang Rig',      rare: true,  per: 12, desc: '{v}% chance the enemy starts every fight stunned.' },
   { id: 'riposte',   name: 'Riposte',            rare: true,  per: 25, desc: 'Hit while Defending: hit back for {v}% of your ATK.' },
   { id: 'warpaint',  name: 'War Paint',          rare: true,  per: 1, r: 0.7, whole: true, desc: 'Every enemy starts every fight Shaken and Exposed for {v} turn(s).' },
+  // Relics: one of each, never stacked, offered only by bosses. Each changes how a run plays rather than adding a little.
+  { id: 'echo',      name: 'Echo Chamber',       relic: true, per: 50, desc: 'Every third shot fires a second round for {v}% of the damage.' },
+  { id: 'mirror',    name: 'Mirror Plate',       relic: true, per: 35, desc: 'While you Defend, {v}% of the damage you take goes back at the enemy.' },
+  { id: 'thirst',    name: 'Red Thirst',         relic: true, per: 12, desc: 'Heal {v}% of all the damage you deal. You can’t use stims.' },
+  { id: 'glassheart',name: 'Glass Heart',        relic: true, per: 40, desc: 'You deal +{v}% damage, but your max HP is 30% lower.' },
+  { id: 'executioner',name: 'Executioner’s Mark', relic: true, per: 18, desc: 'An enemy you hit below {v}% HP dies (bosses below 8%).' },
+  { id: 'overclock', name: 'Overclocker',        relic: true, per: 1, whole: true, desc: 'Your drone acts twice every turn.' },
+  { id: 'loaded',    name: 'Loaded Die',         relic: true, per: 1.8, dp: 1, desc: 'Every hit lands for half or for x{v}, at even odds.' },
+  { id: 'bloodprice',name: 'Blood Price',        relic: true, per: 7, desc: 'Skills have no cooldown, but each one costs {v}% of your max HP.' },
 ];
 
 // ---------- contracts: optional jobs from the cell. Rewards are permanent Resolve and credits. ----------

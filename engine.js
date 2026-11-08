@@ -51,7 +51,7 @@ export const payDepth = (r) => 1.5 * Math.pow(effSector(r.sector, r.map), 0.65);
 export const hardAt = (sector) => HARD[hardTier(sector)];
 // In a raid the current sector sets the tier; in the yard, the deepest sector the cell has reached.
 export const hard = (s) => hardAt(s.run ? s.run.sector : (s.meta && s.meta.bestSector) || 0);
-export const TUNE = { hpLin: 0.28, hpQuad: 0.003, atkLin: 0.14, atkQuad: 0.002, bossHp: 2.1, bossAtk: 1.4, enemyAtk: 1.8, enemyHp: 2.4, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 1.5, strAtk: 0.6, agiCrit: 0.05, agiDodge: 0.035, intOverload: 5, chaHesitate: 0.055, chaCredits: 0.05, wanted: 0.025, ambush: 1.5,
+export const TUNE = { relicOdds: 0.35, hpLin: 0.28, hpQuad: 0.003, atkLin: 0.14, atkQuad: 0.002, bossHp: 2.1, bossAtk: 1.4, enemyAtk: 1.8, enemyHp: 2.4, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 1.5, strAtk: 0.6, agiCrit: 0.05, agiDodge: 0.035, intOverload: 5, chaHesitate: 0.055, chaCredits: 0.05, wanted: 0.025, ambush: 1.5,
   upgradeCost: 60, eliteGear: 0.3, shopLegendary: 0.06, cover: 0.5, agiAtk: 1.2,
   // Enemy strength in sectors 1-5. Nobody levels up during a raid, so a first raid has to be winnable on level-1 stats.
   earlyCurve: [1, 0.95, 0.88, 0.84, 0.85, 0.95, 0.95, 0.95, 0.95, 0.95],
@@ -95,6 +95,7 @@ export const hasPerk = (c, id) => !!c && (c.perks || []).includes(id);
 export const perkById = (id) => D.PERKS.find((p) => p.id === id);
 export const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI'];
 // Contraband stacks without limit, with diminishing returns: see per and r in D.PERKS.
+export const isRelic = (id) => !!(D.PERKS.find((p) => p.id === id) || {}).relic;
 export const perkStacks = (c, id) => (c && c.perkN && c.perkN[id]) || 0;
 export function perkValue(id, n) {
   const p = perkById(id), r = p.r || 0.85;
@@ -777,7 +778,7 @@ export function statsOf(meta, c) {
   const hp = Math.round(B.hp * 1.25) + t.hp * D.TRAINING.hp.per + (c.level - 1) * 6 + Math.round(str * TUNE.strHp) + (c.background === 'foundry' ? 25 + 3 * (c.level - 1) : 0) + (TUNE.classHp[c.background] || 0) + (hasImp(c, 'pain') ? 40 : 0) + gearBonus(c, 'hp');
   const mk = markSum(c), drink = drinkOf(c) || {}, fb = featBuffs(meta), dAtk = (drink.atk || 0) + favOf(c, 'atk'), dCrit = (drink.crit || 0) + favOf(c, 'crit');
   const out = {
-    maxHp: Math.round(hp * (c.mut && c.mut.includes('glass') ? 0.75 : 1) * (hasTrait(c, 'stalwart') ? 1.12 : 1) * (1 + pv(c, 'ironlung') / 100) * (1 + mk.hp + fb.hp) * (1 + (drink.hp || 0)) * Math.max(0.5, 1 + favOf(c, 'hp'))),
+    maxHp: Math.round(hp * (c.mut && c.mut.includes('glass') ? 0.75 : 1) * (hasPerk(c, 'glassheart') ? 0.7 : 1) * (hasTrait(c, 'stalwart') ? 1.12 : 1) * (1 + pv(c, 'ironlung') / 100) * (1 + mk.hp + fb.hp) * (1 + (drink.hp || 0)) * Math.max(0.5, 1 + favOf(c, 'hp'))),
     atk: common + rMain + dAtk + (w.type === 'heavy' ? Math.floor(str * TUNE.strAtk) : Math.floor(agi * TUNE.agiAtk)),
     atkM: common + mMain + dAtk + Math.floor(str * TUNE.strAtk),
     def: B.def + (c.background === 'foundry' ? 2 : 0) + t.def * D.TRAINING.def.per + Math.floor((c.level - 1) / 2) + def + gearBonus(c, 'def') + (hasImp(c, 'dermal') ? 5 : 0) + (has(c, 'lining') ? 2 : 0) + mk.def + pv(c, 'padding') + (drink.def || 0) + favOf(c, 'def'),
@@ -1685,7 +1686,7 @@ export function intimidateChance(s) {
 
 export const partnerDown = (s) => { const pc = isCoop(s) ? charAt(s, 1 - actorIdx(s)) : null; return pc && pc.downed > 0 ? pc : null; };
 export function canUse(s, act) {
-  if (act === 'stim' && mutOn(s.run, 'dry')) return false;
+  if (act === 'stim' && (mutOn(s.run, 'dry') || hasPerk(s.char, 'thirst'))) return false;
   if (act === 'revive') return !!partnerDown(s);
   if (act === 'run') return !runBlocked(s);
   if (['attack', 'shoot', 'strike', 'defend'].includes(act)) return true;
@@ -1742,9 +1743,14 @@ function strike(s, rng, { mult = 1, critBonus = 0, pierce = 0, unarmoredBonus = 
   r.struck = true;
   feat(s, melee ? 'strikes' : 'shots'); if (crit) feat(s, 'crits');
   const sp = spreadOf(melee);
+  if (hasPerk(c, 'glassheart')) mult *= 1 + pv(c, 'glassheart') / 100;
+  if (hasPerk(c, 'loaded')) mult *= rng() < 0.5 ? 0.5 : pv(c, 'loaded');
   let dmg = mitigate((melee ? st.atkM : st.atk) * (1 - sp + rng() * 2 * sp) * mult + flat, e.def * (1 - pierce));
   if (!melee && e.intent === 'guard' && e.stun === 0) dmg = Math.max(1, Math.round(dmg * TUNE.cover));
   e.hp -= dmg;
+  if (!melee && hasPerk(c, 'echo') && dmg > 0 && (r.echoN = (r.echoN || 0) + 1) % 3 === 0) { const x = Math.max(1, Math.round(dmg * pv(c, 'echo') / 100)); e.hp -= x; dmg += x; log(s, `Echo Chamber: a second round for ${x}.`, 'hit'); }
+  if (hasPerk(c, 'thirst') && dmg > 0) c.hp = Math.min(st.maxHp, c.hp + Math.max(1, Math.round(dmg * pv(c, 'thirst') / 100)));
+  if (hasPerk(c, 'executioner') && e.hp > 0 && e.hp < e.maxHp * (e.boss ? 0.08 : pv(c, 'executioner') / 100)) { log(s, `Executioner’s Mark: ${e.name} is finished.`, 'crit'); dmg += e.hp; e.hp = 0; }
   if (e.hp > 0) {
     const bleed = 1 - (1 - pv(c, 'serrated') / 100) * (1 - gearBonus(c, 'bleed', mode) / 100);
     if (bleed > 0 && rng() < bleed) addStatus(e.st, e.fresh, { bleed: 2 });
@@ -1806,7 +1812,8 @@ function playerActInner(s, act, rng, who) {
   const guarded = e.intent === 'guard' && e.stun === 0;
   const skill = D.SKILLS[act];
   if (skill) {
-    r.cooldowns[act] = skillCd(c, act) + 1;
+    r.cooldowns[act] = hasPerk(c, 'bloodprice') ? 0 : skillCd(c, act) + 1;
+    if (hasPerk(c, 'bloodprice')) { const cost = Math.max(1, Math.round(st.maxHp * pv(c, 'bloodprice') / 100)); c.hp = Math.max(1, c.hp - cost); log(s, `Blood Price: ${cost} HP.`, 'hurt'); }
     if (act !== 'intimidate' && rng() < Math.min(60, gearBonus(c, 'cooldown')) / 100) r.cooldowns[act] -= 1;
     (r.usedThisFight = r.usedThisFight || []).includes(act) || r.usedThisFight.push(act);
     feat(s, 'skills');
@@ -2025,6 +2032,7 @@ function playerActInner(s, act, rng, who) {
     return winFight(s, rng, true);
   }
   droneTurn(s, rng, who);
+  if (hasPerk(s.char, 'overclock') && s.run && s.run.enemy && s.run.enemy.hp > 0) droneTurn(s, rng, who);
   if (e.hp <= 0) return winFight(s, rng);
   checkPhase(s);
   // In co-op the other operative acts before the enemy does.
@@ -2227,6 +2235,7 @@ function enemyTurn(s, rng) {
       if (r.defending) dmg = Math.max(1, Math.round(dmg * (heavy ? TUNE.defendHeavy : TUNE.defend) * (hasTrait(c, 'bulwark') ? 0.7 : 1)));
       dmg = soak(s, c, droneShield(c, dmg));
       c.hp -= dmg; vamp(dmg); reflect(dmg);
+      if (r.defending && hasPerk(c, 'mirror') && dmg > 0 && e.hp > 0) { const back = Math.max(1, Math.round(dmg * pv(c, 'mirror') / 100 / Math.max(0.2, heavy ? TUNE.defendHeavy : TUNE.defend))); e.hp -= back; log(s, `Mirror Plate: ${back} goes back at them.`, 'hit'); }
       if (r.defending && hasPerk(c, 'riposte') && e.hp > 0) { const back = Math.max(1, Math.round(st.atk * pv(c, 'riposte') / 100)); e.hp -= back; log(s, `Riposte: you hit back for ${back}.`, 'hit'); }
       if (q && q.bleedOnHit && !r.defending) addPlayerStatus(s, { bleed: 2 }, rng);
       if (luck !== 1) log(s, luck > 1 ? 'The gamble pays off for them.' : 'Their gamble doesn\u2019t pay off.', 'info');
@@ -2906,12 +2915,16 @@ export function buyPerkCap(s, borrow = false) {
   s.notice = `You can carry ${perkCap(c)} of each piece of contraband now.`;
   return true;
 }
+export { offerPerks as __offerPerks };
 function offerPerks(s, rng, boss) {
-  const c = s.char, pool = D.PERKS.slice(), out = []; // pieces at the cap still turn up: the screen offers to raise it
+  const c = s.char, pool = D.PERKS.filter((p) => !p.relic), out = []; // pieces at the cap still turn up: the screen offers to raise it
+  // A boss may put a relic on the table: one the operative doesn't have yet, about one boss in three.
+  const relics = D.PERKS.filter((p) => p.relic && !hasPerk(c, p.id));
+  if (boss && relics.length && rng() < TUNE.relicOdds) out.push(pick(rng, relics).id);
   const weight = (p) => (p.rare ? (boss ? 2 : 1) : 3) * (hasPerk(c, p.id) ? 3 : 1);
   const take = (list) => { const it = pickWeighted(rng, list.map((p) => [p, weight(p)])); out.push(it.id); pool.splice(pool.indexOf(it), 1); };
   if (boss && pool.some((p) => p.rare)) take(pool.filter((p) => p.rare));
-  while (out.length < (has(c, 'broker') ? 4 : 3) && pool.length) take(pool);
+  while (out.length < (has(c, 'broker') ? 4 : 3) + (out.length && D.PERKS.find((p) => p.id === out[0]).relic ? 1 : 0) && pool.length) take(pool);
   return out;
 }
 // For bots and auto-accept: a piece already carried if there's room for it, else any piece with room, else leave it ('').
@@ -2926,8 +2939,9 @@ export function choosePerk(s, id, rng, who = actorIdx(s), raise = '') {
 function choosePerkInner(s, id, rng, raise = '') {
   const r = s.run, c = s.char;
   if (!r || !r.perkOffer) return false;
-  if (id && r.perkOffer.includes(id) && perkStacks(c, id) >= perkCap(c)) { if (!raise || !buyPerkCap(s, raise === 'borrow')) return false; }
-  if (id && r.perkOffer.includes(id) && perkStacks(c, id) < perkCap(c)) {
+  if (id && isRelic(id) && hasPerk(c, id)) id = ''; // relics never stack
+  if (id && r.perkOffer.includes(id) && perkStacks(c, id) >= perkCap(c) && !isRelic(id)) { if (!raise || !buyPerkCap(s, raise === 'borrow')) return false; }
+  if (id && r.perkOffer.includes(id) && (perkStacks(c, id) < perkCap(c) || isRelic(id))) {
     c.perkN = c.perkN || {};
     c.perkN[id] = (c.perkN[id] || 0) + 1;
     if (!c.perks.includes(id)) c.perks.push(id);
