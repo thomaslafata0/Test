@@ -4,7 +4,7 @@ compatibility_date = "2025-01-01"
 
 [assets]
 directory = "."
-run_worker_first = ["/room/*", "/save/*", "/board", "/.well-known/*", "/apple-app-site-association"]
+run_worker_first = ["/room/*", "/save/*", "/board", "/bug", "/.well-known/*", "/apple-app-site-association"]
 
 [[durable_objects.bindings]]
 name = "ROOMS"
@@ -30,3 +30,11 @@ class_name = "Board"
 [[migrations]]
 tag = "v3"
 new_sqlite_classes = ["Board"]
+
+[[durable_objects.bindings]]
+name = "BUGS"
+class_name = "Bugs"
+
+[[migrations]]
+tag = "v4"
+new_sqlite_classes = ["Bugs"]

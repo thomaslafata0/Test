@@ -21,7 +21,7 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   check('three hostesses', await host.locator('.hostess-card').count() === 3 && await host.locator('.hostess.ph').count() === 0);
   await host.click('button[data-a="lounge"][data-v="vex"]'); await host.waitForTimeout(400);
   const st = await host.evaluate(() => { const s = cinderGame.state(); return { cr: s.char.credits, fav: s.char.fav, booked: s.char.booked }; });
-  check('a night costs 500 and leaves a mark', st.cr === 900 && st.booked === 'vex' && st.fav && Object.keys(st.fav).length, JSON.stringify(st));
+  check('a night costs 350 and leaves a mark', st.cr === 1050 && st.booked === 'vex' && st.fav && Object.keys(st.fav).length, JSON.stringify(st));
   check('the result shows, and the room is booked', await host.locator('.lounge-res').count() === 1 && await host.locator('button[data-a="lounge"]:not([disabled])').count() === 0);
   await host.screenshot({ path: `${OUT}/lounge.png` });
   await host.keyboard.press('Escape'); await host.waitForTimeout(150);
@@ -48,7 +48,7 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   await guest.click('.shortcuts button[data-v="bar"]'); await guest.waitForTimeout(250); await guest.click('.pop-tabs [data-v="lounge"]'); await guest.waitForTimeout(300);
   await guest.click('button[data-a="lounge"][data-v="rook"]'); await guest.waitForTimeout(700);
   const gs = await host.evaluate(() => { const s = cinderGame.state(); return { cr: s.char2.credits, booked: s.char2.booked, me: s.char.booked }; });
-  check('the friend books Rook on their own credits', gs.cr === 200 && gs.booked === 'rook' && gs.me === 'vex', JSON.stringify(gs));
+  check('the friend books Rook on their own credits', gs.cr === 350 && gs.booked === 'rook' && gs.me === 'vex', JSON.stringify(gs));
   check('the friend sees their result', await guest.locator('.lounge-res').count() === 1);
   await guest.keyboard.press('Escape'); await guest.waitForTimeout(150);
   }

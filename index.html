@@ -1645,8 +1645,20 @@ function crashBanner() {
   });
   document.body.appendChild(el);
 }
-window.addEventListener('error', (ev) => { if (ev.error) crashBanner(); });
-window.addEventListener('unhandledrejection', () => { if (!state) crashBanner(); });
+window.addEventListener('error', (ev) => { if (ev.error) { crashBanner(); reportBug('error', ev.error); } });
+window.addEventListener('unhandledrejection', (ev) => { if (!state) crashBanner(); reportBug('promise', ev.reason || new Error('rejected')); });
+// Sends a short crash or lock-up report to the game's own server: the error, the screen, solo or co-op. Nothing personal.
+const BUILD = '2026-11-08';
+let bugsSent = 0; const bugsSeen = new Set();
+function reportBug(kind, e) {
+  try {
+    const msg = String((e && e.message) || e || '').slice(0, 300), key = kind + msg;
+    if (bugsSent >= 8 || bugsSeen.has(key) || !/workers\.dev$/.test(location.hostname)) return;
+    bugsSeen.add(key); bugsSent++;
+    const st = typeof state !== 'undefined' && state;
+    fetch('/bug', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind, msg, stack: String((e && e.stack) || '').slice(0, 1500), screen: (st && st.screen) || '', coop: st && st.coop ? (typeof isGuest === 'function' && isGuest() ? 'guest' : 'host') : 'solo', ver: BUILD, ua: navigator.userAgent.slice(0, 120) }) }).catch(() => {});
+  } catch (x) {}
+}
 
 // A short note over everything, for explanations that shouldn't disturb the screen behind them.
 let hintTimer = null;
@@ -2030,7 +2042,7 @@ function asGuest(fn) {
   const mine = {};
   for (const k of GUEST_VIEW) { mine[k] = state[k]; state[k] = guestView[k] ?? null; }
   E.setActor(state, 1); actingAs = 1;
-  try { fn(); } catch (e) { console.warn('friend action failed', e); } finally {
+  try { fn(); } catch (e) { console.warn('friend action failed', e); reportBug('friend-act', e); } finally {
     actingAs = 0; E.setActor(state, 0);
     for (const k of GUEST_VIEW) { guestView[k] = state[k]; state[k] = mine[k]; }
   }
@@ -2050,7 +2062,7 @@ function pumpInbox() {
   (async () => {
     while (inbox.length) {
       const m = inbox.shift();
-      try { if (m.t === 'fx') await playHostFx(m.ev); else applyHostState(m); } catch (e) { console.warn('host message failed', e); }
+      try { if (m.t === 'fx') await playHostFx(m.ev); else applyHostState(m); } catch (e) { console.warn('host message failed', e); reportBug('host-msg', e); }
     }
     pumping = false;
   })();
@@ -2801,13 +2813,13 @@ function clinic() {
   const imps = D.IMPLANTS.map((u) => {
     const owned = c.implants.includes(u.id);
     return `<div class="row i ${owned ? 'owned' : ''}">${ico(`implant:${u.id}`)}<div><div class="name">${esc(u.name)}</div><div class="desc">${esc(u.desc)}</div></div>
-      ${owned ? `<button class="btn" data-a="unimplant" data-v="${u.id}">Remove</button>` : buyBtn('implant', u.id, '', u.cost, c.implants.length >= st.slots)}</div>`;
+      ${owned ? `<button class="btn" data-a="unimplant" data-v="${u.id}">Remove</button>` : buyBtn('implant', u.id, '', E.implantCost(c, u), c.implants.length >= st.slots)}</div>`;
   }).join('');
   return `<p class="muted pop-intro">Doc Ilse works out of a laundry back room. Stitches, and for the right price, hardware under the skin.</p>
     <h3>Treatment</h3>
     <div class="kv"><dt>Condition</dt><dd>${c.hp} / ${st.maxHp} HP</dd><dt>Cost</dt><dd>${cost > 0 ? cr(cost) : 'Not needed'}</dd></div>
     <div><button class="btn primary" data-a="heal" ${cost <= 0 || c.credits < cost ? 'disabled' : ''}>${cost > 0 ? `Patch me up \u00B7 ${cr(cost)}` : 'Fully healed'}</button></div>
-    <h3>Implants <span class="num muted" style="font-size:.9rem">${c.implants.length} / ${st.slots} slots</span></h3>
+    <h3>Implants <span class="num muted" style="font-size:.9rem">${c.implants.length} / ${st.slots} slots</span></h3>${c.implants.length ? `<p class="muted" style="font-size:.86rem">Your next implant costs ${Math.round(E.IMPLANT_STEP[Math.min(E.IMPLANT_STEP.length - 1, c.implants.length)] * 100)}% of the list price.</p>` : ''}
     <p class="muted" style="font-size:.9rem">More slots at INT 4 and 8. Removing one refunds nothing.</p>
     <div class="rows">${imps}</div>`;
 }
@@ -2993,7 +3005,7 @@ function combatScreen() {
     <div class="actions ${mine ? '' : 'locked'}">
       <button class="btn primary twoline atk" data-a="act" data-v="shoot" title="${esc(E.weaponOf(c).name)}: ${st.atk} ATK, ${pct(E.critChance(st, e))} crit. Steady damage; cover halves it. You keep your distance, so you take ${Math.round(E.TUNE.shootGuard * 100)}% less damage this turn."><span class="bt">Shoot<span class="k" aria-hidden="true">A</span></span><span class="wpn">${esc(E.weaponOf(c).name)}</span><span class="bs"><b class="rng">${sr[0]}\u2013${sr[1]}</b> dmg${e.intent === 'guard' && !e.stun ? ' (cover)' : ''}</span></button>
       <button class="btn twoline atk ${D.MELEE_COUNTER[e.id] ? 'warn' : ''}" data-a="act" data-v="strike" title="${esc(E.meleeOf(c).name)}: ${st.atkM} ATK, ${pct(E.critChance(st, e, true))} crit. Hits harder than a shot but swingy, ignores cover, stops a repair, and your next attack hits ${Math.round(E.TUNE.momentum * 100)}% harder."><span class="bt">Strike<span class="k" aria-hidden="true">F</span></span><span class="wpn">${esc(E.meleeOf(c).name)}</span><span class="bs"><b class="rng">${mr[0]}\u2013${mr[1]}</b> dmg${D.MELEE_COUNTER[e.id] ? ' \u00B7 hits back!' : ''}</span></button>
-      <button class="btn twoline" data-a="act" data-v="defend" title="Take half damage, about a third from a heavy strike, and steady your next shot."><span class="bt">Defend<span class="k" aria-hidden="true">D</span></span><span class="bs">${ventNow ? `Blocks the vent (\u2212${ventNow.me})${inc ? ` \u00b7 take ${inc.defMin}-${inc.phaseDefMax || inc.defMax}` : ''}` : inc ? `Take ${inc.defMin}-${inc.phaseDefMax || inc.defMax}${dot ? ` +${dot}` : ''}` : 'Half damage'}</span></button>
+      <button class="btn twoline" data-a="act" data-v="defend" title="Take 40% less damage (about 60% less from a heavy strike) and steady your next shot."><span class="bt">Defend<span class="k" aria-hidden="true">D</span></span><span class="bs">${ventNow ? `Blocks the vent (\u2212${ventNow.me})${inc ? ` \u00b7 take ${inc.defMin}-${inc.phaseDefMax || inc.defMax}` : ''}` : inc ? `Take ${inc.defMin}-${inc.phaseDefMax || inc.defMax}${dot ? ` +${dot}` : ''}` : '40% less damage'}</span></button>
       <button class="btn twoline" data-a="act" data-v="stim" title="${esc(D.ITEMS.stim.desc)}" ${c.items.stim ? '' : 'disabled'}><span class="bt">${ico('item:stim', 'sm')}Stim <span class="num">\u00D7${c.items.stim}</span><span class="k" aria-hidden="true">S</span></span><span class="bs">${esc(D.ITEMS.stim.short)}</span></button>
       <button class="btn twoline" data-a="act" data-v="run" ${E.canUse(state, 'run') ? '' : 'disabled'} title="Getting away drops ${Math.round(E.runShare(state) * 100)}% of unsecured credits and XP. Failing gives the enemy a free turn."><span class="bt">Run<span class="k" aria-hidden="true">R</span></span><span class="bs" title="Getting away drops ${Math.round(E.runShare(state) * 100)}% of unsecured credits and XP">${E.runBlocked(state) ? esc(E.runBlocked(state)) : `${pct(E.runChance(state))}, lose ${Math.round(E.runShare(state) * 100)}%`}</span></button>
     </div>
@@ -3199,7 +3211,7 @@ function newsView() {
     return `<div class="modal-wrap news-wrap" data-a="closemodal"><div class="modal news" role="dialog" aria-modal="true" aria-label="What's new">
     <div class="news-hero news-hero-ah"><div class="news-hero-text"><span class="label">New \u00b7 1 of 2</span><h2>After hours</h2><p>Two new operatives, a back room at the Lantern, and a ring in the barracks.</p></div></div>
     <div class="news-girls">${D.LOUNGE.girls.map((g) => `<figure>${hostessFig(g, 150)}<figcaption><b>${esc(g.name)}</b><span>${esc(g.tag)}</span></figcaption></figure>`).join('')}
-      <div class="news-girls-text"><b>The E-Girl Room</b><span>Through the curtain at the back of the Lantern. 500 credits a night buys a permanent mark on your operative: usually a good one, about one in four not.</span></div></div>
+      <div class="news-girls-text"><b>The E-Girl Room</b><span>Through the curtain at the back of the Lantern. From 350 credits a night (each visit costs 10% more) for a permanent mark on your operative: usually a good one, about one in three not.</span></div></div>
     <div class="news-cards">
       <div class="news-card"><div class="news-ops">${ops.map((b) => `<figure>${opStrip(b.sprite, 118)}<figcaption><b>${esc(b.name)}</b></figcaption></figure>`).join('')}</div>
         <b>Two unique operatives</b><span>The Dealer flips cards for crits, bleeds and stolen credits. The Foreman\u2019s Ghost overhauls droids and shrugs off hits. ${ops.map((b) => `${esc(b.name)}: ${esc(b.unlock.text)}`).join(' ')}</span></div>
@@ -3256,11 +3268,11 @@ function modalView() {
       <section><h3>Controls</h3><p>Phone: tap to walk or pick a sign; hold any button to read it. Keyboard: <b>WASD</b> walk, <b>E</b> talk, <b>X</b> battle mode, <b>A F D S R</b> shoot, strike, defend, stim, run. Each button shows its key; skill keys follow the skill\u2019s slot, so they can change with your build.</p></section>
       <section><h3>The goal</h3><p>Beat the sector 20 boss in all four districts. Each district opens once your operative has cleared far enough into the earlier ones, and each starts harder than the last. A new operative starts from the Garrison again; the cell remembers the rest.</p></section>
       <section><h3>A raid</h3><p>Three rooms per sector, choosing one of two doors each time. A boss every fifth sector. After each sector, push deeper or extract.</p></section>
-      <section><h3>Getting out</h3><p>Credits and XP stay <b>unsecured</b> until you beat a boss or leave, and levels only come then. Risky extraction costs a share of what\u2019s unsecured, by place in each run of five: sectors 1, 6, 11, 16: 80%. 2, 7, 12, 17: 65%. 3, 8, 13, 18: 50%. 4, 9, 14, 19: 40%. Nothing after a boss. Safe extraction always works but forfeits the whole unsecured haul. So 200 credits and 40 XP banked at sector 2 pays 70 credits and 14 XP. Risky extraction can also fail (${Math.round(E.TUNE.extractFail * 100)}%), and then you go one sector deeper. Running mid-fight costs 90% to 60%. What you walked in with is safe.</p></section>
+      <section><h3>Getting out</h3><p>Credits and XP stay <b>unsecured</b> until you beat a boss or leave, and levels only come then. Risky extraction costs a share of what\u2019s unsecured, by place in each run of five: sectors 1, 6, 11, 16: 80%. 2, 7, 12, 17: 65%. 3, 8, 13, 18: 50%. 4, 9, 14, 19: 40%. Nothing after a boss. Safe extraction always works but forfeits the whole unsecured haul. So 200 credits and 40 XP banked at sector 2 pays 70 credits and 14 XP. Risky extraction can also fail (${Math.round(E.TUNE.extractFails[0] * 100)}% just after a boss, rising to ${Math.round(E.TUNE.extractFails[3] * 100)}% just before the next), and then you go one sector deeper. Running mid-fight costs 90% to 60%. What you walked in with is safe.</p></section>
       <section><h3>Your turn</h3><ul>
         <li><b>Shoot</b>: the safe choice. Steady damage, and you take 15% less that turn.</li>
         <li><b>Strike</b>: 25% more damage but swingy, ignores cover, stops a repair, next hit +15%. You give up Shoot\u2019s protection, and some enemies hit back.</li>
-        <li><b>Defend</b>: half damage, next shot +50%.</li>
+        <li><b>Defend</b>: 40% less damage (about 60% less from a heavy strike), next shot +50%.</li>
         <li><b>Skills</b>: cooldowns last across a sector.</li></ul></section>
       <section><h3>Enemy moves</h3><ul>
         <li><b>Heavy strike</b>: x2.2. Defend takes about a third.</li>
@@ -3272,7 +3284,7 @@ function modalView() {
       <section><h3>Contraband</h3><p>Bosses always carry it, elites often, others sometimes. Pick one of three. Copies stack, each adding a bit less than the last, up to 3 of each; Marrow raises that limit for credits. Lost on death.</p></section>
       <section><h3>Gear</h3><p>Six slots. Rarer gear rolls more bonuses; bosses drop Uniques. The market restocks each raid, and nobody buys old gear. Upgrade and reroll on the Gear tab.</p></section>
       <section><h3>Getting stronger</h3><p><b>Lost on death</b>: levels, gear, implants, contraband, ventures. <b>Kept</b>: Resolve, training, cell upgrades, achievements, and one heirloom with that upgrade.</p></section>
-      <section><h3>After curfew</h3><p><b>Lantern</b>: one drink per raid. <b>E-Girl Room</b>: 500 credits a night for a permanent mark on this operative, usually good, about one in four bad; once per trip home. <b>Ring</b> (barracks, co-op only): duel your partner with a ready-made loadout; the winner takes one piece of the loser\u2019s contraband. <b>Wheel</b>: roulette. <b>Orbit</b>: shuttle fights for credits and permanent Marks. <b>Ventures</b>: invest for a return each raid.</p></section>
+      <section><h3>After curfew</h3><p><b>Lantern</b>: one drink per raid. <b>E-Girl Room</b>: from 350 credits a night, 10% more each visit, for a permanent mark on this operative, usually good, about one in three bad; once per trip home. <b>Ring</b> (barracks, co-op only): duel your partner with a ready-made loadout; the winner takes one piece of the loser\u2019s contraband. <b>Wheel</b>: roulette. <b>Orbit</b>: shuttle fights for credits and permanent Marks. <b>Ventures</b>: invest for a return each raid.</p></section>
       <section><h3>Threat and rewards</h3><p>Freeing a district opens Threat levels and reinforces the others. Sectors far below your level pay less, and a boss you\u2019ve beaten pays half XP.</p></section>
       <section><h3>Drones</h3><p>Every operative flies one drone, and you can switch type for free in town. It can\u2019t be shot down. Clearing a sector has a 10% chance of knocking it offline until you repair it in town. Spend Resolve on the Drone tab of the safehouse: ranks 3 and 5 add abilities, and ranks stay with your cell for every operative who picks that type.</p></section>
       <section><h3>Co-op</h3><p>Host from <b>Settings</b> and share the link. <b>Auto-accept</b> (top of the screen) makes your votes and ready-ups follow your partner; if you both turn it on, the raid plays itself at half speed. You keep your own operative. Vote on doors, pick your own loot, and press <b>E</b> by your partner to trade. At 0 HP you go down and can be revived. If one of you dies, the other must win or run; if both fall, it\u2019s a wipe.</p></section>
@@ -3658,7 +3670,7 @@ function sectorClearScreen() {
       ${rate ? `<button class="btn big twoline" data-a="extractsafe"><span class="bt">Safe extract \u00B7 always works<span class="k" aria-hidden="true">3</span></span><span class="bs">Bank nothing new \u00b7 wallet ${cr(c.credits - un)}</span></button>` : ''}`; })()}
     </div>
     ${exitVoteLine()}
-    <p class="muted extract-note">${E.extractRate(r.sector) ? `<b>Risky</b> costs ${Math.round(E.leaveShare(state) * 100)}% of your unsecured haul and has a ${Math.round(E.TUNE.extractFail * 100)}% chance of failing, which forces you into sector ${next}. <b>Safe</b> always works, but you lose all ${cr(E.unsecuredNow(state))} and ${c.xpBank || 0} XP.` : 'Everything is secured, so leaving here costs nothing.'}</p>
+    <p class="muted extract-note">${E.extractRate(r.sector) ? `<b>Risky</b> costs ${Math.round(E.leaveShare(state) * 100)}% of your unsecured haul and has a ${Math.round(E.extractFailChance(state) * 100)}% chance of failing, which forces you into sector ${next}. <b>Safe</b> always works, but you lose all ${cr(E.unsecuredNow(state))} and ${c.xpBank || 0} XP.` : 'Everything is secured, so leaving here costs nothing.'}</p>
   `);
 }
 
@@ -3805,6 +3817,7 @@ function trapTab(ev) {
 }
 
 function render() {
+  if (state && isHost() && state.guestReady && !state.char2) { state.guestReady = false; state.hostWants = null; } // no operative, nobody to be ready
   if (state && state.meta && !isGuest()) state.playerName = playerName(); // stamped on this device's leaderboard rows
   if (!appReadySent) { appReadySent = true; const r = appBridge('ready'); if (r) requestAnimationFrame(() => setTimeout(() => { try { r.postMessage(1); } catch (e) {} }, 80)); }
   if (isGuest() && (!hostSynced || (!state.char && home && home.char))) {
@@ -3948,7 +3961,7 @@ function render() {
         const info = D.BOSS_INFO[r.enemy.id] || {};
         const scene = r.enemy.intro;
         const wait = res.artWait; res.artWait = null;
-        Promise.resolve(wait).then(() => stage.bossIntro({ name: r.enemy.name, epithet: info.epithet, line: r.enemy.line || (D.ENEMIES[r.enemy.id] || {}).line, lines: scene && scene.beats, onFull: () => { heard(); if (scene && scene.first && !isGuest()) { E.markSceneSeen(state, scene.key); save(); } }, label: `${map.name} \u00B7 Sector ${r.sector}` })).then(() => { heard(); busy = false; document.getElementById('app').classList.remove('busy'); scheduleAuto(); drainGuest(); });
+        Promise.resolve(wait).then(() => stage.bossIntro({ name: r.enemy.name, epithet: info.epithet, line: r.enemy.line || (D.ENEMIES[r.enemy.id] || {}).line, lines: scene && scene.beats, onFull: () => { heard(); if (scene && scene.first && !isGuest()) { E.markSceneSeen(state, scene.key); save(); } }, label: `${map.name} \u00B7 Sector ${r.sector}` })).catch((e) => console.error('boss intro failed', e)).then(() => { heard(); busy = false; document.getElementById('app').classList.remove('busy'); scheduleAuto(); drainGuest(); });
       }
     }
     // Any other fight whose art is still coming: no moves until it's in, or the wait runs out.
@@ -4110,7 +4123,18 @@ town.onAction = (id) => {
   if (id === 'barracks') return { text: ['A voice from the hatch: \u201CDeliveries round the back. Everything else, go away.\u201D', 'Snoring. The Directorate\u2019s finest.', 'You knock. Something heavy falls over inside, and someone swears in three languages.'][Math.floor(rng() * 3)] };
   return null;
 };
-let busy = false;
+let busy = false, busySince = 0;
+// Last line of defence: nothing should hold the screen locked this long. If something does, unlock it and carry on.
+setInterval(() => {
+  const app = document.getElementById('app'), locked = busy || (app && app.classList.contains('busy'));
+  if (!locked) { busySince = 0; return; }
+  if (!busySince) { busySince = Date.now(); return; }
+  if (Date.now() - busySince < 20000) return;
+  console.warn('screen was locked for 20s: unlocking');
+  reportBug('locked', new Error(`busy ${busy} awaiting ${awaitingHost} screen ${state && state.screen}`));
+  busy = false; busySince = 0; if (awaitingHost) setAwaiting(false); if (app) app.classList.remove('busy');
+  try { render(); scheduleAuto(); drainGuest(); } catch (e) {}
+}, 2000);
 
 // What the last turn cost: the log lines written since the player's move, and the HP before it.
 let turnMark = null;
@@ -4142,8 +4166,9 @@ async function fight(v, who = 0) {
   document.getElementById('app').classList.add('busy');
   const alertBefore = state.run.alert;
   state.events = [];
-  E.playerAct(state, v, rng, who);
-  const events = state.events;
+  // A rules error mid-turn must never leave the game locked: busy is only cleared further down, so catch it here.
+  try { E.playerAct(state, v, rng, who); } catch (e) { console.error('turn failed', e); reportBug('turn', e); }
+  const events = state.events || [];
   delete state.events;
   // The friend sees the move as it happens, not after the host's animation.
   if (isHost() && net.peer) net.send({ t: 'fx', ev: events });
@@ -4211,7 +4236,7 @@ function act(a, v, k) {
       if (!dr || !cost || home.meta.resolve < cost) { A.play('denied'); return; }
       home.meta.resolve -= cost; home.meta.droneRanks = { ...(home.meta.droneRanks || {}), [dr.type]: dr.rank + 1 }; save(); net.send({ t: 'act', a: 'droneupfree' }); net.send({ t: 'home', home: homeInfo() }); mirrorHome(); A.play('buy'); return;
     }
-    if (a === 'recruit') { net.send({ t: 'recruit' }); state.coopFallen = null; A.play('click'); return; }
+    if (a === 'recruit') { net.send({ t: 'recruit' }); state.coopFallen = null; state.guestSawDeath = true; A.play('click'); render(); return; } // straight to the new operative, without waiting on the host
     if (a === 'duel' && v === 'close') modal = null;
     if (a === 'pickmap') { toast = 'The host picks the target.'; A.play('denied'); render(); return; }
     if (a === 'deploy' || a === 'reset' || a === 'threat') { A.play('denied'); return; }
@@ -4409,7 +4434,7 @@ function applyAct(a, v, k) {
     case 'spend': ok = E.spendAttr(state, v); break;
     case 'respec': ok = E.respec(state); break;
     case 'pickmap': state.gateMap = v; break;
-    case 'deploy': if (E.isCoop(state) && !state.guestReady) { if (!peerAuto) { ok = false; break; } state.hostWants = String(v); sfx('click'); break; } state.hostWants = null; state.trade = null; state.popup = null; state.lastResult = null; E.deploy(state, state.gateMap || 'garrison', +v, rng); break;
+    case 'deploy': if (E.isCoop(state) && !state.guestReady) { if (!peerAuto) { ok = false; break; } state.hostWants = String(v); sfx('click'); break; } state.hostWants = null; state.trade = null; state.popup = null; state.lastResult = null; E.deploy(state, state.gateMap || 'garrison', +v, rng); if (state.run) { state.guestReady = false; state.guestReadyAuto = false; } break; // a ready counts for one raid only
     case 'continue': if (!['victory', 'room', 'loot', 'perk'].includes(state.screen)) break; E.continueAfterVictory(state, rng); break;
     case 'room': { if (E.isCoop(state) && net && net.peer) { if (!E.voteDoor(state, actingAs, +v, rng)) break; } else E.enterRoom(state, +v, rng); state.lastResult = null; } if (state.screen === 'room') { state.lastResult = { kind: 'room', ...state.roomResult }; E.continueAfterVictory(state, rng); } break;
     case 'dismissresult': state.lastResult = null; break;

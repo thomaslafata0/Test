@@ -29,7 +29,8 @@ let reduceMotion = osCalm;
 export const setCalm = (on) => { reduceMotion = osCalm || on; };
 const MAX_PARTICLES = 260; // the stage draws at 3x on a phone: keep the sparks affordable
 const BLOOD = ['#a3261e', '#7d1a15', '#c23a2e'], FLECK = ['#9aa4ad', '#5f6a73', '#c6ced4'];
-const C = { amber: '#ffb35a', crit: '#fff1c9', red: '#ff5a44', ion: '#8fdcff', heal: '#9be08a', smoke: '#8b949c', spark: '#ffd27a' };
+const C = { amber: '#ffb35a', crit: '#fff1c9', red: '#ff5a44', ion: '#8fdcff', heal: '#9be08a', smoke: '#8b949c', spark: '#ffd27a', gas: '#9dff6a' };
+const HUFF_GROW = 1.45; // how much bigger a Gas Bot gets once it's high on its own supply
 
 // ---------- sprite sheets ----------
 const sheets = {};
@@ -275,7 +276,8 @@ class Actor {
     this.ox = 0; this.oy = 0; this.alpha = 1; this.flash = 0; this.flashColor = '#ffffff';
     this.anim = 'idle'; this.animStart = 0; this.rest = 'idle';
   }
-  get scale() {
+  get scale() { return this.baseScale * (this.grow || 1); }
+  get baseScale() {
     if (this.fixedH && this.sheet && this.sheet.hd) return this.fixedH / this.sheet.fig;
     if (this.sheet && this.sheet.hd) return (HD_HEIGHT[this.side === 'enemy' ? this.id : this.side] || 112) / this.sheet.fig;
     // Sheet characters fill about half their frame, so they're drawn larger than the frame size.
@@ -491,7 +493,7 @@ export class Stage {
     }
     this.intent = enemy.intent; this.stun = enemy.stun; this.enemyTags = enemy.tags || [];
     this.max.enemy = enemy.maxHp; this.max.player = player.maxHp;
-    this.setHud('enemy', enemy.name, enemy.boss ? (enemy.phase2 ? 'ENRAGED' : 'BOSS') : enemy.elite ? 'ELITE' : `SECTOR ${sector}`, enemy.hp);
+    this.setHud('enemy', enemy.name, enemy.boss ? (enemy.phase2 ? 'ENRAGED' : 'BOSS') : enemy.huffed ? 'BLAZED' : enemy.elite ? 'ELITE' : `SECTOR ${sector}`, enemy.hp);
     this.setHud('player', player.name, `LV ${player.level}`, player.hp);
     this.setStatuses('player', pst);
     this.setStatuses('enemy', est, affix, quirk);
@@ -520,6 +522,7 @@ export class Stage {
       if (this.enemy.sheet) this.enemy.sheet = tintedSheet(enemy.id, theme) || this.enemy.sheet;
       const F = this.enemy;
       F.ox = 140; F.alpha = 0;
+      F.grow = enemy.huffed ? HUFF_GROW : 1; F.high = !!enemy.huffed;
       if (enemy.boss) { isNewBoss = true; F.alpha = 0; F.ox = 0; }
       else enter.push(() => { if (this.enemy !== F) return; this.tween(450, (p) => { F.ox = 140 * (1 - ease(p)); F.alpha = p; }); play('door'); if (quirk) setTimeout(() => this.popup('enemy', quirk.toUpperCase(), 'quirk'), 450 / (this.speed || 1)); });
     }
@@ -1264,6 +1267,25 @@ export class Stage {
         await this.wait(200);
         break;
       }
+      case 'enemy:huff': {
+        // The Gas Bot gets into its own supply: a cloud, then it swells up and glows.
+        E.setAnim(E.sheet && E.sheet.anims.attack ? 'attack' : 'idle', now());
+        play('vent');
+        const c = this.center(E);
+        for (let i = 0; i < 26; i++) setTimeout(() => this.burst(c.x + (Math.random() * 50 - 25), c.y + (Math.random() * 30 - 5), 1, C.gas, 0.7, 900, -0.03, 3), i * 25);
+        await this.wait(450);
+        this.flash(E, C.gas, 700);
+        E.high = true;
+        const g0 = E.grow || 1;
+        this.tween(650, (p) => { E.grow = g0 + (HUFF_GROW - g0) * ease(p) + Math.sin(p * Math.PI * 3) * 0.05 * (1 - p); });
+        this.shake(5, 500);
+        this.ring(c.x, c.y, 56, C.gas, 600, 3);
+        this.max.enemy = ev.maxHp;
+        this.setHud('enemy', ev.name, 'BLAZED', ev.ehp);
+        this.popup('enemy', 'HIGH ON ITS OWN SUPPLY', 'heavy');
+        await this.wait(700);
+        break;
+      }
       case 'enemy:phase': {
         const big = ev.enraged !== false;
         this.flash(E, C.red, big ? 900 : 500);
@@ -1728,6 +1750,13 @@ export class Stage {
     else if (!reduceMotion && !(actor.sheet && actor.sheet.hd)) bob = actor.side === 'enemy' ? Math.sin(t / 650) : Math.sin(t / 720) * 1.2;
     const feet = actor.sheet && actor.sheet.hd ? (f.pad || 0) * s : this.footPad(actor);
     const x = Math.round(a.x + actor.ox - w / 2), y = Math.round(a.y + actor.oy - h + feet + bob);
+    if (actor.high && actor.alpha > 0) {
+      // A sick green haze around anything that's been huffing: it pulses, and wisps drift up off it.
+      const cx = x + w / 2, cy = y + h * 0.55, r = Math.max(w, h) * 0.75, pulse = reduceMotion ? 0.5 : 0.5 + 0.5 * Math.sin(t / 260);
+      const gl = g.createRadialGradient(cx, cy, 2, cx, cy, r); gl.addColorStop(0, `rgba(157,255,106,${0.28 + 0.14 * pulse})`); gl.addColorStop(1, 'rgba(157,255,106,0)');
+      g.fillStyle = gl; g.fillRect(cx - r, cy - r, r * 2, r * 2);
+      if (!reduceMotion && Math.random() < 0.18) this.burst(cx + (Math.random() * w - w / 2) * 0.6, y + h * 0.3, 1, C.gas, 0.4, 900, -0.02, 2);
+    }
     g.globalAlpha = actor.alpha;
     if (actor.mirror) { g.save(); g.translate(x * 2 + w, 0); g.scale(-1, 1); } // the far fighter in the ring faces left
     if (actor.flash > t) {

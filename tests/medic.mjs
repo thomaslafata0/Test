@@ -49,7 +49,7 @@ const resetCd = (s) => { s.run.cooldowns = {}; if (s.run.cb) for (const b of Obj
   const plain = dmgRange();
   s.run.rally = 2;
   const boosted = dmgRange();
-  ok('Adrenal Shot lifts the partner’s damage', boosted[1] > plain[1], `${plain[1]} -> ${boosted[1]}`);
+  ok('Adrenal Shot lifts the partner\u2019s damage', boosted[1] > plain[1], `${plain[1]} -> ${boosted[1]}`);
   s.run.rally = 0;
   // Triage picks the hurt partner.
   const fh = E.charAt(s, 0); fh.hp = 10;

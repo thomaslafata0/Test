@@ -252,14 +252,14 @@ export const ITEMS = {
 
 // Implants: installed at the clinic, lost on death. Slots: 2, +1 at INT 4 and INT 8.
 export const IMPLANTS = [
-  { id: 'reflex',  name: 'Reflex Booster',       cost: 150, desc: '+3 SPD.' },
-  { id: 'dermal',  name: 'Subdermal Plating',    cost: 180, desc: '+3 DEF.' },
-  { id: 'optic',   name: 'Targeting Optic',      cost: 160, desc: '+8% crit chance.' },
-  { id: 'pain',    name: 'Pain Editor',          cost: 200, desc: '+20 max HP.' },
-  { id: 'adrenal', name: 'Adrenal Pump',         cost: 220, desc: 'Once per fight, below 30% HP: heal 25%.' },
-  { id: 'myomer',  name: 'Myomer Fibres',        cost: 240, desc: '+2 STR.' },
-  { id: 'neural',  name: 'Neural Jack',          cost: 240, desc: '+2 INT.' },
-  { id: 'voice',   name: 'Voice Modulator',      cost: 200, desc: '+2 CHA.' },
+  { id: 'reflex',  name: 'Reflex Booster',       cost: 150, desc: '+4 SPD.' },
+  { id: 'dermal',  name: 'Subdermal Plating',    cost: 180, desc: '+4 DEF.' },
+  { id: 'optic',   name: 'Targeting Optic',      cost: 160, desc: '+12% crit chance.' },
+  { id: 'pain',    name: 'Pain Editor',          cost: 200, desc: '+30 max HP.' },
+  { id: 'adrenal', name: 'Adrenal Pump',         cost: 220, desc: 'Once per fight, below 30% HP: heal 35%.' },
+  { id: 'myomer',  name: 'Myomer Fibres',        cost: 240, desc: '+3 STR.' },
+  { id: 'neural',  name: 'Neural Jack',          cost: 240, desc: '+3 INT.' },
+  { id: 'voice',   name: 'Voice Modulator',      cost: 200, desc: '+3 CHA.' },
   { id: 'synapse', name: 'Synapse Accelerator',  cost: 320, desc: 'Skill cooldowns 1 turn shorter.' },
 ];
 
@@ -376,7 +376,7 @@ export const ENEMIES = {
     intents: { attack: 4, heavy: 2 }, line: 'A hunched little furnace on legs. Its grate glows brighter as it nears.' },
   cuffbot: { name: 'Cuff Bot', tags: ['droid'], hp: 14, atk: 6, def: 1, spd: 6, cr: [5, 8], xp: 6,
     intents: { attack: 5, heavy: 1 }, line: 'A restraint bot clicks up the corridor, cuffs snapping open and shut.' },
-  gasbot: { name: 'Gas Bot', tags: ['droid'], hp: 13, atk: 5, def: 0, spd: 5, cr: [6, 9], xp: 6,
+  gasbot: { name: 'Gas Bot', tags: ['droid'], hp: 13, atk: 5, def: 0, spd: 5, cr: [6, 9], xp: 6, huff: true,
     intents: { attack: 5, heavy: 1 }, line: 'A small tank on legs wheezes green vapour from its nozzle.' },
   mortarbot: { name: 'Mortar Bot', tags: ['droid'], hp: 15, atk: 9, def: 1, spd: 2, cr: [10, 14], xp: 8,
     intents: { attack: 3, heavy: 3 }, line: 'A stubby walker plants its feet and tilts the tube on its back.' },
@@ -440,9 +440,10 @@ export const ENEMIES = {
 
 export const INTENTS = {
   attack: { label: 'Taking aim',              tone: 'warn',   tip: 'Normal attack.' },
-  heavy:  { label: 'Charging a heavy strike', tone: 'danger', tip: 'x2.2 damage. Defend to cut it to about a third.' },
+  heavy:  { label: 'Charging a heavy strike', tone: 'danger', tip: 'x2.2 damage. Defend to take about 40% of it.' },
   guard:  { label: 'Bracing behind cover',    tone: 'calm',   tip: 'Your attacks deal half. A free turn to heal or set up.' },
   repair: { label: 'Running self-repair',     tone: 'calm',   tip: 'Will restore 15% HP. Hit it hard now.' },
+  huff:   { label: 'Huffing its own supply',  tone: 'danger', tip: 'It\u2019s about to get high on its own gas: bigger, healed, +60% ATK and gassing you. Kill it now, or brace.' },
 };
 
 // ---------- rooms ----------
@@ -891,6 +892,14 @@ export const PERKS = [
   { id: 'padding',   name: 'Kevlar Padding',     rare: false, per: 1, r: 0.9, whole: true, desc: '+{v} DEF.' },
   { id: 'coupdegrace', name: 'Coup de Gr\u00E2ce', rare: true, per: 15, desc: '+{v}% damage against enemies below 30% HP.' },
   { id: 'ghost',     name: 'Ghost Protocol',     rare: true,  per: 3, desc: '+{v}% chance to dodge every attack.' },
+  { id: 'rangefinder', name: 'Rangefinder',     rare: false, per: 5, desc: '+{v}% Shoot damage.' },
+  { id: 'knuckles',  name: 'Brass Knuckles',     rare: false, per: 6, desc: '+{v}% Strike damage.' },
+  { id: 'stimsling', name: 'Stim Sling',         rare: false, per: 10, desc: 'Stims heal {v}% more.' },
+  { id: 'fieldnotes',name: 'Field Notes',        rare: false, per: 6, desc: '+{v}% XP from fights.' },
+  { id: 'pockets',   name: 'Hidden Pockets',     rare: false, per: 1, r: 0.7, whole: true, desc: 'Carry {v} more of each item.' },
+  { id: 'siphon',    name: 'Siphon Rounds',      rare: true,  per: 3, desc: 'Heal {v}% of the damage you deal.' },
+  { id: 'flashbang', name: 'Flashbang Rig',      rare: true,  per: 12, desc: '{v}% chance the enemy starts every fight stunned.' },
+  { id: 'riposte',   name: 'Riposte',            rare: true,  per: 25, desc: 'Hit while Defending: hit back for {v}% of your ATK.' },
   { id: 'warpaint',  name: 'War Paint',          rare: true,  per: 1, r: 0.7, whole: true, desc: 'Every enemy starts every fight Shaken and Exposed for {v} turn(s).' },
 ];
 
@@ -1033,7 +1042,7 @@ export const BAR = {
 // and a permanent mark on that operative, usually good, sometimes not. One visit per trip home.
 // fx: hp, crit and dodge are fractions; atk, def and spd are flat; str, agi, int and cha are attribute points.
 export const LOUNGE = {
-  cost: 500,
+  cost: 350, rise: 0.1, badOdds: 0.35,
   girls: [
     { id: 'vex', name: 'Vex', tag: 'Goth \u00b7 bites', desc: 'Black and pink twin-tails, a cat-ear headset and a stare that could strip paint. Charges by the hour, judges by the minute.',
       outcomes: [

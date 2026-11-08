@@ -10,11 +10,12 @@ function town(seed) {
 }
 // The room.
 { const { s, rng, c } = town(1);
-  c.credits = 400; ok('needs 500 credits', !E.visitLounge(s, 'vex', rng));
+  c.credits = 300; ok('needs 350 credits', !E.visitLounge(s, 'vex', rng));
   c.credits = 2000; const hp = E.stats(s).maxHp, res = E.visitLounge(s, 'vex', rng);
-  ok('a visit costs 500 and leaves a mark', res && c.credits === 1500 && c.fav && Object.keys(c.fav).length > 0, JSON.stringify(res && res.fx));
-  ok('once per trip home', !E.visitLounge(s, 'pixie', rng) && c.credits === 1500);
+  ok('a visit costs 350 and leaves a mark', res && c.credits === 1650 && c.fav && Object.keys(c.fav).length > 0, JSON.stringify(res && res.fx));
+  ok('once per trip home', !E.visitLounge(s, 'pixie', rng) && c.credits === 1650);
   c.booked = false;
+  ok('the next night costs 10% more', E.loungeCost(s) === 385, `${E.loungeCost(s)}`);
   // Every outcome of every girl applies to stats without breaking them.
   for (const g of D.LOUNGE.girls) for (const o of g.outcomes) {
     const t = town(7); t.c.fav = { ...o.fx }; const st = E.stats(t.s);
@@ -22,10 +23,10 @@ function town(seed) {
   }
   { const t = town(8); const base = E.stats(t.s).maxHp; t.c.fav = { hp: 0.05 }; ok('+5% max HP is +5%', Math.abs(E.stats(t.s).maxHp - Math.round(base * 1.05)) <= 1); }
   { const t = town(9); t.c.fav = { def: -1, cha: -1 }; const b = town(9); ok('a disease takes DEF and CHA', E.stats(t.s).def === E.stats(b.s).def - 1 && E.attr(t.c, 'cha') === Math.max(1, E.attr(b.c, 'cha') - 1)); }
-  // Bad nights happen: roughly one in four over many visits.
+  // Bad nights happen: about one in three over many visits.
   let bad = 0; const N = 400;
   for (let i = 0; i < N; i++) { const t = town(100 + i); t.c.credits = 600; const r = E.visitLounge(t.s, D.LOUNGE.girls[i % 3].id, t.rng); if (r && r.bad) bad++; }
-  ok('about one night in four goes badly', bad > N * 0.15 && bad < N * 0.33, `${bad}/${N}`);
+  ok('about one night in three goes badly', bad > N * 0.28 && bad < N * 0.42, `${bad}/${N}`);
 }
 // The duel.
 function pair(seed) {

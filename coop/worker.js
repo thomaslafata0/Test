@@ -155,6 +155,32 @@ export class Board {
   }
 }
 
+// Crash and lock-up reports from the game: what broke and on which screen. No names, ids or saves.
+// GET /bug lists the latest 200 for whoever is fixing things.
+const BUG_KEEP = 2000, BUG_MAX_BODY = 4000, BUG_RATE = 20;
+export class Bugs {
+  constructor(state) {
+    this.sql = state.storage.sql;
+    this.sql.exec('CREATE TABLE IF NOT EXISTS bugs (at INTEGER NOT NULL, data TEXT NOT NULL)');
+    this.hits = new Map();
+  }
+  async fetch(request) {
+    if (request.method === 'GET') return json({ rows: this.sql.exec('SELECT at, data FROM bugs ORDER BY at DESC LIMIT 200').toArray().map((r) => ({ at: r.at, ...JSON.parse(r.data) })) });
+    if (request.method !== 'POST') return json({ error: 'method' }, 405);
+    const ip = request.headers.get('CF-Connecting-IP') || 'local', now = Date.now(), m = this.hits.get(ip);
+    if (!m || now - m.t > 60000) { if (this.hits.size > 5000) this.hits.clear(); this.hits.set(ip, { t: now, n: 1 }); } else if (++m.n > BUG_RATE) return json({ error: 'slow down' }, 429);
+    const text = await request.text();
+    if (text.length > BUG_MAX_BODY) return json({ error: 'too big' }, 413);
+    let b; try { b = JSON.parse(text); } catch (e) { return json({ error: 'bad json' }, 400); }
+    const row = { kind: label(b.kind, 20), msg: label(b.msg, 300), stack: label(b.stack, 1500), screen: label(b.screen, 20), coop: label(b.coop, 10), ver: label(b.ver, 20), ua: label(b.ua, 120) };
+    if (!row.kind || !row.msg) return json({ error: 'bad row' }, 400);
+    this.sql.exec('INSERT INTO bugs (at, data) VALUES (?, ?)', now, JSON.stringify(row));
+    const n = this.sql.exec('SELECT COUNT(*) AS n FROM bugs').one().n;
+    if (n > BUG_KEEP) this.sql.exec('DELETE FROM bugs WHERE at IN (SELECT at FROM bugs ORDER BY at ASC LIMIT ?)', n - BUG_KEEP);
+    return json({ ok: true });
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -162,6 +188,7 @@ export default {
     if (url.pathname === '/.well-known/apple-app-site-association' || url.pathname === '/apple-app-site-association') {
       return new Response(JSON.stringify({ applinks: { details: [{ appIDs: ['39BW6948KL.com.thomaslafata.cindercell'], components: [{ '/': '/', '?': { join: '?*' }, comment: 'co-op invites' }] }] } }), { headers: { 'content-type': 'application/json', 'cache-control': 'max-age=3600' } });
     }
+    if (url.pathname === '/bug') return env.BUGS.get(env.BUGS.idFromName('all')).fetch(request);
     if (url.pathname === '/board') return env.BOARD.get(env.BOARD.idFromName('season2'))  // season 1's board is kept under 'global'
      .fetch(request);
     const sv = url.pathname.match(/^\/save\/([A-Z0-9]{12})(\/versions)?$/);

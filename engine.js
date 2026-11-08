@@ -56,12 +56,15 @@ export const TUNE = { hpLin: 0.28, hpQuad: 0.003, atkLin: 0.14, atkQuad: 0.002, 
   // Enemy strength in sectors 1-5. Nobody levels up during a raid, so a first raid has to be winnable on level-1 stats.
   earlyCurve: [1, 0.95, 0.88, 0.84, 0.85, 0.95, 0.95, 0.95, 0.95, 0.95],
   // Rewards shrink once an operative is more than overFree levels above the sector. reinforce: enemy strength by districts already freed.
-  extractFail: 0.15, droneAtk: 1, droneShield: 1, droneHeal: 1, droneTech: 1, overFree: 2, overStep: 0.2, overMin: 0.25, defendHeavy: 0.35, smokeEscape: 0.7, priceAll: 1.265, trainBase: 3, trainStep: 1, fightDrop: FIGHT_DROP, eliteDrop: ELITE_DROP, coopCr: 1, repeatPay: 2, reinforce: [0, 0.5, 0.5, 0.35], bossRepeatXp: 0.5, bossRepeatResolve: 1,
+  extractFail: 0.15, droneAtk: 1, droneShield: 1, droneHeal: 1, droneTech: 1, overFree: 2, overStep: 0.2, overMin: 0.25, defend: 0.6, defendHeavy: 0.42, smokeEscape: 0.7, priceAll: 1.265, trainBase: 3, trainStep: 1, fightDrop: FIGHT_DROP, eliteDrop: ELITE_DROP, coopCr: 1, repeatPay: 2, reinforce: [0, 0.5, 0.5, 0.35], bossRepeatXp: 0.5, bossRepeatResolve: 1,
   // Field Medic: shield share of max HP (team / alone), team damage buff, its length in rounds, Triage heal, Tag's Exposed, revive HP, stim bonus.
   medShield: 0.2, medShieldSolo: 0.28, rallyAtk: 0.25, rallySolo: 0.3, rallyTurns: 3, triageHeal: 0.22, tagMult: 1, tagSolo: 1.4, tagExposed: 2, medRevive: 0.35, medStim: 0.25,
+  huffAt: 0.6, huffHp: 1.3, huffHeal: 0.15, huffAtk: 1.6,
   classHp: { runner: 14, clerk: 16, ghost: 10, medic: 15 }, ghostGuard: 0.92, ghostCrack: 3, overhaulMult: 1.3, overhaulHeal: 0.06, overhaulTear: 2, overhaulTears: 99,
   rangedSpread: 0.15, meleeSpread: 0.3, shootGuard: 0.15, momentum: 0.15, strikeBonus: 0.25, foundryStrike: 0.15, coopHp: 2.1, coopAtk: 1.4, coopExtra: 3, reviveHp: 0.2, reviveAfter: 0.15, downsPerRaid: 1, bleedRounds: 3,
   // Share of unsecured credits and XP lost, by position in the five-sector run to the next boss. Beating the boss secures everything.
+  // Chance an extraction falls through, by position before the next boss: safer just after a boss, riskier just before one.
+  extractFails: [0.1, 0.13, 0.17, 0.2, 0],
   extractRates: [0.8, 0.65, 0.5, 0.4, 0], escapeRates: [0.9, 0.85, 0.75, 0.65, 0.6],
   itemScale: 0.3, allyGrit: 3 };
 export const extractRate = (sector) => TUNE.extractRates[(sector - 1) % 5];
@@ -742,7 +745,7 @@ export function equipHeirloom(s) {
 // ---------- derived stats ----------
 export function attr(c, k) {
   const imp = { str: 'myomer', int: 'neural', cha: 'voice' }[k];
-  return Math.max(1, Math.min(D.ATTR_MAX + 2, c.attrs[k] + (imp && hasImp(c, imp) ? 2 : 0) + favOf(c, k)));
+  return Math.max(1, Math.min(D.ATTR_MAX + 3, c.attrs[k] + (imp && hasImp(c, imp) ? 3 : 0) + favOf(c, k)));
 }
 // What the E-Girl Room has left on this operative: a sum of every night's marks. Kept on the operative, gone with them.
 export const favOf = (c, k) => (c && c.fav && c.fav[k]) || 0;
@@ -762,22 +765,22 @@ export function statsOf(meta, c) {
   }
   const common = B.atk + t.atk * D.TRAINING.atk.per + (c.level - 1) + (has(c, 'drill') ? 2 : 0);
   const rMain = (mainStat(gearIn(c, 'ranged')) || { v: 0 }).v, mMain = (mainStat(gearIn(c, 'melee')) || { v: 0 }).v;
-  const optic = hasImp(c, 'optic') ? 0.08 : 0, gadget = baseOf(gearIn(c, 'gadget')) || {};
-  const hp = Math.round(B.hp * 1.25) + t.hp * D.TRAINING.hp.per + (c.level - 1) * 6 + Math.round(str * TUNE.strHp) + (c.background === 'foundry' ? 25 + 3 * (c.level - 1) : 0) + (TUNE.classHp[c.background] || 0) + (hasImp(c, 'pain') ? 20 : 0) + gearBonus(c, 'hp');
+  const optic = hasImp(c, 'optic') ? 0.12 : 0, gadget = baseOf(gearIn(c, 'gadget')) || {};
+  const hp = Math.round(B.hp * 1.25) + t.hp * D.TRAINING.hp.per + (c.level - 1) * 6 + Math.round(str * TUNE.strHp) + (c.background === 'foundry' ? 25 + 3 * (c.level - 1) : 0) + (TUNE.classHp[c.background] || 0) + (hasImp(c, 'pain') ? 30 : 0) + gearBonus(c, 'hp');
   const mk = markSum(c), drink = drinkOf(c) || {}, fb = featBuffs(meta), dAtk = (drink.atk || 0) + favOf(c, 'atk'), dCrit = (drink.crit || 0) + favOf(c, 'crit');
   return {
     maxHp: Math.round(hp * (hasTrait(c, 'stalwart') ? 1.12 : 1) * (1 + pv(c, 'ironlung') / 100) * (1 + mk.hp + fb.hp) * (1 + (drink.hp || 0)) * Math.max(0.5, 1 + favOf(c, 'hp'))),
     atk: common + rMain + dAtk + (w.type === 'heavy' ? Math.floor(str * TUNE.strAtk) : Math.floor(agi * TUNE.agiAtk)),
     atkM: common + mMain + dAtk + Math.floor(str * TUNE.strAtk),
-    def: B.def + (c.background === 'foundry' ? 2 : 0) + t.def * D.TRAINING.def.per + Math.floor((c.level - 1) / 2) + def + gearBonus(c, 'def') + (hasImp(c, 'dermal') ? 3 : 0) + (has(c, 'lining') ? 2 : 0) + mk.def + pv(c, 'padding') + (drink.def || 0) + favOf(c, 'def'),
-    spd: B.spd + (c.background === 'runner' ? 2 : 0) + t.spd * D.TRAINING.spd.per + Math.floor((c.level - 1) / 3) + agi + (hasImp(c, 'reflex') ? 3 : 0) + spd + gearBonus(c, 'spd') + mk.spd + (drink.spd || 0) + favOf(c, 'spd'),
+    def: B.def + (c.background === 'foundry' ? 2 : 0) + t.def * D.TRAINING.def.per + Math.floor((c.level - 1) / 2) + def + gearBonus(c, 'def') + (hasImp(c, 'dermal') ? 4 : 0) + (has(c, 'lining') ? 2 : 0) + mk.def + pv(c, 'padding') + (drink.def || 0) + favOf(c, 'def'),
+    spd: B.spd + (c.background === 'runner' ? 2 : 0) + t.spd * D.TRAINING.spd.per + Math.floor((c.level - 1) / 3) + agi + (hasImp(c, 'reflex') ? 4 : 0) + spd + gearBonus(c, 'spd') + mk.spd + (drink.spd || 0) + favOf(c, 'spd'),
     dodge: (agi - 1) * TUNE.agiDodge + (c.background === 'runner' ? 0.1 : 0) + fb.dodge + pv(c, 'ghost') / 100 + favOf(c, 'dodge'),
     crit: 0.05 + (w.crit || 0) + critAll + optic + (agi - 1) * TUNE.agiCrit + gearBonus(c, 'crit', 'ranged') / 100 + mk.crit + dCrit + fb.crit,
     critM: 0.05 + (mw.crit || 0) + critAll + optic + gearBonus(c, 'crit', 'melee') / 100 + mk.crit + dCrit + fb.crit,
-    carry: 4 + (has(c, 'belt') ? 3 : 0) + carry,
+    carry: 4 + (has(c, 'belt') ? 3 : 0) + carry + pv(c, 'pockets'),
     slots: 2 + (has(c, 'ripper') ? 1 : 0) + (attr(c, 'int') >= 4 ? 1 : 0) + (attr(c, 'int') >= 8 ? 1 : 0) + (c.background === 'clerk' ? 1 : 0),
     tech: (1 + 0.1 * attr(c, 'int')) * (c.background === 'clerk' ? 1.25 : 1) * (hasTrait(c, 'overcharge') ? 1.2 : 1) * (1 + (gadget.techBoost || 0)) * (1 + (drink.tech || 0)),
-    stimBoost: (gadget.stimBoost || 0) + fb.stim + (has(c, 'corpsman') ? 0.25 : 0),
+    stimBoost: (gadget.stimBoost || 0) + fb.stim + (has(c, 'corpsman') ? 0.25 : 0) + pv(c, 'stimsling') / 100,
     scan: !!gadget.scan || has(c, 'informant') || c.background === 'clerk',
   };
 }
@@ -1070,11 +1073,14 @@ export function buyUpgrade(s, id) {
   return true;
 }
 
+// Each implant after the first costs a lot more: the body only takes so much hardware.
+export const IMPLANT_STEP = [1, 1.75, 2.5, 3.25];
+export const implantCost = (c, u) => Math.round(u.cost * IMPLANT_STEP[Math.min(IMPLANT_STEP.length - 1, (c.implants || []).length)]);
 export function installImplant(s, id) {
-  const u = D.IMPLANTS.find((x) => x.id === id), c = s.char;
-  if (!u || hasImp(c, id) || c.credits < price(s, u.cost) || c.implants.length >= stats(s).slots) return false;
+  const u = D.IMPLANTS.find((x) => x.id === id), c = s.char, cost = u && price(s, implantCost(c, u));
+  if (!u || hasImp(c, id) || c.credits < cost || c.implants.length >= stats(s).slots) return false;
   const before = stats(s).maxHp;
-  c.credits -= price(s, u.cost); c.implants.push(id); ledger(s, 'spend:implants', price(s, u.cost));
+  c.credits -= cost; c.implants.push(id); ledger(s, 'spend:implants', cost);
   c.hp += Math.max(0, stats(s).maxHp - before);
   s.notice = `${u.name} installed. Doc says the twitching stops in a week.`;
   return true;
@@ -1350,7 +1356,10 @@ function startFight(s, rng, kind) {
   if (kind === 'fight' && r.cond === 'hunters' && rng() < 0.25) kind = 'elite';
   if (kind === 'bounty') kind = 'elite';
   const boss = kind === 'boss';
-  const e = makeEnemy(r.sector, boss, rng, r.map, r.threat, r.reinforced || 0, Math.max(0, (s.char.level || 1) - 4));
+  // The level floor comes from the strongest operative still standing, not whichever player's vote opened the door:
+  // in co-op that used to make the same boss tougher or softer depending on who clicked last.
+  const teamLevel = Math.max(1, ...livingActors(s).map((i) => (charAt(s, i) || {}).level || 1), isCoop(s) ? 1 : (s.char.level || 1));
+  const e = makeEnemy(r.sector, boss, rng, r.map, r.threat, r.reinforced || 0, Math.max(0, teamLevel - 4));
   if (!boss) applyQuirk(r, e, rng);
   if (kind === 'elite') makeElite(e, rng);
   if (r.bulletin === 'payday') e.hp = e.maxHp = Math.round(e.maxHp * 1.1);
@@ -1378,6 +1387,7 @@ function startFight(s, rng, kind) {
   for (const k of r.usedThisFight || []) if (r.cooldowns[k] < 50) r.cooldowns[k] = Math.max(r.cooldowns[k] || 0, CARRY_CD);
   r.usedThisFight = [];
   if (r.room === 1 && has(c, 'forger') && !boss) { e.stun = 1; log(s, 'Your forged papers buy you a free moment.', 'good'); }
+  if (hasPerk(c, 'flashbang') && !e.stun && rng() < pv(c, 'flashbang') / 100) { e.stun = 1; log(s, 'A flashbang goes off as you come in. It reels.', 'good'); }
   if (r.nextMod === 'stunned') { e.stun = Math.max(e.stun, 1); log(s, 'They don\u2019t see you coming.', 'good'); }
   if (r.nextMod === 'alerted') { e.atk = Math.round(e.atk * 1.2); log(s, 'The alarm is still sounding. They\u2019re ready for you.', 'bad'); }
   if (r.nextMod === 'weakened') { e.hp = Math.round(e.maxHp * 0.75); log(s, 'They\u2019re already hurt. Your tip was good.', 'good'); }
@@ -1467,6 +1477,7 @@ export function makeEnemy(sector, boss, rng, mapId = 'garrison', threat = 0, rei
     intents: D.SPECIALS[id] ? { ...base.intents, special: Math.round(2 * TUNE.statusRate) } : base.intents,
     intent: 'attack', lastIntent: null, stun: 0, shaken: false, st: {}, fresh: [], phase2: false,
   };
+  if (base.huff && !boss) e.huff = true;
   const mv = !boss && D.MAP_VARIANT_IDS.includes(id) && D.MAP_VARIANT[map.id];
   if (mv) {
     e.variant = map.id; // a different look, not a different name
@@ -1494,6 +1505,7 @@ function chooseIntent(e, rng) {
   let i = e.next || rollIntent(e, rng, e.lastIntent);
   if (!e.intents[i] && i !== 'attack') i = rollIntent(e, rng, e.lastIntent);
   if (i === 'repair' && e.hp > e.maxHp * 0.6) i = 'attack';
+  if (e.huff && !e.huffed && e.hp > 0 && e.hp < e.maxHp * TUNE.huffAt) i = 'huff'; // a Gas Bot that's losing gets into its own tank
   e.lastIntent = i;
   e.next = rollIntent(e, rng, i);
   return i;
@@ -1530,7 +1542,7 @@ export function incomingRange(s) {
     const sp = D.SPECIALS[e.id];
     if (!sp || !(sp.mult > 0)) return null;
     const st = stats(s), b = e.atk * sp.mult * outMult(e.st, r.pst), lo = mitigate(b * 0.85, st.def), hi = mitigate(b * 1.15, st.def);
-    const g = (n) => droneShield(c, Math.max(1, Math.round(n * 0.5 * (hasTrait(c, 'bulwark') ? 0.7 : 1))));
+    const g = (n) => droneShield(c, Math.max(1, Math.round(n * TUNE.defend * (hasTrait(c, 'bulwark') ? 0.7 : 1))));
     return { min: droneShield(c, lo), max: droneShield(c, hi), defMin: g(lo), defMax: g(hi), lethal: droneShield(c, hi) >= c.hp };
   }
   if (e.intent !== 'attack' && e.intent !== 'heavy') return null;
@@ -1538,12 +1550,12 @@ export function incomingRange(s) {
   const twice = !heavy && e.bs && e.bs.twice; // Vane with his coat off: two lighter shots
   const base = e.atk * (heavy ? 2.2 : twice ? TWICE_MULT : 1) * outMult(e.st, r.pst);
   if (twice) {
-    const lo = mitigate(base * 0.85, st.def), hi = mitigate(base * 1.15, st.def), g = (n) => droneShield(c, Math.max(1, Math.round(n * 0.5 * (hasTrait(c, 'bulwark') ? 0.7 : 1))));
+    const lo = mitigate(base * 0.85, st.def), hi = mitigate(base * 1.15, st.def), g = (n) => droneShield(c, Math.max(1, Math.round(n * TUNE.defend * (hasTrait(c, 'bulwark') ? 0.7 : 1))));
     const hiNow = droneShield(c, hi) * 2;
     return { min: droneShield(c, lo) * 2, max: hiNow, defMin: g(lo) * 2, defMax: g(hi) * 2, lethal: hiNow >= c.hp };
   }
   const min = mitigate(base * 0.85 * (q && q.gamble ? 0.5 : 1), st.def), max = mitigate(base * 1.15 * (q && q.gamble ? 1.8 : 1), st.def);
-  const guarded = (n) => droneShield(c, Math.max(1, Math.round(n * (heavy ? TUNE.defendHeavy : 0.5) * (hasTrait(c, 'bulwark') ? 0.7 : 1))));
+  const guarded = (n) => droneShield(c, Math.max(1, Math.round(n * (heavy ? TUNE.defendHeavy : TUNE.defend) * (hasTrait(c, 'bulwark') ? 0.7 : 1))));
   const hiNow = droneShield(c, max);
   // A boss over half health that your best hit could push under it gains +20% ATK before it swings.
   const reach = Math.max(attackRange(s, false)[1], attackRange(s, true)[1]);
@@ -1622,6 +1634,7 @@ function hitMult(s, melee, { mult = 1, unarmoredBonus = 1 } = {}) {
   mult *= 1 + fb.atk + (melee ? fb.melee : fb.ranged) + (fb.vs[e.id] || 0);
   if (r.ready) mult *= hasPerk(c, 'steady') ? 1 + pv(c, 'steady') / 100 : 1.5;
   if (r.card === 'red') mult *= 1.15;
+  mult *= 1 + pv(c, melee ? 'knuckles' : 'rangefinder') / 100;
   if (r.rally > 0) mult *= 1 + (isCoop(s) ? TUNE.rallyAtk : TUNE.rallySolo); // a Field Medic's Adrenal Shot, for the whole team
   if (melee) mult *= 1 + TUNE.strikeBonus + (c.background === 'foundry' ? TUNE.foundryStrike : 0); // up close hits harder; Shoot is the safe option
   if (r.momentum) mult *= 1 + TUNE.momentum;
@@ -1670,6 +1683,7 @@ function strike(s, rng, { mult = 1, critBonus = 0, pierce = 0, unarmoredBonus = 
     if (hasTrait(c, 'stunner', mode) && rng() < 0.12) e.stun = Math.max(e.stun, 1);
   }
   if (hasTrait(c, 'leech', mode)) c.hp = Math.min(st.maxHp, c.hp + Math.round(dmg * 0.08));
+  if (hasPerk(c, 'siphon') && dmg > 0) c.hp = Math.min(st.maxHp, c.hp + Math.max(1, Math.round(dmg * pv(c, 'siphon') / 100)));
   if (crit && !melee && hasUnique(c, 'halvek')) for (const k of Object.keys(r.cooldowns)) if (r.cooldowns[k] > 0 && r.cooldowns[k] < 50) r.cooldowns[k] -= 1;
   return { dmg, crit };
 }
@@ -2115,9 +2129,10 @@ function enemyTurn(s, rng) {
     } else {
       const luck = q && q.gamble ? (rng() < 0.5 ? 0.5 : 1.8) : 1;
       let dmg = mitigate(e.atk * (0.85 + rng() * 0.3) * (heavy ? 2.2 : twice ? TWICE_MULT : 1) * luck * outMult(e.st, r.pst) * (r.keepDistance ? 1 - TUNE.shootGuard : 1), st.def);
-      if (r.defending) dmg = Math.max(1, Math.round(dmg * (heavy ? TUNE.defendHeavy : 0.5) * (hasTrait(c, 'bulwark') ? 0.7 : 1)));
+      if (r.defending) dmg = Math.max(1, Math.round(dmg * (heavy ? TUNE.defendHeavy : TUNE.defend) * (hasTrait(c, 'bulwark') ? 0.7 : 1)));
       dmg = soak(s, c, droneShield(c, dmg));
       c.hp -= dmg; vamp(dmg); reflect(dmg);
+      if (r.defending && hasPerk(c, 'riposte') && e.hp > 0) { const back = Math.max(1, Math.round(st.atk * pv(c, 'riposte') / 100)); e.hp -= back; log(s, `Riposte: you hit back for ${back}.`, 'hit'); }
       if (q && q.bleedOnHit && !r.defending) addPlayerStatus(s, { bleed: 2 }, rng);
       if (luck !== 1) log(s, luck > 1 ? 'The gamble pays off for them.' : 'Their gamble doesn\u2019t pay off.', 'info');
       fx(s, { who: 'enemy', type: e.intent, dmg, blocked: r.defending });
@@ -2130,7 +2145,7 @@ function enemyTurn(s, rng) {
   } else if (e.intent === 'special') {
     const sp = D.SPECIALS[e.id];
     let dmg = sp.mult > 0 ? mitigate(e.atk * (0.85 + rng() * 0.3) * sp.mult * outMult(e.st, r.pst) * (r.keepDistance ? 1 - TUNE.shootGuard : 1), st.def) : 0;
-    if (r.defending) dmg = Math.max(dmg ? 1 : 0, Math.round(dmg * 0.5 * (hasTrait(c, 'bulwark') ? 0.7 : 1)));
+    if (r.defending) dmg = Math.max(dmg ? 1 : 0, Math.round(dmg * TUNE.defend * (hasTrait(c, 'bulwark') ? 0.7 : 1)));
     dmg = soak(s, c, droneShield(c, dmg));
     c.hp -= dmg; vamp(dmg); reflect(dmg);
     const added = r.defending ? [] : addPlayerStatus(s, sp.status, rng);
@@ -2140,6 +2155,16 @@ function enemyTurn(s, rng) {
     fx(s, { who: 'enemy', type: 'guard' });
     log(s, `${e.name} ${e.suppressed ? 'stays pinned' : 'holds position'} behind cover.`, 'info');
     e.suppressed = false;
+  } else if (e.intent === 'huff') {
+    // High on its own supply: it swells, heals, hits harder and starts gassing you. Worth more if you still put it down.
+    const was = e.maxHp;
+    e.huffed = true; e.name = `${e.name}, Blazed`;
+    e.maxHp = Math.round(was * TUNE.huffHp); e.hp = Math.min(e.maxHp, e.hp + (e.maxHp - was) + Math.round(e.maxHp * TUNE.huffHeal));
+    e.atk = Math.round(e.atk * TUNE.huffAtk); e.spd += 2;
+    e.intents = { ...e.intents, special: (e.intents.special || 0) + 3 }; // and it's generous with the gas now
+    e.cr = e.cr.map((n) => Math.round(n * 1.5)); e.xp = Math.round((e.xp || 0) * 1.5);
+    fx(s, { who: 'enemy', type: 'huff', maxHp: e.maxHp, name: e.name });
+    log(s, `${e.name.replace(', Blazed', '')} jams its nozzle in its own intake and takes a long pull. It swells, twitching. ATK +${Math.round((TUNE.huffAtk - 1) * 100)}%.`, 'bad');
   } else if (e.intent === 'repair') {
     const amt = Math.min(e.maxHp - e.hp, Math.round(e.maxHp * 0.15));
     e.hp += amt;
@@ -2148,7 +2173,7 @@ function enemyTurn(s, rng) {
   }
   if (c.hp > 0 && c.hp < st.maxHp * 0.3 && hasImp(c, 'adrenal') && !r.adrenalUsed) {
     r.adrenalUsed = true;
-    const amt = Math.round(st.maxHp * 0.25); c.hp = Math.min(st.maxHp, c.hp + amt);
+    const amt = Math.round(st.maxHp * 0.35); c.hp = Math.min(st.maxHp, c.hp + amt);
     fx(s, { who: 'player', type: 'stim', amt, adrenal: true });
     log(s, `Adrenal pump kicks in. +${amt} HP.`, 'good');
   }
@@ -2686,7 +2711,7 @@ function winFight(s, rng, fled = false) {
   const credits = Math.round(randInt(rng, e.cr[0], e.cr[1]) * creditMult(s) * (fled ? 0.5 : 1) * easy);
   // A boss this operative has already beaten is worth less the second time round.
   const beaten = e.boss && r.sector <= mapProgress(c, r.map).deepest;
-  const xp = Math.round((fled ? e.xp * 0.75 : e.xp) * easy * (beaten ? TUNE.bossRepeatXp : 1));
+  const xp = Math.round((fled ? e.xp * 0.75 : e.xp) * easy * (beaten ? TUNE.bossRepeatXp : 1) * (1 + pv(c, 'fieldnotes') / 100));
   c.credits += credits; r.sectorCredits += credits; ledger(s, 'fights', credits);
   const out = { enemy: e.name, id: e.id, portrait: e.portrait, credits, xp, levelUps: [], healed: 0, boss: e.boss, elite: !!e.elite, resolve: 0, fled, items: [], notes: [] };
   log(s, `${e.name} ${fled ? 'flees, dropping a credit pouch' : 'goes down'}. +${credits} ${D.SETTING.cur}, +${xp} XP.`, 'reward');
@@ -2899,7 +2924,7 @@ function clearSector(s, rng = Math.random) {
 }
 
 // Two ways out between bosses. Risky keeps part of the haul but can fail, forcing you into the next sector. Safe always works and keeps nothing.
-export const extractFailChance = (s) => (s.run && extractRate(s.run.sector) > 0 ? TUNE.extractFail : 0);
+export const extractFailChance = (s) => (s.run && extractRate(s.run.sector) > 0 ? TUNE.extractFails[(s.run.sector - 1) % 5] : 0);
 export function attemptExtract(s, rng) {
   if (rng() < extractFailChance(s)) {
     s.lastResult = { kind: 'note', name: 'Extraction failed', text: 'The pickup was compromised. You\u2019re forced deeper.', notes: [] };
@@ -3182,14 +3207,18 @@ export function buyDrink(s, id) {
 // The E-Girl Room: 500 credits, one hostess, one permanent mark (about one night in four goes badly). Once per trip home.
 export const FAV_LABEL = { hp: ['max HP', true], crit: ['crit', true], dodge: ['dodge', true], atk: ['ATK'], def: ['DEF'], spd: ['SPD'], str: ['STR'], agi: ['AGI'], int: ['INT'], cha: ['CHA'] };
 export const favText = (fx) => Object.entries(fx || {}).filter(([, v]) => v).map(([k, v]) => { const [n, pct] = FAV_LABEL[k] || [k]; const x = pct ? Math.round(v * 100) : v; return `${x > 0 ? '+' : '\u2212'}${Math.abs(x)}${pct ? '%' : ''} ${n}`; }).join(', ');
-export const loungeCost = () => D.LOUNGE.cost;
+// Each night costs 10% more than the last for this operative.
+export const loungeCost = (s) => Math.round(D.LOUNGE.cost * Math.pow(1 + D.LOUNGE.rise, (s && s.char && s.char.loungeVisits) || 0));
 export function visitLounge(s, id, rng) {
   const c = s.char, girl = D.LOUNGE.girls.find((x) => x.id === id), cost = loungeCost(s);
   if (!girl || !inTown(s) || c.booked || c.credits < cost) return null;
-  let roll = rng() * girl.outcomes.reduce((a, o) => a + o.w, 0), out = girl.outcomes[0];
-  for (const o of girl.outcomes) { roll -= o.w; if (roll < 0) { out = o; break; } }
+  // 65% a good night, 35% a bad one; within each, the outcomes keep their own weights.
+  const bad = rng() < D.LOUNGE.badOdds, pool = girl.outcomes.filter((o) => !!o.bad === bad);
+  let roll = rng() * pool.reduce((a, o) => a + o.w, 0), out = pool[0];
+  for (const o of pool) { roll -= o.w; if (roll < 0) { out = o; break; } }
   const before = stats(s).maxHp;
   c.credits -= cost; c.booked = id; ledger(s, 'spend:lounge', cost);
+  c.loungeVisits = (c.loungeVisits || 0) + 1; c.loungeSpent = (c.loungeSpent || 0) + cost;
   c.fav = c.fav || {};
   for (const [k, v] of Object.entries(out.fx)) c.fav[k] = Math.round(((c.fav[k] || 0) + v) * 1000) / 1000;
   c.hp = Math.max(1, Math.min(stats(s).maxHp, c.hp + stats(s).maxHp - before));

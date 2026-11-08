@@ -46,6 +46,22 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   await guest.bringToFront(); await guest.waitForTimeout(800);
   check('friend gets their own death screen', /A wipe/.test(await guest.innerText('body')));
   await guest.screenshot({ path: `${OUT}/wipe-guest-death.png` });
+  // After the wipe, both start again: the friend recruits first, then the host. Nobody gets stuck on a death screen,
+  // and a ready from before the wipe doesn't carry over into the next raid.
+  const scr = (p) => p.evaluate(() => globalThis.cinderGame.state().screen);
+  const make = async (p) => { await p.click('button[data-a="step"][data-v="2"]').catch(() => {}); await p.click('button[data-a="step"][data-v="4"]').catch(() => {}); await p.waitForTimeout(100); await p.click('button[data-a="create"]').catch(() => {}); await p.waitForTimeout(250); await p.click('button[data-a="scenenext"]', { timeout: 1500 }).catch(() => {}); await p.waitForTimeout(600); };
+  await guest.click('button[data-a="recruit"]'); await guest.waitForTimeout(400);
+  check('friend\u2019s Recruit opens creation straight away', await scr(guest) === 'create', await scr(guest));
+  await host.bringToFront(); await host.click('button[data-a="recruit"]'); await host.waitForTimeout(400);
+  check('host\u2019s Recruit opens creation', await scr(host) === 'create', await scr(host));
+  await make(host); await guest.bringToFront(); await make(guest);
+  await host.waitForFunction(() => !!globalThis.cinderGame.state().char2, null, { timeout: 5000 }).catch(() => {});
+  check('both are back in town with new operatives', await scr(host) === 'town' && await scr(guest) === 'town' && await host.evaluate(() => { const s = globalThis.cinderGame.state(); return !!(s.char && s.char2 && !s.char.dead && !s.char2.dead); }));
+  check('no ready carried over from before', await host.evaluate(() => !globalThis.cinderGame.state().guestReady));
+  await guest.click('button[data-a="popup"][data-v="missions"]'); await guest.waitForTimeout(250); await guest.click('.popup button[data-a="coopready"]'); await guest.waitForTimeout(500); await guest.keyboard.press('Escape');
+  await host.bringToFront(); await host.click('button[data-a="popup"][data-v="missions"]'); await host.waitForTimeout(250); await host.click('button[data-a="deploy"]'); await host.waitForTimeout(800);
+  check('and they raid again together', await host.evaluate(() => { const s = globalThis.cinderGame.state(); return !!s.run && !!s.coop; }) && await guest.evaluate(() => !!globalThis.cinderGame.state().run));
+  check('the ready was used up by that raid', await host.evaluate(() => !globalThis.cinderGame.state().guestReady));
   console.log(errors.length ? errors : 'no errors');
   await browser.close();
   process.exit(errors.length ? 1 : 0);
