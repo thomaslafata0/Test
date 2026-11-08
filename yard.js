@@ -44,26 +44,23 @@ export const PLACES = {
     { id: 'tenement_b', box: [219, 118, 250, 150], door: [238, 160], push: [0, -1], knock: { prompt: 'knock', lines: ['The door is welded shut. Curfew rules.', 'Someone inside is singing, badly. You leave them to it.', 'A note on the door: GONE TO THE FOUNDRY. BACK NEVER.'] } },
     { id: 'market', box: [28, 125, 188, 265], door: [172, 250], push: [-0.8, -0.5], sign: { x: 84, y: 118 } },
     { id: 'lantern', box: [0, 270, 140, 384], door: [122, 325], push: [-1, 0], sign: { x: 60, y: 246, text: 'The Lantern' } },
+    // Club Velvet, bottom right of the square: the girls and the card table. Its facade is an overlay (town/street/club_ext.png).
+    { id: 'club', box: [500, 290, 688, 384], door: [548, 300], push: [-0.6, -0.8], sign: { x: 600, y: 262, text: 'Club Velvet' } },
   ],
   spots: [
-    { id: 'fire', x: 646, y: 355, r: 30, stand: [625, 345], prompt: 'warm your hands', lines: ['You warm your hands. The rain hisses on the rim.', 'Someone has burned a stack of ration cards in here.', 'Warm. For a moment nothing is chasing you.'] },
     { id: 'holosign', x: 118, y: 160, r: 26, stand: [194, 222], prompt: 'read the sign', lines: ['MARROW\u2019S. OPEN. (The word CLOSED flickers underneath.)', 'The sign buzzes: NO REFUNDS. NO RECEIPTS. NO RUNNING.'] },
-    { id: 'vent', x: 560, y: 182, r: 22, stand: [540, 196], prompt: 'look at the vent', lines: ['Steam. The foundry runs under half the town now.', 'The vent sighs. It sounds tired.'] },
+    { id: 'vent', x: 344, y: 262, r: 26, stand: [344, 296], prompt: 'look at the vent', lines: ['Steam. The foundry runs under half the town now.', 'The vent sighs. It sounds tired.'] },
     { id: 'lockers', x: 160, y: 130, r: 22, stand: [194, 195], prompt: 'check the lockers', lines: ['Shift lockers, padlocked. One has a name you recognise from the wall.', 'Empty. Someone has scratched a tally of days into the door. It stops at ninety.'] },
     { id: 'poster', x: 282, y: 118, r: 24, stand: [282, 156], prompt: 'read the poster', lines: ['\u201CPRODUCTIVITY IS LOYALTY.\u201D Someone has drawn a moustache on the Supervisor.', '\u201CREPORT UNUSUAL MOVEMENT.\u201D Below it, in marker: \u201Clike your bowels?\u201D', '\u201CCURFEW: DUSK.\u201D The word DUSK has been scratched out and replaced with NEVER.', 'A reward notice. The face is smudged. Could be anyone. Could be you.'] },
     { id: 'noticeboard', x: 425, y: 140, r: 22, stand: [428, 158], prompt: 'read the board (Missions)', open: 'missions' },
     { id: 'vending', x: 455, y: 128, r: 22, stand: [462, 172], prompt: 'use the vending terminal (1 cr)', action: 'vending' },
-    { id: 'crawler', x: 677, y: 328, r: 26, stand: [630, 310], prompt: 'look at the crawler', lines: ['A cargo crawler, three wheels and a prayer. Someone has keyed REPAIR ME into the door.', 'The crawler\u2019s cab smells of coolant and old cigarettes.'] },
     { id: 'tower', x: 648, y: 75, r: 58, stand: [590, 320], prompt: 'look up', lines: ['The water tower. The Directorate tested the water last month and nobody saw the results.', 'A kid has climbed it and painted a fist on the tank. Nobody has painted over it yet.'] },
   ],
-  folk: [
-    { id: 'vendor', x: 100, y: 366, h: 110, lines: ['The Lantern\u2019s open. Go on in, the house is hungry.', 'Drinks at the bar, wheel in the back. Nobody saw you.', 'Curfew stops at the door. Debts don\u2019t.', 'The new girls at the Lantern? Nova bit a Directorate captain. Allegedly.', 'Wheel\u2019s hot tonight. That\u2019s what I tell everyone.', 'If you\u2019re buying, the croupier takes yard scrip. Mostly.', 'Somebody keeps leaving flowers by the back door of the Lantern.'] },
-    { id: 'kid', x: 250, y: 320, h: 87, wander: { x: [216, 300], y: [292, 346] }, lines: ['Are you one of them? The cell?', 'I can run messages. I\u2019m fast.', 'My dad worked the casting floor. Before.', 'The guard\u2019s scared of the dark. I saw him.', 'Is it true there\u2019s another world up the lift? With purple sky?', 'When I\u2019m big I\u2019m going to fight the Governor.', 'I found a bullet. Do you want it? It\u2019s lucky.', 'Mum says not to talk to the cell. Mum isn\u2019t here.'] },
-    { id: 'worker', x: 500, y: 300, h: 134, lines: ['Double shift again. The quota went up.', 'Crawler\u2019s been broken for a month. They fine us for it.', 'Heard someone hit the garrison last night. Wasn\u2019t me.', 'Don\u2019t stand near the vent. It bites.', 'My brother went up the lift on a crate. They said he\u2019s mining. They said.', 'Union meeting\u2019s cancelled. The union\u2019s cancelled.', 'You look like you could use a drink. So could I. Can\u2019t afford one.', 'They put new cameras on the terminal. Smile.'] },
-  ],
+  folk: [], // only people who belong to a building now
   patrol: { id: 'patrol', route: [[250, 200], [440, 190], [530, 300], [400, 360], [200, 340], [205, 260]], h: 140, lines: ['Papers.', 'Curfew\u2019s at dusk. Move along.', 'Keep walking, citizen.', 'Nothing to see. Keep moving.', 'Eyes down, citizen.', 'Did you hear something? No. You didn\u2019t.', 'This is a quiet yard. Keep it quiet.'] },
   lights: [
-    { x: 646, y: 340, r: 52, color: '#ff7a2a', kind: 'fire', a: 0.42 },
+    { x: 590, y: 300, r: 70, color: '#ff4fb8', kind: 'neon', a: 0.34 },
+    { x: 344, y: 262, r: 34, color: '#ffc27a', kind: 'lamp', a: 0.16 },
     { x: 118, y: 160, r: 40, color: '#4fe0d0', kind: 'neon', a: 0.2 },
     { x: 549, y: 222, r: 28, color: '#ffc27a', kind: 'lamp', a: 0.28 },
     { x: 42, y: 332, r: 32, color: '#ffb066', kind: 'lamp', a: 0.24 },
@@ -73,8 +70,10 @@ export const PLACES = {
     { x: 410, y: 88, r: 18, color: '#4fe0d0', kind: 'neon', a: 0.22 },
     { x: 624, y: 200, r: 20, color: '#ffc27a', kind: 'lamp', a: 0.24 },
   ],
-  steam: [{ x: 560, y: 176, big: true }, { x: 88, y: 316 }],
-  embers: { x: 646, y: 340 },
+  steam: [{ x: 344, y: 258, big: true }, { x: 88, y: 316 }],
+  embers: null,
+  // Painted pieces laid over the yard picture: the club's front and the vent grate (each skipped until its file loads).
+  overlays: [{ key: 'club_ext', x: 458, y: 236 }, { key: 'vent', x: 312, y: 240 }],
   puddles: [{ x: [270, 340], y: 300 }, { x: [430, 500], y: 345 }, { x: [230, 280], y: 230 }, { x: [500, 540], y: 250 }],
   // The E-Girl Room, through the curtain at the back of the Lantern: tonight's three girls stand at the slots; she walks you
   // out through the curtain on the right. Leaving by the left door goes back into the Lantern.
@@ -84,8 +83,8 @@ export const PLACES = {
     market: { npc: { id: 'marrow', x: 480, h: 160 }, spawn: 130, exit: [0, 62], lights: [{ x: 330, y: 80, r: 130, color: '#ffb066', kind: 'lamp' }, { x: 580, y: 140, r: 70, color: '#ff3d7a', kind: 'neon' }] },
     clinic: { npc: { id: 'ilse', x: 470, h: 152 }, spawn: 130, exit: [0, 62], lights: [{ x: 350, y: 66, r: 150, color: '#c8ffe6', kind: 'lamp' }] },
     safehouse: { npc: { id: 'handler', x: 470, h: 158 }, spawn: 110, exit: [0, 62], lights: [{ x: 240, y: 130, r: 120, color: '#ffc27a', kind: 'fire' }, { x: 640, y: 215, r: 50, color: '#ff9a4a', kind: 'fire' }] },
-    lantern: { back: { x: 405, to: 'lounge' }, npc: { id: 'keg7', x: 545, h: 150 }, also: { id: 'croupier', x: 285, h: 156, opens: 'wheel' }, spawn: 110, exit: [0, 62], lights: [{ x: 300, y: 70, r: 150, color: '#ff8a3c', kind: 'fire' }, { x: 120, y: 60, r: 80, color: '#ff4a3a', kind: 'neon' }, { x: 560, y: 110, r: 110, color: '#ffc27a', kind: 'lamp' }] },
-    lounge: { npc: null, girls: [215, 365, 515], spawn: 70, exit: [0, 50], curtain: 640, parent: 'lantern', lights: [{ x: 230, y: 90, r: 130, color: '#ff4fb8', kind: 'neon' }, { x: 520, y: 90, r: 130, color: '#b44fff', kind: 'neon' }, { x: 640, y: 200, r: 80, color: '#ff8ad8', kind: 'neon' }] },
+    lantern: { npc: { id: 'keg7', x: 545, h: 150 }, also: { id: 'croupier', x: 285, h: 156, opens: 'wheel' }, spawn: 110, exit: [0, 62], lights: [{ x: 300, y: 70, r: 150, color: '#ff8a3c', kind: 'fire' }, { x: 120, y: 60, r: 80, color: '#ff4a3a', kind: 'neon' }, { x: 560, y: 110, r: 110, color: '#ffc27a', kind: 'lamp' }] },
+    club: { npc: null, name: 'Club Velvet', girls: [180, 300, 420], table: { x: 545, opens: 'cards' }, spawn: 70, exit: [0, 50], curtain: 650, lights: [{ x: 230, y: 90, r: 130, color: '#ff4fb8', kind: 'neon' }, { x: 520, y: 90, r: 130, color: '#b44fff', kind: 'neon' }, { x: 640, y: 200, r: 80, color: '#ff8ad8', kind: 'neon' }] },
   },
 };
 // Each E-Girl's own room, through the curtain: she leads you in, the night plays out, and the left door goes back to the lounge.
@@ -97,7 +96,7 @@ const GIRL_ROOMS = {
   luna: { name: 'Luna\u2019s nook', lights: [{ x: 420, y: 130, r: 140, color: '#a8e6ff', kind: 'lamp' }, { x: 180, y: 80, r: 100, color: '#ffd8a8', kind: 'lamp' }] },
   nova: { name: 'Nova\u2019s loft', lights: [{ x: 300, y: 90, r: 150, color: '#ff3a3a', kind: 'neon' }, { x: 560, y: 110, r: 100, color: '#ffb05a', kind: 'lamp' }] },
 };
-for (const [id, r] of Object.entries(GIRL_ROOMS)) PLACES.interiors[`room_${id}`] = { npc: null, host: id, name: r.name, girls: [430], spawn: 70, exit: [0, 50], parent: 'lounge', lights: r.lights };
+for (const [id, r] of Object.entries(GIRL_ROOMS)) PLACES.interiors[`room_${id}`] = { npc: null, host: id, name: r.name, girls: [430], spawn: 70, exit: [0, 50], parent: 'club', lights: r.lights };
 
 const ROOM = PLACES.room, FLOOR = ROOM.floor, MID_Y = (FLOOR.y0 + FLOOR.y1) / 2;
 const FIG = PLACES.figure, WALK = PLACES.walk;
@@ -116,12 +115,13 @@ export const SHOPS = {
   clinic: { name: 'Doc Ilse\u2019s clinic', opens: 'clinic', label: 'Clinic' },
   safehouse: { name: 'The hideout', opens: 'character', label: 'Character & Resolve' },
   lantern: { name: 'The Lantern', opens: 'bar', label: 'The Lantern' },
+  club: { name: 'Club Velvet', opens: 'lounge', label: 'Club Velvet' },
   barracks: { name: 'Directorate barracks', hotspot: 'barracks' },
   tenement_a: { name: 'Tenement', hotspot: 'tenement_a' },
   tenement_b: { name: 'Tenement', hotspot: 'tenement_b' },
 };
 // Which sign a partner's open menu belongs to.
-const MENU_SIGN = { missions: 'terminal', market: 'market', clinic: 'clinic', character: 'safehouse', gear: 'safehouse', bar: 'lantern', wheel: 'lantern' };
+const MENU_SIGN = { missions: 'terminal', market: 'market', clinic: 'clinic', character: 'safehouse', gear: 'safehouse', bar: 'lantern', wheel: 'lantern', lounge: 'club', cards: 'club' };
 // Interior NPC one-liners.
 const INSIDE = {
   marrow: ['No receipts. No refunds. No questions.', 'Fresh stock after every job you pull.', 'I don\u2019t buy. I sell. Old kit goes on the heap.'],
@@ -320,7 +320,7 @@ export class Town {
   async loadArt() {
     this.sprites = { shadow: softBlack() };
     this.baked = {}; this.art = {};
-    for (const key of ['yard', 'int_terminal', 'int_market', 'int_clinic', 'int_safehouse', 'int_lantern', 'int_lounge']) {
+    for (const key of ['yard', 'int_terminal', 'int_market', 'int_clinic', 'int_safehouse', 'int_lantern', 'int_club']) {
       this.art[key] = 'loading';
       // A slow connection gets the placeholder after a few seconds; the real picture still replaces it when it arrives.
       setTimeout(() => { if (this.art[key] === 'loading') { this.art[key] = 'failed'; this.bake(key, null); } }, 4000);
@@ -334,6 +334,7 @@ export class Town {
     loadImg(`${ART}${key}.png`).then((im) => { this.art[key] = im ? 'ok' : 'failed'; if (im) this.bake(key, im); });
   }
   bake(key, im) {
+    if (key === 'yard' && im) for (const o of PLACES.overlays || []) loadImg(`${ART}${o.key}.png`).then((ov) => { if (ov && this.baked.yard) { const g = this.baked.yard.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(ov, o.x, o.y); } });
     const c = makeCanvas(VIEW_W, VIEW_H), g = c.getContext('2d');
     if (im) g.drawImage(im, 0, 0, VIEW_W, VIEW_H);
     else if (key === 'yard') paintYardPlaceholder(g);
@@ -425,6 +426,7 @@ export class Town {
     const p = this.player;
     p.x = it.spawn; p.y = MID_Y; p.dir = 'right'; p.face = !it.npc || it.npc.x > it.spawn ? 1 : -1; p.path = null; p.then = null; this.say = null;
     for (const n of [it.npc, it.also]) if (n && NPC_ART[n.id]) ensureSheet(NPC_ART[n.id]);
+    if (it.girls && this.onBack) this.onBack(door.id); // the girls' town sheets
     const shop = SHOPS[door.id];
     // Only the freight terminal opens its menu as you walk in; everywhere else you talk to the person inside.
     if (shop && shop.auto && this.onOpen) setTimeout(() => this.onOpen(shop.opens, door.id), 180);
@@ -518,6 +520,7 @@ export class Town {
     if (it) {
       if (it.npc && Math.abs(p.x - it.npc.x) < 72) offer(Math.abs(p.x - it.npc.x) * 0.5, { kind: 'npc', id: it.npc.id, x: it.npc.x, y: it.npc.y || MID_Y, opens: SHOPS[this.interiorId].opens });
       if (it.back && Math.abs(p.x - it.back.x) < 60) offer(Math.abs(p.x - it.back.x) * 0.6, { kind: 'back' });
+      if (it.table && Math.abs(p.x - it.table.x) < 60) offer(Math.abs(p.x - it.table.x) * 0.6, { kind: 'table', opens: it.table.opens });
       if (it.girls) for (const g of this.girlsHere()) if (Math.abs(p.x - g.x) < 60) offer(Math.abs(p.x - g.x) * 0.5, { kind: 'girl', id: g.id, name: g.name, x: g.x, y: MID_Y });
       if (it.also && Math.abs(p.x - it.also.x) < 72) offer(Math.abs(p.x - it.also.x) * 0.5, { kind: 'npc', id: it.also.id, x: it.also.x, y: it.also.y || MID_Y, opens: it.also.opens, also: true });
       return best;
@@ -548,6 +551,7 @@ export class Town {
     if (n.kind === 'partner') { if (this.onPartner) this.onPartner(); play('click'); return; }
     if (n.kind === 'door') { this.enter(n.door); return; }
     if (n.kind === 'back') { this.enterBack(); return; }
+    if (n.kind === 'table') { play('click'); if (this.onOpen) this.onOpen(n.opens, this.interiorId); return; }
     if (n.kind === 'girl') { const g = this.girlsHere().find((q) => q.id === n.id); if (g && g.greet) this.speak('girl', g.greet, g.x, MID_Y - ROOM.figure - 10, 3200); play('click'); if (this.onGirl) this.onGirl(n.id); return; }
     if (n.kind === 'npc') {
       this.speak(n.id, pick(INSIDE[n.id] || ['...']), n.x, n.y);
@@ -587,7 +591,7 @@ export class Town {
     const e = this.led;
     if (!e || e.phase === 'gone') return;
     const gid = e.id.slice(5), room = `room_${gid}`;
-    if (this.interiorId === 'lounge' && PLACES.interiors[room] && e.phase !== 'inside') { this.enterRoom(room, e); return; }
+    if (this.interiorId === 'club' && PLACES.interiors[room] && e.phase !== 'inside') { this.enterRoom(room, e); return; }
     e.phase = 'gone';
     this.flash();
     setTimeout(() => { const d = e.done; this.led = null; this.say = null; if (d) d(); }, 450);
@@ -631,6 +635,7 @@ export class Town {
     if (it) {
       if (it.girls) for (const g of this.girlsHere()) if (onFigure({ x: g.x, y: MID_Y }, ROOM.figure)) { this.walkTo(beside(g), MID_Y, () => this.use({ kind: 'girl', id: g.id, name: g.name, x: g.x, y: MID_Y })); return; }
       if (it.back && Math.abs(x - it.back.x) < 50 && y < MID_Y) { this.walkTo(it.back.x, MID_Y, () => this.enterBack()); return; }
+      if (it.table && Math.abs(x - it.table.x) < 60 && y < MID_Y + 20) { this.walkTo(it.table.x - 40, MID_Y, () => this.use({ kind: 'table', opens: it.table.opens })); return; }
       const n = it.npc || { x: -999, h: 0 };
       if (it.npc && onFigure({ x: n.x, y: n.y || MID_Y }, n.h)) { this.walkTo(beside(n), MID_Y, () => this.use({ kind: 'npc', id: n.id, x: n.x, y: n.y || MID_Y, opens: SHOPS[this.interiorId].opens })); return; }
       const o = it.also;
@@ -825,7 +830,7 @@ export class Town {
     const em = PLACES.embers;
     this.sparkT -= dt;
     for (const q of this.sparks) { q.age += dt; q.x += (q.vx + Math.sin(q.age * 5) * 12) * dt; q.y += q.vy * dt; }
-    if (this.sparkT <= 0) {
+    if (this.sparkT <= 0 && em) {
       this.sparkT = 0.22;
       const q = this.sparks.find((o) => o.age > o.life);
       if (q) { q.x = em.x + (Math.random() - 0.5) * 14; q.y = em.y; q.vx = (Math.random() - 0.5) * 14; q.vy = -24 - Math.random() * 34; q.age = 0; q.life = 0.9 + Math.random() * 1; }
@@ -1113,7 +1118,8 @@ export class Town {
     else if (n && n.kind === 'folk') text = n.who.talk ? `${E} \u00B7 talk to the vendor` : `${E} \u00B7 talk`;
     else if (n && n.kind === 'spot') text = `${E} \u00B7 ${n.spot.prompt}`;
     else if (n && n.kind === 'girl') text = `${E} \u00B7 talk to ${n.name}`;
-    else if (n && n.kind === 'back') text = `${E} \u00B7 through the curtain \u00B7 E-Girl Room`;
+    else if (n && n.kind === 'back') text = `${E} \u00B7 through the curtain`;
+    else if (n && n.kind === 'table') text = `${E} \u00B7 sit at the card table \u00B7 Velvet Hearts`;
     else if (n && n.kind === 'door') { const sh = SHOPS[n.door.id]; text = `${E} \u00B7 go in \u00B7 ${sh.label}`; }
     else {
       act = false;

@@ -13,7 +13,7 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   await host.reload(); await host.click('button[data-a="continue-title"]', { timeout: 3000 }).catch(() => {}); await host.waitForTimeout(800);
   await host.keyboard.press('Escape').catch(() => {});
   // The room, solo first. It only opens once the hostess art is installed.
-  await host.click('.shortcuts button[data-v="bar"]'); await host.waitForTimeout(250);
+  await host.click('.shortcuts button[data-v="lounge"]'); await host.waitForTimeout(250);
   const room = await host.locator('.pop-tabs [data-v="lounge"]').count();
   let pickH = null;
   console.log(room ? 'E-Girl Room open' : 'E-Girl Room hidden: no hostess art yet');
@@ -27,7 +27,7 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   check('she walks you out and the result card shows', await host.waitForSelector('.lounge-result', { timeout: 15000 }).then(() => true).catch(() => false));
   await host.screenshot({ path: `${OUT}/lounge.png` });
   await host.click('.lounge-result button[data-a="closemodal"]'); await host.waitForTimeout(200);
-  await host.click('.shortcuts button[data-v="bar"]'); await host.waitForTimeout(250); await host.click('.pop-tabs [data-v="lounge"]'); await host.waitForTimeout(300);
+  await host.click('.shortcuts button[data-v="lounge"]'); await host.waitForTimeout(250); await host.click('.pop-tabs [data-v="lounge"]'); await host.waitForTimeout(300);
   check('and the room is booked', await host.locator('.lounge-res').count() === 1 && await host.locator('button[data-a="lounge"]:not([disabled])').count() === 0);
   await host.keyboard.press('Escape'); await host.waitForTimeout(150);
   }
@@ -50,7 +50,7 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   await guest.waitForTimeout(400);
   check('the host\u2019s menus don\u2019t flash the friend\u2019s screen', await guest.evaluate(() => globalThis.__mark === document.querySelector('#app .status')));
   // The friend's own night out runs on the host and lands on the friend's operative only.
-  await guest.click('.shortcuts button[data-v="bar"]'); await guest.waitForTimeout(250); await guest.click('.pop-tabs [data-v="lounge"]'); await guest.waitForTimeout(300);
+  await guest.click('.shortcuts button[data-v="lounge"]'); await guest.waitForTimeout(250); await guest.click('.pop-tabs [data-v="lounge"]'); await guest.waitForTimeout(300);
   const pickG = await guest.evaluate(() => document.querySelector('button[data-a="lounge"]').dataset.v);
   await guest.click(`button[data-a="lounge"][data-v="${pickG}"]`); await guest.waitForTimeout(2500);
   const gs = await host.evaluate(() => { const s = cinderGame.state(); return { cr: s.char2.credits, booked: s.char2.booked, me: s.char.booked }; });

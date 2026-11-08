@@ -10,9 +10,9 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   await p.goto(URL);
   await p.evaluate(async () => { localStorage.clear(); for (const k of ['afterhours', 'reach', 'contracts']) localStorage.setItem('cinder-cell-news', k); const E = await import('./engine.js'), rng = E.seededRng(4), s = E.newGame(rng); E.createChar(s, rng); s.char.credits = 2000; s.screen = 'town'; s.meta.tips = { town: true, combat: true, route: true }; localStorage.setItem('cinder-cell-save-v1', JSON.stringify(s)); });
   await p.reload(); await p.click('button[data-a="continue-title"]', { timeout: 3000 }).catch(() => {}); await p.waitForTimeout(900);
-  await p.click('.shortcuts button[data-v="bar"]'); await p.waitForTimeout(300);
+  await p.click('.shortcuts button[data-v="lounge"]'); await p.waitForTimeout(300);
   const tab = p.locator('.pop-tabs [data-v="cards"]');
-  check('the card table is a Lantern tab', await tab.count() === 1);
+  check('the card table is a Club Velvet tab', await tab.count() === 1);
   await tab.click(); await p.waitForTimeout(300);
   const st = () => p.evaluate(() => { const s = cinderGame.state(); return { cr: s.char.credits, cards: Object.values(s.meta.cards || {}).reduce((a, b) => a + b, 0), free: s.meta.cardsFree, packs: s.meta.cardPacks || 0, match: s.cardMatch, deck: s.meta.deck, deckSet: !!s.meta.deckSet }; });
   check('three tables to sit at', await p.locator('.tc-table').count() === 3);

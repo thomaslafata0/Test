@@ -54,7 +54,8 @@ const FX_RECIPE = {
   spotweld: { melee: 'slag_splash', color: '#ffd27a' }, welder: { beam: '#ffb35a', hit: 'slag_splash' }, crawler: { beam: '#ff7a2a', hit: 'slag_splash' },
 };
 // The district tactics (engine MAP_TACTIC) by the name they announce.
-const FX_BY_NAME = { 'Molten slag': FX_RECIPE.slagrunt, Flare: FX_RECIPE.colonist, Shackles: { proj: 'cuffs', arc: 10, hit: 'zap', color: '#8fdcff' }, 'Calling it in': { radio: true } };
+FX_RECIPE.pursuer = { proj: 'net', arc: 14, hit: 'zap', color: '#ff4a4a', scale: 1.6 };
+const FX_BY_NAME = { 'Net launcher': FX_RECIPE.pursuer, 'Molten slag': FX_RECIPE.slagrunt, Flare: FX_RECIPE.colonist, Shackles: { proj: 'cuffs', arc: 10, hit: 'zap', color: '#8fdcff' }, 'Calling it in': { radio: true } };
 let VFX = {};
 fetch('vfx/manifest.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : {})).then((m) => {
   for (const [k, v] of Object.entries(m || {})) { const im = new Image(); im.onload = () => { VFX[k] = { ...v, img: im }; }; im.src = `vfx/${v.file || k + '.png'}`; }

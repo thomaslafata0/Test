@@ -142,5 +142,13 @@
   "frames": 6,
   "fps": 12,
   "loop": true
+ },
+ "net": {
+  "file": "net.png",
+  "w": 32,
+  "h": 32,
+  "frames": 6,
+  "fps": 12,
+  "loop": true
  }
 }

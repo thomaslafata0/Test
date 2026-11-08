@@ -223,6 +223,40 @@ if (SECTIONS.includes('maps')) {
     console.log(label.padEnd(26) + D.MAPS.map((mp) => { const a = res.map((r) => r[mp.id]).filter(Boolean); return `${mp.id} ${a.length ? pct(a.map((x) => x.raids), 0.5) : '-'} (${a.length ? pct(a.map((x) => x.ops), 0.5) : '-'}) ${Math.round(a.length / camp * 100)}%`; }).join('  '));
   }
 }
+// The climb after escaping: play the whole game until one operative escapes, send them back one level higher,
+// then record how far each later raid gets and when they die. THREATUP=1 runs it; CAMP sets the cells.
+if (SECTIONS.includes('threatup')) {
+  const camp = Math.max(1, Math.ceil(CAMP / 6)), b = BUILDS[process.env.BUILD || 'strength'], st = STYLES.standard;
+  console.log(`\n=== After the escape (${camp} cells, ${process.env.BUILD || 'strength'}): raids until escape, then the Threat I climb ===`);
+  for (let k = 0; k < camp; k++) {
+    const rng = E.seededRng(8800 + k), s = E.newGame(rng); let ops = 0, raids = 0, esc = null;
+    while (ops < 150 && !esc) {
+      const mp = D.MAPS.find((x) => E.mapUnlocked(s, x) && !(s.char && E.opFreed(s.char, x.id))) || D.MAPS[0];
+      spendResolve(s);
+      if (!s.char) { ops++; E.createChar(s, rng, draft(s, rng, b)); s.screen = 'town'; }
+      shop(s, b, st); raids++;
+      try { raid(s, rng, [b], st, mp.id, startOf(s, mp.id, st)); } catch (e) { s.run = null; s.screen = 'death'; }
+      if (s.screen === 'ending') { s.meta.endingSeen = true; s.screen = 'town'; }
+      if (s.screen === 'death') { s.screen = 'town'; s.char = null; continue; }
+      if (s.escape) esc = { ops, raids, level: s.char.level };
+    }
+    if (!esc) { console.log(`cell ${k}: no escape in ${raids} raids`); continue; }
+    E.returnHigher(s);
+    const log = []; let n = 0;
+    while (s.char && n++ < 120) {
+      const t = E.opThreat(s.char);
+      const mp = D.MAPS.find((x) => E.mapUnlocked(s, x) && !E.freedAt(s.char, x.id, t)) || D.MAPS[0];
+      spendResolve(s); shop(s, b, st); G.upgradeGear(s, 'auto', 150);
+      try { raid(s, rng, [b], st, mp.id, Math.max(...E.insertionsAt(s.char, mp.id, t))); } catch (e) { s.run = null; s.screen = 'death'; }
+      if (s.screen === 'ending') { s.meta.endingSeen = true; s.screen = 'town'; }
+      const died = s.screen === 'death';
+      log.push(`${mp.id.slice(0, 4)}${s.run ? '' : ''}${(s.char && s.char.maps[mp.id] ? s.char.maps[mp.id].deepest : '')}${died ? 'X' : ''}`);
+      if (died) break;
+      if (s.escape) { log.push(`ESCAPED T${t}`); E.returnHigher(s); }
+    }
+    console.log(`cell ${k}: escaped after ${esc.raids} raids (${esc.ops} ops, lvl ${esc.level}); then: ${log.join(' ')}`);
+  }
+}
 // One operative with one thing given free, against the same seeds without it. Same training throughout, so only the item differs.
 function single(give, ranks = 8, b = BUILDS.strAgi, stName = process.env.ITEMSTYLE || 'pusher') {
   const res = [];

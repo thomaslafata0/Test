@@ -1196,8 +1196,8 @@ export const mapUnlocked = (s, map) => Object.entries(map.unlock || {}).every(([
 export const opDepth = (c) => Math.max(0, ...Object.entries((c && c.maps) || {}).map(([id, p]) => (p.deepest ? effSector(p.deepest, id) : 0))) + THREAT_DEPTH * opThreat(c);
 // Threat levels: an operative who frees all five districts escapes, then goes back in one level higher. Their maps start over
 // from sector 1, but every sector counts as THREAT_DEPTH deeper per level (enemies, pay, the shop), so Garrison at Threat I
-// opens about where Halcyon Reach did. Lower levels stay shut for that operative; a new one starts at Standard.
-export const THREAT_DEPTH = 22;
+// opens a little past where Halcyon Reach did (tuned with SECTIONS=threatup in sim-balance.mjs). Lower levels stay shut for that operative; a new one starts at Standard.
+export const THREAT_DEPTH = 30;
 export const opThreat = (c) => (c && c.threat) || 0;
 export const upgradeMax = (t = 0) => D.UPGRADE_MAX + 2 * t; // Standard +8, Threat I +10, Threat II +12...
 export const opFreed = (c, mapId) => (((c && c.maps) || {})[mapId] || {}).deepest >= MAX_SECTOR;

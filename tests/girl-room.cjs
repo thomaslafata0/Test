@@ -10,11 +10,11 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   await p.goto(URL);
   await p.evaluate(async () => { localStorage.clear(); localStorage.setItem('cinder-cell-news', 'contracts'); const E = await import('./engine.js'), rng = E.seededRng(7), s = E.newGame(rng); E.createChar(s, rng); s.char.credits = 5000; s.screen = 'town'; s.meta.tips = { town: true, combat: true, route: true }; localStorage.setItem('cinder-cell-save-v1', JSON.stringify(s)); });
   await p.reload(); await p.click('button[data-a="continue-title"]', { timeout: 3000 }).catch(() => {}); await p.waitForTimeout(1200);
-  await p.click('.shortcuts button[data-v="bar"]'); await p.waitForTimeout(300);
+  await p.click('.shortcuts button[data-v="lounge"]'); await p.waitForTimeout(300);
   await p.click('.pop-tabs [data-v="lounge"]'); await p.waitForTimeout(300);
   await p.click('button[data-a="backroom"]'); await p.waitForTimeout(2500);
   const st = () => p.evaluate(() => ({ scene: cinderTown.scene, led: cinderTown.led && cinderTown.led.phase }));
-  check('the walk goes into the E-Girl Room', (await st()).scene === 'interior:lounge', JSON.stringify(await st()));
+  check('the walk goes into Club Velvet', (await st()).scene === 'interior:club', JSON.stringify(await st()));
   const id = await p.evaluate(() => cinderTown.girlsHere()[0].id);
   await p.evaluate((id) => cinderTown.onGirl(id), id); await p.waitForTimeout(400);
   await p.click(`button[data-a="lounge"][data-v="${id}"]`);
@@ -29,7 +29,7 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   check('she stays in her room after', await p.evaluate(() => cinderTown.girlsHere().length === 1));
   await p.screenshot({ path: `${OUT}/girl-room-after.png` });
   await p.keyboard.press('Escape'); await p.waitForTimeout(600);
-  check('the door goes back to the lounge', (await st()).scene === 'interior:lounge', JSON.stringify(await st()));
+  check('the door goes back to the club', (await st()).scene === 'interior:club', JSON.stringify(await st()));
   await browser.close();
   console.log(errors.length ? errors.join('\n') + '\nFAILED' : 'ALL PASS');
   process.exit(errors.length ? 1 : 0);
