@@ -23,7 +23,7 @@ const turns = ({ s, rng }, n, act = 'defend') => { for (let i = 0; i < n && s.sc
   const g = start(1, 'hornet', 2); toFight(g);
   const e = g.s.run.enemy, atk = Math.max(E.stats(g.s).atk, E.stats(g.s).atkM);
   turns(g, 50);
-  const dealt = e.maxHp - e.hp, want = atk * 0.18 * 50;
+  const dealt = e.maxHp - e.hp, want = atk * D.DRONES.hornet.ranks[1] / 100 * 50;
   assert(Math.abs(dealt - want) <= want * 0.05 + 2, `hornet dealt ${dealt}, wanted about ${want}`);
   console.log('PASS hornet adds up to its share of ATK');
 }
