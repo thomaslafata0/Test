@@ -778,7 +778,7 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .goals { display: grid; gap: 6px; } .goal { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; }
 .goal.ready { border-color: var(--sodium); background: #e8973a14; } .goal.done { opacity: .6; } .goal-rw { display: grid; justify-items: end; gap: 4px; } .chip.cos { color: #ff9ae5; border-color: #ff6ad566; }
 .goal-bar { height: 5px; border-radius: 3px; background: #0006; margin: 4px 0 2px; overflow: hidden; } .goal-bar i { display: block; height: 100%; background: var(--sodium); }
-.guide { margin: 0 0 8px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: #e8973a0d; } .guide summary { cursor: pointer; display: flex; gap: 8px; align-items: baseline; } .guide summary .tool { margin-left: auto; }
+.guide { margin: 0 0 8px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: #e8973a0d; } .guide summary { cursor: pointer; display: flex; gap: 8px; align-items: baseline; } .guide summary .tool { margin-left: auto; min-height: 44px; min-width: 64px; }
 .guide ol { list-style: none; margin: 6px 0 2px; padding: 0; display: grid; gap: 3px; } .guide li { display: flex; gap: 8px; align-items: center; font-size: .85rem; } .guide li span { width: 14px; color: var(--muted); } .guide li b { flex: 1; font-weight: 500; }
 .guide li.ready span { color: var(--sodium); } .guide li.ready b { color: var(--fg, #eee); font-weight: 700; } .guide li.claimed { opacity: .55; } .guide li.claimed span { color: var(--ok); }
 .mastery { margin-bottom: 10px; } .mastery summary { cursor: pointer; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
@@ -1892,8 +1892,8 @@ function hideoutRoom(cos) {
 }
 function hideoutView() {
   const m = state.meta, c = state.char, cos = E.cosmetics(m), tab = state.hideTab || 'room', guest = isGuest();
-  const tabBtn = (k, label) => `<button class="tab" aria-selected="${tab === k}" data-a="hidetab" data-v="${k}">${label}</button>`;
-  const nav = `<nav class="tabs pop-tabs">${tabBtn('room', 'Hideout')}${tabBtn('wardrobe', 'Wardrobe')}${tabBtn('table', 'Card table')}</nav>`;
+  const tabBtn = (k, label) => `<button class="btn small ${tab === k ? 'primary' : ''}" data-a="hidetab" data-v="${k}">${label}</button>`;
+  const nav = `<div class="tc-tabs">${tabBtn('room', 'Rooms')}${tabBtn('wardrobe', 'Wardrobe')}${tabBtn('table', 'Card table')}</div>`;
   const price = (n) => (n ? cr(n) : 'Free');
   if (tab === 'wardrobe') {
     const now = c.look && c.look.dye;
@@ -1934,7 +1934,7 @@ function seasonView() {
     return `<div class="goal ${done ? 'done' : ready ? 'ready' : ''}"><div><b>${esc(goal.text)}</b><div class="goal-bar"><i style="width:${Math.round(100 * n / goal.n)}%"></i></div><span class="muted small">${n.toLocaleString()} / ${goal.n.toLocaleString()}</span></div>
       <div class="goal-rw"><span class="chip ${goal.reward.resolve ? '' : 'cos'}">${esc(rewardText(goal.reward))}</span>${done ? '<span class="good-text small">Claimed</span>' : ready ? `<button class="btn small primary" data-a="claimgoal" data-v="${goal.id}" ${guest ? 'disabled' : ''}>Claim</button>` : ''}</div></div>`;
   }).join('');
-  return `<p class="muted small">Season ${E.SEASON} goals for the whole cell. Progress counts from the start of the season; each pays once. Cosmetic rewards can\u2019t be bought.</p><div class="goals">${rows}</div>`;
+  return `${guideView(true)}<p class="muted small">Season ${E.SEASON} goals for the whole cell. Progress counts from the start of the season; each pays once. Cosmetic rewards can\u2019t be bought.</p><div class="goals">${rows}</div>`;
 }
 
 // ---------- class mastery ----------
@@ -1960,14 +1960,17 @@ const GUIDE = [
   { id: 'contract', text: 'Play a daily contract (Missions)', done: (m) => Object.keys(m.contractsDone || {}).length > 0 },
   { id: 'freed', text: 'Free the Directorate Garrison', done: (m) => !!(m.liberated && m.liberated.garrison) },
 ];
-function guideView() {
+// In the yard on roomy screens; on phones and in co-op it lives at the top of Missions \u2192 Season instead (inMenu).
+function guideView(inMenu = false) {
   const m = state.meta, g = m.guide || {};
+  if (!inMenu && (E.isCoop(state) || matchMedia('(max-height: 560px), (max-width: 700px)').matches)) return '';
   if (isGuest() || g.off || GUIDE.every((x) => (g.claimed || []).includes(x.id))) return '';
   const rows = GUIDE.map((x) => {
     const claimed = (g.claimed || []).includes(x.id), done = x.done(m);
     return `<li class="${claimed ? 'claimed' : done ? 'ready' : ''}"><span>${claimed ? '&#10003;' : done ? '&#9733;' : '&#9675;'}</span><b>${esc(x.text)}</b>${done && !claimed ? `<button class="tool" data-a="guideclaim" data-v="${x.id}">+1 ${esc(S.meta)}</button>` : ''}</li>`;
   }).join('');
-  return `<details class="guide" ${GUIDE.some((x) => x.done(m) && !(g.claimed || []).includes(x.id)) || !(g.claimed || []).length ? 'open' : ''}><summary><span class="label">First steps</span> <span class="muted small">${(g.claimed || []).length} / ${GUIDE.length}</span><button class="tool" data-a="guideoff" title="Hide the checklist">Hide</button></summary><ol>${rows}</ol></details>`;
+  const ready = GUIDE.some((x) => x.done(m) && !(g.claimed || []).includes(x.id)), roomy = !matchMedia('(max-height: 560px)').matches;
+  return `<details class="guide" ${(ready && roomy) || inMenu ? 'open' : ''}><summary><span class="label">First steps</span> <span class="muted small">${(g.claimed || []).length} / ${GUIDE.length}</span><button class="tool" data-a="guideoff" title="Hide the checklist">Hide</button></summary><ol>${rows}</ol></details>`;
 }
 
 // A short note over everything, for explanations that shouldn't disturb the screen behind them.
@@ -2757,7 +2760,7 @@ const POPUPS = {
   character: { label: 'Character', where: 'The safehouse \u00B7 Cass', body: () => character() },
   gear: { label: 'Gear', where: 'The safehouse \u00B7 your locker', body: () => `${tip('gear')}${gearTab()}` },
   lockup: { label: 'Lockup', where: 'The safehouse \u00B7 under the floor', body: () => lockupTab() },
-  hideout: { label: 'Hideout', where: 'The basement under the safehouse', body: () => hideoutView() },
+  hideout: { label: 'Hideout', where: 'The basement under the safehouse', body: () => hideoutView(), hidden: true },
   partner: { label: 'With your partner', where: 'In the yard', body: () => partnerMenu(), hidden: true },
 };
 const popupBadge = (id) => {
@@ -2978,7 +2981,7 @@ function townPopup() {
   if (!p) return '';
   // The safehouse is one menu: Resolve, the operative, their record, gear and the Lockup, all on one row of tabs.
   const ct = state.charTab || 'resolve', c = state.char, safeTab = (pop, k, label) => `<button class="tab" aria-selected="${id === pop && (!k || ct === k)}" data-a="popup" data-v="${pop}" ${k ? `data-k="${k}"` : ''}>${label}</button>`;
-  let body = p.body(), pair = id === 'character' || id === 'gear' || id === 'lockup' ? `<nav class="tabs pop-tabs">${safeTab('character', 'resolve', `${esc(S.meta)} ${state.meta.resolve}${canSpendResolve() ? ' <span class="badge" title="You can spend Resolve here">+</span>' : ''}`)}${safeTab('character', 'operative', `Operative${c.attrPoints ? ` <span class="badge" title="Attribute points to spend">${c.attrPoints}</span>` : ''}`)}${safeTab('character', 'drone', `Drone${!c.drone || c.drone.damaged ? ' <span class="badge bad" title="Needs attention">!</span>' : ''}`)}${safeTab('character', 'record', 'Record')}${safeTab('gear', '', 'Gear')}${safeTab('lockup', '', 'Lockup')}</nav>` : '';
+  let body = p.body(), pair = id === 'character' || id === 'gear' || id === 'lockup' || id === 'hideout' ? `<nav class="tabs pop-tabs">${safeTab('character', 'resolve', `${esc(S.meta)} ${state.meta.resolve}${canSpendResolve() ? ' <span class="badge" title="You can spend Resolve here">+</span>' : ''}`)}${safeTab('character', 'operative', `Operative${c.attrPoints ? ` <span class="badge" title="Attribute points to spend">${c.attrPoints}</span>` : ''}`)}${safeTab('character', 'drone', `Drone${!c.drone || c.drone.damaged ? ' <span class="badge bad" title="Needs attention">!</span>' : ''}`)}${safeTab('character', 'record', 'Record')}${safeTab('gear', '', 'Gear')}${safeTab('lockup', '', 'Lockup')}${safeTab('hideout', '', 'Hideout')}</nav>` : '';
   // A menu's own tabs sit in its header when it has no other tabs there, so the list starts higher up.
   if (!pair) { const m = body.match(/^\s*(<nav class="tabs pop-tabs">[\s\S]*?<\/nav>)/); if (m) { pair = m[1]; body = body.slice(m[0].length); } }
   return `<div class="popup-wrap town-pop"><div class="modal popup wide" role="dialog" aria-modal="true" aria-label="${esc(p.label)}">
@@ -4575,7 +4578,7 @@ setInterval(() => {
   if (!locked || document.hidden) { busySince = 0; return; } // a backgrounded app (iOS pauses animation frames) isn't stuck
   if (!busySince) { busySince = Date.now(); return; }
   if (Date.now() - busySince < 20000) return;
-  console.warn('screen was locked for 20s: unlocking');
+  console.warn('screen was locked for 20s: unlocking', JSON.stringify({ busy, awaitingHost, screen: state && state.screen, modal, popup: state && state.popup, led: !!(town && town.led), stageBusy: !!(stage && stage.busy), queue: stage && stage.queue && stage.queue.length }));
   reportBug('locked', new Error(`busy ${busy} awaiting ${awaitingHost} screen ${state && state.screen}`));
   busy = false; busySince = 0; if (awaitingHost) setAwaiting(false); if (app) app.classList.remove('busy');
   try { render(); scheduleAuto(); drainGuest(); } catch (e) {}
