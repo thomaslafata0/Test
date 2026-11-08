@@ -626,6 +626,15 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .duel-log p { margin: 2px 0; }
 .duel-moves .btn { min-width: 6.5em; }
 .duel-fight .stage .speed { display: none; }
+.cells-modal { width: min(720px, 100%); }
+.cells { display: grid; gap: 8px; }
+.cell-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); background: var(--panel-2); }
+.cell-row.cur { border-color: var(--sodium); background: #d9a53a14; }
+.cell-face { width: 44px; height: 44px; image-rendering: pixelated; object-fit: contain; border: 1px solid var(--line); background: var(--panel); }
+.cell-face.ph { display: grid; place-items: center; font-family: var(--display); color: var(--muted); }
+.cell-info { display: grid; gap: 2px; min-width: 0; } .cell-info > div { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline; }
+.cell-btns { display: flex; gap: 6px; align-items: center; }
+@media (max-width: 560px) { .cell-row { grid-template-columns: 44px minmax(0, 1fr); } .cell-btns { grid-column: 1 / -1; justify-content: flex-end; } }
 .duel-who { margin: 0; font-size: .85rem; color: var(--muted); }
 @media (orientation: landscape) and (max-height: 600px), (orientation: landscape) and (pointer: coarse) and (max-height: 820px) {
   .hostess-card { padding: 6px; } .hostess-card p { display: none; } .hostess, .hostess.ph { zoom: .62; }
@@ -1600,6 +1609,11 @@ function shareOrCopy(text, done) {
 import { BODIES, HAIR_FOR, sexOf, setOpSheets, HAIR, HAIR_NAMES, SKINS, HAIRS, defaultLook, loadLayers, hasLayers, lookStill, lookBattleStill, lookPortrait, townSheets, battleSheet, weaponLayer } from './look.js';
 
 const SAVE_KEY = 'cinder-cell-save-v1';
+// Up to five cells on one device, each a whole game of its own, played solo or in co-op as you like. Cell 1 keeps the
+// original key, so a save from before slots is cell 1.
+const CELLS = 5, CELL_KEY = 'cinder-cell-slot';
+let cellSlot = (() => { try { const n = +localStorage.getItem(CELL_KEY); return n >= 0 && n < CELLS ? n : 0; } catch (e) { return 0; } })();
+const saveKey = (i = cellSlot) => (i ? `${SAVE_KEY}-s${i}` : SAVE_KEY);
 const oldSeason = (s) => !!(s && s.meta && (s.meta.season || 1) < E.SEASON);
 const NEWS_KEY = 'cinder-cell-news', NEWS_ID = 'afterhours'; // bump to show the popup again
 let newsPage = 0;
@@ -1622,7 +1636,7 @@ function crashBanner() {
     const c = ev.target.dataset.c;
     if (c === 'reload') location.reload();
     if (c === 'close') el.remove();
-    if (c === 'copy') { try { navigator.clipboard.writeText(localStorage.getItem(SAVE_KEY) || '').then(() => { ev.target.textContent = 'Copied'; }).catch(() => {}); } catch (e) {} }
+    if (c === 'copy') { try { navigator.clipboard.writeText(localStorage.getItem(saveKey()) || '').then(() => { ev.target.textContent = 'Copied'; }).catch(() => {}); } catch (e) {} }
   });
   document.body.appendChild(el);
 }
@@ -1680,8 +1694,8 @@ function applyUi() {
 
 function load() {
   let raw = null;
-  try { raw = localStorage.getItem(SAVE_KEY); if (raw) return JSON.parse(raw); }
-  catch (e) { try { if (raw) { localStorage.setItem(`${SAVE_KEY}-broken`, raw); toast = 'Your save couldn\u2019t be read, so a copy was kept and a new game started.'; } } catch (e2) {} }
+  try { raw = localStorage.getItem(saveKey()); if (raw) return JSON.parse(raw); }
+  catch (e) { try { if (raw) { localStorage.setItem(`${saveKey()}-broken`, raw); toast = 'Your save couldn\u2019t be read, so a copy was kept and a new game started.'; } } catch (e2) {} }
   return null;
 }
 // Writes only when something changed, stamping the save and the operative with when, so copies of them can be compared.
@@ -1694,7 +1708,7 @@ function writeSave(s) {
   const now = Date.now();
   s.savedAt = changed ? now : a; if (c) c.savedAt = changed ? now : b;
   if (!changed) return;
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(s)); lastBody = body; saveFailed = false; cloudTouched(); } catch (e) { saveFailed = true; }
+  try { localStorage.setItem(saveKey(), JSON.stringify(s)); lastBody = body; saveFailed = false; cloudTouched(); } catch (e) { saveFailed = true; }
 }
 // The friend's own game (home) is the real save; what's on their screen in co-op is a mirror of the host's.
 function save() {
@@ -1752,9 +1766,11 @@ async function loadBoard() {
 // twice a minute and when the tab goes away. On loading, whichever copy is newer wins; the server keeps the last few versions.
 const CLOUD_KEY = 'cinder-cell-cloud', CLOUD_ON = typeof location !== 'undefined' && location.hostname.endsWith('.workers.dev');
 const CLOUD_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-let cloud = (() => { try { return JSON.parse(localStorage.getItem(CLOUD_KEY)) || {}; } catch (e) { return {}; } })();
+const cloudKey = (i = cellSlot) => (i ? `${CLOUD_KEY}-s${i}` : CLOUD_KEY); // each cell has its own cell code
+const readCloud = () => { try { return JSON.parse(localStorage.getItem(cloudKey())) || {}; } catch (e) { return {}; } };
+let cloud = readCloud();
 let cloudDirty = false, cloudBusy = false, cloudLast = 0, cloudStatus = '', cloudNewer = null, cloudVersions = null, cloudArm = false;
-const storeCloud = () => { try { localStorage.setItem(CLOUD_KEY, JSON.stringify(cloud)); } catch (e) {} };
+const storeCloud = () => { try { localStorage.setItem(cloudKey(), JSON.stringify(cloud)); } catch (e) {} };
 function cloudCode() {
   if (!cloud.code) { const a = crypto.getRandomValues(new Uint8Array(12)); cloud.code = Array.from(a, (x) => CLOUD_ALPHABET[x % 32]).join(''); cloud.rev = 0; storeCloud(); }
   return cloud.code;
@@ -1770,7 +1786,7 @@ async function cloudPull(code, rev) {
 }
 async function cloudPush({ force = false, keepalive = false } = {}) {
   if (!CLOUD_ON || cloudBusy || (net && net.local)) return;
-  const data = localStorage.getItem(SAVE_KEY);
+  const data = localStorage.getItem(saveKey());
   if (!data) return;
   let parsed; try { parsed = JSON.parse(data); } catch (e) { return; }
   // Nothing worth keeping yet: don't overwrite a real save with a blank start.
@@ -1801,7 +1817,7 @@ function adoptSave(data, rev, code) {
   const parsed = JSON.parse(data);
   if (oldSeason(parsed)) { toast = 'That save is from before the season reset, so it can\u2019t be loaded.'; return false; }
   state = E.migrate(parsed, rng);
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) {}
+  try { localStorage.setItem(saveKey(), JSON.stringify(state)); } catch (e) {}
   lastBody = bodyOf(state);
   cloud = { ...cloud, code: code || cloud.code, rev, at: parsed.savedAt }; storeCloud();
   cloudDirty = false; cloudNewer = null; cloudVersions = null; cloudStatus = '';
@@ -1930,7 +1946,7 @@ const myIdx = () => (isGuest() ? 1 : 0);
 const DOWNTIME = new Set(['drink', 'bet', 'stake', 'spin', 'invest', 'withdraw', 'shippart', 'shipcell', 'orbitgo', 'orbitact', 'orbitclose']);
 // The shuttle belongs to each player's own cell, so a friend in someone's room can't fly or fit it from here.
 const SHIP_ACTS = new Set(['shippart', 'shipcell', 'orbitarm', 'orbitgo', 'orbitact', 'orbitclose']);
-const LOCAL = new Set(['newspage', 'firstraid', 'takeover', 'autoaccept', 'autostim', 'featfilter', 'stimprompt', 'draftdrone', 'randomize', 'missiontab', 'markettab', 'chartab', 'continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm', 'cloudcopy', 'cloudload', 'cloudversions', 'cloudrestore', 'cloudkeep', 'devunlock', 'devoff', 'dev', 'autostart']);
+const LOCAL = new Set(['mainmenu', 'cellgo', 'celldel', 'newspage', 'firstraid', 'takeover', 'autoaccept', 'autostim', 'featfilter', 'stimprompt', 'draftdrone', 'randomize', 'missiontab', 'markettab', 'chartab', 'continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm', 'cloudcopy', 'cloudload', 'cloudversions', 'cloudrestore', 'cloudkeep', 'devunlock', 'devoff', 'dev', 'autostart']);
 function coopChip() {
   if (!net) return '';
   const who = net.peerName || (isHost() ? 'friend' : 'host');
@@ -2295,7 +2311,7 @@ function titleScreen() {
       <p class="tagline">A resistance cell. One operative at a time.</p>
       <div class="title-menu">
         ${hasRun ? `<button class="btn primary big" data-a="continue-title">${state.char && lookStill(state.char.look, state.char.background) ? `<img class="title-me" src="${lookStill(state.char.look, state.char.background)}" alt="" width="48" height="48">` : ''}Continue <span class="sub">${state.char ? `${esc(state.char.name)}, operative ${state.char.number}` : `${m.operatives} operative${m.operatives === 1 ? '' : 's'} so far`}</span></button>` : `<button class="btn primary big" data-a="firstraid">Play first raid <span class="sub">a ready operative, straight in</span></button><button class="btn big" data-a="continue-title">Build your own operative</button>`}
-        ${hasRun ? `<button class="btn big" data-a="newcell">${confirmReset ? 'Click again: this erases everything' : 'New cell'}</button>` : ''}
+        <button class="btn big" data-a="modal" data-v="cells">Cells <span class="sub">cell ${cellSlot + 1} of ${CELLS}</span></button>
         ${getLastRoom() && !net ? `<button class="btn big" data-a="coopresume">${getLastRoom().role === 'host' ? 'Host room' : 'Rejoin room'} ${esc(getLastRoom().code)}</button>` : ''}
         <button class="btn big" data-a="modal" data-v="board">Leaderboard</button>
         <button class="btn big" data-a="modal" data-v="feats">Achievements</button>
@@ -3200,7 +3216,8 @@ function modalView() {
   if (modal === 'news') return newsView();
   if (modal === 'menu') return `<div class="modal-wrap" data-a="closemodal"><div class="modal menu-modal" role="dialog" aria-modal="true" aria-label="Menu">
     <div class="pop-head"><h2>Menu</h2><button class="tool close" data-a="closemodal" aria-label="Close">Close</button></div>
-    <div class="menu-grid"><button class="btn" data-a="modal" data-v="manual">Manual</button><button class="btn" data-a="sound">${p.muted ? 'Sound off' : 'Sound on'}</button><button class="btn" data-a="modal" data-v="board">Leaderboard</button><button class="btn" data-a="modal" data-v="feats">Achievements</button><button class="btn" data-a="modal" data-v="codex">${codexLabel()}</button><button class="btn" data-a="modal" data-v="settings">Settings</button>${devOn && !isGuest() ? '<button class="btn" data-a="modal" data-v="dev">Dev</button>' : ''}</div></div></div>`;
+    <div class="menu-grid">${isGuest() ? '' : '<button class="btn primary" data-a="mainmenu">Main menu</button><button class="btn" data-a="modal" data-v="cells">Cells</button>'}<button class="btn" data-a="modal" data-v="manual">Manual</button><button class="btn" data-a="sound">${p.muted ? 'Sound off' : 'Sound on'}</button><button class="btn" data-a="modal" data-v="board">Leaderboard</button><button class="btn" data-a="modal" data-v="feats">Achievements</button><button class="btn" data-a="modal" data-v="codex">${codexLabel()}</button><button class="btn" data-a="modal" data-v="settings">Settings</button>${devOn && !isGuest() ? '<button class="btn" data-a="modal" data-v="dev">Dev</button>' : ''}</div></div></div>`;
+  if (modal === 'cells') return cellsView();
   if (modal === 'board') return boardView();
   if (modal === 'feats') return featsView();
   if (modal === 'codex') return codexView();
@@ -4239,6 +4256,9 @@ function applyAct(a, v, k) {
     case 'coopleave': leaveCoop(); return;
     case 'coopready': state.guestReady = !state.guestReady; if (net) net.send({ t: 'ready', on: state.guestReady, auto: !!coopReadyAuto }); sfx('click'); break;
     case 'newspage': newsPage = +v; sfx('click'); break;
+    case 'mainmenu': if (isGuest()) break; save(); modal = null; titleOpen = true; sfx('door'); break;
+    case 'cellgo': ok = switchCell(+v); if (ok) sfx('door'); break;
+    case 'celldel': if (cellDelArm !== +v) { cellDelArm = +v; sfx('click'); break; } cellDelArm = null; ok = deleteCell(+v); if (ok) { toast = `Cell ${+v + 1} erased.`; sfx('denied'); } break;
     case 'newsok': newsPage = 0; try { localStorage.setItem(NEWS_KEY, NEWS_ID); } catch (e) {} modal = null; sfx('click'); break;
     case 'modal': modal = v; if (v === 'board') loadBoard(); sfx('click'); break;
     case 'lounge': { const r = E.visitLounge(state, v, rng); ok = !!r; if (r) { sfx(r.bad ? 'denied' : 'perk'); if (!actingAs) toast = `${r.name}: ${r.text}`; } break; }
@@ -4487,6 +4507,54 @@ function artArrived(id) {
   // Only where a still of them is on show. Anywhere else a re-render could cut an animation short for nothing.
   artRenderTimer = setTimeout(() => { if (!busy && !auto && state && (state.screen === 'create' || state.popup) && !(state.char && state.char.payout)) render(); }, 80);
 }
+// ---------- cells: up to five games on one device ----------
+function cellSummary(i) {
+  let raw = null; try { raw = localStorage.getItem(saveKey(i)); } catch (e) {}
+  if (!raw) return null;
+  try { const s = JSON.parse(raw); if (oldSeason(s)) return null; const c = s.char, m = s.meta || {};
+    return { char: c ? { name: c.name, level: c.level, background: c.background, look: c.look } : null, raids: (m.stats || {}).raids || 0, deepest: m.bestSector || 0, resolve: m.resolve || 0, ops: m.operatives || 0, at: s.savedAt || 0, inRaid: !!s.run };
+  } catch (e) { return { broken: true }; }
+}
+// Saves the cell in play, then opens another: its own operatives, Resolve, unlocks, cloud code. An empty slot starts fresh.
+function switchCell(i) {
+  if (net) { toast = 'Leave the co-op room first: the cell you share stays as it is.'; return false; }
+  if (i === cellSlot || i < 0 || i >= CELLS) return false;
+  writeSave(state); if (cloudDirty && !cloudNewer) cloudPush({ keepalive: true });
+  cellSlot = i; try { localStorage.setItem(CELL_KEY, String(i)); } catch (e) {}
+  cloud = readCloud(); cloudDirty = false; cloudNewer = null; cloudVersions = null; cloudStatus = '';
+  let saved = load(); if (saved && oldSeason(saved)) saved = null;
+  const next = E.migrate(saved, rng); state = saved ? next : keepBoard(next);
+  delete state.events; lastBody = saved ? bodyOf(state) : '';
+  if (state.screen === 'create' && !state.draft) state.draft = E.newDraft(state.meta, rng);
+  localDraft = null; lookKey = ''; confirmReset = false; cellDelArm = null; stimPromptDone = false;
+  if (!saved) writeSave(state);
+  titleOpen = true; modal = null;
+  return true;
+}
+function deleteCell(i) {
+  if (net && i === cellSlot) { toast = 'Leave the co-op room first.'; return false; }
+  try { localStorage.removeItem(saveKey(i)); localStorage.removeItem(cloudKey(i)); } catch (e) {}
+  if (i === cellSlot) { state = keepBoard(E.newGame(rng)); cloud = {}; lastBody = ''; writeSave(state); localDraft = null; lookKey = ''; }
+  return true;
+}
+let cellDelArm = null;
+function cellsView() {
+  const row = (i) => {
+    const cur = i === cellSlot, sm = cur ? { char: state.char, raids: state.meta.stats.raids, deepest: state.meta.bestSector, resolve: state.meta.resolve, ops: state.meta.operatives, at: state.savedAt, inRaid: !!state.run } : cellSummary(i);
+    const pic = sm && sm.char && lookStill(sm.char.look, sm.char.background);
+    const what = !sm ? '<span class="muted">Empty</span>' : sm.broken ? '<span class="muted">Can\u2019t be read</span>'
+      : `${sm.char ? `<b>${esc(sm.char.name)}</b> \u00b7 Lv ${sm.char.level}${sm.inRaid ? ' \u00b7 <span class="danger-text">mid-raid</span>' : ''}` : sm.ops ? '<span class="muted">Between operatives</span>' : '<span class="muted">New cell</span>'}
+         <span class="muted small">${sm.raids} raid${sm.raids === 1 ? '' : 's'} \u00b7 deepest sector ${sm.deepest || 0} \u00b7 ${sm.resolve} ${esc(S.meta)}${sm.at ? ` \u00b7 ${ago(sm.at)}` : ''}</span>`;
+    const del = sm && (sm.ops || sm.char || sm.raids || sm.broken) ? `<button class="btn ${cellDelArm === i ? 'danger' : 'quiet'}" data-a="celldel" data-v="${i}">${cellDelArm === i ? 'Tap again to erase' : 'Erase'}</button>` : '';
+    const go = cur ? '<span class="chip good">Playing</span>' : `<button class="btn ${sm ? 'primary' : ''}" data-a="cellgo" data-v="${i}" ${net ? 'disabled' : ''}>${sm && !sm.broken ? 'Play' : 'Start new'}</button>`;
+    return `<div class="cell-row ${cur ? 'cur' : ''}">${pic ? `<img class="cell-face" src="${pic}" alt="" width="44" height="44">` : `<div class="cell-face ph">${i + 1}</div>`}
+      <div class="cell-info"><span class="label">Cell ${i + 1}</span><div>${what}</div></div><div class="cell-btns">${go}${del}</div></div>`;
+  };
+  return `<div class="modal-wrap" data-a="closemodal"><div class="modal cells-modal" role="dialog" aria-modal="true" aria-label="Cells">
+    <div class="pop-head"><h2>Cells</h2><button class="tool close" data-a="closemodal" aria-label="Close">Close</button></div>
+    <p class="muted small">Up to ${CELLS} cells on this device. Each is a whole game of its own (operatives, ${esc(S.meta)}, training, unlocks, districts), and any of them can be played solo or in co-op.${net ? ' <b>Leave the co-op room to switch.</b>' : ''}</p>
+    <div class="cells">${Array.from({ length: CELLS }, (_, i) => row(i)).join('')}</div></div></div>`;
+}
 // This device's raids and any still waiting to be sent survive New cell and Reset.
 function keepBoard(fresh) { if (state && state.meta) { fresh.meta.board = state.meta.board || []; fresh.meta.boardOut = state.meta.boardOut || []; fresh.meta.boardMine = state.meta.boardMine || []; } return fresh; }
 async function start(data) {
@@ -4495,7 +4563,7 @@ async function start(data) {
   if (CLOUD_ON && cloud.code && !(data && data.state)) {
     try {
       const o = await Promise.race([cloudPull(cloud.code), new Promise((res) => setTimeout(() => res(undefined), 2500))]);
-      if (o && o.at > ((saved && saved.savedAt) || 0)) { saved = JSON.parse(o.data); cloud.rev = o.rev; cloud.at = o.at; storeCloud(); try { localStorage.setItem(SAVE_KEY, o.data); } catch (e) {} pulledToast = 'Loaded your newer save from the cloud.'; }
+      if (o && o.at > ((saved && saved.savedAt) || 0)) { saved = JSON.parse(o.data); cloud.rev = o.rev; cloud.at = o.at; storeCloud(); try { localStorage.setItem(saveKey(), o.data); } catch (e) {} pulledToast = 'Loaded your newer save from the cloud.'; }
       else if (o) { cloud.rev = o.rev; storeCloud(); }
     } catch (e) {}
   }
