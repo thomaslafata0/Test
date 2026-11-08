@@ -1,0 +1,132 @@
+{
+ "hideout_bg": {
+  "w": 688,
+  "h": 377,
+  "frames": 1
+ },
+ "arcade": {
+  "w": 73,
+  "h": 102,
+  "frames": 4
+ },
+ "bed": {
+  "w": 120,
+  "h": 43,
+  "frames": 1
+ },
+ "bed2": {
+  "w": 119,
+  "h": 80,
+  "frames": 1
+ },
+ "couch": {
+  "w": 118,
+  "h": 65,
+  "frames": 1
+ },
+ "couch2": {
+  "w": 122,
+  "h": 62,
+  "frames": 1
+ },
+ "dock": {
+  "w": 110,
+  "h": 68,
+  "frames": 1
+ },
+ "dock2": {
+  "w": 122,
+  "h": 115,
+  "frames": 1
+ },
+ "fridge": {
+  "w": 70,
+  "h": 115,
+  "frames": 1
+ },
+ "fridge2": {
+  "w": 90,
+  "h": 119,
+  "frames": 1
+ },
+ "jukebox": {
+  "w": 84,
+  "h": 115,
+  "frames": 4
+ },
+ "map": {
+  "w": 115,
+  "h": 86,
+  "frames": 1
+ },
+ "map2": {
+  "w": 115,
+  "h": 94,
+  "frames": 1
+ },
+ "neon": {
+  "w": 80,
+  "h": 98,
+  "frames": 4
+ },
+ "plant": {
+  "w": 78,
+  "h": 102,
+  "frames": 1
+ },
+ "plant2": {
+  "w": 94,
+  "h": 109,
+  "frames": 1
+ },
+ "poster": {
+  "w": 88,
+  "h": 111,
+  "frames": 1
+ },
+ "poster2": {
+  "w": 81,
+  "h": 114,
+  "frames": 1
+ },
+ "rug": {
+  "w": 122,
+  "h": 34,
+  "frames": 1
+ },
+ "rug2": {
+  "w": 123,
+  "h": 40,
+  "frames": 1
+ },
+ "tv": {
+  "w": 77,
+  "h": 95,
+  "frames": 1
+ },
+ "tv2": {
+  "w": 110,
+  "h": 104,
+  "frames": 1
+ },
+ "rack": {
+  "w": 102,
+  "h": 81,
+  "frames": 1
+ },
+ "rack2": {
+  "w": 118,
+  "h": 101,
+  "frames": 1
+ },
+ "workbench": {
+  "w": 113,
+  "h": 86,
+  "frames": 1
+ },
+ "workbench2": {
+  "w": 108,
+  "h": 95,
+  "frames": 1
+ }
+}

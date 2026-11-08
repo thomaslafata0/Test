@@ -1165,20 +1165,20 @@ export const FELTS = [
 // The hideout: the cell's basement, furnished piece by piece. Each piece has up to two tiers; art in hideout/<id>.png and <id>2.png.
 // x, y: where it stands in the 688x377 room (feet at y). layer: 0 back wall, 1 floor.
 export const DECOR = [
-  { id: 'couch', name: 'Couch', tiers: ['Ratty couch', 'Leather couch'], cost: [400, 1800], x: 300, y: 330, layer: 1 },
-  { id: 'bed', name: 'Bed', tiers: ['Floor mattress', 'Proper bed'], cost: [300, 1500], x: 90, y: 340, layer: 1 },
-  { id: 'workbench', name: 'Workbench', tiers: ['Workbench', 'Machinist bench'], cost: [600, 2400], x: 560, y: 320, layer: 1 },
-  { id: 'rack', name: 'Weapon rack', tiers: ['Weapon rack', 'Armoury wall'], cost: [700, 2600], x: 470, y: 250, layer: 0 },
-  { id: 'neon', name: 'Neon sign', tiers: ['Neon heart'], cost: [1200], x: 330, y: 150, layer: 0 },
-  { id: 'plant', name: 'Plants', tiers: ['Dead plant', 'Hydroponics'], cost: [100, 1600], x: 640, y: 335, layer: 1 },
-  { id: 'arcade', name: 'Arcade cabinet', tiers: ['Arcade cabinet'], cost: [2500], x: 200, y: 320, layer: 1 },
-  { id: 'fridge', name: 'Fridge', tiers: ['Fridge', 'Stocked fridge'], cost: [350, 1100], x: 30, y: 300, layer: 1 },
-  { id: 'map', name: 'Wall map', tiers: ['Wall map'], cost: [500], x: 180, y: 190, layer: 0 },
-  { id: 'tv', name: 'TV', tiers: ['CRT stack'], cost: [900], x: 400, y: 320, layer: 1 },
-  { id: 'rug', name: 'Rug', tiers: ['Rug', 'Good rug'], cost: [250, 900], x: 330, y: 365, layer: 0.5 },
-  { id: 'poster', name: 'Poster', tiers: ['Poster'], cost: [150], x: 560, y: 170, layer: 0 },
-  { id: 'dock', name: 'Drone dock', tiers: ['Drone dock'], cost: [1500], x: 610, y: 210, layer: 0 },
-  { id: 'jukebox', name: 'Jukebox', tiers: ['Jukebox'], cost: [3000], x: 130, y: 320, layer: 1 },
+  { id: 'couch', name: 'Couch', tiers: ['Ratty couch', 'Leather couch'], cost: [400, 1800], x: 290, y: 328, layer: 1 },
+  { id: 'bed', name: 'Bed', tiers: ['Floor mattress', 'Proper bed'], cost: [300, 1500], x: 20, y: 368, layer: 1 },
+  { id: 'workbench', name: 'Workbench', tiers: ['Workbench', 'Machinist bench'], cost: [600, 2400], x: 520, y: 322, layer: 1 },
+  { id: 'rack', name: 'Weapon rack', tiers: ['Weapon rack', 'Armoury wall'], cost: [700, 2600], x: 440, y: 232, layer: 0 },
+  { id: 'neon', name: 'Neon sign', tiers: ['Neon heart'], cost: [1200], x: 305, y: 112, layer: 0 },
+  { id: 'plant', name: 'Plants', tiers: ['Dead plant', 'Hydroponics'], cost: [100, 1600], x: 628, y: 322, layer: 1 },
+  { id: 'arcade', name: 'Arcade cabinet', tiers: ['Arcade cabinet'], cost: [2500], x: 170, y: 318, layer: 1 },
+  { id: 'fridge', name: 'Fridge', tiers: ['Fridge', 'Stocked fridge'], cost: [350, 1100], x: 12, y: 300, layer: 1 },
+  { id: 'map', name: 'Wall map', tiers: ['Corkboard map', 'Holo map'], cost: [500, 1600], x: 170, y: 152, layer: 0 },
+  { id: 'tv', name: 'TV', tiers: ['Old CRT', 'CRT stack'], cost: [400, 1200], x: 405, y: 322, layer: 1 },
+  { id: 'rug', name: 'Rug', tiers: ['Rug', 'Good rug'], cost: [250, 900], x: 300, y: 368, layer: 0.5 },
+  { id: 'poster', name: 'Poster', tiers: ['Poster', 'More posters'], cost: [150, 400], x: 525, y: 122, layer: 0 },
+  { id: 'dock', name: 'Drone dock', tiers: ['Drone dock', 'Charging bay'], cost: [1500, 3000], x: 585, y: 205, layer: 0 },
+  { id: 'jukebox', name: 'Jukebox', tiers: ['Jukebox'], cost: [3000], x: 108, y: 318, layer: 1 },
 ];
 // Season goals: progress counts from the start of the season (meta.seasonGoals); each pays once.
 // key: a feat counter (engine feat()) or a season event (engine seasonTick()). reward: Resolve, or a season cosmetic.

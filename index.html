@@ -772,7 +772,7 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .hd-room { position: relative; width: min(100%, 640px); margin-inline: auto; height: 0; padding-bottom: min(54.8%, 351px); flex: none; border-radius: 10px; overflow: hidden; background: url(hideout/hideout_bg.png) center / cover no-repeat, linear-gradient(#2a2622, #15120f); image-rendering: pixelated; border: 1px solid var(--line); margin-bottom: 8px; }
 .hd-room.bare { background: linear-gradient(180deg, #3a332c 0 62%, #24201c 62%); }
 .hd-piece { position: absolute; background-repeat: no-repeat; background-position: 0 0; image-rendering: pixelated; }
-.hd-piece.anim { animation: hd-anim calc(var(--n) * .25s) steps(var(--n)) infinite; } @keyframes hd-anim { to { background-position: 100% 0; } }
+.hd-piece.anim { animation: hd-anim calc(var(--n) * .2s) steps(var(--n), jump-none) infinite; } @keyframes hd-anim { to { background-position: 100% 0; } }
 .hd-piece.box { border: 1px dashed #e8973a88; background: #e8973a14; display: grid; place-items: center; font-size: .6rem; color: #e8c08a; text-align: center; }
 .cos-row .btn, .cos-tile .btn { padding: 4px 10px; font-size: .8rem; min-height: 0; }
 .goals { display: grid; gap: 6px; } .goal { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; }
