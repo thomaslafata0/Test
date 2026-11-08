@@ -799,11 +799,21 @@ export class Town {
     const g = this.patrol;
     if (g && !this.interior) {
       g.t += dt;
-      if (g.pause > 0) { g.pause -= dt; g.moving = false; }
+      if (g.pause > 0) { g.pause -= dt; g.moving = false; if (g.look && g.pause < 0.9) { g.face = -g.face; g.look = false; } }
       else {
+        // A steady stroll: eases in from each stop and slows into the next corner, faces the way he's going
+        // (a turn only when the leg really changes direction, never a flicker), and looks about at each corner.
         const [gx, gy] = g.route[g.leg], dx = gx - g.x, dy = gy - g.y, d = Math.hypot(dx, dy);
-        if (d < 2) { g.leg = (g.leg + 1) % g.route.length; g.pause = 1.2; g.moving = false; }
-        else { const st = Math.min(d, 62 * dt); g.x += dx / d * st; g.y += dy / d * st; if (Math.abs(dx) > 1) g.face = Math.sign(dx); g.dir = dx < 0 ? 'left' : 'right'; g.moving = true; }
+        if (d < 2) {
+          g.leg = (g.leg + 1) % g.route.length; g.pause = 1.6 + Math.random() * 1.4; g.moving = false; g.v = 0;
+          g.look = Math.random() < 0.5; // half the time he glances back the way he came
+        } else {
+          g.v = Math.min(52, (g.v || 0) + 90 * dt);
+          const st = Math.min(d, Math.min(g.v, 18 + d * 1.6) * dt);
+          g.x += dx / d * st; g.y += dy / d * st;
+          if (Math.abs(dx) > Math.abs(dy) * 0.35) g.face = Math.sign(dx);
+          g.dir = g.face < 0 ? 'left' : 'right'; g.moving = true; g.look = false;
+        }
       }
     }
   }
