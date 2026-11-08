@@ -305,32 +305,13 @@ class Actor {
   }
 }
 
-// Boss-move art (bars, container, slag) and the props that stand about the floor. Each loads on first use; until it
+// Boss-move art (bars, container, slag). Each loads on first use; until it
 // arrives, the old code-drawn version stands in, so a slow connection never shows a hole.
 const FX_IMG = {};
 function fxImg(name) {
   let e = FX_IMG[name];
   if (!e) { e = FX_IMG[name] = { img: null }; const im = new Image(); im.onload = () => { e.img = im; }; im.onerror = () => {}; im.src = `sprites/fx/${name}.png`; }
   return e.img;
-}
-let PROP_DEFS = null;
-function propDefs() {
-  if (PROP_DEFS) return PROP_DEFS;
-  PROP_DEFS = {};
-  fetch('sprites/props/manifest.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : {})).then((m) => {
-    for (const [id, d] of Object.entries(m || {})) { const im = new Image(); im.onload = () => { PROP_DEFS[id] = { ...d, id, img: im }; }; im.src = `sprites/props/${id}.png`; }
-  }).catch(() => {});
-  return PROP_DEFS;
-}
-// A few props per map, not every room: about half of the sectors get one, a few get two, boss arenas stay bare.
-const PROP_SPOTS = [{ x: 352, y: 158, h: 60 }, { x: 186, y: 140, h: 44 }];
-function propsFor(theme, sector, boss) {
-  const defs = Object.values(propDefs()).filter((d) => d.theme === theme);
-  if (boss || !defs.length) return [];
-  const rnd = seeded(sector * 7919 + theme.length * 131), r = rnd(), n = r < 0.14 ? 2 : r < 0.55 ? 1 : 0;
-  const out = [], pool = [...defs];
-  for (let i = 0; i < n && pool.length; i++) out.push({ ...PROP_SPOTS[i], d: pool.splice(Math.floor(rnd() * pool.length), 1)[0], phase: rnd() * 1000 });
-  return out;
 }
 // Who steps in front of a boss for 'front': foundry hands for Brask, conscripts for Dray.
 const FRONT_CREW = { brask: 'stoker', dray: 'patrol' };
@@ -518,7 +499,6 @@ export class Stage {
     this.bfx = enemy.bs ? { shutter: enemy.bs.shutter, floor: enemy.bs.floor, front: enemy.bs.front, lights: enemy.bs.lights, wreck: enemy.bs.wreck, sig: enemy.sig ? enemy.sig.id : null, left: enemy.sig ? enemy.sig.left : 0 } : null;
     this.crewId = FRONT_CREW[enemy.id] || null;
     if (this.crewId) ensureSheet(this.crewId);
-    this.props = propsFor(theme, sector, boss);
     let isNewBoss = false, artWait = null;
     const enter = [], newFight = this.runRef !== run || !this.player || this.enemyRef !== enemy;
     if (this.runRef !== run || !this.player) {
@@ -559,7 +539,7 @@ export class Stage {
       this.duelKey = key; this.runRef = null; this.enemyRef = null;
       const P = this.player = new Actor('player', 'player', false);
       const F = this.enemy = new Actor('player', 'partner', false); F.side = 'enemy'; F.mirror = true; F.fixedH = 128;
-      Object.assign(this, { partner: null, partnerInfo: null, allies: 0, allyActors: [], drone: null, partnerDrone: null, bfx: null, drop: null, props: [], crewId: null, intent: null, stun: 0, heavyBoost: false, boss: false, theme: 'garrison', sector: 6, enemyTags: [] });
+      Object.assign(this, { partner: null, partnerInfo: null, allies: 0, allyActors: [], drone: null, partnerDrone: null, bfx: null, drop: null, crewId: null, intent: null, stun: 0, heavyBoost: false, boss: false, theme: 'garrison', sector: 6, enemyTags: [] });
       P.ox = -150; P.alpha = 0; F.ox = 150; F.alpha = 0;
       this.tween(500, (p) => { P.ox = -150 * (1 - ease(p)); P.alpha = p; F.ox = 150 * (1 - ease(p)); F.alpha = p; });
       play('door');
@@ -1601,17 +1581,6 @@ export class Stage {
   }
 
   // Props on the floor behind the fighters. Their own frames play slowly; nothing here moves in calm mode.
-  drawProps(g, t) {
-    for (const p of this.props || []) {
-      const d = p.d, img = d.img;
-      if (!img) continue;
-      const n = d.frames || 1, fw = img.width / n, fr = reduceMotion || n < 2 ? 0 : Math.floor((t + p.phase) / 1000 * (d.fps || 6)) % n;
-      const h = p.h, w = Math.round(fw * h / img.height), cx = Math.min(p.x, W - 4 - w / 2), x = Math.round(cx - w / 2), y = Math.round(p.y - h);
-      g.fillStyle = 'rgba(0,0,0,0.3)'; g.beginPath(); g.ellipse(cx, p.y, w * 0.42, 3, 0, 0, Math.PI * 2); g.fill();
-      g.globalAlpha = 0.92; g.drawImage(img, fr * fw, 0, fw, img.height, x, y, w, h); g.globalAlpha = 1;
-    }
-  }
-
   // ---------- drawing ----------
   background(sector, boss, theme = 'garrison') {
     const key = `${theme}-${sector}-${boss ? 1 : 0}`;
@@ -1801,7 +1770,6 @@ export class Stage {
     // Rain outdoors; in the foundry, sparks. Under a roof, neither.
     if (!underRoof || this.theme === 'foundry') for (const d of reduceMotion ? [] : this.rain) { if (!frozen) { d.y += d.v; d.x -= d.v * 0.25; if (d.y > H) { d.y = -6; d.x = Math.random() * (W + 40); } } g.fillRect(Math.round(d.x), Math.round(d.y), 1, 4); }
 
-    this.drawProps(g, frozen ? this.stopAt : t);
     const ea = this.anchor('enemy');
     if (painted.canvas) this.groundShadow(ea.x, ea.y + 1, Math.max(26, (this.enemy ? this.enemy.tall : 100) * 0.5), 11); else this.pad(ea.x, ea.y + 1, 58, 11);
     const E = this.enemy, ec = this.center(E);
