@@ -511,9 +511,10 @@ export class Stage {
     await this.wait(2600 / a.fps);
   }
   // Called after every render of the combat screen.
-  sync({ run, enemy, player, drone = null, partnerDrone = null, partner = null, sector, boss, theme = 'garrison', allies = 0, pst = {}, est = {}, affix = null, quirk = null, label = '' }) {
+  sync({ run, enemy, player, drone = null, partnerDrone = null, partner = null, sector, boss, theme = 'garrison', allies = 0, pst = {}, est = {}, affix = null, quirk = null, label = '', duo = false }) {
     const now = performance.now();
     this.bulletin = (run && run.bulletin) || null;
+    this.duo = !!duo && !!partner; // Vex and Mochi on one team: they have moves of their own
     // Co-op: the friend's operative stands at your shoulder. partner = { idx, name, hp, maxHp, acting }.
     this.partnerInfo = partner;
     this.drone = drone; this.partnerDrone = partnerDrone;
@@ -564,6 +565,7 @@ export class Stage {
     }
     // Nobody walks on in the wrong art: on a slow connection the fight waits a moment for its sheets.
     if (newFight) artWait = this.holdArt(enemy.id);
+    if (newFight && this.duo) enter.push(() => setTimeout(() => this.duoPose('duo'), 520));
     if (artWait) artWait.then(() => enter.forEach((f) => f())); else enter.forEach((f) => f());
     this.enemy.rest = enemy.intent === 'heavy' && !enemy.stun ? 'charge' : 'idle';
     if (this.enemy.anim === 'idle' && this.enemy.rest === 'charge') this.enemy.setAnim('charge', now);
@@ -860,6 +862,16 @@ export class Stage {
     if (kind === 'gas' || kind === 'explosion') this.burst(x, y, 14, kind === 'gas' ? color : C.smoke, 0.9, 900, -0.02, 3);
   }
   // Something thrown, spat or fired along an arc (arc 0: a straight line).
+  // Vex and Mochi together: heart hands as a fight opens (a heart pops between them), a hop and a wave when it's won.
+  duoPose(kind) {
+    const a = this.player, b = this.partner;
+    if (!a || !b || a.alpha < 1 || b.alpha < 1) return;
+    let any = false;
+    for (const x of [a, b]) if (x.sheet && x.sheet.anims && x.sheet.anims[kind]) { x.setAnim(kind, performance.now()); any = true; }
+    const ca = this.center(a), cb = this.center(b), mx = (ca.x + cb.x) / 2, my = Math.min(ca.y, cb.y) - 40;
+    if (kind === 'duo') { this.spark('heart_burst', mx, my, { color: '#ff8ad8', scale: 1.3 }); if (any) play('perk'); }
+    else for (let i = 0; i < 8; i++) setTimeout(() => this.burst(mx + (Math.random() * 60 - 30), my, 2, i % 2 ? '#ff8ad8' : '#a8ffe0', 1.4, 700, -0.04, 2), i * 60);
+  }
   async lob(kind, from, to, { arc = 50, ms = 420, color, spin = false, flip = false, scale = 1 } = {}) {
     const pr = { kind, x: from.x, y: from.y, color, spin, flip, scale, born: performance.now() };
     this.projectiles.push(pr);
@@ -1210,6 +1222,14 @@ export class Stage {
         break;
       case 'player:stim': {
         const c = this.center(P);
+        // Mochi's Sugar Rush: her lollipop lick, a sparkle and a heart pop, then the heal.
+        if (ev.skill === 'sugar') {
+          if (P.sheet && P.sheet.anims.special) P.setAnim('special', performance.now());
+          play('heal'); await this.wait(420);
+          this.spark('heart_burst', c.x + 14, c.y - 46, { color: '#ff8ad8', scale: 1.1 });
+          for (let i = 0; i < 6; i++) setTimeout(() => this.burst(c.x + 10, c.y - 40, 2, i % 2 ? '#ffd1f0' : '#a8ffe0', 1.2, 600, -0.05, 2), i * 70);
+          this.popup('player', 'Sugar rush', 'info');
+        }
         for (let i = 0; i < 14; i++) setTimeout(() => this.burst(c.x + (Math.random() * 40 - 20), c.y + 20, 1, C.heal, 0.8, 700, -0.04, 2), i * 30);
         this.flash(P, C.heal, 300);
         this.setHp('player', ev.php);
@@ -1442,6 +1462,7 @@ export class Stage {
       }
       case 'enemy:down': {
         E.setAnim('death', now());
+        if (this.duo) setTimeout(() => this.duoPose('cheer'), 700);
         const c = this.center(E);
         if (E.id === 'probe' || E.id === 'loader' || E.id === 'sentinel' || E.id === 'crawler' || this.enemyTags.includes('droid')) { this.burst(c.x, c.y, 24, C.spark, 2.5, 600, 0.08); this.spray(c.x, c.y, 1, 10, FLECK, 2.4, 700, 0.17, 2); }
         if (ev.boss) { this.shake(6, 900); this.burst(c.x, c.y, 50, C.spark, 3, 900, 0.05, 2); play('explosion'); }

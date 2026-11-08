@@ -783,7 +783,7 @@ export function statsOf(meta, c) {
     atkM: common + mMain + dAtk + Math.floor(str * TUNE.strAtk),
     def: B.def + (c.background === 'foundry' ? 2 : 0) + t.def * D.TRAINING.def.per + Math.floor((c.level - 1) / 2) + def + gearBonus(c, 'def') + (hasImp(c, 'dermal') ? 5 : 0) + (has(c, 'lining') ? 2 : 0) + mk.def + pv(c, 'padding') + (drink.def || 0) + favOf(c, 'def'),
     spd: B.spd + (c.background === 'runner' ? 2 : 0) + t.spd * D.TRAINING.spd.per + Math.floor((c.level - 1) / 3) + agi + (hasImp(c, 'reflex') ? 5 : 0) + (hasImp(c, 'synapse') ? 2 : 0) + spd + gearBonus(c, 'spd') + mk.spd + (drink.spd || 0) + favOf(c, 'spd'),
-    dodge: (agi - 1) * TUNE.agiDodge + (c.background === 'runner' ? 0.1 : 0) + (c.background === 'vex' ? 0.08 : 0) + fb.dodge + pv(c, 'ghost') / 100 + favOf(c, 'dodge'),
+    dodge: (agi - 1) * TUNE.agiDodge + (c.background === 'runner' ? 0.1 : 0) + (c.background === 'vex' ? 0.08 : c.background === 'mochi' ? 0.05 : 0) + fb.dodge + pv(c, 'ghost') / 100 + favOf(c, 'dodge'),
     crit: 0.05 + (w.crit || 0) + critAll + optic + (agi - 1) * TUNE.agiCrit + gearBonus(c, 'crit', 'ranged') / 100 + mk.crit + dCrit + fb.crit,
     critM: 0.05 + (mw.crit || 0) + critAll + optic + gearBonus(c, 'crit', 'melee') / 100 + mk.crit + dCrit + fb.crit,
     carry: 4 + (has(c, 'belt') ? 3 : 0) + carry + pv(c, 'pockets'),
@@ -848,7 +848,7 @@ export const reqText = (req) => req ? Object.entries(req).map(([k, v]) => `${D.A
 export const MEDIC_SKILLS = ['barrier', 'rally', 'triage', 'tag'];
 export function skillsOf(c) {
   if (c.background === 'medic') return [...MEDIC_SKILLS]; // the medic kit only: no weapon or attribute skills
-  const out = c.background === 'dealer' ? ['pickcard'] : c.background === 'ghost' ? ['overhaul'] : c.background === 'vex' ? ['wink'] : [];
+  const out = c.background === 'dealer' ? ['pickcard'] : c.background === 'ghost' ? ['overhaul'] : c.background === 'vex' ? ['wink'] : c.background === 'mochi' ? ['sugar'] : [];
   const w = weaponOf(c), ws = D.WEAPON_SKILL[w.type], mw = meleeOf(c), gad = baseOf(gearIn(c, 'gadget'));
   if (ws) out.push(ws);
   if ((!mw.noSkill || attr(c, 'str') >= 6) && !out.includes('smash')) out.push('smash');
@@ -1757,6 +1757,7 @@ function strike(s, rng, { mult = 1, critBonus = 0, pierce = 0, unarmoredBonus = 
   const r = s.run, e = r.enemy, c = s.char, st = stats(s), mode = melee ? 'melee' : 'ranged', w = melee ? meleeOf(c) : weaponOf(c);
   const first = !r.struck;
   mult = hitMult(s, melee, { mult, unarmoredBonus });
+  if (r.sugar) { mult *= 1.3; r.sugar = false; } // Sugar Rush: the next hit after the lollipop
   r.momentum = false;
   // Lights Out: a shot in the dark can go anywhere. A swing can't.
   if (!melee && e.bs && e.bs.lights > 0 && rng() < kitOf(e).moves.lights.miss) { r.struck = true; feat(s, 'shots'); return { dmg: 0, crit: false, missed: true }; }
@@ -1972,6 +1973,15 @@ function playerActInner(s, act, rng, who) {
       const pct = Math.round((isCoop(s) ? TUNE.rallyAtk : TUNE.rallySolo) * 100);
       fx(s, { who: 'player', type: 'rally', pct });
       log(s, `Adrenal shot${isCoop(s) ? 's all round' : ''}: ${isCoop(s) ? 'everyone hits' : 'you hit'} ${pct}% harder for ${TUNE.rallyTurns} rounds.`, 'good');
+      break;
+    }
+    case 'sugar': {
+      // Mochi's lollipop: a heal, a clean slate and a sugar high for the next hit.
+      const mx = st.maxHp, amt = Math.min(mx - c.hp, Math.round(mx * 0.15));
+      c.hp += amt; for (const k of ['shaken', 'exposed', 'bleed', 'burn']) delete r.pst[k];
+      r.sugar = true;
+      fx(s, { who: 'player', type: 'stim', amt, skill: 'sugar' });
+      log(s, `Sugar Rush: a long lick of the lollipop. +${amt} HP, and the next hit lands harder.`, 'good');
       break;
     }
     case 'triage': {
@@ -2802,6 +2812,7 @@ export function codexFresh(s) {
 function gainXp(s, amount) {
   const c = s.char;
   if (c.fed) amount = Math.round(amount * 1.05);
+  if (c.background === 'mochi') amount = Math.round(amount * 1.1);
   amount = Math.round(amount * (1 + featBuffs(s.meta).xp));
   c.xpBank = (c.xpBank || 0) + amount;
 }

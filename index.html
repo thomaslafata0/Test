@@ -2346,6 +2346,7 @@ function cloudSection() {
 
 // ---------- dev mode ----------
 const DEV_CODE = '444481', DEV_KEY = 'cinder-cell-dev';
+const MOCHI_CODE = '444483'; // opens Mochi as an operative on this device (every cell), nothing else: the cell stays on the board
 const CASH_CODE = '444482', CASH_AMOUNT = 10000; // adds credits to the current operative without dev mode, so the cell stays on the leaderboard
 let devOn = (() => { try { return localStorage.getItem(DEV_KEY) === '1'; } catch (e) { return false; } })();
 let auto = null, autoLast = { build: 'strength', target: 15, stopOnDeath: false, map: '' }, autoResult = null;
@@ -4572,6 +4573,7 @@ function render() {
     slot.replaceWith(stage.el);
     const r = state.run, st = E.stats(state), map = E.mapById(r.map);
     const res = stage.sync({ run: r, enemy: r.enemy, sector: r.sector, boss: r.enemy.boss, theme: map.theme, allies: r.allies,
+      duo: E.isCoop(state) && [E.charAt(state, 0), E.charAt(state, 1)].map((c) => c && c.background).sort().join() === 'mochi,vex',
       pst: r.pst, est: r.enemy.st, affix: r.enemy.affix ? D.AFFIXES[r.enemy.affix].name : null, quirk: r.enemy.quirk ? E.quirkById(r.enemy.quirk).name : null,
       player: { name: state.char.name, level: state.char.level, hp: state.char.hp, maxHp: st.maxHp, down: !!state.char.downed || !!state.char.dead },
       drone: state.char.drone || null, partnerDrone: E.isCoop(state) && E.charAt(state, 1 - myIdx()) ? E.charAt(state, 1 - myIdx()).drone || null : null,
@@ -4944,7 +4946,8 @@ function applyAct(a, v, k) {
     }
     case 'cloudversions': if (!CLOUD_ON) break; fetch(`/save/${cloudCode()}/versions`, { cache: 'no-store' }).then((r) => r.json()).then((o) => { cloudVersions = o.versions || []; render(); }).catch(() => { toast = 'Couldn\u2019t reach the cloud.'; render(); }); sfx('click'); break;
     case 'cloudrestore': if (net) break; cloudPull(cloudCode(), +v).then((o) => { if (!o) return; adoptSave(o.data, o.rev); state.savedAt = Date.now(); modal = null; titleOpen = false; toast = 'That version is back.'; A.play('perk'); cloudDirty = true; cloudPush({ force: true }); render(); }).catch(() => { toast = 'Couldn\u2019t reach the cloud.'; render(); }); break;
-    case 'devunlock': if (((document.getElementById('dev-code') || {}).value || '').trim() === CASH_CODE) { if (state.char && !isGuest()) { state.char.credits += CASH_AMOUNT; toast = `+${CASH_AMOUNT.toLocaleString()} credits for ${state.char.name}.`; sfx('coin'); } else { toast = 'Make an operative first.'; sfx('denied'); } }
+    case 'devunlock': if (((document.getElementById('dev-code') || {}).value || '').trim() === MOCHI_CODE) { if (isGuest()) { toast = 'Use it in your own game.'; sfx('denied'); break; } state.meta.unlockedOps = [...new Set([...(state.meta.unlockedOps || []), 'mochi'])]; syncUnlocks(); toast = 'Mochi wants in. She\u2019s on the operative list now.'; sfx('perk'); break; }
+    if (((document.getElementById('dev-code') || {}).value || '').trim() === CASH_CODE) { if (state.char && !isGuest()) { state.char.credits += CASH_AMOUNT; toast = `+${CASH_AMOUNT.toLocaleString()} credits for ${state.char.name}.`; sfx('coin'); } else { toast = 'Make an operative first.'; sfx('denied'); } }
       else if (((document.getElementById('dev-code') || {}).value || '').trim() === DEV_CODE) { devOn = true; try { localStorage.setItem(DEV_KEY, '1'); } catch (e) {} modal = 'dev'; sfx('perk'); } else { toast = 'That isn\u2019t it.'; sfx('denied'); } break;
     case 'devoff': devOn = false; try { localStorage.removeItem(DEV_KEY); } catch (e) {} modal = null; sfx('click'); break;
     case 'dev': if (devOn && !isGuest()) { applyDev(v, k); sfx('buy'); } break;
