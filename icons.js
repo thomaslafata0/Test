@@ -793,6 +793,10 @@ const DRAW = {
   'skill:overload': (p) => bolt(p, 'ion'),
   'skill:suppress': (p) => { pistol(p, { x: 4, y: 52, len: 40, h: 14, slide: 'steel', frame: 'black', gripMat: 'black', barrel: 'steel', bl: 4, gw: 14, gh: 18, fh: 7 }); for (let i = 0; i < 4; i++) { const y = 10 + i * 13; p.bar(40 + i * 2, y, 90, y, 3, 'yellow', { w2: 6, tone: 4.2, k: 1.5, shadow: 0 }); p.line(44 + i * 2, y, 90, y, 'yellow', 6); } },
   'skill:intimidate': (p) => skull(p, { eye: 'red' }),
+  'skill:barrier': (p) => { shield(p, 'ion'); p.rect(40, 22, 16, 40, 'white', { bevel: 2, tone: 4, shadow: 0 }); p.rect(28, 34, 40, 16, 'white', { bevel: 2, tone: 4, shadow: 0 }); },
+  'skill:rally': (p) => { syringe(p, 14, 84, 90, 8, 22, 'red'); p.rect(12, 74, 10, 4, 'sodium', { bevel: 1, tone: 4, shadow: 0 }); },
+  'skill:triage': (p) => { heart(p); p.rect(42, 26, 12, 36, 'white', { bevel: 2, tone: 4, shadow: 0 }); p.rect(30, 38, 36, 12, 'white', { bevel: 2, tone: 4, shadow: 0 }); },
+  'skill:tag': (p) => crosshair(p, 'yellow'),
 
   // ---- rooms ----
   'room:fight': (p) => { blade(p, { mat: 'steel', handle: 'leather', tip: [88, 6], heel: [32, 62], w: 14, end: [10, 84], hw: 9 }); blade(p, { mat: 'silver', handle: 'wood', tip: [8, 6], heel: [64, 62], w: 14, end: [86, 84], hw: 9 }); },

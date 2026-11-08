@@ -57,6 +57,9 @@ export const TUNE = { hpLin: 0.28, hpQuad: 0.003, atkLin: 0.14, atkQuad: 0.002, 
   earlyCurve: [1, 0.95, 0.88, 0.84, 0.85, 0.95, 0.95, 0.95, 0.95, 0.95],
   // Rewards shrink once an operative is more than overFree levels above the sector. reinforce: enemy strength by districts already freed.
   extractFail: 0.15, droneAtk: 1, droneShield: 1, droneHeal: 1, droneTech: 1, overFree: 2, overStep: 0.2, overMin: 0.25, defendHeavy: 0.35, smokeEscape: 0.7, priceAll: 1.265, trainBase: 3, trainStep: 1, fightDrop: FIGHT_DROP, eliteDrop: ELITE_DROP, coopCr: 1, repeatPay: 2, reinforce: [0, 0.5, 0.5, 0.35], bossRepeatXp: 0.5, bossRepeatResolve: 1,
+  // Field Medic: shield share of max HP (team / alone), team damage buff, its length in rounds, Triage heal, Tag's Exposed, revive HP, stim bonus.
+  medShield: 0.2, medShieldSolo: 0.28, rallyAtk: 0.25, rallySolo: 0.3, rallyTurns: 3, triageHeal: 0.22, tagMult: 1, tagSolo: 1.4, tagExposed: 2, medRevive: 0.35, medStim: 0.25,
+  classHp: { runner: 14, clerk: 16, ghost: 10, medic: 15 }, ghostGuard: 0.92, ghostCrack: 3, overhaulMult: 1.3, overhaulHeal: 0.06, overhaulTear: 2, overhaulTears: 99,
   rangedSpread: 0.15, meleeSpread: 0.3, shootGuard: 0.15, momentum: 0.15, strikeBonus: 0.25, foundryStrike: 0.15, coopHp: 2.1, coopAtk: 1.4, coopExtra: 3, reviveHp: 0.2, reviveAfter: 0.15, downsPerRaid: 1, bleedRounds: 3,
   // Share of unsecured credits and XP lost, by position in the five-sector run to the next boss. Beating the boss secures everything.
   extractRates: [0.8, 0.65, 0.5, 0.4, 0], escapeRates: [0.9, 0.85, 0.75, 0.65, 0.6],
@@ -275,7 +278,7 @@ export function createChar(s, rng, draft = null, slot = 'char') {
     maps: {}, deepest: 0, hp: 1, history: [], perks: [], perkN: {}, lockup: [], xpBank: 0, look: d.look || null,
     drone: { type: D.DRONES[d.drone] ? d.drone : 'hornet', rank: droneRankOf(m, d.drone), damaged: false },
   };
-  for (const k of ['smoke', 'ion']) if (bg.start[k]) c.items[k] += bg.start[k];
+  for (const k of ['smoke', 'ion', 'stim']) if (bg.start[k]) c.items[k] += bg.start[k];
   c.gear = startingGear(m, bg.id);
   { const kit = cellV(m, 'kit', [0, 0]); c.items.stim += kit[0]; c.items.thermal += kit[1]; }
   c.hp = statsOf(m, c).maxHp;
@@ -760,7 +763,7 @@ export function statsOf(meta, c) {
   const common = B.atk + t.atk * D.TRAINING.atk.per + (c.level - 1) + (has(c, 'drill') ? 2 : 0);
   const rMain = (mainStat(gearIn(c, 'ranged')) || { v: 0 }).v, mMain = (mainStat(gearIn(c, 'melee')) || { v: 0 }).v;
   const optic = hasImp(c, 'optic') ? 0.08 : 0, gadget = baseOf(gearIn(c, 'gadget')) || {};
-  const hp = Math.round(B.hp * 1.25) + t.hp * D.TRAINING.hp.per + (c.level - 1) * 6 + Math.round(str * TUNE.strHp) + (c.background === 'foundry' ? 25 + 3 * (c.level - 1) : 0) + (hasImp(c, 'pain') ? 20 : 0) + gearBonus(c, 'hp');
+  const hp = Math.round(B.hp * 1.25) + t.hp * D.TRAINING.hp.per + (c.level - 1) * 6 + Math.round(str * TUNE.strHp) + (c.background === 'foundry' ? 25 + 3 * (c.level - 1) : 0) + (TUNE.classHp[c.background] || 0) + (hasImp(c, 'pain') ? 20 : 0) + gearBonus(c, 'hp');
   const mk = markSum(c), drink = drinkOf(c) || {}, fb = featBuffs(meta), dAtk = (drink.atk || 0) + favOf(c, 'atk'), dCrit = (drink.crit || 0) + favOf(c, 'crit');
   return {
     maxHp: Math.round(hp * (hasTrait(c, 'stalwart') ? 1.12 : 1) * (1 + pv(c, 'ironlung') / 100) * (1 + mk.hp + fb.hp) * (1 + (drink.hp || 0)) * Math.max(0.5, 1 + favOf(c, 'hp'))),
@@ -791,7 +794,9 @@ export const price = (s, cost) => Math.ceil(cost * hard(s).price * TUNE.priceAll
 export const meetsReq = (c, req) => !req || Object.entries(req).every(([k, v]) => attr(c, k) >= v);
 export const reqText = (req) => req ? Object.entries(req).map(([k, v]) => `${D.ATTRS[k].short} ${v}`).join(', ') : '';
 
+export const MEDIC_SKILLS = ['barrier', 'rally', 'triage', 'tag'];
 export function skillsOf(c) {
+  if (c.background === 'medic') return [...MEDIC_SKILLS]; // the medic kit only: no weapon or attribute skills
   const out = c.background === 'dealer' ? ['pickcard'] : c.background === 'ghost' ? ['overhaul'] : [];
   const w = weaponOf(c), ws = D.WEAPON_SKILL[w.type], mw = meleeOf(c), gad = baseOf(gearIn(c, 'gadget'));
   if (ws) out.push(ws);
@@ -1030,6 +1035,13 @@ function droneTurn(s, rng, who) {
       log(s, `${name} jabs you with a stim. +${amt} HP.`, 'good');
     }
   }
+}
+// A Field Medic's shield takes the hit first.
+function soak(s, c, dmg) {
+  if (!(dmg > 0) || !(c.medShield > 0)) return dmg;
+  const took = Math.min(c.medShield, dmg); c.medShield -= took;
+  log(s, `The field shield takes ${took}${c.medShield ? '' : ' and breaks'}.`, 'good');
+  return dmg - took;
 }
 const droneShield = (c, dmg) => { if (dmg > 0 && c.fightGuard && c.fightGuard < 1) dmg = Math.max(1, Math.round(dmg * c.fightGuard)); const d = droneOf(c); return d && d.type === 'aegis' && dmg > 0 ? Math.max(1, Math.round(dmg * (1 - droneValue(d) / 100 * TUNE.droneShield))) : dmg; };
 export function restockStims(s) {
@@ -1352,8 +1364,10 @@ function startFight(s, rng, kind) {
   for (const b of Object.values(r.cb || {})) { const cd = b.cooldowns || {}; for (const k of b.usedThisFight || []) if (cd[k] < 50) cd[k] = Math.max(cd[k] || 0, CARRY_CD); Object.assign(b, freshBag(), { cooldowns: cd }); }
   r.enemy = e; r.defending = false; r.ready = false; r.momentum = false; r.keepDistance = false; r.adrenalUsed = false; r.vent = 3; r.turns = 0; r.alarmRaised = false; r.struck = false;
   // Unique operatives' passives, set per fighter: the Dealer cuts the deck, the Ghost shrugs off droids.
+  r.rally = 0;
   forEachActor(s, (a) => {
-    a.fightGuard = a.background === 'ghost' && e.tags.includes('droid') ? 0.8 : 1;
+    a.medShield = 0;
+    a.fightGuard = a.background === 'ghost' && e.tags.includes('droid') ? TUNE.ghostGuard : 1;
     if (a.background === 'dealer') {
       r.card = pick(rng, ['red', 'black', 'face']); r.suit = pick(rng, ['hearts', 'spades', 'diamonds']);
       if (r.card === 'black') a.fightGuard *= 0.85;
@@ -1550,6 +1564,8 @@ export function autoAction(s, { stimReserve = 0, items = true } = {}) {
   if (items && e.tags.includes('droid') && c.items.ion > 0 && !free && e.hp > e.maxHp * 0.5) return 'ion';
   // A boss can't be scared off, but losing a quarter of its ATK is worth the turn while it's still healthy.
   if (canUse(s, 'intimidate') && e.tags.includes('human') && (e.boss ? !e.shaken && e.hp > e.maxHp * 0.3 : intimidateChance(s) > 0.5)) return 'intimidate';
+  const med = medicPick(s);
+  if (med) return med;
   const hit = adv.hit || bestAttack(s);
   if (!free && !blind && e.intent === 'guard' && hit === 'shoot') return 'defend';
   for (const k of ['overhaul', 'pickcard', 'overload', 'smash', 'aimed', 'blast', 'burst', 'suppress']) {
@@ -1559,6 +1575,18 @@ export function autoAction(s, { stimReserve = 0, items = true } = {}) {
     return k;
   }
   return hit;
+}
+// What a Field Medic does with its turn, or null to just attack. Shared by auto battle and the balance bots.
+export function medicPick(s) {
+  const r = s.run, e = r.enemy, c = s.char;
+  if (c.background !== 'medic' || !e) return null;
+  const free = e.stun > 0, blind = intentHidden(s), danger = !free && !blind && (e.intent === 'heavy' || (e.intent === 'special' && D.SPECIALS[e.id] && D.SPECIALS[e.id].status) || e.intent === 'sig');
+  const team = livingActors(s).map((i) => withActor(s, i, () => ({ f: s.char.hp / stats(s).maxHp, sh: s.char.medShield || 0 })));
+  if (canUse(s, 'triage') && team.some((t) => t.f < 0.5)) return 'triage';
+  if (canUse(s, 'barrier') && (danger || team.some((t) => !t.sh && t.f < (team.length > 1 ? 0.8 : 0.6)))) return 'barrier';
+  if (canUse(s, 'rally') && !r.rally && e.hp > e.maxHp * 0.35) return 'rally';
+  if (canUse(s, 'tag') && !(e.st && e.st.exposed > 0) && e.hp > e.maxHp * 0.2) return 'tag';
+  return null;
 }
 export function runChance(s) {
   const st = stats(s), e = s.run.enemy;
@@ -1594,6 +1622,7 @@ function hitMult(s, melee, { mult = 1, unarmoredBonus = 1 } = {}) {
   mult *= 1 + fb.atk + (melee ? fb.melee : fb.ranged) + (fb.vs[e.id] || 0);
   if (r.ready) mult *= hasPerk(c, 'steady') ? 1 + pv(c, 'steady') / 100 : 1.5;
   if (r.card === 'red') mult *= 1.15;
+  if (r.rally > 0) mult *= 1 + (isCoop(s) ? TUNE.rallyAtk : TUNE.rallySolo); // a Field Medic's Adrenal Shot, for the whole team
   if (melee) mult *= 1 + TUNE.strikeBonus + (c.background === 'foundry' ? TUNE.foundryStrike : 0); // up close hits harder; Shoot is the safe option
   if (r.momentum) mult *= 1 + TUNE.momentum;
   if (w.type === 'tech' && droid) mult *= 1.5;
@@ -1715,7 +1744,7 @@ function playerActInner(s, act, rng, who) {
       r.ready = false; r.momentum = true;
       fx(s, { who: 'player', type: 'strike', dmg, crit, ready: wasReady });
       log(s, `${wasReady ? 'Braced. ' : ''}${crit ? 'Critical! ' : ''}You strike ${e.name} with the ${meleeOf(c).name} for ${dmg}${guarded ? ', straight past their cover' : ''}.`, crit ? 'crit' : 'hit');
-      if (c.background === 'ghost' && e.hp > 0 && e.def > 0 && (e.cracked || 0) < 3) { e.def -= 1; e.cracked = (e.cracked || 0) + 1; log(s, `The loader arm cracks ${e.name}\u2019s armour: DEF \u22121.`, 'good'); }
+      if (c.background === 'ghost' && e.hp > 0 && e.def > 0 && (e.cracked || 0) < TUNE.ghostCrack) { e.def -= 1; e.cracked = (e.cracked || 0) + 1; log(s, `The loader arm cracks ${e.name}\u2019s armour: DEF \u22121.`, 'good'); }
       // A repair needs both hands: a hit up close stops it.
       if (e.intent === 'repair' && e.stun === 0 && e.hp > 0) { e.intent = 'attack'; log(s, `You knock the tools out of ${e.name}\u2019s hands. No repair this turn.`, 'good'); }
       meleeCounter(s, rng);
@@ -1755,12 +1784,12 @@ function playerActInner(s, act, rng, who) {
       break;
     }
     case 'overhaul': {
-      const { dmg, crit } = strike(s, rng, { mult: 1.3, melee: true });
+      const { dmg, crit } = strike(s, rng, { mult: TUNE.overhaulMult, melee: true });
       r.ready = false;
-      const heal = Math.min(st.maxHp - c.hp, Math.round(st.maxHp * 0.12)); c.hp += heal;
+      const heal = Math.min(st.maxHp - c.hp, Math.round(st.maxHp * TUNE.overhaulHeal)); c.hp += heal;
       let note = '';
       if (e.hp > 0 && e.tags.includes('droid') && (e.overhauled || 0) < 2) { e.atk = Math.max(1, Math.round(e.atk * 0.85)); e.overhauled = (e.overhauled || 0) + 1; note = ' A part comes away in the arm: ATK \u221215%.'; }
-      else if (e.hp > 0 && !e.tags.includes('droid')) { e.def = Math.max(0, e.def - 2); note = ' Their kit tears: DEF \u22122.'; }
+      else if (e.hp > 0 && !e.tags.includes('droid') && (e.torn || 0) < TUNE.overhaulTears) { e.def = Math.max(0, e.def - TUNE.overhaulTear); e.torn = (e.torn || 0) + 1; note = ` Their kit tears: DEF \u2212${TUNE.overhaulTear}.`; }
       fx(s, { who: 'player', type: 'smash', skill: act, dmg, crit });
       log(s, `Overhaul${crit ? ', critical' : ''}: ${dmg} damage, +${heal} HP.${note}`, crit ? 'crit' : 'hit');
       meleeCounter(s, rng);
@@ -1804,6 +1833,37 @@ function playerActInner(s, act, rng, who) {
       log(s, `${e.name} ${e.boss ? 'will never run' : 'doesn\u2019t run'}, but their aim is shaking. ATK \u2212${Math.round(drop * 100)}%.`, 'info');
       break;
     }
+    case 'barrier': {
+      // Field Shield: a shield on every living operative, a share of their own max HP. It soaks hits until it breaks or the fight ends.
+      const share = (isCoop(s) ? TUNE.medShield : TUNE.medShieldSolo) * st.tech, got = [];
+      for (const i of livingActors(s)) withActor(s, i, () => { const pc = s.char, amt = Math.round(stats(s).maxHp * share); pc.medShield = Math.max(pc.medShield || 0, amt); got.push(`${i === who ? 'you' : firstName(pc)} ${pc.medShield}`); fx(s, { who: 'player', type: 'barrier', amt: pc.medShield, actor: i }); });
+      if (!isCoop(s)) r.ready = true; // alone, the medic steadies behind its own shield: next shot +50%
+      log(s, `Field Shield up: ${got.join(', ')}.${isCoop(s) ? '' : ' Next shot +50%.'}`, 'good');
+      break;
+    }
+    case 'rally': {
+      r.rally = TUNE.rallyTurns;
+      const pct = Math.round((isCoop(s) ? TUNE.rallyAtk : TUNE.rallySolo) * 100);
+      fx(s, { who: 'player', type: 'rally', pct });
+      log(s, `Adrenal shot${isCoop(s) ? 's all round' : ''}: ${isCoop(s) ? 'everyone hits' : 'you hit'} ${pct}% harder for ${TUNE.rallyTurns} rounds.`, 'good');
+      break;
+    }
+    case 'triage': {
+      // Patches up whoever is worst off, and stops their bleeding and burns.
+      const tech = st.tech, hurt = livingActors(s).map((i) => withActor(s, i, () => ({ i, f: s.char.hp / stats(s).maxHp }))).sort((a, b) => a.f - b.f)[0];
+      const t = hurt ? hurt.i : who;
+      withActor(s, t, () => { const pc = s.char, mx = stats(s).maxHp, amt = Math.min(mx - pc.hp, Math.round(mx * TUNE.triageHeal * tech)); pc.hp += amt; delete s.run.pst.bleed; delete s.run.pst.burn;
+        fx(s, { who: 'player', type: 'stim', amt, actor: t, triage: true }); log(s, `Triage: ${t === who ? 'you patch yourself up' : `you patch ${firstName(pc)} up`}. +${amt} HP.`, 'good'); });
+      break;
+    }
+    case 'tag': {
+      const { dmg, crit, missed } = strike(s, rng, { mult: isCoop(s) ? TUNE.tagMult : TUNE.tagSolo });
+      r.ready = false; r.keepDistance = true;
+      if (e.hp > 0 && !missed) addStatus(e.st, e.fresh, { exposed: TUNE.tagExposed });
+      fx(s, { who: 'player', type: 'shoot', skill: act, dmg, crit, guarded, ready: wasReady });
+      log(s, missed ? 'The tag goes wide.' : `Tagged${crit ? ', critical' : ''}: ${dmg} damage, and ${e.name} is Exposed for ${TUNE.tagExposed} turns.`, crit ? 'crit' : 'hit');
+      break;
+    }
     case 'defend':
       r.defending = true; r.ready = true;
       if (hasPerk(c, 'secondwind')) c.hp = Math.min(st.maxHp, c.hp + Math.round(st.maxHp * pv(c, 'secondwind') / 100));
@@ -1812,7 +1872,7 @@ function playerActInner(s, act, rng, who) {
       break;
     case 'stim': {
       c.items.stim -= 1;
-      const amt = Math.min(st.maxHp - c.hp, Math.round(st.maxHp * 0.4 * st.tech * (1 + st.stimBoost)));
+      const amt = Math.min(st.maxHp - c.hp, Math.round(st.maxHp * 0.4 * st.tech * (1 + st.stimBoost) * (c.background === 'medic' ? 1 + TUNE.medStim : 1)));
       c.hp += amt;
       delete r.pst.bleed; delete r.pst.burn; feat(s, 'stims');
       fx(s, { who: 'player', type: 'stim', amt });
@@ -1839,8 +1899,8 @@ function playerActInner(s, act, rng, who) {
       break;
     }
     case 'revive': {
-      const other = 1 - who;
-      withActor(s, other, () => { const pc = s.char; pc.downed = 0; pc.hp = Math.round(stats(s).maxHp * TUNE.reviveHp); });
+      const other = 1 - who, back = c.background === 'medic' ? TUNE.medRevive : TUNE.reviveHp;
+      withActor(s, other, () => { const pc = s.char; pc.downed = 0; pc.hp = Math.round(stats(s).maxHp * back); });
       fx(s, { who: 'player', type: 'revived', actor: other });
       log(s, `You drag ${charAt(s, other).name} back to their feet.`, 'good');
       break;
@@ -1908,6 +1968,7 @@ function enemyRound(s, rng) {
   first = true;
   for (const i of livingActors(s)) { if (!fighting(s)) break; withActor(s, i, () => statusTurn(s, rng, first)); first = false; }
   r.dealt = {};
+  if (r.rally > 0) r.rally -= 1;
   bleedTick(s);
   // Take turns going first.
   if (fighting(s) && coop) { const alive = livingActors(s); r.actor = alive[r.round % alive.length]; }
@@ -2055,7 +2116,7 @@ function enemyTurn(s, rng) {
       const luck = q && q.gamble ? (rng() < 0.5 ? 0.5 : 1.8) : 1;
       let dmg = mitigate(e.atk * (0.85 + rng() * 0.3) * (heavy ? 2.2 : twice ? TWICE_MULT : 1) * luck * outMult(e.st, r.pst) * (r.keepDistance ? 1 - TUNE.shootGuard : 1), st.def);
       if (r.defending) dmg = Math.max(1, Math.round(dmg * (heavy ? TUNE.defendHeavy : 0.5) * (hasTrait(c, 'bulwark') ? 0.7 : 1)));
-      dmg = droneShield(c, dmg);
+      dmg = soak(s, c, droneShield(c, dmg));
       c.hp -= dmg; vamp(dmg); reflect(dmg);
       if (q && q.bleedOnHit && !r.defending) addPlayerStatus(s, { bleed: 2 }, rng);
       if (luck !== 1) log(s, luck > 1 ? 'The gamble pays off for them.' : 'Their gamble doesn\u2019t pay off.', 'info');
@@ -2070,7 +2131,7 @@ function enemyTurn(s, rng) {
     const sp = D.SPECIALS[e.id];
     let dmg = sp.mult > 0 ? mitigate(e.atk * (0.85 + rng() * 0.3) * sp.mult * outMult(e.st, r.pst) * (r.keepDistance ? 1 - TUNE.shootGuard : 1), st.def) : 0;
     if (r.defending) dmg = Math.max(dmg ? 1 : 0, Math.round(dmg * 0.5 * (hasTrait(c, 'bulwark') ? 0.7 : 1)));
-    dmg = droneShield(c, dmg);
+    dmg = soak(s, c, droneShield(c, dmg));
     c.hp -= dmg; vamp(dmg); reflect(dmg);
     const added = r.defending ? [] : addPlayerStatus(s, sp.status, rng);
     fx(s, { who: 'enemy', type: 'special', name: sp.name, dmg, blocked: r.defending, statuses: added });
@@ -2439,7 +2500,7 @@ function sigTurn(s, rng, vamp, reflect) {
   const hit = (mult, guard = 0.5) => {
     let dmg = mitigate(e.atk * (0.85 + rng() * 0.3) * mult * outMult(e.st, r.pst) * (r.keepDistance ? 1 - TUNE.shootGuard : 1), st.def);
     if (r.defending) dmg = Math.max(1, Math.round(dmg * guard * (hasTrait(c, 'bulwark') ? 0.7 : 1)));
-    dmg = droneShield(c, dmg);
+    dmg = soak(s, c, droneShield(c, dmg));
     c.hp -= dmg; vamp(dmg); reflect(dmg);
     return dmg;
   };
@@ -2877,7 +2938,7 @@ function careerRow(s, c, status, foe = null) {
   const m = s.meta, k = c.career || (c.career = { raids: 0, kills: 0, bosses: 0 }), progress = careerProgress(c), score = careerScore(c);
   if (m.dev || score <= 0) return ''; // cells touched by dev mode stay off the leaderboard
   const top = progress.slice().sort((a, b) => b.threat - a.threat || b.best - a.best)[0];
-  const entry = { id: c.uid, name: c.name, number: c.number, background: c.background, level: c.level, status, score, gain: score - (c.boardScore || 0), progress,
+  const entry = { id: c.uid, name: c.name, player: String(c.coopName || s.playerName || '').slice(0, 16), number: c.number, background: c.background, level: c.level, status, score, gain: score - (c.boardScore || 0), progress,
     map: top.map, threat: top.threat, deepest: top.best, freed: progress.filter((x) => x.threat === 0 && x.best >= MAX_SECTOR).length, raids: k.raids, kills: k.kills, bosses: k.bosses,
     killer: foe ? foe.name : '', when: Date.now() };
   c.boardScore = score;

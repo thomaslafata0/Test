@@ -685,6 +685,11 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .aa-feat b { color: var(--fg); }
 .aa-feat.done .feat-bar i { background: var(--ok); }
 .modal.feats { width: min(960px, 100%); }
+.pm-shield { color: #8fdcff; font-size: .8em; }
+.board-player { color: var(--sodium); font-weight: 600; }
+.name-gate { max-width: 460px; }
+.name-gate .set-row input { min-width: 0; }
+.name-edit { display: flex; gap: 6px; }
 .board-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .board-table th { text-align: left; font-family: var(--mono); font-size: .66rem; letter-spacing: .1em; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); }
 .board-table td { padding: 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
@@ -1716,6 +1721,22 @@ function save() {
   if (home && !net.local) writeSave(home);
 }
 
+// ---------- player name ----------
+// One name per device, separate from operative names: it goes on the leaderboard beside every operative and to co-op partners.
+// Everyone sets it once (PNAME_KEY marks that), even if co-op already had a name saved. Automated test browsers skip the prompt.
+const PNAME_KEY = 'cinder-cell-player-set';
+const playerName = () => String(getCoopPrefs().name || '').trim();
+const cleanName = (v) => String(v || '').replace(/[^A-Za-z0-9 _.\-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 16);
+const needName = () => { try { return !localStorage.getItem(PNAME_KEY) && !navigator.webdriver; } catch (e) { return false; } };
+let pendingJoin = null;
+function nameView() {
+  return `<div class="modal-wrap"><div class="modal name-gate" role="dialog" aria-modal="true" aria-label="Player name">
+    <div class="pop-head"><h2>Your player name</h2></div>
+    <p class="muted">Not an operative: this is you. It shows on the leaderboard next to each of your operatives, so people can tell whose is whose, and your co-op partner sees it too.</p>
+    <label class="set-row" for="player-name"><span>Player name</span><input id="player-name" class="text" maxlength="16" autocomplete="nickname" placeholder="2 to 16 letters or numbers" value="${esc(playerName())}"></label>
+    <div class="btnrow"><button class="btn primary big" data-a="setname">Save name</button></div>
+  </div></div>`;
+}
 // ---------- global leaderboard ----------
 // Each operative's row goes to the shared board after every raid. Rows that can't be sent wait in meta.boardOut (part of the save) and try again later.
 const BOARD_ON = typeof location !== 'undefined' && (location.hostname.endsWith('.workers.dev') || location.port === '8787');
@@ -1727,6 +1748,7 @@ async function flushBoard() {
   try {
     while (state.meta.boardOut.length) {
       const e = state.meta.boardOut[0];
+      if (!e.player) e.player = (state.char2 && state.char2.uid === e.id ? state.char2.coopName : playerName()) || '';
       const res = await fetch('/board', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(e) });
       if (res.status === 429 || res.status >= 500) { boardRetryAt = Date.now() + 30000; break; }
       state.meta.boardOut = state.meta.boardOut.filter((x) => x !== e); // a newer row for the same operative stays queued. A 4xx means the board refused it: retrying won't help
@@ -1946,7 +1968,7 @@ const myIdx = () => (isGuest() ? 1 : 0);
 const DOWNTIME = new Set(['drink', 'bet', 'stake', 'spin', 'invest', 'withdraw', 'shippart', 'shipcell', 'orbitgo', 'orbitact', 'orbitclose']);
 // The shuttle belongs to each player's own cell, so a friend in someone's room can't fly or fit it from here.
 const SHIP_ACTS = new Set(['shippart', 'shipcell', 'orbitarm', 'orbitgo', 'orbitact', 'orbitclose']);
-const LOCAL = new Set(['mainmenu', 'cellgo', 'celldel', 'newspage', 'firstraid', 'takeover', 'autoaccept', 'autostim', 'featfilter', 'stimprompt', 'draftdrone', 'randomize', 'missiontab', 'markettab', 'chartab', 'continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm', 'cloudcopy', 'cloudload', 'cloudversions', 'cloudrestore', 'cloudkeep', 'devunlock', 'devoff', 'dev', 'autostart']);
+const LOCAL = new Set(['setname', 'mainmenu', 'cellgo', 'celldel', 'newspage', 'firstraid', 'takeover', 'autoaccept', 'autostim', 'featfilter', 'stimprompt', 'draftdrone', 'randomize', 'missiontab', 'markettab', 'chartab', 'continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm', 'cloudcopy', 'cloudload', 'cloudversions', 'cloudrestore', 'cloudkeep', 'devunlock', 'devoff', 'dev', 'autostart']);
 function coopChip() {
   if (!net) return '';
   const who = net.peerName || (isHost() ? 'friend' : 'host');
@@ -2914,7 +2936,7 @@ function intentInfo(e) {
   return D.INTENTS[e.intent];
 }
 // What a phone has room to say on a skill or item button. The full wording is in the title, shown by holding.
-const SKILL_BRIEF = { overhaul: 'Grab, heal 12%', aimed: 'x1.5, +25% crit', burst: '3 quick shots', blast: 'x2 vs unarmoured', smash: 'Melee, \u00BD armour', overload: 'Stuns droids', suppress: 'Pins it in cover' };
+const SKILL_BRIEF = { barrier: 'Shield team', rally: 'Team +dmg', triage: 'Heal worst off', tag: 'Exposes it', overhaul: 'Grab, heal 6%', aimed: 'x1.5, +25% crit', burst: '3 quick shots', blast: 'x2 vs unarmoured', smash: 'Melee, \u00BD armour', overload: 'Stuns droids', suppress: 'Pins it in cover' };
 const ITEM_BRIEF = { thermal: 'Thermal', ion: 'Ion', smoke: 'Smoke' };
 function combatScreen() {
   const r = state.run, e = r.enemy, c = state.char, st = E.stats(state);
@@ -2923,7 +2945,7 @@ function combatScreen() {
   const inc = E.incomingRange(state);
   const incChip = inc ? `<span class="chip ${inc.lethal ? 'lethal' : 'bad'}" title="If it connects. Defend to take ${inc.defMin}-${inc.defMax}.${inc.phaseMax ? ` If your hit takes it under half health it hits harder first: up to ${inc.phaseMax}.` : ''}">${inc.lethal ? 'Lethal ' : 'Hits '}${inc.min}-${inc.phaseMax || inc.max}${inc.phaseMax ? '!' : ''}</span>` : '';
   const coop = E.isCoop(state), mine = !coop || r.actor === myIdx();
-  const party = coop ? `<div class="party">${[0, 1].map((i) => { const pc = E.charAt(state, i); if (!pc) return ''; const pst = E.statsOf(state.meta, pc); return `<div class="pm ${r.actor === i ? 'turn' : ''} ${i === myIdx() ? 'me' : ''}"><span class="label">${i === myIdx() ? 'You' : esc(pc.name)}${r.actor === i ? ' \u00B7 acting' : ''}${pc.downed ? ` \u00B7 <span class="danger-text">down, ${pc.downed} round${pc.downed > 1 ? 's' : ''} left</span>` : ''}</span><b>${Math.max(0, pc.hp)} / ${pst.maxHp} <span class="pm-stim" title="Stims left">${ico('item:stim', 'sm')}\u00D7${pc.items.stim}</span></b>${bar(pc.hp, pst.maxHp)}</div>`; }).join('')}</div>` : '';
+  const party = coop ? `<div class="party">${[0, 1].map((i) => { const pc = E.charAt(state, i); if (!pc) return ''; const pst = E.statsOf(state.meta, pc); return `<div class="pm ${r.actor === i ? 'turn' : ''} ${i === myIdx() ? 'me' : ''}"><span class="label">${i === myIdx() ? 'You' : esc(pc.name)}${r.actor === i ? ' \u00B7 acting' : ''}${pc.downed ? ` \u00B7 <span class="danger-text">down, ${pc.downed} round${pc.downed > 1 ? 's' : ''} left</span>` : ''}</span><b>${Math.max(0, pc.hp)} / ${pst.maxHp} <span class="pm-stim" title="Stims left">${ico('item:stim', 'sm')}\u00D7${pc.items.stim}</span>${pc.medShield > 0 ? ` <span class="pm-shield" title="Field Shield">+${pc.medShield}</span>` : ''}</b>${bar(pc.hp, pst.maxHp)}</div>`; }).join('')}</div>` : '';
   const waiting = coop && !mine ? `<div class="notice ${c.downed || c.dead ? 'lose' : ''}">${c.dead ? `You\u2019re dead. ${esc(E.charAt(state, 1 - myIdx()).name)} is trying to get out alive.` : c.downed ? `You\u2019re down, bleeding out: ${c.downed} round${c.downed > 1 ? 's' : ''} left. ${esc(E.charAt(state, 1 - myIdx()).name)} can get you up.` : `Waiting for ${esc(E.charAt(state, 1 - myIdx()).name)} to act\u2026`}</div>` : '';
   const downedMate = coop && mine ? E.partnerDown(state) : null;
   const reviveBtn = downedMate ? `<button class="btn primary big" data-a="act" data-v="revive" style="width:100%">Get ${esc(downedMate.name.split(' ')[0])} up \u00B7 ${downedMate.downed} round${downedMate.downed > 1 ? 's' : ''} left<span class="k" aria-hidden="true">V</span></button>` : '';
@@ -2933,7 +2955,7 @@ function combatScreen() {
       <span class="bs">${id === 'smoke' && confirmSmoke ? 'Tap again to try to escape' : esc(D.ITEMS[id].short)}</span></button>`).join('');
   const skills = E.skillsOf(c).slice(0, 4).map((k, i) => {
     const cd = r.cooldowns[k] || 0, sk = D.SKILLS[k];
-    const status = k === 'pickcard' && !cd ? `next: ${r.suit || 'hearts'} (${{ hearts: 'stun', spades: 'bleed', diamonds: 'steal' }[r.suit || 'hearts']})` : k === 'intimidate' ? (cd ? 'used this sector' : e.boss && e.tags.includes('human') ? 'shakes aim' : e.tags.includes('human') ? `${pct(E.intimidateChance(state))} chance` : 'humans only') : cd ? `ready in ${cd}` : 'ready';
+    const status = k === 'rally' && r.rally > 0 ? `active, ${r.rally} round${r.rally > 1 ? 's' : ''}` : k === 'pickcard' && !cd ? `next: ${r.suit || 'hearts'} (${{ hearts: 'stun', spades: 'bleed', diamonds: 'steal' }[r.suit || 'hearts']})` : k === 'intimidate' ? (cd ? 'used this sector' : e.boss && e.tags.includes('human') ? 'shakes aim' : e.tags.includes('human') ? `${pct(E.intimidateChance(state))} chance` : 'humans only') : cd ? `ready in ${cd}` : 'ready';
     const note = `<span class="sk-full">${esc(sk.short)}</span><span class="sk-brief">${k === 'intimidate' ? status : SKILL_BRIEF[k] || esc(sk.short)}</span> <span class="sk-status">${status}</span>`;
     return `<button class="btn skill ${cd ? '' : 'ready'}" data-a="act" data-v="${k}" title="${esc(sk.desc)}" ${E.canUse(state, k) && !(k === 'intimidate' && !e.tags.includes('human')) ? '' : 'disabled'}>
       <span class="sk-name">${ico(`skill:${k}`, 'sm')}${esc(sk.name)}<span class="k" aria-hidden="true">${SKILL_KEYS[i].toUpperCase()}</span></span><span class="sk-note">${note}</span></button>`;
@@ -2941,6 +2963,7 @@ function combatScreen() {
   const fx = E.bossEffects(state), traits = [['quirk', e.quirk && E.quirkById(e.quirk)], ['bad', D.MELEE_COUNTER[e.id]], ['bad', e.affix && D.AFFIXES[e.affix]]].filter((x) => x[1]);
   const scanned = st.scan && e.next && !(e.boss && E.intentHidden(state)) ? intentLabel(e, e.next) : '';
   const aimChip = r.ready ? `Aim +${E.hasPerk(c, 'steady') ? 100 : 50}%` : '', pushChip = r.momentum ? `Momentum +${Math.round(E.TUNE.momentum * 100)}%` : '';
+  const medChips = [c.medShield > 0 ? `<span class="chip ph good" data-tip="Field Shield: soaks the next ${c.medShield} damage.">Shield ${c.medShield}</span>` : '', r.rally > 0 ? `<span class="chip ph good" data-tip="Adrenal Shot: everyone hits harder for ${r.rally} more round${r.rally > 1 ? 's' : ''}.">Adrenal ${r.rally}</span>` : ''];
   // A phone has one row for all of it. In order of need; what doesn't fit drops whole, and a tap on the row gives the full list.
   const ventNow = E.mapById(r.map).mechanic.id === 'vents' && r.vent === 1 && e.stun === 0 ? { me: Math.round(st.maxHp * 0.08), them: Math.round(e.maxHp * (e.boss ? 0.04 : e.tags.includes('droid') ? 0.06 : 0.12)) } : null;
   const dot = E.dotDamage(state), pstChips = Object.entries(r.pst || {}).filter(([k, t]) => t > 0 && D.STATUSES[k]).map(([k, t]) => `<span class="chip ph bad" data-tip="${esc(`${D.STATUSES[k].name}, ${t} turn${t > 1 ? 's' : ''} left: ${D.STATUSES[k].desc}${k === 'bleed' || k === 'burn' ? ' A stim or a rest stops it.' : ''}`)}">${esc(D.STATUSES[k].short)} ${t}</span>`);
@@ -2949,7 +2972,7 @@ function combatScreen() {
     ...fx.map((x) => `<span class="chip ph bad" data-tip="${esc(x.tip)}">${esc(x.label)}</span>`),
     scanned ? `<span class="chip ph" data-tip="Scanner: the move after this one.">Then ${esc(scanned)}</span>` : '',
     mechanicBrief(r),
-    aimChip ? `<span class="chip ph good">${aimChip}</span>` : '', pushChip ? `<span class="chip ph good">${pushChip}</span>` : '',
+    aimChip ? `<span class="chip ph good">${aimChip}</span>` : '', pushChip ? `<span class="chip ph good">${pushChip}</span>` : '', ...medChips,
     ...traits.map(([cls, t]) => `<span class="chip ph ${cls}" data-tip="${esc(`${t.name}: ${t.desc}`)}">${esc(t.name)}</span>`)].join('');
   const rowTip = [`${e.name}.`, `ATK ${e.atk}, DEF ${e.def}, SPD ${e.spd}.`, `Your dodge ${pct(E.dodgeChance(st, e))}, run ${pct(E.runChance(state))}.`, ...traits.map(([, t]) => `${t.name}: ${t.desc}`), c.drone ? `${D.DRONES[c.drone.type].name} ${c.drone.damaged ? 'offline' : `rank ${c.drone.rank}`}.` : ''].join(' ');
   const intentTip = [`${intent.label}: ${intent.tip}`, scanned ? `Scanner: then ${scanned}.` : '', ...fx.map((x) => x.tip)].join(' ');
@@ -2960,7 +2983,7 @@ function combatScreen() {
   return `<div class="columns fight"><section class="panel combat"><div class="c-left">
     <div class="combat-head"><span class="label">${esc(E.mapById(r.map).name)} \u00B7 Sector ${r.sector} \u00B7 ${esc(E.sectorName(r.sector, r.map))}</span>${stage.auto ? '<span class="auto-note">Auto battle \u00B7 change the mode to take over</span>' : ''}${roomPips(r)}</div>
     <div class="stage-box"><div id="stage-slot"></div>${coachView(e, mine)}</div>
-    <div class="intent ${intent.tone} ${e.intent === 'sig' ? 'sigi' : ''} ${fx.length ? 'fx' : ''}" data-tip="${esc(intentTip)}"><span class="dot"></span><b>${esc(intent.label)}</b><span class="tip">${esc(intent.tip)}${st.scan && e.next && !(e.boss && E.intentHidden(state)) ? ` <span class="next-intent">Scanner: then ${esc(intentLabel(e, e.next))}</span>` : ''}</span><span class="intent-side">${incChip}${fx.map((x) => `<span class="chip bad" data-tip="${esc(x.tip)}" title="${esc(x.tip)}">${esc(x.label)}</span>`).join('')}${mechanicChip(r)}${r.ready ? `<span class="chip good">Aim +${E.hasPerk(c, 'steady') ? 100 : 50}%</span>` : ''}${r.momentum ? `<span class="chip good">Momentum +${Math.round(E.TUNE.momentum * 100)}%</span>` : ''}</span></div>
+    <div class="intent ${intent.tone} ${e.intent === 'sig' ? 'sigi' : ''} ${fx.length ? 'fx' : ''}" data-tip="${esc(intentTip)}"><span class="dot"></span><b>${esc(intent.label)}</b><span class="tip">${esc(intent.tip)}${st.scan && e.next && !(e.boss && E.intentHidden(state)) ? ` <span class="next-intent">Scanner: then ${esc(intentLabel(e, e.next))}</span>` : ''}</span><span class="intent-side">${incChip}${medChips.map((x) => x.replace('chip ph good', 'chip good')).join('')}${fx.map((x) => `<span class="chip bad" data-tip="${esc(x.tip)}" title="${esc(x.tip)}">${esc(x.label)}</span>`).join('')}${mechanicChip(r)}${r.ready ? `<span class="chip good">Aim +${E.hasPerk(c, 'steady') ? 100 : 50}%</span>` : ''}${r.momentum ? `<span class="chip good">Momentum +${Math.round(E.TUNE.momentum * 100)}%</span>` : ''}</span></div>
     <div class="statline" data-tip="${esc(rowTip)}">${meta}</div>
     ${(() => { const trait = (cls, t) => (t ? `<div class="quirk-line"><span class="chip ${cls}" data-tip="${esc(`${t.name}: ${t.desc}`)}">${esc(t.name)}</span><span>${esc(t.desc)}</span></div>` : ''); const all = trait('quirk', e.quirk && E.quirkById(e.quirk)) + trait('bad', D.MELEE_COUNTER[e.id]) + trait('bad', e.affix && D.AFFIXES[e.affix]); return all ? `<div class="quirk-row">${all}</div>` : ''; })()}
     </div><div class="c-right">
@@ -3208,6 +3231,7 @@ function newsView() {
   </div></div>`;
 }
 function modalView() {
+  if (needName()) return nameView();
   if (!modal) return '';
   if (modal === 'lounge' && !loungeOpen()) modal = 'bar';
   if (['bar', 'lounge', 'wheel', 'orbit', 'ventures'].includes(modal)) return downtimeView();
@@ -3280,7 +3304,7 @@ function modalView() {
         ${isGuest() ? '<p class="muted" style="font-size:.88rem">Your operative stays yours, and leaving takes them back to your solo game.</p>' : ''}
         ${isHost() ? '<p class="muted" style="font-size:.88rem">You pick the missions; your friend presses Ready at their terminal.</p>' : ''}`
       : `<div class="coop-form">
-        <label class="set-row" for="coop-name"><span>Your name</span><input id="coop-name" class="text" maxlength="16" value="${esc(getCoopPrefs().name || (state.char ? state.char.name.split(' ')[0] : ''))}"></label>
+        <label class="set-row" for="coop-name"><span>Player name <span class="muted">(leaderboard and co-op)</span></span><span class="name-edit"><input id="coop-name" class="text" maxlength="16" value="${esc(playerName())}"><button class="btn" data-a="setname">Save</button></span></label>
         ${location.hostname.endsWith('.workers.dev') ? '' : `<label class="set-row" for="coop-relay"><span>Relay URL <span class="muted">(blank: two tabs here)</span></span><input id="coop-relay" class="text" placeholder="https://cinder-cell-coop.yourname.workers.dev" value="${esc(getCoopPrefs().relay)}"></label>`}
         <div class="set-row"><span>Host a game${state.char ? '' : ' (build an operative first)'}</span><button class="btn primary" data-a="coophost" ${state.char ? '' : 'disabled'}>Host</button></div>
         <label class="set-row" for="coop-code"><span>Join with a code</span><span class="btnrow"><input id="coop-code" class="text" maxlength="8" placeholder="CODE" style="width:7ch;text-transform:uppercase"><button class="btn" data-a="coopjoin">Join</button></span></label>
@@ -3391,7 +3415,7 @@ function boardView() {
     const own = mine.has(e.tag || e.id) || (me && e.name === me.name && +e.number === me.number);
     const died = e.status === 'died', threat = (D.THREAT[+e.threat] || {}).name, freed = +e.freed || 0;
     const reached = [+e.threat ? threat : '', freed ? `${freed} district${freed > 1 ? 's' : ''} freed` : ''].filter(Boolean).join(' \u00B7 ');
-    return `<tr class="${own ? 'mine' : ''}"><td class="num">${i + 1}</td><td><b>${esc(e.name)}</b><span class="muted"> #${+e.number || 0}</span><div class="muted small">${esc((D.BACKGROUNDS.find((b) => b.id === e.background) || {}).name || e.background)}, lv ${+e.level || 1}</div></td><td>${esc(E.mapById(e.map).name)}, sector ${+e.deepest || 0}${reached ? `<div class="muted small">${esc(reached)}</div>` : ''}</td><td class="${died ? 'bad' : 'good'}">${died ? 'Died' : 'Alive'}<div class="muted small">${died && e.killer ? `to ${esc(e.killer)}, ` : ''}${+e.raids || 0} raids, ${+e.kills || 0} kills</div></td><td class="num score">${(+e.score || 0).toLocaleString()}</td></tr>`;
+    return `<tr class="${own ? 'mine' : ''}"><td class="num">${i + 1}</td><td><b>${esc(e.name)}</b><span class="muted"> #${+e.number || 0}</span>${e.player ? `<div class="small board-player">${esc(e.player)}</div>` : ''}<div class="muted small">${esc((D.BACKGROUNDS.find((b) => b.id === e.background) || {}).name || e.background)}, lv ${+e.level || 1}</div></td><td>${esc(E.mapById(e.map).name)}, sector ${+e.deepest || 0}${reached ? `<div class="muted small">${esc(reached)}</div>` : ''}</td><td class="${died ? 'bad' : 'good'}">${died ? 'Died' : 'Alive'}<div class="muted small">${died && e.killer ? `to ${esc(e.killer)}, ` : ''}${+e.raids || 0} raids, ${+e.kills || 0} kills</div></td><td class="num score">${(+e.score || 0).toLocaleString()}</td></tr>`;
   }).join('');
   return `<div class="modal-wrap" data-a="closemodal"><div class="modal board" role="dialog" aria-modal="true" aria-label="Leaderboard">
     <div class="pop-head"><h2>Leaderboard <span class="num muted h2-note">${online ? `top ${board.length} of ${globalBoard.total.toLocaleString()} operatives, everyone\u2019s` : `this device\u2019s best ${board.length} operatives`}</span></h2><button class="tool close" data-a="closemodal" aria-label="Close">Close</button></div>
@@ -3781,6 +3805,7 @@ function trapTab(ev) {
 }
 
 function render() {
+  if (state && state.meta && !isGuest()) state.playerName = playerName(); // stamped on this device's leaderboard rows
   if (!appReadySent) { appReadySent = true; const r = appBridge('ready'); if (r) requestAnimationFrame(() => setTimeout(() => { try { r.postMessage(1); } catch (e) {} }, 80)); }
   if (isGuest() && (!hostSynced || (!state.char && home && home.char))) {
     lastHtml = '';
@@ -4218,6 +4243,15 @@ function applyAct(a, v, k) {
     case 'look': state.draft.look = state.draft.look || defaultLook(); state.draft.look[v] = v === 'skin' || v === 'hairColor' ? +k : k; if (v === 'body') state.draft.look.hair = HAIR_FOR[sexOf(state.draft.look)]; sfx('click'); break;
     case 'savecode': { const code = E.exportSave(state); state.report = code; try { navigator.clipboard.writeText(code).then(() => { toast = 'Save code copied.'; render(); }).catch(() => {}); } catch (e) {} sfx('click'); break; }
     case 'loadcode': { const t = (document.getElementById('load-code') || {}).value || ''; const loaded = E.importSave(t, rng); if (loaded && oldSeason(loaded)) { toast = 'That save is from before the season reset.'; sfx('denied'); break; } if (loaded) { state = loaded; modal = null; titleOpen = false; toast = 'Save loaded.'; sfx('perk'); } else { toast = 'That is not a Cinder Cell save code.'; sfx('denied'); } break; }
+    case 'setname': {
+      const box = document.getElementById('player-name') || document.getElementById('coop-name'), name = cleanName(box && box.value);
+      if (name.length < 2) { toast = 'Pick a name of 2 to 16 letters or numbers.'; break; }
+      setCoopPrefs({ name }); state.playerName = name;
+      try { localStorage.setItem(PNAME_KEY, '1'); } catch (e) {}
+      toast = `You\u2019re ${name}.`;
+      if (pendingJoin) { const code = pendingJoin; pendingJoin = null; startCoop('guest', code, !getCoopPrefs().relay); }
+      break;
+    }
     case 'coophost': {
       const pre = getCoopPrefs(), code = pre.hostCode || makeCode(); // the same room each time, so an old invite link keeps working
       setCoopPrefs({ name: (document.getElementById('coop-name') || {}).value || '', relay: ((document.getElementById('coop-relay') || {}).value || '').trim(), hostCode: code });
@@ -4580,7 +4614,7 @@ async function start(data) {
   titleOpen = !(data && data.state);
   // An invite link joins straight away; a reload goes back to the room this tab was in.
   const join = (new URLSearchParams(location.search).get('join') || '').trim().toUpperCase(), room = getRoom();
-  if (/^[A-Z0-9]{4,8}$/.test(join)) { history.replaceState(null, '', location.pathname); titleOpen = false; startCoop('guest', join, !getCoopPrefs().relay); }
+  if (/^[A-Z0-9]{4,8}$/.test(join)) { history.replaceState(null, '', location.pathname); titleOpen = false; if (needName()) pendingJoin = join; else startCoop('guest', join, !getCoopPrefs().relay); }
   else if (room && (room.role === 'guest' || state.char)) { titleOpen = false; startCoop(room.role, room.code, room.local); }
   else state.coop = false;
   try { navigator.storage && navigator.storage.persist && navigator.storage.persist().catch(() => {}); } catch (e) {}

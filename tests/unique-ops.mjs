@@ -38,7 +38,7 @@ function fightAs(id, seed, enemyTag) {
   ok('a black card cuts the damage taken', c.fightGuard < 1); }
 // The Ghost.
 { const { s, rng, e, c } = fightAs('ghost', 4, 'droid');
-  ok('the Ghost takes less from droids', c.fightGuard === 0.8 || (s.run.enemy.tags.includes('droid') === false));
+  ok('the Ghost takes less from droids', c.fightGuard === E.TUNE.ghostGuard && c.fightGuard < 1 || (s.run.enemy.tags.includes('droid') === false));
   e.def = 6; const atk = e.atk;
   E.playerAct(s, 'strike', rng, 0); ok('a Strike cracks armour', e.def === 5, `${e.def}`);
   s.run.cooldowns.overhaul = 0; c.hp = 10; e.intent = 'attack';

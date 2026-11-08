@@ -1124,6 +1124,24 @@ export class Stage {
         this.popup('enemy', 'Fled!', 'info');
         await this.tween(500, (p) => { E.ox = 160 * ease(p); E.alpha = 1 - p; });
         break;
+      case 'player:barrier': {
+        P.setAnim('defend', now());
+        const c = this.center(P);
+        this.ring(c.x, c.y, 30, C.ion, 420, 3);
+        this.flash(P, C.ion, 280);
+        play('shield');
+        this.popup(P === this.partner ? 'partner' : 'player', `Shield ${ev.amt}`, 'info');
+        await this.wait(380);
+        break;
+      }
+      case 'player:rally': {
+        P.setAnim('defend', now());
+        for (const F of [this.player, this.partner].filter(Boolean)) { const c = this.center(F); this.flash(F, C.amber, 260); this.burst(c.x, c.y, 10, C.amber, 1, 500, -0.04, 1); }
+        play('status');
+        this.popup('player', `Team +${ev.pct}% dmg`, 'info');
+        await this.wait(420);
+        break;
+      }
       case 'player:defend':
         P.setAnim('defend', now());
         this.playerShield = true;

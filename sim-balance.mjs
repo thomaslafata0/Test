@@ -6,6 +6,8 @@ import * as G from './sim-gear.mjs';
 Object.assign(E.TUNE, JSON.parse(process.env.TUNE || '{}'));
 // KIT='{"ostrane":{"rate":0.3}}' overrides a boss's numbers in D.BOSS_KIT for a test run.
 for (const [id, v] of Object.entries(JSON.parse(process.env.KIT || '{}'))) Object.assign(D.BOSS_KIT[id], v);
+// BGPATCH='{"clerk":{"start":{...}}}' overrides a class for a test run.
+for (const [id, v] of Object.entries(JSON.parse(process.env.BGPATCH || '{}'))) Object.assign(D.BACKGROUNDS.find((b) => b.id === id), v);
 const CAMP = +process.env.CAMP || 60, OPS = +process.env.OPS || 300, LIVES = +process.env.LIVES || 40;
 const STACK = +process.env.STACK || 3;
 const SECTIONS = (process.env.SECTIONS || 'builds,styles,coop,maps,items,early,econ').split(',');
@@ -72,6 +74,9 @@ function act(s, st, b, who = 0) {
   if (r.fallen && !e.boss && E.canUse(s, 'run') && E.runChance(s) > 0.3) return 'run'; // a partner just died: get out
   if (st.flee && !e.boss && !E.isCoop(s) && c.hp < hp * st.flee && E.canUse(s, 'run') && E.runChance(s) > 0.3) return 'run';
   if (!free && E.mechanicOf(r) === 'vents' && r.vent === 1) return 'defend';
+  if (r.turns > 60 && !e.boss && E.canUse(s, 'run')) return 'run'; // a fight going nowhere (a regenerating enemy that can't be outdamaged): a player would leave
+  const med = E.medicPick(s);
+  if (med) return med;
   const adv = E.sigAdvice(s), blind = E.intentHidden(s); // boss signature moves: see sigAdvice in engine.js
   if (!free && adv.act && (adv.act !== 'defend' || !E.isCoop(s) || r.lastAttacker === who)) return adv.act;
   const danger = !free && !blind && (e.intent === 'heavy' || (e.intent === 'special' && D.SPECIALS[e.id] && D.SPECIALS[e.id].status));
@@ -81,7 +86,7 @@ function act(s, st, b, who = 0) {
   if (E.canUse(s, 'intimidate') && e.tags.includes('human') && (e.boss ? !e.shaken && e.hp > e.maxHp * 0.3 : E.intimidateChance(s) > 0.3)) return 'intimidate';
   const hit = adv.hit || G.attackChoice(s, b.style);
   if (!free && !blind && e.intent === 'guard' && hit !== 'strike') return 'defend';
-  for (const k of ['overload', 'smash', 'aimed', 'blast', 'burst', 'suppress']) if (E.canUse(s, k) && G.skillAllowed(b.style, k) && !(k === 'smash' && D.MELEE_COUNTER[e.id] && !free) && !(adv.hit === 'strike' && k !== 'smash' && k !== 'overload') && !(adv.hit === 'shoot' && k === 'smash')) return k;
+  for (const k of ['overhaul', 'pickcard', 'overload', 'smash', 'aimed', 'blast', 'burst', 'suppress']) if (E.canUse(s, k) && E.skillsOf(c).includes(k) && G.skillAllowed(b.style, k) && !(k === 'smash' && D.MELEE_COUNTER[e.id] && !free) && !(adv.hit === 'strike' && k !== 'smash' && k !== 'overload') && !(adv.hit === 'shoot' && k === 'smash')) return k;
   return hit;
 }
 // Stacks what it already carries when it can, as a player chasing a build would.
@@ -126,7 +131,7 @@ function raid(s, rng, bots, st, map, start, hook) {
     else if (s.screen === 'sectorClear') { if (leave(s, st)) E.attemptExtract(s, rng); else E.pushDeeper(s, rng); }
     else break;
   }
-  if (steps >= 6000) throw new Error('stuck at ' + s.screen);
+  if (steps >= 6000) { const e = s.run && s.run.enemy; throw new Error('stuck at ' + s.screen + (e ? ` vs ${e.id} hp ${e.hp}/${e.maxHp} def ${e.def} intents ${JSON.stringify(e.intents)} me ${s.char.background} hp ${s.char.hp} atk ${E.stats(s).atk} log ${JSON.stringify(s.log.slice(-6).map((l) => l.text || l))}` : '')); }
 }
 const spendResolve = (s) => { for (const u of D.CELL) E.buyCell(s, u.id); let t = true; while (t) t = Object.keys(D.TRAINING).sort((a, b) => s.meta.training[a] - s.meta.training[b]).some((x) => E.train(s, x)); };
 const startOf = (s, map, st, who = 'char') => { const c = s[who]; if (st.farmTo && c.level < st.farmTo) return 1; return Math.max(...E.insertionsAt(c, map, 0)); };
@@ -307,5 +312,63 @@ if (SECTIONS.includes('threat')) {
     }
     const med = (a, k) => (a.length ? pct(a.map((x) => x[k]), 0.5) : '-');
     console.log(`${label.padEnd(22)} threat 1 opens: ${med(open, 'ops')} ops (${med(open, 'raids')} raids) in ${Math.round(100 * open.length / camp)}%   beaten: ${med(beat, 'ops')} ops (${med(beat, 'raids')} raids) in ${Math.round(100 * beat.length / camp)}%`);
+  }
+}
+
+// Every class with the same five builds: only the background changes. CLS=dealer,ghost limits the classes.
+// Depth: one operative at training 8, mean deepest sector. Campaign: a fresh cell, median raids to beat the sector 5, 10 and 15 bosses.
+if (SECTIONS.includes('classes')) {
+  const KITS = {
+    str: { attrs: ['str'], style: 'auto', implants: ['myomer', 'pain', 'dermal', 'adrenal'], drink: 'gin' },
+    agi: { attrs: ['agi'], style: 'rangedFocus', implants: ['reflex', 'optic', 'dermal', 'adrenal'], drink: 'sour' },
+    int: { attrs: ['int'], style: 'auto', implants: ['neural', 'synapse', 'dermal', 'pain'], items: { ion: 2, thermal: 2 }, drink: 'tonic' },
+    cha: { attrs: ['cha'], style: 'auto', implants: ['voice', 'dermal', 'pain', 'adrenal'], drink: 'rum' },
+    mix: { attrs: ['str', 'agi', 'int', 'cha'], style: 'auto', implants: ['dermal', 'reflex', 'pain', 'adrenal'], drink: 'stout' },
+  };
+  const classes = (process.env.CLS || D.BACKGROUNDS.map((x) => x.id).join(',')).split(','), stName = process.env.CSTYLE || 'standard';
+  for (const bg of classes) for (const [k, kit] of Object.entries(KITS)) {
+    const b = { ...kit, bg };
+    const depth = single(null, process.env.TRAIN ? +process.env.TRAIN : 8, b, stName);
+    const res = []; if (!process.env.NOCAMP) for (let i = 0; i < CAMP; i++) res.push(campaign(4000 + i, [b], stName));
+    const med = (n) => { const a = res.map((r) => r[n] && r[n].raids).filter((v) => v != null); return a.length ? pct(a, 0.5) : '-'; };
+    console.log(`CLASS ${bg} ${k} depth ${depth.toFixed(2)} raids5 ${med(5)} raids10 ${med(10)} raids15 ${med(15)} finish ${Math.round(res.filter((r) => r[15]).length / CAMP * 100)} death ${Math.round(avg(res.map((r) => r.deaths / Math.max(1, r.raids))) * 100)}`);
+  }
+}
+
+// Two-player teams: each class in its natural build, every pairing with the Field Medic against common pairs without one.
+// Depth: two operatives at training 8 raiding together, mean deepest sector. Campaign: a fresh co-op cell, median raids to beat boss 15.
+if (SECTIONS.includes('comps')) {
+  const NAT = {
+    foundry: { bg: 'foundry', attrs: ['str'], style: 'auto', implants: ['myomer', 'pain', 'dermal', 'adrenal'], drink: 'gin' },
+    runner: { bg: 'runner', attrs: ['agi'], style: 'rangedFocus', implants: ['reflex', 'optic', 'dermal', 'adrenal'], drink: 'sour' },
+    clerk: { bg: 'clerk', attrs: ['int'], style: 'auto', implants: ['neural', 'synapse', 'dermal', 'pain'], items: { ion: 2, thermal: 2 }, drink: 'tonic' },
+    preacher: { bg: 'preacher', attrs: ['cha'], style: 'auto', implants: ['voice', 'dermal', 'pain', 'adrenal'], drink: 'rum' },
+    dealer: { bg: 'dealer', attrs: ['cha', 'agi'], style: 'auto', implants: ['voice', 'reflex', 'dermal', 'adrenal'], drink: 'rum' },
+    ghost: { bg: 'ghost', attrs: ['str'], style: 'auto', implants: ['myomer', 'pain', 'dermal', 'adrenal'], drink: 'gin' },
+    medic: { bg: 'medic', attrs: ['int', 'cha'], style: 'auto', implants: ['neural', 'dermal', 'pain', 'adrenal'], drink: 'tonic' },
+  };
+  const coopDepth = (pair, ranks = +(process.env.TRAIN || 8)) => {
+    const res = [];
+    for (let i = 0; i < OPS; i++) {
+      const rng = E.seededRng(9000 + i), s = E.newGame(rng), st = STYLES[process.env.CSTYLE || 'standard'];
+      s.coop = true; s.meta.training = { hp: ranks, atk: ranks, def: ranks, spd: ranks }; s.meta.cell = ['stash', 'kit', 'cache', 'ledger', 'mentor'];
+      E.createChar(s, rng, draft(s, rng, pair[0]), 'char'); E.createChar(s, rng, draft(s, rng, pair[1]), 'char2'); s.screen = 'town';
+      let n = 0;
+      while (s.char && s.char2 && s.screen !== 'death' && n++ < 25) {
+        for (let w = 0; w < 2; w++) E.withActor(s, w, () => { shop(s, pair[w], st, { noBuy: true }); s.char.hp = E.stats(s).maxHp; });
+        raid(s, rng, pair, st, 'garrison', Math.max(...E.insertionsAt(s.char, 'garrison', 0)));
+        s.coopFallen = null;
+      }
+      res.push(Math.max(...[s.char, s.char2].filter(Boolean).map((c) => c.deepest || 0), s.outcome && s.outcome.sector || 0));
+    }
+    return avg(res);
+  };
+  const pairs = (process.env.PAIRS || 'medic+foundry,medic+runner,medic+clerk,medic+preacher,medic+dealer,medic+ghost,medic+medic,foundry+runner,foundry+foundry,foundry+clerk,runner+clerk,preacher+dealer,ghost+foundry,dealer+runner,clerk+preacher,ghost+dealer').split(',');
+  for (const p of pairs) {
+    const pair = p.split('+').map((k) => NAT[k]);
+    const depth = coopDepth(pair);
+    const res = []; if (!process.env.NOCAMP) for (let i = 0; i < CAMP; i++) res.push(campaign(4000 + i, pair, process.env.CSTYLE || 'standard'));
+    const med = (n) => { const a = res.map((r) => r[n] && r[n].raids).filter((v) => v != null); return a.length ? pct(a, 0.5) : '-'; };
+    console.log(`PAIR ${p} depth ${depth.toFixed(2)} raids15 ${med(15)} finish ${res.length ? Math.round(res.filter((r) => r[15]).length / res.length * 100) : '-'} death ${res.length ? Math.round(avg(res.map((r) => r.deaths / Math.max(1, r.raids))) * 100) : '-'} wipes ${res.length ? Math.round(avg(res.map((r) => r.wipes / Math.max(1, r.raids))) * 100) : '-'}`);
   }
 }

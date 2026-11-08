@@ -106,7 +106,7 @@ function cleanRow(e) {
   const name = label(e.name, 40), nums = { number: whole(e.number, 1e6), level: whole(e.level, 999), raids: whole(e.raids, 1e5), kills: whole(e.kills, 1e7), bosses: whole(e.bosses, 1e5) };
   if (!name || !progress.length || Object.values(nums).includes(null)) return null;
   const top = progress.slice().sort((a, b) => b.threat - a.threat || b.best - a.best)[0];
-  return { id: e.id, name, background: label(e.background, 24), status: e.status, killer: e.status === 'died' ? label(e.killer, 40) : '', ...nums,
+  return { id: e.id, name, player: label(e.player, 16), background: label(e.background, 24), status: e.status, killer: e.status === 'died' ? label(e.killer, 40) : '', ...nums,
     map: top.map, threat: top.threat, deepest: top.best, freed: progress.filter((x) => x.threat === 0 && x.best >= 15).length,
     score: progress.reduce((t, x) => t + groundWorth(x.best, x.threat), 0) };
 }
