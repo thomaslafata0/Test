@@ -785,6 +785,7 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .mast-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; margin-top: 6px; } .mast { padding: 8px; border: 1px solid var(--line); border-radius: 8px; } .mast.mine { border-color: var(--sodium); }
 .mast-head { display: flex; justify-content: space-between; } .mast-lv { color: var(--sodium); letter-spacing: 1px; }
 .spec-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 6px; } .spec { display: grid; gap: 2px; text-align: left; padding: 5px 6px; border: 1px solid var(--line); border-radius: 6px; background: #0003; color: inherit; font: inherit; cursor: pointer; } .spec span { font-size: .7rem; color: var(--muted); } .spec.on { border-color: var(--sodium); background: #e8973a1c; }
+.lounge-walk { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin: 8px 0; }
 .girl-card { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; align-items: center; max-width: 620px; background: radial-gradient(80% 120% at 15% 80%, #ff4fb833, #0000 60%), var(--panel); border-color: #ff6ad588; }
 .girl-card-art { display: grid; place-items: end center; min-width: 120px; } .girl-card h2 { margin: 2px 0 6px; } .girl-card .hostess-greet { font-style: italic; color: #ffb3e6; }
 .modal.lounge-result.night { background: linear-gradient(90deg, #0b0612ee 0 52%, #0b061299), url(town/street/night.png) center / cover no-repeat, #120a18; border-color: #ff6ad588; image-rendering: pixelated; animation: night-in .9s ease-out; }
@@ -3896,7 +3897,7 @@ function girlView() {
   const why = c.booked ? 'The girls are booked until you\u2019ve been out on another raid.' : c.credits < cost ? `She costs ${cr(cost)} tonight. You have ${cr(c.credits)}.` : '';
   return `<div class="modal-wrap" data-a="closemodal"><div class="modal girl-card" role="dialog" aria-modal="true" aria-label="${esc(g.name)}">
     <div class="girl-card-art">${hostessFig(g, 220)}</div>
-    <div class="girl-card-body"><span class="label">${esc(g.tag)}</span><h2>${esc(g.name)}</h2>${greet ? `<p class="hostess-greet">\u201c${esc(greet)}\u201d</p>` : ''}<p class="muted small">${esc(g.desc)}</p>
+    <div class="girl-card-body"><span class="label">${esc(g.tag)}</span><h2>${esc(g.name)}</h2>${greet ? `<p class="hostess-greet">${esc(greet)}</p>` : ''}<p class="muted small">${esc(g.desc)}</p>
       <p class="small">A night leaves a permanent mark on ${esc(c.name.split(' ')[0])}: usually good, about one in three not.</p>
       <div class="btnrow"><button class="btn primary big" data-a="lounge" data-v="${g.id}" ${why ? 'disabled' : ''}>Spend the night \u00b7 ${cr(cost)}</button><button class="btn" data-a="closemodal">Not tonight</button></div>${why ? `<p class="muted small">${esc(why)}</p>` : ''}</div></div></div>`;
 }
@@ -3910,6 +3911,7 @@ function loungeView() {
       <button class="btn ${c.booked ? '' : 'primary'}" data-a="lounge" data-v="${g.id}" ${c.booked || c.credits < cost ? 'disabled' : ''}>${c.booked === g.id ? 'Tonight' : `Spend the night \u00b7 ${cr(cost)}`}</button></div>`;
   return `<p class="muted">${cost} credits tonight (each night costs 10% more). Every night leaves a permanent mark on ${esc(c.name.split(' ')[0])}: usually a good one, about one in three not, and a good night sometimes clears an old bad one. One visit per trip home; who\u2019s working changes every night.</p>
     ${last ? `<div class="notice lounge-res ${last.bad ? 'bad' : 'good'}"><b>${esc(last.girl)}:</b> ${esc(last.text)} <b>${esc(E.favText(last.fx))}.</b></div>` : ''}
+    ${isGuest() ? '' : '<div class="notice lounge-walk"><span>Tonight\u2019s girls are waiting through the curtain at the back of the Lantern.</span><button class="btn primary" data-a="backroom">Walk to the back room</button></div>'}
     <div class="hostesses">${lineup.map(card).join('')}</div>
     <p class="muted small">${total ? `Marks on this operative: <b>${esc(total)}</b>. They stay until this operative is gone.` : 'No marks yet.'}${c.booked ? ' The girls are booked until you\u2019ve been out on another raid.' : ''}</p>`;
 }
@@ -4772,6 +4774,7 @@ function applyAct(a, v, k) {
     case 'newspage': newsPage = +v; sfx('click'); break;
     case 'mutator': ok = E.toggleMutator(state, v); sfx('click'); break;
     case 'hidetab': state.hideTab = v; sfx('click'); break;
+    case 'backroom': modal = null; state.popup = null; if (town.interiorId !== 'lantern' && town.interiorId !== 'lounge') { const d = town.doors.find((q) => q.id === 'lantern'); if (d) town.enter(d); } if (town.interiorId === 'lantern') town.enterBack(); sfx('door'); break;
     case 'guideclaim': { const x = GUIDE.find((q) => q.id === v), g = state.meta.guide = state.meta.guide || {}; g.claimed = g.claimed || []; ok = !!x && x.done(state.meta) && !g.claimed.includes(v); if (ok) { g.claimed.push(v); state.meta.resolve += 1; state.meta.totalResolve += 1; toast = `+1 ${S.meta}: ${x.text.toLowerCase()}.`; sfx('perk'); } break; }
     case 'pickspec': { const [cls, i] = String(v).split(':'); ok = E.pickSpec(state, cls, +i); sfx('click'); break; }
     case 'guideoff': (state.meta.guide = state.meta.guide || {}).off = true; sfx('click'); break;
