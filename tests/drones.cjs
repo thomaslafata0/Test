@@ -38,7 +38,7 @@ const saved = (p) => p.evaluate(() => JSON.parse(localStorage.getItem('cinder-ce
   console.log('PASS an old operative gets one free pick');
   await p.click('button[data-a="droneup"]'); await p.waitForTimeout(200);
   s = await saved(p);
-  assert.strictEqual(s.char.drone.rank, 2); assert.strictEqual(s.meta.resolve, 0);
+  assert.strictEqual(s.char.drone.rank, 2); assert.strictEqual(s.meta.resolve, 5 - 4); // rank 2 costs 4
   console.log('PASS upgrading with Resolve');
   await ctx.close();
 

@@ -14,7 +14,7 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   // An existing player with a save and an old co-op name still gets asked once.
   await p.evaluate(async () => { localStorage.clear(); const E = await import('./engine.js'), rng = E.seededRng(3), s = E.newGame(rng); E.createChar(s, rng); s.screen = 'town';
     s.meta.board = [{ id: 'x1', tag: 'x1', name: 'Vera Kade', player: 'Tommy', number: 4, background: 'medic', level: 7, status: 'alive', score: 2400, map: 'garrison', threat: 0, deepest: 9, freed: 0 }];
-    localStorage.setItem('cinder-cell-save-v1', JSON.stringify(s)); localStorage.setItem('cinder-cell-news', 'afterhours'); localStorage.setItem('cinder-cell-coop', JSON.stringify({ relay: '', name: 'Vera' })); });
+    localStorage.setItem('cinder-cell-save-v1', JSON.stringify(s)); localStorage.setItem('cinder-cell-news', 'reach'); localStorage.setItem('cinder-cell-coop', JSON.stringify({ relay: '', name: 'Vera' })); });
   await p.reload(); await p.waitForTimeout(900);
   check('existing players are asked for a player name', await p.locator('.name-gate').count() === 1);
   check('it starts from the saved co-op name', (await p.inputValue('#player-name')) === 'Vera');

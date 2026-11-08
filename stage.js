@@ -15,10 +15,12 @@ const HD_HEIGHT = { player: 146, partner: 124, patrol: 112, probe: 66, officer: 
   welder: 66, foreman: 112, loader: 112, slagger: 114, jailer: 108, sedation: 108, dockguard: 112, gunner: 112, brask: 122, crucible: 128, kell: 116, vane: 116,
   smallbot: 62, bulwark: 62, spotweld: 60, slagrunt: 60, cuffbot: 60, gasbot: 62, mortarbot: 66, deckbot: 60,
   stoker: 110, hookbot: 84, castguard: 116, warder: 116, orderly: 108, customs: 112, tetherdrone: 64, exo: 122,
-  dray: 120, slagmother: 132, hale: 120, restraint: 126, voight: 116, venn: 118, pell: 112, gantry: 134, imre: 122 };
+  dray: 120, slagmother: 132, hale: 120, restraint: 126, voight: 116, venn: 118, pell: 112, gantry: 134, imre: 122,
+  colonist: 112, skitter: 58, terraformer: 124, stalker: 104, rask: 128, broodqueen: 150, lancer: 140, saal: 124 };
 // Fighters whose own sheet isn't in yet borrow one that fits, worn in the map's colours. Each lookup checks for the real
 // sheet first, so it takes over the moment hd.json lists it, with nothing to change here.
-const STAND_IN = { dray: 'halvek', slagmother: 'crucible', hale: 'brask', restraint: 'crawler', voight: 'interrogator', venn: 'kell', pell: 'officer', gantry: 'loader', imre: 'ostrane',
+// Halcyon Reach borrows these until its own art is in, recoloured in the map's light.
+const STAND_IN = { colonist: 'dockguard', skitter: 'hound', terraformer: 'sentinel', stalker: 'hound', rask: 'brask', broodqueen: 'crawler', lancer: 'gantry', saal: 'imre', dray: 'halvek', slagmother: 'crucible', hale: 'brask', restraint: 'crawler', voight: 'interrogator', venn: 'kell', pell: 'officer', gantry: 'loader', imre: 'ostrane',
   stoker: 'foreman', hookbot: 'welder', castguard: 'shock', warder: 'riot', orderly: 'jailer', customs: 'dockguard', tetherdrone: 'probe', exo: 'shock' };
 const MELEE = new Set(['hound', 'riot', 'loader', 'brask', 'foreman', 'slagger', 'jailer', 'sedation', 'bulwark', 'spotweld', 'cuffbot', 'stoker', 'warder', 'orderly', 'exo', 'hale', 'venn']);
 // Charge poses that were drawn to loop from their first frame. The rest settle into a brace and breathe on their last frames.
@@ -176,7 +178,7 @@ function sheetFor(id) {
   return alt && sheets[alt] ? [alt, sheets[alt]] : [id, null];
 }
 // Enemies shared between maps wear that map's colours. Recoloured once per enemy and map, in code. Bright glows (eyes, muzzles) keep their colour.
-const MAP_TINT = { foundry: [1, 0.72, 0.52, 0.42, 0.86], detention: [0.62, 0.78, 1, 0.48, 0.92], port: [0.96, 1, 1.06, 0.55, 1.28] };
+const MAP_TINT = { foundry: [1, 0.72, 0.52, 0.42, 0.86], detention: [0.62, 0.78, 1, 0.48, 0.92], port: [0.96, 1, 1.06, 0.55, 1.28], reach: [0.82, 0.7, 1.12, 0.5, 1.05] };
 const TINTED = new Set(['probe', 'officer', 'hound', 'riot', 'marksman', 'interrogator', 'shock', 'sentinel', 'crawler', 'ostrane']);
 const tintCache = {};
 function tintedSheet(id, theme) {
@@ -1083,6 +1085,18 @@ export class Stage {
         await this.wait(300);
         if (ev.pdmg) { this.flash(P, '#ff8a3c', 250); this.popup('player', `\u2212${ev.pdmg}`, 'heavy'); } else this.popup('player', 'Behind cover', 'info');
         if (ev.edmg) { this.flash(E, '#ff8a3c', 250); this.popup('enemy', `\u2212${ev.edmg}`, 'heavy'); }
+        this.setHp('player', ev.php); this.setHp('enemy', ev.ehp);
+        await this.wait(450);
+        break;
+      }
+      case 'env:storm': {
+        // A wall of glowing spores drifts across the field.
+        this.popup('player', 'Spore storm!', 'heavy');
+        for (let i = 0; i < 40; i++) setTimeout(() => this.burst(W + 10 - (i / 40) * (W + 20), 40 + Math.random() * 160, 2, i % 2 ? '#9dff6a' : '#c88cff', 0.5, 1100, -0.01, 4), i * 16);
+        await this.wait(380);
+        if (ev.pdmg) { this.flash(P, '#9dff6a', 260); this.popup('player', `\u2212${ev.pdmg}`, 'heavy'); } else this.popup('player', 'Sheltered', 'info');
+        for (const st of ev.statuses || []) this.popup('player', st.toUpperCase(), `st-${st}`);
+        if (ev.edmg) { this.flash(E, '#9dff6a', 260); this.popup('enemy', `\u2212${ev.edmg}`, 'heavy'); }
         this.setHp('player', ev.php); this.setHp('enemy', ev.ehp);
         await this.wait(450);
         break;

@@ -222,6 +222,51 @@ export const BOSS_MOVES = {
       winded: 'It rocks back on its legs: Exposed.',
     },
   },
+  rask: {
+    siege: {
+      name: 'Drill Charge',
+      tip: 'A x2.8 plasma drill run. Ion pulse, or 10% of his HP first, jams the bit. Defend takes a third.',
+      fail: 'Your fire jams the drill bit. It screams and stops.',
+      ion: 'The ion pulse kills the drill motor. Rask hammers the housing.',
+    },
+    overtime: {
+      name: 'Rig Swing',
+      tip: 'Two swings at x0.9, then the rig overbalances: Exposed for 2 turns. Defend, then hit it.',
+      winded: 'The rig overbalances: Exposed.',
+    },
+  },
+  broodqueen: {
+    roll: {
+      name: 'Brood Burst',
+      tip: 'Her egg sacs swell: +50% damage. Deal 12% of her HP now to burst them early and stagger her.',
+      tipNext: 'Brood burst, x2.2. Defend halves it.',
+      fail: 'You burst the sacs before they ripen. She reels.',
+      charge: 'The egg sacs pulse and swell. Something is about to hatch.',
+    },
+    anchor: {
+      name: 'Tendril Grab',
+      tip: 'x1.7, then held 2 turns: no Run. Defend blocks the grab. Strike the tendril now for +30%.',
+    },
+  },
+  lancer: {
+    siege: {
+      name: 'Rail Lance',
+      tip: 'A x3 rail shot. Ion pulse, or 10% of its HP first, breaks the charge. Defend takes a third.',
+      fail: 'Your fire knocks the lance off its line. The charge earths into the pad.',
+      ion: 'The ion pulse dumps the lance coils. The Lancer staggers.',
+    },
+    lights: {
+      name: 'Chaff Burst', chip: 'Chaff',
+      tip: 'For 2 turns you can\u2019t read it and shots miss 25% of the time. A scanner still can. Strike can\u2019t miss.',
+    },
+  },
+  saal: {
+    salute: {
+      name: 'The Governor\u2019s Draw',
+      tip: 'His next shot is a sure crit, x1.7. Shoot back and yours is too. The staff parries Strikes for half. Or Defend.',
+    },
+    audit: { name: 'The Ledger', tip: 'x{x} right now: x1.2 plus 0.4 per item you used this fight, up to x3.2. Defend halves it.' },
+  },
   imre: {
     shutter: {
       name: 'Shield Projector', chip: 'Shield', blocked: 'His shield is up',
@@ -1049,6 +1094,114 @@ export const BOSS_SCRIPT = {
     victoryNote: 'The yard crates read warm on the customs scanner. Pell stamps them anyway. Nobody opens them.',
   },
 
+  rask: {
+    intro: [
+      '\u201cBack for another shift? Good. We\u2019re short.\u201d Rask cracks his neck.',
+      'Rask leans on the drill rig. \u201cYou cost me a week of ore last time.\u201d',
+    ],
+    firstIntro: [
+      'Overseer Rask climbs out of the drill rig\u2019s cab. \u201cQuota\u2019s short. You\u2019ll do.\u201d',
+      '\u201cEvery crate off the lift comes down here. They dig, or they don\u2019t eat.\u201d',
+    ],
+    phase: {
+      75: ['\u201cThat\u2019s coming out of your rations.\u201d', 'Rask spits into the dust. \u201cStill standing. Good. Strong back.\u201d'],
+      50: ['Rask spins the drill up to full and grins.', '\u201cPit crew, get the big bit. We\u2019re going deep.\u201d'],
+      25: ['The rig\u2019s cooling fins glow red. Rask doesn\u2019t notice.', '\u201cI make quota. I always make quota!\u201d'],
+    },
+    taunt: ['\u201cDown you go. The pit takes everybody.\u201d', '\u201cYou\u2019d make a good digger. Shame.\u201d'],
+    playerLow: ['The thin air burns. Your mask hisses for more than it has.', 'Somewhere below, picks are still swinging. They haven\u2019t stopped for you.'],
+    signature: {
+      siege: ['\u201cStand still. This won\u2019t take long.\u201d The drill screams.', 'Rask lowers the drill like a lance and charges.'],
+      overtime: ['The rig\u2019s arms swing wide.', '\u201cOut of my pit!\u201d Both rig arms come round.'],
+    },
+    defeat: ['Rask crashes into the ore cart. His crew haul him back to the domes.', 'The rig seizes. They drag Rask out of the cab, swearing.'],
+    firstDefeat: [
+      'Rask is on his back in the dust. The diggers have stopped. They\u2019re watching.',
+      'They have yard faces. Some of them you knew. They were on the crates.',
+      '\u201cThey\u2019re alive, aren\u2019t they? You wanted them alive.\u201d Rask laughs. \u201cThis is alive.\u201d',
+    ],
+    victoryNote: 'The people on the crates are here, digging. They\u2019re alive. The Governor keeps them that way on purpose.',
+  },
+
+  broodqueen: {
+    intro: ['The cave smells like wet bread and rust. She\u2019s been waiting.', 'The eggs turn towards you. Then she does.'],
+    firstIntro: [
+      'The cave wall moves. It isn\u2019t a wall. A broodmother uncoils over her eggs.',
+      'There are tags on her carapace. Directorate tags. Somebody has been feeding her.',
+    ],
+    phase: {
+      75: ['She hisses, and the whole cave hisses with her.', 'The eggs pulse faster.'],
+      50: ['The Brood Queen rears up over her clutch and screams.', 'Spores pour off her like smoke.'],
+      25: ['She is bleeding acid into the egg pools. She doesn\u2019t care.', 'She stops guarding the eggs and comes straight for you.'],
+    },
+    taunt: ['She clicks, low and slow, like counting.', 'A tendril tastes the air where you were.'],
+    playerLow: ['The spores are in your mask now. Everything glows at the edges.', 'You can hear the eggs. You wish you couldn\u2019t.'],
+    signature: {
+      roll: ['The egg sacs on her back swell and pulse.', 'Her back splits open. Something inside is ready.'],
+      anchor: ['A tendril whips out of the dark.', 'She reaches for you with something that isn\u2019t an arm.'],
+    },
+    defeat: ['She folds over her clutch and goes still. The cave goes quiet.', 'She drags herself into the deep tunnels, trailing acid.'],
+    firstDefeat: [
+      'She sinks down over her eggs. Under her, half buried, a Directorate feeding chute.',
+      'The chute is labelled. Ration line, Kessa Yard. Surplus.',
+      'They weren\u2019t feeding her rations. They were feeding her the people who stopped digging.',
+    ],
+    victoryNote: 'The ones who stop digging go down the chute. The Governor calls it waste management.',
+  },
+
+  lancer: {
+    intro: ['The Lancer turns on its cradle. It remembers you.', 'The relay pad hums. The Lancer is already charging.'],
+    firstIntro: [
+      'The relay pad shudders as the Orbital Lancer drops from its cradle, rail lance humming.',
+      'A recorded voice: \u201cRelay defence active. All transmissions are the property of the Governor.\u201d',
+    ],
+    phase: {
+      75: ['\u201cHull breach logged. Billing the responsible party.\u201d', 'The Lancer recalculates. Its lance swings to you.'],
+      50: ['The Lancer vents its coils. The lance glows white along its length.', '\u201cEscalating. Escalating. Escalating.\u201d'],
+      25: ['Sparks pour from the cradle mounts. It fires anyway.', '\u201cRelay integrity critical. Defend the relay. Defend the relay.\u201d'],
+    },
+    taunt: ['\u201cTarget suppressed.\u201d', '\u201cNo transmission will leave this world.\u201d'],
+    playerLow: ['The gas giant fills the sky. It doesn\u2019t care either way.', 'Your ears are ringing from the last shot. Or the relay is.'],
+    signature: {
+      siege: ['The lance begins to glow. The pad shakes.', '\u201cCharging. Do not move.\u201d'],
+      lights: ['Chaff bursts from its shoulders. You lose it in the glitter.', 'The air fills with spinning foil.'],
+    },
+    defeat: ['The Lancer slumps in its cradle, coils dark. Repair drones swarm it.', 'It falls back into the cradle. The relay goes quiet for the first time.'],
+    firstDefeat: [
+      'With the Lancer down, the relay opens. It\u2019s been jamming every signal off this world.',
+      'Someone in the domes has been transmitting the same message for months. Names. Hundreds of names.',
+      'You patch it through to the yard. For the first time, the yard can hear them.',
+    ],
+    victoryNote: 'The relay is open. The yard can hear the colony now: names, and a request. Come and get us.',
+  },
+
+  saal: {
+    intro: ['\u201cYou again. Do sit. No? Pity.\u201d', 'Saal turns a page in the ledger. \u201cYou are an expensive habit.\u201d'],
+    firstIntro: [
+      'Governor Saal does not get up from the throne. \u201cThey sent you all this way. How thrifty.\u201d',
+      '\u201cEvery crate from your yard is in this ledger. Every one of them is useful. Are you?\u201d',
+    ],
+    phase: {
+      75: ['\u201cThat was a very expensive vase.\u201d', 'Saal makes a note in the ledger without looking down.'],
+      50: ['Saal finally rises from the throne, staff in hand.', '\u201cVery well. I will see to this myself.\u201d'],
+      25: ['The spire doors seal. \u201cNobody leaves until the books balance.\u201d', 'Saal\u2019s regalia sparks. He doesn\u2019t notice.'],
+    },
+    taunt: ['\u201cMark it. One raider, written off.\u201d', '\u201cYou were never in the ledger. Nobody will miss the entry.\u201d'],
+    playerLow: ['The window behind the throne looks out over the whole colony. Every dome is lit.', 'You think of the names on the relay. You get up.'],
+    signature: {
+      salute: ['Saal levels the staff like a duelling pistol. \u201cOne shot each. Civilised.\u201d', '\u201cBy decree of the Governor: hold still.\u201d The staff glows.'],
+      audit: ['Saal opens the ledger. \u201cLet us see what you owe.\u201d', '\u201cEvery stim. Every charge. It\u2019s all written down.\u201d'],
+    },
+    defeat: ['Saal falls across the ledger. His guards carry him out through the back of the spire.', 'The staff cracks. Saal is dragged away still shouting figures.'],
+    firstDefeat: [
+      'The ledger lies open on the floor. Every page is a name from the yard, and a number.',
+      'The last page is the Directorate\u2019s seal, and a signature from the Supervisor.',
+      'Out of the window, the colony lights are coming on, one dome at a time. Someone is opening the doors.',
+      'Halcyon Reach is free. Whatever the Directorate sends next, it will have to come a long way.',
+    ],
+    victoryNote: 'The ledger names the Supervisor. The colony is free, and it remembers who sent it here.',
+  },
+
   gantry: {
     intro: [
       'The Walker swings off the gantry. The cab radio: \u201CNot you again. Please just go home.\u201D',
@@ -1215,6 +1368,14 @@ export const MAP_INTROS = {
       'Holding Pens and Cell Block A. People look up when you pass, then look back at the door.',
       'Isolation, the Infirmary, Records. Nobody in the files is marked dead. You check twice.',
       'Past Solitary, the Transfer Dock. The beds are clean. Somebody wants these people healthy.',
+    ],
+  },
+  reach: {
+    arrive: 'The lift doors open on a violet sky and a gas giant that fills half of it. The air tastes of mushrooms and rust.',
+    bands: [
+      'The Landing Zone and the Hab Domes. Every dome has a number and a quota on the door.',
+      'The Glowcap Forest. Things move in the fungus that aren\u2019t in any Directorate survey.',
+      'The Relay Road. Every antenna points up, and every one of them is jammed.',
     ],
   },
   port: {

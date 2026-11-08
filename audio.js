@@ -235,7 +235,7 @@ export function press(kind) { lastPress = Date.now(); play(kind); }
 
 // ---------- ambience: a low drone that changes per map, plus optional filtered rain (off by default) ----------
 let currentTheme = null;
-const DRONES = { garrison: [55, 82.4], foundry: [49, 73.4], detention: [61.7, 92.5], port: [65.4, 98], town: [58.3, 87.3] };
+const DRONES = { garrison: [55, 82.4], foundry: [49, 73.4], detention: [61.7, 92.5], port: [65.4, 98], reach: [43.7, 65.4], town: [58.3, 87.3] };
 export function setAmbience(theme) {
   currentTheme = theme;
   if (!ctx) return;

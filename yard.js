@@ -57,11 +57,11 @@ export const PLACES = {
     { id: 'tower', x: 648, y: 75, r: 58, stand: [590, 320], prompt: 'look up', lines: ['The water tower. The Directorate tested the water last month and nobody saw the results.', 'A kid has climbed it and painted a fist on the tank. Nobody has painted over it yet.'] },
   ],
   folk: [
-    { id: 'vendor', x: 100, y: 366, h: 110, lines: ['The Lantern\u2019s open. Go on in, the house is hungry.', 'Drinks at the bar, wheel in the back. Nobody saw you.', 'Curfew stops at the door. Debts don\u2019t.'] },
-    { id: 'kid', x: 250, y: 320, h: 87, wander: { x: [216, 300], y: [292, 346] }, lines: ['Are you one of them? The cell?', 'I can run messages. I\u2019m fast.', 'My dad worked the casting floor. Before.', 'The guard\u2019s scared of the dark. I saw him.'] },
-    { id: 'worker', x: 500, y: 300, h: 134, lines: ['Double shift again. The quota went up.', 'Crawler\u2019s been broken for a month. They fine us for it.', 'Heard someone hit the garrison last night. Wasn\u2019t me.', 'Don\u2019t stand near the vent. It bites.'] },
+    { id: 'vendor', x: 100, y: 366, h: 110, lines: ['The Lantern\u2019s open. Go on in, the house is hungry.', 'Drinks at the bar, wheel in the back. Nobody saw you.', 'Curfew stops at the door. Debts don\u2019t.', 'The new girls at the Lantern? Nova bit a Directorate captain. Allegedly.', 'Wheel\u2019s hot tonight. That\u2019s what I tell everyone.', 'If you\u2019re buying, the croupier takes yard scrip. Mostly.', 'Somebody keeps leaving flowers by the back door of the Lantern.'] },
+    { id: 'kid', x: 250, y: 320, h: 87, wander: { x: [216, 300], y: [292, 346] }, lines: ['Are you one of them? The cell?', 'I can run messages. I\u2019m fast.', 'My dad worked the casting floor. Before.', 'The guard\u2019s scared of the dark. I saw him.', 'Is it true there\u2019s another world up the lift? With purple sky?', 'When I\u2019m big I\u2019m going to fight the Governor.', 'I found a bullet. Do you want it? It\u2019s lucky.', 'Mum says not to talk to the cell. Mum isn\u2019t here.'] },
+    { id: 'worker', x: 500, y: 300, h: 134, lines: ['Double shift again. The quota went up.', 'Crawler\u2019s been broken for a month. They fine us for it.', 'Heard someone hit the garrison last night. Wasn\u2019t me.', 'Don\u2019t stand near the vent. It bites.', 'My brother went up the lift on a crate. They said he\u2019s mining. They said.', 'Union meeting\u2019s cancelled. The union\u2019s cancelled.', 'You look like you could use a drink. So could I. Can\u2019t afford one.', 'They put new cameras on the terminal. Smile.'] },
   ],
-  patrol: { id: 'patrol', route: [[250, 200], [440, 190], [530, 300], [400, 360], [200, 340], [205, 260]], h: 140, lines: ['Papers.', 'Curfew\u2019s at dusk. Move along.', 'Keep walking, citizen.', 'Nothing to see. Keep moving.'] },
+  patrol: { id: 'patrol', route: [[250, 200], [440, 190], [530, 300], [400, 360], [200, 340], [205, 260]], h: 140, lines: ['Papers.', 'Curfew\u2019s at dusk. Move along.', 'Keep walking, citizen.', 'Nothing to see. Keep moving.', 'Eyes down, citizen.', 'Did you hear something? No. You didn\u2019t.', 'This is a quiet yard. Keep it quiet.'] },
   lights: [
     { x: 646, y: 340, r: 52, color: '#ff7a2a', kind: 'fire', a: 0.42 },
     { x: 118, y: 160, r: 40, color: '#4fe0d0', kind: 'neon', a: 0.2 },
@@ -429,6 +429,7 @@ export class Town {
     window.addEventListener('keydown', (ev) => {
       if (!this.active || ev.metaKey || ev.ctrlKey || ev.altKey) return;
       if (/^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName)) return;
+      if (this.led) return; // being led out back: hands off the controls
       const k = ev.key.toLowerCase();
       if (DIR[k]) { this.keys.add(DIR[k]); this.player.path = null; this.player.then = null; ev.preventDefault(); }
       else if (k === 'e' || k === ' ' || k === 'enter') { this.interact(); if (k === ' ') ev.preventDefault(); }
@@ -523,12 +524,47 @@ export class Town {
       else { this.speak(h.id, pick(h.lines), n.x, n.y); play('click'); }
     }
   }
+  // An E-Girl takes your hand and walks you out the back. done() runs once you're through the door, or straight away
+  // when her town art isn't in (the result still shows). id is the hostess id; her town sheet is girl_<id>.
+  escort(id, line, done) {
+    const key = `girl_${id}`;
+    if (!this.active || !this.hdOf(key)) { done(); return; }
+    const p = this.player, it = this.interior;
+    this.keys.clear(); this.press = null;
+    const side = p.x > VIEW_W / 2 ? -1 : 1;
+    this.led = { id: key, x: p.x + side * 60, y: p.y, face: -side, moving: false, t: 0, done, phase: 'meet' };
+    if (line) this.speak('girl', line, this.led.x, p.y - this.figureAt(p.y) - 10, 2600);
+    // Out back: the far wall of the room, away from the street door; outside, the Lantern's own door.
+    const target = it ? [it.exit[0] < 1 ? VIEW_W - 50 : 50, FLOOR.y0 + 4] : [PLACES.buildings.find((b) => b.id === 'lantern').door[0], PLACES.buildings.find((b) => b.id === 'lantern').door[1]];
+    setTimeout(() => {
+      if (!this.led) return;
+      this.led.phase = 'walk';
+      this.walkTo(target[0], target[1], () => this.endEscort());
+      setTimeout(() => this.endEscort(), 6000); // never strand the player if the path can't finish
+    }, 900);
+  }
+  endEscort() {
+    const e = this.led;
+    if (!e || e.phase === 'gone') return;
+    e.phase = 'gone';
+    this.flash();
+    setTimeout(() => { const d = e.done; this.led = null; this.say = null; if (d) d(); }, 450);
+  }
+  updateEscort(dt) {
+    const e = this.led;
+    if (!e || e.phase === 'gone') return;
+    e.t += dt;
+    const p = this.player, gx = p.x - (p.face || 1) * 30, gy = p.y + 2, dx = gx - e.x, dy = gy - e.y, d = Math.hypot(dx, dy);
+    if (e.phase === 'meet' || d < 2) { e.moving = false; if (e.phase === 'meet') e.face = p.x < e.x ? -1 : 1; return; }
+    const step = Math.min(d, 190 * dt); e.x += (dx / d) * step; e.y += (dy / d) * step; e.moving = true; if (Math.abs(dx) > 1) e.face = Math.sign(dx);
+  }
   speak(who, text, x, y, ms = 2800) { this.say = { text, x, y, until: performance.now() + ms }; }
 
   // How tall someone stands at this y, right now.
   figureAt(y) { return this.interior ? ROOM.figure : FIG * depthAt(y); }
   // A tap: a person, then a thing, then a building, and otherwise just walk there.
   tapAt(x, y) {
+    if (this.led) return;
     const p = this.player, it = this.interior, m = this.partner;
     const onFigure = (f, h) => Math.abs(x - f.x) < Math.max(24, h * 0.26) && y > f.y - h && y < f.y + 14;
     const beside = (f) => f.x + (p.x < f.x ? -34 : 34);
@@ -580,6 +616,7 @@ export class Town {
     if (this.interior) this.updateRoom(dt); else this.updateYard(dt);
     p.t += dt;
     this.updatePartner(dt);
+    this.updateEscort(dt);
     this.updateFolk(dt);
     if (!reduceMotion) this.updateEffects(dt);
   }
@@ -906,6 +943,8 @@ export class Town {
     }
     add('player', p.x, p.y, this.figureAt(p.y), p.moving, p.dir, p.face, p.t, 1);
     if (m && m.scene === this.scene) add('partner', m.x, m.y, this.figureAt(m.y), m.moving, m.dir, m.face, m.t, 1);
+    const eg = this.led;
+    if (eg && eg.phase !== 'gone') add(eg.id, eg.x, eg.y, this.figureAt(eg.y) * 0.96, eg.moving, eg.face < 0 ? 'left' : 'right', eg.face, eg.t, -1);
     list.sort((a, b) => a.y - b.y);
     for (const o of list) {
       if (it) o.h *= 1 + (o.y - MID_Y) * 0.002; // a touch bigger nearer the viewer

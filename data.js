@@ -61,6 +61,11 @@ export const BACKGROUNDS = [
     perks: ['Each fight, cut the deck: red +15% damage, black \u221215% damage taken, a face card makes your first hit critical', 'Pick a Card: you see the suit, then throw it (stun, bleed or steal credits)', 'Steel-edged deck and a card edge'],
     perk: 'Stacked deck: every fight starts with a cut. Red: +15% damage. Black: you take 15% less. A face card: your first hit is critical. Signature skill Pick a Card: the next suit is always showing. Hearts stun, spades bleed, diamonds steal credits.',
     desc: 'Ran the tables under the Lantern for the officers. Learned which of them cheat, and how.' },
+  { id: 'vex', name: 'Vex', unique: true, sprite: 'op_vex', attrs: { cha: 1, agi: 1 }, start: { gear: { ranged: 'smartpistol', melee: 'heelbaton' } },
+    unlock: { kind: 'lounge', spent: 5000, text: 'Spend 5,000 credits in the Lantern\u2019s E-Girl Room, all told, in one cell.' },
+    perks: ['Blown Kiss: a shot that charms humans and beasts (stunned 1 turn, \u221210% ATK)', '+8% dodge', '+10% credits', 'Smart pistol and a heel baton'],
+    perk: 'Heartbreaker: +8% dodge and +10% credits from everything. Signature skill Blown Kiss: a shot and a wink. Humans and beasts are charmed, stunned for a turn and 10% weaker (twice at most); bosses only lose the ATK. Droids just get shot.',
+    desc: 'Used to work the back room at the Lantern. Quit the night she found out where the crates go. Took her pistol with her.' },
   { id: 'ghost', name: 'The Foreman\u2019s Ghost', unique: true, sprite: 'ghost', attrs: { str: 2 }, start: { gear: { ranged: 'holdout', melee: 'loaderarm' } },
     unlock: { kind: 'liberated', map: 'foundry', text: 'Free the Foundry Works (beat its sector-20 boss).' },
     perks: ['+10 max HP, takes 8% less damage from droids', 'Strikes crack armour: \u22121 DEF a hit, up to \u22123', 'Overhaul: tear a part off, heal 6%, droids lose 15% ATK', 'Loader arm (melee)'],
@@ -83,6 +88,7 @@ export const SKILLS = {
   rally:     { name: 'Adrenal Shot',    short: 'Team hits 25% harder', cd: 5, desc: 'You and your partner deal 25% more damage for 3 rounds (30% when alone).', from: 'Field Medic' },
   triage:    { name: 'Triage',          short: 'Heal whoever needs it', cd: 3, desc: 'Heals whoever is worst off, you or your partner, by 22% of max HP (more with INT) and stops bleeding and burns.', from: 'Field Medic' },
   tag:       { name: 'Tag',             short: 'Shot that leaves it Exposed', cd: 3, desc: 'A shot that leaves the enemy Exposed for 2 turns: everyone hits it 25% harder. Alone it hits 40% harder too.', from: 'Field Medic' },
+  wink:      { name: 'Blown Kiss',      short: 'Shot that charms', cd: 4, desc: 'A x1 shot and a wink. Humans and beasts are charmed: stunned 1 turn and 10% weaker (twice at most). Bosses only lose the ATK. Droids just get shot.', from: 'Vex' },
   intimidate:{ name: 'Intimidate',      short: 'Scare a human off', cd: 99, desc: 'Once per sector. A human enemy may run. If not, its ATK drops 25% for the fight, up to 40% with high CHA. Bosses never run, so a boss just loses the ATK.', from: 'CHA 3' },
 };
 export const WEAPON_SKILL = { pistol: 'aimed', rifle: 'aimed', carbine: 'burst', scatter: 'blast', heavy: 'blast', tech: 'overload' };
@@ -117,6 +123,8 @@ export const GEAR = {
   marksman: { slot: 'ranged', tier: 5, name: 'Directorate Long Rifle', type: 'rifle',  atk: 17, cost: 760,  req: { agi: 6 }, crit: 0.15, desc: '+15% crit chance. Officer issue.' },
   cannon:   { slot: 'ranged', tier: 5, name: 'Shoulder Cannon',       type: 'heavy',   atk: 17, cost: 1000, req: { str: 7 }, spd: -1, desc: '\u22121 SPD. Adds STR to ATK like a melee weapon.' },
   // melee
+  smartpistol: { slot: 'ranged', tier: 0, name: 'Pink Smart Pistol',  type: 'pistol', atk: 5, cost: 0, crit: 0.06, desc: 'Finds the target for you. +6% crit. Vex\u2019s starting weapon.' },
+  heelbaton: { slot: 'melee', tier: 0, name: 'Heel Baton',            type: 'melee', atk: 2, cost: 0, crit: 0.06, desc: 'Collapsible, rhinestoned, shocking. +6% crit.' },
   deck:     { slot: 'ranged', tier: 0, name: 'Steel-Edged Deck',       type: 'pistol', atk: 4, cost: 0, crit: 0.08, desc: 'Fifty-two cards with ground edges. +8% crit. The Dealer\u2019s starting weapon.' },
   cardedge: { slot: 'melee', tier: 0, name: 'Card Edge',              type: 'melee', atk: 1, cost: 0, crit: 0.08, desc: 'A single card between two fingers. +8% crit.' },
   loaderarm:{ slot: 'melee', tier: 0, name: 'Loader Arm',             type: 'melee', atk: 4, cost: 0, desc: 'Welded on. It doesn\u2019t come off. The Ghost\u2019s starting weapon.' },
@@ -236,6 +244,8 @@ export const MELEE_COUNTER = {
   crucible: { name: 'Molten hull', status: { burn: 2 }, desc: 'Striking it sets you Burning.' },
   hound:    { name: 'Snapping jaws', status: { bleed: 2 }, desc: 'Get close and it bites: striking it leaves you Bleeding.' },
   slagger:  { name: 'Slag spatter', status: { burn: 2 }, desc: 'Molten slag splashes back: striking it sets you Burning.' },
+  skitter:  { name: 'Acid blood', status: { burn: 2 }, desc: 'Its blood is acid: striking it sets you Burning.' },
+  broodqueen: { name: 'Acid blood', status: { burn: 2 }, desc: 'Her blood is acid: striking her sets you Burning.' },
   shock:    { name: 'Shock baton', mult: 0.4, desc: 'Strikes against it are answered with a baton: you take 40% of its ATK.' },
   sentinel: { name: 'Arc field', mult: 0.4, desc: 'Its hull is live: striking it costs you 40% of its ATK.' },
   brask:    { name: 'Hammer fist', mult: 0.5, desc: 'Brask loves a brawl: strikes against him are met with 50% of his ATK.' },
@@ -252,15 +262,15 @@ export const ITEMS = {
 
 // Implants: installed at the clinic, lost on death. Slots: 2, +1 at INT 4 and INT 8.
 export const IMPLANTS = [
-  { id: 'reflex',  name: 'Reflex Booster',       cost: 150, desc: '+4 SPD.' },
-  { id: 'dermal',  name: 'Subdermal Plating',    cost: 180, desc: '+4 DEF.' },
-  { id: 'optic',   name: 'Targeting Optic',      cost: 160, desc: '+12% crit chance.' },
-  { id: 'pain',    name: 'Pain Editor',          cost: 200, desc: '+30 max HP.' },
-  { id: 'adrenal', name: 'Adrenal Pump',         cost: 220, desc: 'Once per fight, below 30% HP: heal 35%.' },
-  { id: 'myomer',  name: 'Myomer Fibres',        cost: 240, desc: '+3 STR.' },
-  { id: 'neural',  name: 'Neural Jack',          cost: 240, desc: '+3 INT.' },
-  { id: 'voice',   name: 'Voice Modulator',      cost: 200, desc: '+3 CHA.' },
-  { id: 'synapse', name: 'Synapse Accelerator',  cost: 320, desc: 'Skill cooldowns 1 turn shorter.' },
+  { id: 'reflex',  name: 'Reflex Booster',       cost: 230, desc: '+5 SPD.' },
+  { id: 'dermal',  name: 'Subdermal Plating',    cost: 270, desc: '+5 DEF.' },
+  { id: 'optic',   name: 'Targeting Optic',      cost: 240, desc: '+15% crit chance.' },
+  { id: 'pain',    name: 'Pain Editor',          cost: 300, desc: '+40 max HP.' },
+  { id: 'adrenal', name: 'Adrenal Pump',         cost: 330, desc: 'Once per fight, below 30% HP: heal 40%.' },
+  { id: 'myomer',  name: 'Myomer Fibres',        cost: 360, desc: '+3 STR and +5% Strike damage.' },
+  { id: 'neural',  name: 'Neural Jack',          cost: 360, desc: '+3 INT and items 10% stronger.' },
+  { id: 'voice',   name: 'Voice Modulator',      cost: 300, desc: '+3 CHA and 5% off at the market.' },
+  { id: 'synapse', name: 'Synapse Accelerator',  cost: 480, desc: 'Skill cooldowns 1 turn shorter, and +2 SPD.' },
 ];
 
 // Contacts and mods: one-time purchases for this operative.
@@ -284,48 +294,94 @@ export const MOD_STEP = 1.25; // each mod an operative buys makes the next one t
 
 // ---------- permanent progression (Resolve; survives death) ----------
 // Drones: one per operative, chosen at creation. They can't be shot down, and die only with their operative.
-// ranks: the drone's strength at rank 1 to 5. Resolve buys ranks; ranks 3 and 5 add an ability.
+// ranks: the drone's strength at rank 1 to 8. Resolve buys ranks; ranks 4 and 7 add an ability (DRONE_AB).
 export const DRONES = {
-  hornet: { name: 'Hornet', role: 'Attack', what: 'Fires after each of your turns.', effect: (v) => `Shots add up to ${v}% of your ATK a turn, ignoring armour.`, ranks: [12, 20, 27, 36, 46],
-    abilities: { 3: { name: 'Finisher', desc: 'Double damage to enemies under 30% HP.' }, 5: { name: 'Marker', desc: '10% chance a turn to leave the enemy Exposed.' } } },
-  aegis: { name: 'Aegis', role: 'Shield', what: 'Soaks part of every hit.', effect: (v) => `Blocks ${v}% of attack damage.`, ranks: [9, 15, 21, 28, 36],
-    abilities: { 3: { name: 'Intercept', desc: '8% chance to stop an attack outright.' }, 5: { name: 'Feedback', desc: 'A stopped attack zaps the enemy for your ATK.' } } },
-  mender: { name: 'Mender', role: 'Healing', what: 'Patches you up mid-fight.', effect: (v) => `Heals ${v}% of max HP a turn.`, ranks: [1.2, 2.3, 3.5, 4.5, 5.5],
-    abilities: { 3: { name: 'Coagulant', desc: '25% chance a turn to stop bleeding and burns.' }, 5: { name: 'Emergency', desc: 'Once a fight, heals 15% when you fall under 25% HP.' } } },
-  magpie: { name: 'Magpie', role: 'Tech', what: 'Uses gear it finds, for free.', effect: (v) => `${v}% chance a turn to use a free thermal, ion pulse or stim.`, ranks: [4, 7, 9, 12, 16],
-    abilities: { 3: { name: 'Scavenger', desc: '15% chance to find an item after a fight.' }, 5: { name: 'Overdrive', desc: 'Its thermals and ion pulses hit 50% harder.' } } },
+  hornet: { name: 'Hornet', role: 'Attack', what: 'Fires after each of your turns.', effect: (v) => `Shots add up to ${v}% of your ATK a turn, ignoring armour.`, ranks: [12, 16, 20, 27, 32, 36, 46, 55],
+    abilities: { 4: { name: 'Finisher', desc: 'Double damage to enemies under 30% HP.' }, 7: { name: 'Marker', desc: '10% chance a turn to leave the enemy Exposed.' } } },
+  aegis: { name: 'Aegis', role: 'Shield', what: 'Soaks part of every hit.', effect: (v) => `Blocks ${v}% of attack damage.`, ranks: [9, 12, 15, 21, 24, 28, 36, 43],
+    abilities: { 4: { name: 'Intercept', desc: '8% chance to stop an attack outright.' }, 7: { name: 'Feedback', desc: 'A stopped attack zaps the enemy for your ATK.' } } },
+  mender: { name: 'Mender', role: 'Healing', what: 'Patches you up mid-fight.', effect: (v) => `Heals ${v}% of max HP a turn.`, ranks: [1.2, 1.8, 2.3, 3.5, 4, 4.5, 5.5, 6.6],
+    abilities: { 4: { name: 'Coagulant', desc: '25% chance a turn to stop bleeding and burns.' }, 7: { name: 'Emergency', desc: 'Once a fight, heals 15% when you fall under 25% HP.' } } },
+  magpie: { name: 'Magpie', role: 'Tech', what: 'Uses gear it finds, for free.', effect: (v) => `${v}% chance a turn to use a free thermal, ion pulse or stim.`, ranks: [4, 5.5, 7, 9, 10.5, 12, 16, 19],
+    abilities: { 4: { name: 'Scavenger', desc: '15% chance to find an item after a fight.' }, 7: { name: 'Overdrive', desc: 'Its thermals and ion pulses hit 50% harder.' } } },
 };
 export const DRONE_ORDER = ['hornet', 'aegis', 'mender', 'magpie'];
-export const DRONE_MAX_RANK = 5;
-export const DRONE_UPGRADE = [5, 8, 13, 18]; // Resolve to reach rank 2, 3, 4 and 5
+export const DRONE_MAX_RANK = 8;
+export const DRONE_UPGRADE = [4, 6, 8, 11, 14, 18, 24]; // Resolve to reach rank 2 to 8: 79 to rank 7 (the old top), 103 to the top
+export const DRONE_AB = { mid: 4, top: 7 }; // ranks that add each ability
+export const DRONE_RANK_V2 = [0, 1, 3, 4, 6, 7]; // an old rank (1-5) becomes this rank, about the same strength
 export const DRONE_DAMAGE = 0.1; // chance of being knocked out each time a sector is cleared
 export const TRAINING = {
-  hp:  { label: 'Endurance',    stat: 'Max HP', per: 8, max: 20, note: 'Scar tissue and stubbornness.' },
-  atk: { label: 'Marksmanship', stat: 'ATK',    per: 2, max: 20, note: 'Range time behind the slag heaps.' },
-  def: { label: 'Grit',         stat: 'DEF',    per: 1, max: 20, note: 'Knowing which cover holds.' },
-  spd: { label: 'Reflexes',     stat: 'SPD',    per: 1, max: 20, note: 'Dodge, crit and escape odds.' },
+  hp:  { label: 'Endurance',    stat: 'Max HP', per: 8, max: 20, maxEnd: 30, note: 'Scar tissue and stubbornness.' },
+  atk: { label: 'Marksmanship', stat: 'ATK',    per: 2, max: 20, maxEnd: 30, note: 'Range time behind the slag heaps.' },
+  def: { label: 'Grit',         stat: 'DEF',    per: 1, max: 20, maxEnd: 30, note: 'Knowing which cover holds.' },
+  spd: { label: 'Reflexes',     stat: 'SPD',    per: 1, max: 20, maxEnd: 30, note: 'Dodge, crit and escape odds.' },
 };
 // Upgrades for the whole cell. Each level costs its own Resolve and lifts the benefit; `v` is what the rules read.
 export const CELL = [
   { id: 'stash', name: 'Hidden Stash', levels: [
     { cost: 4, v: 30, desc: 'New operatives start with +30 credits.' }, { cost: 6, v: 60, desc: 'New operatives start with +60 credits.' },
-    { cost: 10, v: 120, desc: 'New operatives start with +120 credits.' }, { cost: 16, v: 240, desc: 'New operatives start with +240 credits.' }] },
+    { cost: 10, v: 120, desc: 'New operatives start with +120 credits.' }, { cost: 16, v: 240, desc: 'New operatives start with +240 credits.' },
+    { cost: 24, v: 400, endgame: true, desc: 'New operatives start with +400 credits.' }, { cost: 34, v: 650, endgame: true, desc: 'New operatives start with +650 credits.' }] },
   { id: 'kit', name: 'Field Kit', levels: [
     { cost: 4, v: [1, 0], desc: 'New operatives start with +1 Med Stim.' }, { cost: 6, v: [1, 1], desc: 'New operatives start with +1 Med Stim and +1 Thermal Charge.' },
-    { cost: 9, v: [2, 1], desc: 'New operatives start with +2 Med Stims and +1 Thermal Charge.' }, { cost: 14, v: [2, 2], desc: 'New operatives start with +2 Med Stims and +2 Thermal Charges.' }] },
+    { cost: 9, v: [2, 1], desc: 'New operatives start with +2 Med Stims and +1 Thermal Charge.' }, { cost: 14, v: [2, 2], desc: 'New operatives start with +2 Med Stims and +2 Thermal Charges.' },
+    { cost: 22, v: [3, 3], endgame: true, desc: 'New operatives start with +3 Med Stims and +3 Thermal Charges.' }] },
   { id: 'cache', name: 'Weapons Cache', levels: [
     { cost: 5, v: 1, desc: 'New operatives start with a Shock Baton.' }, { cost: 7, v: 2, desc: 'New operatives start with a Shock Baton and a Salvaged Carbine.' }] },
   { id: 'ledger', name: 'Doc\u2019s Ledger', levels: [
     { cost: 4, v: 0.15, desc: 'Clinic treatment costs 15% less.' }, { cost: 6, v: 0.3, desc: 'Clinic treatment costs 30% less.' },
-    { cost: 9, v: 0.5, desc: 'Clinic treatment costs half.' }, { cost: 14, v: 0.65, desc: 'Clinic treatment costs 65% less.' }] },
+    { cost: 9, v: 0.5, desc: 'Clinic treatment costs half.' }, { cost: 14, v: 0.65, desc: 'Clinic treatment costs 65% less.' },
+    { cost: 22, v: 0.8, endgame: true, desc: 'Clinic treatment costs 80% less.' }] },
   { id: 'mentor', name: 'Old Hand', levels: [
-    { cost: 7, v: 1, desc: 'New operatives get +1 attribute point at creation.' }, { cost: 14, v: 2, desc: 'New operatives get +2 attribute points at creation.' }, { cost: 22, v: 3, desc: 'New operatives get +3 attribute points at creation.' }] },
+    { cost: 7, v: 1, desc: 'New operatives get +1 attribute point at creation.' }, { cost: 14, v: 2, desc: 'New operatives get +2 attribute points at creation.' }, { cost: 22, v: 3, desc: 'New operatives get +3 attribute points at creation.' }, { cost: 32, v: 4, endgame: true, desc: 'New operatives get +4 attribute points at creation.' }, { cost: 44, v: 5, endgame: true, desc: 'New operatives get +5 attribute points at creation.' }] },
   { id: 'heirloom', name: 'Heirloom', levels: [{ cost: 11, v: 1, desc: 'When an operative dies, choose one piece of their gear to pass on to the next.' }] },
   { id: 'lockup1', name: 'Lockup Shelving', levels: [{ cost: 7, v: 1, desc: 'The Lockup holds 2 more pieces.' }] },
   { id: 'lockup2', name: 'False Floor', levels: [{ cost: 14, v: 1, desc: 'The Lockup holds 2 more pieces again.' }] },
 ];
 // What an upgrade bought before levels existed is worth this level.
 export const CELL_LEGACY = { stash: 2, kit: 2, cache: 2, ledger: 3, mentor: 1 };
+
+// Extra openers: each fight picks one of these or the enemy's own line, so the same enemy doesn't always say the same thing.
+export const ENEMY_LINES = {
+  patrol: ['Two troopers argue about overtime. One of them sees you.', 'A trooper lowers a ration bar and raises a rifle.'],
+  probe: ['A probe whirs out of a vent and blinks red at you.', '\u201cCitizen, remain still for scanning.\u201d A probe drifts closer.'],
+  officer: ['\u201cYou\u2019re not on my list.\u201d The officer reaches for the radio.', 'An officer taps a clipboard. \u201cThis is a restricted area.\u201d'],
+  hound: ['A hound lifts its head from a bowl. Its lips peel back.', 'Somebody unclips a leash down the corridor. Paws, fast.'],
+  riot: ['An enforcer slams a baton on the shield. Once. Twice.', 'A riot shield fills the doorway. Behind it, a bored face.'],
+  loader: ['A loader droid drops its pallet and turns to you.', 'The loader\u2019s hazard lights flicker on. It isn\u2019t carrying anything now.'],
+  marksman: ['Glass glints high on the gantry.', 'A marksman shifts on the catwalk and settles in.'],
+  interrogator: ['\u201cSit down. We\u2019re only going to talk.\u201d', 'An interrogator pulls on a second glove, slowly.'],
+  shock: ['A shock trooper cracks their neck and steps out of the dark.', 'Boots in step. A shock trooper doesn\u2019t bother to shout a warning.'],
+  sentinel: ['Plating unlocks with a hiss. The sentinel stands up.', 'A sentinel\u2019s eye sweeps the room and stops on you.'],
+  welder: ['A welding drone hums down from its rail, tip glowing.', 'Sparks rain from the line. One of the drones isn\u2019t welding any more.'],
+  foreman: ['\u201cBreak\u2019s over. For you, forever.\u201d', 'The foreman checks a clock, then checks you.'],
+  slagger: ['Something grinds in the slag pile and climbs out.', 'A slag crusher shudders awake, steam pouring off it.'],
+  jailer: ['\u201cBack in your cell.\u201d The guard hasn\u2019t looked properly yet.', 'A cell guard spins a ring of keys and steps in your way.'],
+  sedation: ['A droid drifts out of the infirmary humming a lullaby.', '\u201cPatient located.\u201d A needle unfolds from the droid\u2019s arm.'],
+  dockguard: ['A dock sentry clips their tether and turns.', '\u201cPad\u2019s closed.\u201d The sentry\u2019s carbine says the same.'],
+  gunner: ['The cannon swings round with a whine.', 'A gunner slaps the turret\u2019s side. It starts to spin.'],
+  smallbot: ['A little walker beeps at you, offended.', 'Something knee-high stomps out of a doorway, gun arm swinging.'],
+  bulwark: ['A shield bot shuffles into the corridor and plants itself.', 'Behind a dented shield, a small bot hunkers down.'],
+  spotweld: ['A walker trundles off the line with its tip already hot.', 'Spot welds hiss as a walker turns toward you.'],
+  slagrunt: ['A runt furnace waddles out of the glow, grate pulsing.', 'Something small and very hot hops off the conveyor.'],
+  cuffbot: ['\u201cDetainee identified.\u201d A cuff bot rolls closer.', 'A restraint bot clicks open every cuff it has.'],
+  gasbot: ['A gas bot coughs green and wobbles toward you.', 'The air turns sweet. A gas bot is close.'],
+  mortarbot: ['A mortar bot settles its feet. The tube tilts.', 'Thunk. Something lands behind you. A mortar bot adjusts.'],
+  deckbot: ['A deck bot skitters out of a hatch, rivet gun first.', 'Rivets ping off the deck around your feet.'],
+  stoker: ['The stoker grins and holds up a shovel of coals.', '\u201cFurnace wants feeding.\u201d The stoker looks at you.'],
+  hookbot: ['A hook swings down on its chain, then the droid behind it.', 'The rail rattles. A hook droid drops in your way.'],
+  castguard: ['A casting guard steps out of the steam, rifle level.', 'Scorched plate, a slug rifle, and no patience at all.'],
+  warder: ['A warder thumbs the prod. It crackles.', '\u201cBlock C. Hands where I can see them.\u201d'],
+  orderly: ['An orderly snaps a glove and smiles.', '\u201cJust a little scratch.\u201d The orderly isn\u2019t joking.'],
+  customs: ['\u201cBag. Open it.\u201d The enforcer\u2019s carbine points at the bag.', 'A customs enforcer reads your face like a manifest.'],
+  tetherdrone: ['A tether drone swoops off the cable, line whistling.', 'Something on a cable dives at you from above.'],
+  exo: ['Hydraulics hiss. A loader in an exo cracks its knuckles.', 'An exo frame lumbers round the stack, fists first.'],
+  colonist: ['A warden\u2019s visor turns teal toward you. \u201cOff your quota, digger?\u201d', '\u201cHalt. Breathing is rationed.\u201d A colony warden raises a carbine.'],
+  skitter: ['Clicking, all around you. The fungus moves.', 'A skitterling rears up, spots flashing in warning.'],
+  terraformer: ['A walker plants a spore pod in the soil, then turns to you.', 'The ground shakes. Something tall is terraforming this way.'],
+  stalker: ['The light bends where it stands.', 'You hear it breathe before you see it.'],
+};
 
 // ---------- enemies ----------
 // tags: human / beast / droid / armored / boss. intents: weights for the enemy's next move.
@@ -434,6 +490,23 @@ export const ENEMIES = {
     intents: { attack: 4, heavy: 2, guard: 1 }, line: 'Chief Pell runs a scanner over you and frowns at it. \u201CAnything to declare?\u201D' },
   gantry:  { name: 'The Gantry Walker', tags: ['boss', 'droid', 'armored'], hp: 130, atk: 15, def: 7, spd: 2, cr: [150, 190], xp: 65,
     intents: { attack: 3, heavy: 3, repair: 1 }, line: 'A cargo walker steps off the gantry, hook swinging. The cab radio crackles. \u201CSorry.\u201D' },
+  // Halcyon Reach: the endgame colony world.
+  colonist: { name: 'Colony Warden', tags: ['human', 'armored'], hp: 32, atk: 12, def: 4, spd: 6, cr: [18, 26], xp: 15,
+    intents: { attack: 4, heavy: 2, guard: 1 }, line: 'A warden in a sealed pressure suit turns, visor glowing teal, carbine up.' },
+  skitter: { name: 'Skitterling', tags: ['beast'], hp: 18, atk: 9, def: 1, spd: 11, cr: [10, 14], xp: 9,
+    intents: { attack: 6, heavy: 1 }, line: 'Something with too many legs comes clicking out of the fungus, spots pulsing.' },
+  terraformer: { name: 'Terraform Walker', tags: ['droid', 'armored'], hp: 46, atk: 13, def: 6, spd: 3, cr: [20, 28], xp: 18,
+    intents: { attack: 3, heavy: 3, repair: 1 }, line: 'A terraform walker stalks over the ridge, spore cannon coughing green.' },
+  stalker: { name: 'Void Stalker', tags: ['beast'], hp: 34, atk: 15, def: 2, spd: 10, cr: [20, 28], xp: 18,
+    intents: { attack: 4, heavy: 2 }, line: 'You only see it when it moves: a long shape, skin like smoked glass, claws out.' },
+  rask:    { name: 'Overseer Rask', tags: ['boss', 'human', 'armored'], hp: 150, atk: 18, def: 8, spd: 4, cr: [200, 260], xp: 90,
+    intents: { attack: 3, heavy: 3, guard: 1 }, line: 'Overseer Rask climbs out of the drill rig\u2019s cab. \u201CQuota\u2019s short. You\u2019ll do.\u201D' },
+  broodqueen: { name: 'The Brood Queen', tags: ['boss', 'beast'], hp: 190, atk: 18, def: 5, spd: 5, cr: [260, 330], xp: 110,
+    intents: { attack: 3, heavy: 3 }, line: 'The cave wall moves. It isn\u2019t a wall. A broodmother uncoils over her eggs.' },
+  lancer:  { name: 'Orbital Lancer', tags: ['boss', 'droid', 'armored'], hp: 200, atk: 21, def: 9, spd: 3, cr: [320, 400], xp: 130,
+    intents: { attack: 3, heavy: 3, repair: 1 }, line: 'The relay pad shudders as the Orbital Lancer drops from its cradle, rail lance humming.' },
+  saal:    { name: 'Governor Iven Saal', tags: ['boss', 'human'], hp: 230, atk: 23, def: 8, spd: 9, cr: [420, 520], xp: 170,
+    intents: { attack: 3, heavy: 2, guard: 2 }, line: 'Governor Saal does not get up from the throne. \u201CThey sent you all this way. How thrifty.\u201D' },
   imre:    { name: 'Director Saul Imre', tags: ['boss', 'human'], hp: 160, atk: 19, def: 7, spd: 9, cr: [300, 360], xp: 110,
     intents: { attack: 3, heavy: 2, guard: 2 }, line: 'Director Imre stands at the glass with his back to you. \u201CCome and look at it first.\u201D' },
 };
@@ -489,6 +562,7 @@ export const MAP_VARIANT = {
   foundry: { prefix: 'Soot-Caked', atk: 1.06, hp: 0.95 },
   detention: { prefix: 'Block', def: 1, hp: 0.95 },
   port: { prefix: 'Vacuum-Rated', hp: 1.08, spd: -1 },
+  reach: { prefix: 'Rebreather', hp: 1.12, atk: 1.06 },
 };
 export const MAPS = [
   { id: 'garrison', name: 'Directorate Garrison', unlock: {}, offset: 0, level: 0, credits: 1, xp: 1, events: 0.3, theme: 'garrison',
@@ -523,6 +597,15 @@ export const MAPS = [
     sectors: ['Cargo Gate', 'Customs Hall', 'Fuel Depot', 'Landing Pad 3', 'Tower Base', 'Container Stacks', 'Lift Shaft', 'Hangar Deck', 'Crew Quarters', 'Control Tower', 'Tether Anchor', 'Gantry Ring', 'Flight Ops', 'Command Deck', 'The Lift', 'Tether Climb', 'Upper Lift', 'Cloud Station', 'Director\u2019s Lounge', 'Observation Deck'],
     pool: [['dockguard', 1], ['tetherdrone', 1], ['deckbot', 1], ['gunner', 2], ['mortarbot', 2], ['customs', 3], ['exo', 4], ['sentinel', 6]],
     bosses: ['pell', 'gantry', 'vane', 'imre'] },
+  // The endgame: only for an operative who has freed the other four. Harder than anything on the ground (power), and pays for it.
+  { id: 'reach', name: 'Halcyon Reach', unlock: { garrison: 20, foundry: 20, detention: 20, port: 20 }, offset: 22, power: 1.15, level: 0, credits: 1.35, xp: 1.35, events: 0.3, theme: 'reach',
+    mechanic: { id: 'storm', name: 'Spore storms', desc: 'Every fourth round a spore storm sweeps the field: you lose 6% of max HP and are Exposed for a turn unless you Defend. Beasts shrug it off; droids and Directorate troops take 4%.' },
+    rooms: { fight: 4, elite: 3, event: 1, cargo: 3, rest: 1 },
+    roomNames: { fight: 'Survey Post', elite: 'Warden Outpost', event: 'Wreck Site', cargo: 'Ore Cache', rest: 'Pressure Shelter' },
+    desc: 'The Directorate\u2019s penal colony on a hostile world, where the yard\u2019s crates were going. Alien life, colony wardens, and the Governor.',
+    sectors: ['Landing Zone', 'Hab Domes', 'Ore Conveyor', 'Survey Ridge', 'The Pit', 'Fungal Edge', 'Glowcap Forest', 'Spore Hollow', 'Egg Fields', 'The Brood Deep', 'Spore Marsh', 'Pump Station', 'Relay Road', 'Antenna Field', 'The Relay Pad', 'Crystal Caves', 'Prism Gallery', 'The Lower Spire', 'Spire Gardens', 'The Governor\u2019s Hall'],
+    pool: [['colonist', 1], ['skitter', 1], ['terraformer', 2], ['shock', 3], ['stalker', 4], ['riot', 5], ['marksman', 6], ['sentinel', 8]],
+    bosses: ['rask', 'broodqueen', 'lancer', 'saal'] },
 ];
 
 // ---------- events between fights ----------
@@ -769,6 +852,14 @@ export const SPECIALS = {
   pell:     { name: 'Stamped',        mult: 0.8, status: { exposed: 2 }, tip: 'The stamp baton marks you. Exposed for 2 turns. Defend.' },
   gantry:   { name: 'Hook rake',      mult: 1.1, status: { bleed: 3 }, tip: 'Bleeding for 3 turns. Defend to block it.' },
   imre:     { name: 'Director\u2019s mark', mult: 1.3, status: { exposed: 2, shaken: 2 }, tip: 'Exposed and Shaken. Defend to block it.' },
+  colonist: { name: 'Flare round',    mult: 0.8, status: { exposed: 2 }, tip: 'Lights you up: Exposed for 2 turns. Defend to block it.' },
+  skitter:  { name: 'Acid spit',      mult: 0.6, status: { burn: 2 }, tip: 'Burning for 2 turns. Defend to block it.' },
+  terraformer: { name: 'Spore cannon', mult: 1.1, status: { shaken: 2, exposed: 1 }, tip: 'A lungful of spores: Shaken and Exposed. Defend to block it.' },
+  stalker:  { name: 'Rending claws',  mult: 1.3, status: { bleed: 3 }, tip: 'Bleeding for 3 turns. Defend to block it.' },
+  rask:     { name: 'Drill sweep',    mult: 1.2, status: { bleed: 3 }, tip: 'The drill bit catches you: Bleeding for 3 turns. Defend.' },
+  broodqueen: { name: 'Brood spit',   mult: 1.1, status: { burn: 3, exposed: 1 }, tip: 'Burning acid: Burning 3, Exposed 1. Defend.' },
+  lancer:   { name: 'Target array',   mult: 0.9, status: { exposed: 3 }, tip: 'Painted for the lance: Exposed for 3 turns. Defend.' },
+  saal:     { name: 'Verdict',        mult: 1.3, status: { shaken: 2, exposed: 2 }, tip: 'Shaken and Exposed. Defend to block it.' },
 };
 
 // ---------- elite modifiers (one per elite) ----------
@@ -801,6 +892,11 @@ export const BOSS_INFO = {
   voight:   { epithet: 'Chief Interrogator',         phase2: 'Voight pulls on a second pair of gloves.', short: 'Voight', he: 'he' },
   venn:     { epithet: 'Magistrate of the High Court', phase2: 'Venn stands. Nobody in this court has seen her stand.', short: 'Venn', he: 'she',
     noRun: ['The court is sealed', 'The doors of the court are sealed. No Run for the rest of the fight.'] },
+  rask:     { epithet: 'Overseer of the Pit',        phase2: 'Rask spins the drill up to full and grins.', short: 'Rask', he: 'he' },
+  broodqueen: { epithet: 'Mother of the Fungal Deep', phase2: 'The Brood Queen rears up over her clutch and screams.', short: 'The Queen', he: 'she' },
+  lancer:   { epithet: 'Relay Defence Platform',     phase2: 'The Lancer vents its coils. The lance glows white along its length.', short: 'The Lancer', he: 'it' },
+  saal:     { epithet: 'Governor of Halcyon Reach',  phase2: 'Saal finally rises from the throne, staff in hand.', short: 'Saal', he: 'he',
+    noRun: ['The spire is sealed', 'The spire doors seal behind you. No Run for the rest of the fight.'] },
   pell:     { epithet: 'Chief of Customs',           phase2: 'Pell puts the scanner away and takes the baton in both hands.', short: 'Pell', he: 'he' },
   gantry:   { epithet: 'Cargo Walker, Gantry Ring',  phase2: 'The Gantry Walker drops its load and turns all the way round.', short: 'The Walker', he: 'it' },
   imre:     { epithet: 'Director of the Orbital Lift', phase2: 'Imre turns away from the glass at last.', short: 'Imre', he: 'he',
@@ -854,6 +950,19 @@ export const BOSS_KIT = {
   venn: { rate: 0.4, cd: 2,
     moves: { count: { from: 100, count: 1, turns: 2, shaken: 2 }, audit: { from: 75, count: 2, base: 1, per: 0.4, max: 3, guard: 0.5 } },
     notes: { 75: 'Sentence opens up.', 50: 'ATK +20%, DEF +2.', 25: 'The court is sealed: no Run. Sentence every third turn.' } },
+  // Halcyon Reach: harder signatures, sooner.
+  rask: { rate: 0.45, cd: 2,
+    moves: { siege: { from: 100, count: 2, mult: 2.8, guard: 0.35, jam: 0.1 }, overtime: { from: 75, count: 1, mult: 0.9, hits: 2, guard: 0.5, winded: 2, self: 0.03 } },
+    notes: { 75: 'Rig Swing opens up.', 50: 'ATK +20%, DEF +2.', 25: 'The rig overheats: Drill Charge every third turn.' } },
+  broodqueen: { rate: 0.45, cd: 2,
+    moves: { roll: { from: 100, count: 2, mult: 2.2, guard: 0.5, open: 1.5, choke: 0.12 }, anchor: { from: 75, count: 1, mult: 1.7, guard: 0.5, pin: 2, belly: 1.3 } },
+    notes: { 75: 'Tendril Grab opens up.', 50: 'ATK +20%, SPD +2.', 25: 'Desperate: she strikes twice a turn. Brood Burst every third turn.' } },
+  lancer: { rate: 0.45, cd: 2,
+    moves: { siege: { from: 100, count: 2, mult: 3, guard: 0.35, jam: 0.1 }, lights: { from: 75, count: 1, turns: 2, miss: 0.25 } },
+    notes: { 75: 'Chaff Burst opens up.', 50: 'ATK +20%, DEF +3. No more self-repair.', 25: 'Rail Lance every third turn.' } },
+  saal: { rate: 0.5, cd: 2,
+    moves: { salute: { from: 100, count: 1, mult: 1.7, guard: 0.5, parry: 0.5 }, audit: { from: 75, count: 2, base: 1.2, per: 0.4, max: 3.2, guard: 0.5 } },
+    notes: { 75: 'The Ledger opens up.', 50: 'ATK +20%, SPD +2.', 25: 'The spire is sealed: no Run. He strikes twice a turn. The Ledger every third turn.' } },
   pell: { rate: 0.4, cd: 2,
     moves: { confiscate: { from: 100, until: 25, count: 1, mult: 1, guard: 0.5 }, crane: { from: 75, count: 2, mult: 2.2, guard: 0.5, wreck: 2 } },
     notes: { 75: 'Crate Drop opens up.', 50: 'ATK +20%. Tower snipers: 30% per turn.', 25: 'No more Seizures. Tower snipers: 45% per turn.' } },
@@ -1042,9 +1151,10 @@ export const BAR = {
 // and a permanent mark on that operative, usually good, sometimes not. One visit per trip home.
 // fx: hp, crit and dodge are fractions; atk, def and spd are flat; str, agi, int and cha are attribute points.
 export const LOUNGE = {
-  cost: 350, rise: 0.1, badOdds: 0.35,
+  cost: 350, rise: 0.1, badOdds: 0.35, cure: 0.25, tonight: 3,
   girls: [
     { id: 'vex', name: 'Vex', tag: 'Goth \u00b7 bites', desc: 'Black and pink twin-tails, a cat-ear headset and a stare that could strip paint. Charges by the hour, judges by the minute.',
+      greet: ['\u201cOh. You again. Fine, I\u2019m bored.\u201d', '\u201cYou look like you need biting.\u201d'], walk: ['\u201cKeep up. Don\u2019t hold my hand like that, hold it like you mean it.\u201d', '\u201cOut back. Mind the puddle, it bites too.\u201d'],
       outcomes: [
         { w: 3, text: 'She bounces on it. You feel rested.', fx: { hp: 0.05 } },
         { w: 2, text: 'She calls you \u201clittle guy\u201d all night. You have never wanted to win more.', fx: { str: 1 } },
@@ -1054,6 +1164,7 @@ export const LOUNGE = {
         { w: 1, bad: true, text: 'She steals your heart. And a kidney, it turns out.', fx: { hp: -0.05 } },
       ] },
     { id: 'pixie', name: 'Pixie', tag: 'Streamer \u00b7 sweet', desc: 'Lavender bob, a hoodie three sizes too big and a bubble tea she never finishes. Says \u201cuwu\u201d unironically.',
+      greet: ['\u201cHiiii! Omg you came back!\u201d', '\u201cChat, look who it is!\u201d'], walk: ['\u201cThis way! Hold on, I\u2019m sooo clumsy.\u201d', '\u201cDon\u2019t worry, the stream\u2019s off. Probably.\u201d'],
       outcomes: [
         { w: 3, text: 'She sits on your lap and rates your setup ten out of ten.', fx: { crit: 0.03 } },
         { w: 2, text: 'An hour of whispering in your ear. Your reflexes have never been better.', fx: { spd: 2 } },
@@ -1063,6 +1174,7 @@ export const LOUNGE = {
         { w: 1, bad: true, text: 'The hoodie was hiding a cold. A bad one.', fx: { hp: -0.04, spd: -1 } },
       ] },
     { id: 'rook', name: 'Rook', tag: 'Cyber-arm \u00b7 trouble', desc: 'Neon undercut, glowing tattoos and a chrome arm that does things to your back that should be illegal. Probably are.',
+      greet: ['\u201cYou\u2019re carrying a lot of tension, operative.\u201d', '\u201cBack for the arm?\u201d'], walk: ['The chrome hand closes round yours. Gently, for now.', '\u201cBack door. The landlord doesn\u2019t ask.\u201d'],
       outcomes: [
         { w: 3, text: 'The chrome arm finds a knot you didn\u2019t know you had. Something clicks into place.', fx: { def: 1 } },
         { w: 2, text: 'She mixes you something blue. You wake up stronger and with a new tattoo.', fx: { atk: 1 } },
@@ -1071,6 +1183,36 @@ export const LOUNGE = {
         { w: 2, bad: true, text: 'You wake up in an alley with a sore neck and a weaker grip.', fx: { str: -1 } },
         { w: 1, bad: true, text: 'Her arm glitches mid-massage. Something cracks that shouldn\u2019t.', fx: { def: -1, spd: -1 } },
       ] },
+    { id: 'jinx', name: 'Jinx', tag: 'Cyberpunk \u00b7 hacker', desc: 'Pink-and-blue hair, an LED choker that scrolls your name, and a holo jacket that never sits still. Already in your phone.',
+      greet: ['\u201cI already read your file. It\u2019s cute.\u201d', 'Her choker scrolls HELLO OPERATIVE in pink.'], walk: ['\u201cThe back door\u2019s camera loops for nine minutes. Walk fast.\u201d', 'She laces her fingers through yours and doesn\u2019t look back.'],
+      outcomes: [
+        { w: 3, text: 'She overclocks your nerves with something from her jacket. Everything is faster.', fx: { spd: 2 } },
+        { w: 2, text: 'She patches your targeting app. You didn\u2019t know you had one.', fx: { crit: 0.03 } },
+        { w: 2, text: 'She teaches you three passwords and a trick with doors.', fx: { int: 1 } },
+        { w: 1, text: 'She hacks your bank. To give you money. You don\u2019t ask.', fx: { atk: 1 } },
+        { w: 2, bad: true, text: 'She left something in your implant port. It pings every hour.', fx: { dodge: -0.02, int: -1 } },
+        { w: 1, bad: true, text: 'Your face is on a dating app now. With your real name.', fx: { cha: -1 } },
+      ] },
+    { id: 'luna', name: 'Luna', tag: 'Gamer \u00b7 cosy', desc: 'Pastel cat-ear hoodie, thigh-high socks and a voice like warm milk. Fourteen hours into a cosy farming game and not stopping.',
+      greet: ['\u201cOh! Sit, sit. I saved you a seat on the beanbag.\u201d', 'She pauses the game. For you. That never happens.'], walk: ['She takes your hand like it\u2019s the most normal thing. \u201cIt\u2019s quieter out back.\u201d', '\u201cCareful, the step\u2019s wobbly. I\u2019ve got you.\u201d'],
+      outcomes: [
+        { w: 3, text: 'You nap on her shoulder for eleven hours. You wake up new.', fx: { hp: 0.06 } },
+        { w: 2, text: 'She feeds you soup and tells you you\u2019re doing great.', fx: { def: 1 } },
+        { w: 2, text: 'A long, slow game of cards. You learn to read faces.', fx: { cha: 1 } },
+        { w: 1, text: 'She teaches you to dodge in her rhythm game. It transfers.', fx: { dodge: 0.02 } },
+        { w: 2, bad: true, text: 'You get so comfy you forget how to be scared. That\u2019s bad, out there.', fx: { spd: -1, def: -1 } },
+        { w: 1, bad: true, text: 'Her cat sleeps on your chest all night. You\u2019re allergic.', fx: { hp: -0.04 } },
+      ] },
+    { id: 'nova', name: 'Nova', tag: 'Alt \u00b7 dangerous', desc: 'Red hair, tattoos down both arms, fishnet sleeves and a leather jacket with the Directorate\u2019s crest burned out of it.',
+      greet: ['\u201cYou look like you\u2019ve been shot at. Good. I like that.\u201d', 'She flicks a lighter. \u201cWell? Pick me.\u201d'], walk: ['She drags you out by the collar, grinning.', '\u201cOut back. Bring your nerve.\u201d'],
+      outcomes: [
+        { w: 3, text: 'She teaches you to throw a punch properly. And then to take one.', fx: { str: 1 } },
+        { w: 2, text: 'A tattoo for luck. It works, somehow.', fx: { crit: 0.03 } },
+        { w: 2, text: 'You spar until dawn. Neither of you holds back.', fx: { atk: 1 } },
+        { w: 1, text: 'She burns your old Directorate ID in front of you. You stand a little taller.', fx: { hp: 0.04 } },
+        { w: 2, bad: true, text: 'The tattoo gets infected. It is in a very visible place.', fx: { cha: -1, hp: -0.03 } },
+        { w: 1, bad: true, text: 'You wake up in a dumpster with a black eye and no memory.', fx: { def: -1 } },
+      ] }
   ],
 };
 

@@ -3007,5 +3007,440 @@
   "size": 256,
   "feetY": 246,
   "fig": 237
+ },
+ "colonist": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 8
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 8,
+    "tip": [
+     -85,
+     -185
+    ]
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 8
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 8
+   }
+  },
+  "size": 256,
+  "feetY": 247,
+  "fig": 238
+ },
+ "girl_jinx": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 7
+   },
+   "walk": {
+    "frames": 9,
+    "fps": 11,
+    "loop": true,
+    "pad": 7
+   }
+  },
+  "size": 256,
+  "feetY": 248,
+  "fig": 241
+ },
+ "girl_luna": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 6
+   },
+   "walk": {
+    "frames": 9,
+    "fps": 11,
+    "loop": true,
+    "pad": 6
+   }
+  },
+  "size": 256,
+  "feetY": 249,
+  "fig": 245
+ },
+ "girl_nova": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 9
+   },
+   "walk": {
+    "frames": 9,
+    "fps": 11,
+    "loop": true,
+    "pad": 9
+   }
+  },
+  "size": 256,
+  "feetY": 246,
+  "fig": 235
+ },
+ "girl_pixie": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 7
+   },
+   "walk": {
+    "frames": 9,
+    "fps": 11,
+    "loop": true,
+    "pad": 7
+   }
+  },
+  "size": 256,
+  "feetY": 248,
+  "fig": 239
+ },
+ "girl_rook": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 10
+   },
+   "walk": {
+    "frames": 9,
+    "fps": 11,
+    "loop": true,
+    "pad": 10
+   }
+  },
+  "size": 256,
+  "feetY": 245,
+  "fig": 237
+ },
+ "girl_vex": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 10
+   },
+   "walk": {
+    "frames": 9,
+    "fps": 11,
+    "loop": true,
+    "pad": 10
+   }
+  },
+  "size": 256,
+  "feetY": 245,
+  "fig": 241
+ },
+ "lancer": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 7
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 7,
+    "tip": [
+     -48,
+     -148
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 7
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 7
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 7
+   },
+   "special": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 7
+   }
+  },
+  "size": 256,
+  "feetY": 248,
+  "fig": 241
+ },
+ "op_vex": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 4
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 4,
+    "tip": [
+     92,
+     -187
+    ]
+   },
+   "attackM": {
+    "frames": 9,
+    "fps": 12,
+    "loop": false,
+    "pad": 4,
+    "tip": [
+     79,
+     -162
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 4
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 4
+   },
+   "defend": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 4
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 4
+   },
+   "special": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 4
+   },
+   "walk": {
+    "frames": 9,
+    "fps": 11,
+    "loop": true,
+    "pad": 4
+   }
+  },
+  "size": 256,
+  "feetY": 251,
+  "fig": 242
+ },
+ "rask": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 10
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 10,
+    "tip": [
+     -76,
+     -93
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 10
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 10
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 10
+   },
+   "special": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 10
+   }
+  },
+  "size": 256,
+  "feetY": 245,
+  "fig": 234
+ },
+ "saal": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 4
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 4,
+    "tip": [
+     -65,
+     -202
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 4
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 4
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 4
+   },
+   "special": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 4
+   }
+  },
+  "size": 256,
+  "feetY": 251,
+  "fig": 244
+ },
+ "skitter": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 30
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 30,
+    "tip": [
+     -44,
+     -35
+    ]
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 30
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 30
+   }
+  },
+  "size": 132,
+  "feetY": 97,
+  "fig": 62
+ },
+ "terraformer": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 13
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 13,
+    "tip": [
+     -88,
+     -105
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 13
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 13
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 13
+   }
+  },
+  "size": 256,
+  "feetY": 242,
+  "fig": 227
  }
 }

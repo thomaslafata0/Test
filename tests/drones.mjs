@@ -29,7 +29,7 @@ const turns = ({ s, rng }, n, act = 'defend') => { for (let i = 0; i < n && s.sc
 }
 // Aegis: blocks its share of a hit, and the preview agrees.
 {
-  const g = start(2, 'aegis', 5); toFight(g);
+  const g = start(2, 'aegis', D.DRONE_MAX_RANK); toFight(g);
   const c = g.s.char, plain = { ...c.drone }, e = g.s.run.enemy;
   e.atk = 200; e.intent = 'attack';
   const withDrone = E.incomingRange(g.s);
@@ -41,7 +41,7 @@ const turns = ({ s, rng }, n, act = 'defend') => { for (let i = 0; i < n && s.sc
 }
 // Mender: heals, and never overheals.
 {
-  const g = start(3, 'mender', 3); toFight(g);
+  const g = start(3, 'mender', D.DRONE_AB.mid); toFight(g);
   const c = g.s.char, mx = E.stats(g.s).maxHp;
   c.hp = 10; E.playerAct(g.s, 'defend', g.rng, 0); E.playerAct(g.s, 'defend', g.rng, 0);
   assert(c.hp >= 10, 'mender should heal');
@@ -49,9 +49,9 @@ const turns = ({ s, rng }, n, act = 'defend') => { for (let i = 0; i < n && s.sc
   assert(c.hp <= mx, 'never over max HP');
   console.log('PASS mender heals up to max');
 }
-// Magpie: at rank 5 it acts roughly as often as stated and doesn't spend your items.
+// Magpie: at the top rank it acts roughly as often as stated and doesn't spend your items.
 {
-  const g = start(4, 'magpie', 5); toFight(g);
+  const g = start(4, 'magpie', D.DRONE_MAX_RANK); toFight(g);
   const c = g.s.char, items = JSON.stringify(c.items);
   g.s.run.enemy.hp = g.s.run.enemy.maxHp = 10000000;
   g.s.events = [];
@@ -63,22 +63,32 @@ const turns = ({ s, rng }, n, act = 'defend') => { for (let i = 0; i < n && s.sc
 }
 // An offline drone does nothing.
 {
-  const g = start(5, 'hornet', 5); toFight(g);
+  const g = start(5, 'hornet', D.DRONE_MAX_RANK); toFight(g);
   g.s.char.drone.damaged = true;
   const e = g.s.run.enemy; turns(g, 30);
   assert.strictEqual(e.hp, e.maxHp, 'offline drones do not fire');
   console.log('PASS offline drones do nothing');
 }
+// Old saves: a five-rank drone moves to the rank of about the same strength on the eight-rank scale.
+{
+  const rng = E.seededRng(66), s = E.newGame(rng); E.createChar(s, rng, E.newDraft(s.meta, rng)); s.screen = 'town';
+  const old = JSON.parse(JSON.stringify(s)); delete old.meta.droneV; old.meta.droneRanks = { hornet: 5, aegis: 3 }; old.char.drone = { type: 'hornet', rank: 5, damaged: false };
+  const m = E.migrate(old, rng);
+  assert.strictEqual(m.meta.droneRanks.hornet, 7); assert.strictEqual(m.meta.droneRanks.aegis, 4); assert.strictEqual(m.char.drone.rank, 7);
+  assert.strictEqual(D.DRONES.hornet.ranks[6], 46, 'old top strength kept');
+  assert(Math.abs(D.DRONES.hornet.ranks[7] / 46 - 1.2) < 0.03, 'new top about 20% more');
+  console.log('PASS old drone ranks carry over to the new scale');
+}
 // Upgrades and repairs.
 {
   const rng = E.seededRng(6), s = E.newGame(rng); E.createChar(s, rng, E.newDraft(s.meta, rng)); s.screen = 'town';
   const c = s.char;
-  s.meta.resolve = 4;
+  s.meta.resolve = D.DRONE_UPGRADE[0] - 1;
   assert.strictEqual(E.upgradeDrone(s), false, 'needs Resolve');
-  s.meta.resolve = 5;
+  s.meta.resolve = D.DRONE_UPGRADE[0];
   assert.strictEqual(E.upgradeDrone(s), true); assert.strictEqual(c.drone.rank, 2); assert.strictEqual(s.meta.resolve, 0);
-  c.drone.rank = 5; s.meta.resolve = 99;
-  assert.strictEqual(E.upgradeDrone(s), false, 'rank 5 is the top');
+  c.drone.rank = D.DRONE_MAX_RANK; s.meta.resolve = 999;
+  assert.strictEqual(E.upgradeDrone(s), false, 'the top rank is the top');
   assert.strictEqual(E.repairDrone(s), false, 'nothing to repair');
   c.drone.damaged = true; c.credits = 0;
   assert.strictEqual(E.droneRepairCost(s), 0, 'the first repair is free');

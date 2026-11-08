@@ -73,7 +73,7 @@ function act(s, st, b, who = 0) {
   if (c.hp < hp * 0.35 && c.items.stim) return 'stim';
   if (r.fallen && !e.boss && E.canUse(s, 'run') && E.runChance(s) > 0.3) return 'run'; // a partner just died: get out
   if (st.flee && !e.boss && !E.isCoop(s) && c.hp < hp * st.flee && E.canUse(s, 'run') && E.runChance(s) > 0.3) return 'run';
-  if (!free && E.mechanicOf(r) === 'vents' && r.vent === 1) return 'defend';
+  if (!free && ((E.mechanicOf(r) === 'vents' && r.vent === 1) || (E.mechanicOf(r) === 'storm' && r.storm === 1))) return 'defend';
   if (r.turns > 60 && !e.boss && E.canUse(s, 'run')) return 'run'; // a fight going nowhere (a regenerating enemy that can't be outdamaged): a player would leave
   const med = E.medicPick(s);
   if (med) return med;
@@ -86,7 +86,7 @@ function act(s, st, b, who = 0) {
   if (E.canUse(s, 'intimidate') && e.tags.includes('human') && (e.boss ? !e.shaken && e.hp > e.maxHp * 0.3 : E.intimidateChance(s) > 0.3)) return 'intimidate';
   const hit = adv.hit || G.attackChoice(s, b.style);
   if (!free && !blind && e.intent === 'guard' && hit !== 'strike') return 'defend';
-  for (const k of ['overhaul', 'pickcard', 'overload', 'smash', 'aimed', 'blast', 'burst', 'suppress']) if (E.canUse(s, k) && E.skillsOf(c).includes(k) && G.skillAllowed(b.style, k) && !(k === 'smash' && D.MELEE_COUNTER[e.id] && !free) && !(adv.hit === 'strike' && k !== 'smash' && k !== 'overload') && !(adv.hit === 'shoot' && k === 'smash')) return k;
+  for (const k of ['overhaul', 'pickcard', 'wink', 'overload', 'smash', 'aimed', 'blast', 'burst', 'suppress']) if (E.canUse(s, k) && E.skillsOf(c).includes(k) && G.skillAllowed(b.style, k) && !(k === 'smash' && D.MELEE_COUNTER[e.id] && !free) && !(adv.hit === 'strike' && k !== 'smash' && k !== 'overload') && !(adv.hit === 'shoot' && k === 'smash')) return k;
   return hit;
 }
 // Stacks what it already carries when it can, as a player chasing a build would.

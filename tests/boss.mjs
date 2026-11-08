@@ -531,6 +531,7 @@ const act = (t, a) => { E.playerAct(t.s, a, t.rng, 0); hold(t.s); };
       const { s, rng } = game(100 + seed);
       const c = s.char; c.level = 12; c.attrs.str += 6; c.attrs.agi += 4; c.attrs.int += 3; c.attrs.cha += 3; c.items = { stim: 3, thermal: 1, ion: 1, smoke: 0 }; c.hp = E.stats(s).maxHp;
       const e = deployBoss(s, rng, id);
+      if (WHERE[id][0] === 'reach') { e.hp = e.maxHp = 2500; e.atk = Math.min(e.atk, 120); } // endgame bosses: a level-12 test operative only needs to meet their moves
       let steps = 0;
       while (s.screen === 'combat' && s.run.enemy === e && steps++ < 300) { if (e.sig) seen.add(e.sig.id); if (seed >= 20) c.hp = Math.max(c.hp, 2000); const a = E.autoAction(s); if (!E.canUse(s, a)) throw new Error(`auto chose ${a} on ${id}`); E.playerAct(s, a, rng, 0); }
       if (steps >= 300) throw new Error(`stuck on ${id}`);

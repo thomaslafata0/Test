@@ -686,24 +686,75 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .aa-feat.done .feat-bar i { background: var(--ok); }
 .modal.feats { width: min(960px, 100%); }
 .pm-shield { color: #8fdcff; font-size: .8em; }
+.hostess-greet { font-style: italic; margin: 2px 0; }
+.lounge-result { max-width: 560px; }
+.lounge-res-body { display: flex; gap: 14px; align-items: center; }
+.lounge-res-body .hostess { flex: none; }
+.good-text { color: var(--ok); }
+@media (max-width: 520px) { .lounge-res-body { flex-direction: column; } }
 .board-player { color: var(--sodium); font-weight: 600; }
 .name-gate { max-width: 460px; }
 .name-gate .set-row input { min-width: 0; }
 .name-edit { display: flex; gap: 6px; }
-.tcard { position: relative; display: grid; justify-items: center; gap: 2px; padding: 8px 8px 10px; border-radius: 10px; background: linear-gradient(160deg, #241a2c, #121018); border: 2px solid #6b5a78; min-width: 112px; }
-.tcard .hostess { margin-bottom: 2px; }
-.tcard.r-foil { border-color: #d9a53a; box-shadow: 0 0 10px #d9a53a55; }
-.tcard.r-holo { border-color: #ff6ad5; box-shadow: 0 0 14px #ff6ad588; background: linear-gradient(160deg, #3b1f4a, #142235 55%, #3a1838); }
-.tcard.house { opacity: .9; }
-.tcard.fresh { animation: tc-pop .5s ease-out; }
-@keyframes tc-pop { from { transform: scale(.7) rotate(-6deg); opacity: 0; } to { transform: none; opacity: 1; } }
-.tc-name { font-weight: 700; } .tc-rar { font-family: var(--mono); font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-.tcard.r-holo .tc-rar { color: #ff9ae5; } .tcard.r-foil .tc-rar { color: #e9c06a; }
-.tc-stats { display: flex; gap: 8px; font-size: .78rem; } .tc-stats span { display: grid; justify-items: center; } .tc-stats i { font-style: normal; color: var(--muted); font-size: .66rem; } .tc-stats b { font-size: 1rem; }
-.tc-shelf, .tc-hand { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
-.tc-count { position: absolute; top: 6px; right: 8px; font-family: var(--mono); font-size: .8rem; color: var(--sodium); }
-.tc-rounds { display: grid; gap: 6px; margin: 6px 0; } .tc-round { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.tc-round.win .tc-vs { color: var(--ok); } .tc-round.loss .tc-vs { color: var(--danger); } .tc-vs { font-family: var(--mono); }
+.tcard { --rc: #6b6470; position: relative; display: grid; justify-items: center; align-content: start; gap: 2px; width: 132px; padding: 6px 6px 8px; border-radius: 10px; background: linear-gradient(165deg, #251b2e, #111019); border: 2px solid var(--rc); overflow: hidden; }
+.tcard .tc-art { width: 100%; display: flex; justify-content: center; overflow: hidden; border-radius: 6px; background: radial-gradient(ellipse at 50% 70%, #3b2a48, #17121e); }
+.tcard .hostess { margin: 0; }
+.tcard .tc-shine { position: absolute; inset: 0; pointer-events: none; }
+.tc-top { display: flex; width: 100%; justify-content: space-between; align-items: baseline; gap: 4px; } .tc-name { font-weight: 700; font-size: .9rem; }
+.tc-gem { color: var(--rc); font-size: .55rem; letter-spacing: 1px; } .tc-rar { width: 100%; font-family: var(--mono); font-size: .62rem; letter-spacing: .1em; text-transform: uppercase; color: var(--rc); } .tc-rar em { font-style: normal; color: var(--muted); letter-spacing: 0; text-transform: none; }
+.tc-stats { display: flex; width: 100%; justify-content: space-around; font-size: .76rem; } .tc-stats span { display: grid; justify-items: center; padding: 1px 4px; border-radius: 5px; } .tc-stats i { font-style: normal; color: var(--muted); font-size: .6rem; } .tc-stats b { font-size: 1rem; }
+.tc-stats span.call { background: #ffd36a22; outline: 1px solid #ffd36a88; } .tc-stats span.call b { color: #ffd36a; }
+.tc-ab { font-size: .64rem; line-height: 1.25; color: var(--muted); text-align: center; } .tc-ab b { color: var(--fg, #eee); }
+.tcard .btn { margin-top: 4px; width: 100%; } .tc-btns { display: grid; gap: 4px; width: 100%; justify-items: center; } .tc-btns .btn { margin: 0; }
+.tc-count { position: absolute; top: 4px; left: 6px; font-family: var(--mono); font-size: .78rem; color: var(--sodium); background: #000a; padding: 0 4px; border-radius: 4px; }
+.tcard.r-foil { --rc: #c9d3e0; } .tcard.r-holo { --rc: #7fd6ff; } .tcard.r-gilded { --rc: #e8b54a; background: linear-gradient(165deg, #3a2a14, #15110b); box-shadow: 0 0 10px #e8b54a55; }
+.tcard.r-neon { --rc: #ff3fb4; background: linear-gradient(165deg, #2c1030, #0c1424); animation: tc-neon 2.4s ease-in-out infinite; }
+.tcard.r-prism { --rc: #fff; border-color: transparent; background: linear-gradient(165deg, #2a1838, #10141f) padding-box, linear-gradient(90deg, #ff6ad5, #ffd36a, #6affc8, #6ab8ff, #c56aff, #ff6ad5) border-box; background-size: 100% 100%, 300% 100%; animation: tc-prism 4s linear infinite; box-shadow: 0 0 16px #c56aff77; }
+.tcard.r-prism .tc-gem, .tcard.r-prism .tc-rar { color: #ffd36a; }
+.tcard.r-foil .tc-shine { background: linear-gradient(115deg, transparent 35%, #ffffff40 50%, transparent 65%); background-size: 260% 100%; animation: tc-sweep 3.2s linear infinite; }
+.tcard.r-holo .tc-shine, .tcard.r-prism .tc-shine { background: linear-gradient(115deg, #ff6ad522, #ffd36a22, #6affc822, #6ab8ff22, #c56aff22); background-size: 300% 100%; mix-blend-mode: screen; animation: tc-sweep 5s linear infinite; }
+.tcard.r-gilded .tc-shine { background: linear-gradient(115deg, transparent 38%, #ffe6a050 50%, transparent 62%); background-size: 260% 100%; animation: tc-sweep 2.6s linear infinite; }
+@keyframes tc-sweep { from { background-position: 130% 0; } to { background-position: -130% 0; } }
+@keyframes tc-neon { 50% { box-shadow: 0 0 18px #ff3fb4aa, 0 0 4px #4ff0ff; } }
+@keyframes tc-prism { to { background-position: 0 0, 300% 0; } }
+.tcard.mini { width: 108px; } .tcard.mini .tc-ab { display: none; } .tcard.tiny { width: 78px; padding: 4px; } .tcard.tiny .tc-ab, .tcard.tiny .tc-stats, .tcard.tiny .tc-rar { display: none; } .tcard.tiny .tc-name { font-size: .72rem; }
+.tcard.empty { border-style: dashed; background: #0006; min-height: 150px; align-content: center; color: var(--muted); font-size: .7rem; text-align: center; } .tcard.tiny.empty { min-height: 84px; opacity: .55; } .tcard.empty.now { border-color: #ffd36a; color: #ffd36a; animation: tc-neon 1.6s infinite; }
+.tcard.back { --rc: #ff6ad5; min-height: 150px; align-content: center; background: repeating-linear-gradient(45deg, #3a1c3f 0 6px, #2a1430 6px 12px); }
+.tc-backmark { display: grid; justify-items: center; font-family: var(--mono); font-size: .62rem; letter-spacing: .12em; text-transform: uppercase; color: #ffb3e6; text-align: center; } .heart { font-size: 1.8rem; color: #ff6ad5; text-shadow: 0 0 10px #ff6ad5; line-height: 1; }
+.tcard.flip { animation: tc-flip .55s both; animation-delay: calc(var(--i, 0) * .35s); }
+.tcard.r-neon.flip { animation: tc-flip .55s both, tc-neon 2.4s ease-in-out .6s infinite; } .tcard.r-prism.flip { animation: tc-flip .55s both, tc-prism 4s linear .6s infinite; }
+.tcard.hit::after { content: ''; position: absolute; inset: -40%; background: radial-gradient(circle, #fff8 0, transparent 55%); animation: tc-burst .9s ease-out both; animation-delay: calc(var(--i, 0) * .35s + .4s); pointer-events: none; }
+@keyframes tc-flip { from { transform: perspective(700px) rotateY(90deg) scale(.85); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes tc-burst { from { opacity: 1; transform: scale(.3); } to { opacity: 0; transform: scale(1.4); } }
+.tc-shelf, .tc-hand { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 12px; } .tc-shelf.deck { padding: 8px; border-radius: 10px; background: #0004; border: 1px solid #ffffff14; }
+.tc-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.tc-free { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 10px; }
+.tc-how summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
+.tc-tables { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; margin: 8px 0; }
+.tc-table { padding: 10px 12px; border-radius: 12px; background: radial-gradient(ellipse at 50% 0, #1f3a2c, #0f1c16); border: 1px solid #2d4f3d; display: grid; gap: 6px; align-content: start; }
+.tc-table.t-floor { background: radial-gradient(ellipse at 50% 0, #3a2d14, #1a140b); border-color: #6b5326; } .tc-table.t-high { background: radial-gradient(ellipse at 50% 0, #3b1f4a, #150d1d); border-color: #7a3f8f; }
+.tc-table h4 { margin: 0; } .tc-table p { margin: 0; } .tc-table-head { display: flex; justify-content: space-between; align-items: baseline; }
+.tc-meter { height: 6px; border-radius: 3px; background: #0006; overflow: hidden; } .tc-meter i { display: block; height: 100%; background: linear-gradient(90deg, #6ab8ff, #ffd36a, #ff6ad5); }
+.tc-packrow { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; } .tc-packrow p { margin: 0 0 6px; }
+.tc-packart { width: 104px; height: 140px; border-radius: 10px; display: grid; place-items: center; align-content: center; gap: 4px; text-align: center; background: linear-gradient(140deg, #ff6ad5, #6ab8ff 50%, #c56aff); background-size: 200% 200%; animation: tc-prism 6s linear infinite; color: #1a0f22; box-shadow: 0 6px 18px #0008; font-family: var(--mono); font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; }
+.tc-packart .heart { color: #fff; text-shadow: 0 0 8px #fff; }
+.tc-reveal { margin: 4px 0 10px; } .tc-hitline { font-family: var(--mono); text-transform: uppercase; letter-spacing: .2em; font-weight: 700; color: var(--rc, #ffd36a); animation: tc-flip .6s both; }
+.tc-hitline.r-gilded { --rc: #e8b54a; } .tc-hitline.r-neon { --rc: #ff3fb4; } .tc-hitline.r-prism { --rc: #ffd36a; text-shadow: 0 0 10px #c56aff; }
+.tc-odds { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .8rem; } .tc-odd { --rc: #6b6470; } .tc-odd.r-foil { --rc: #c9d3e0; } .tc-odd.r-holo { --rc: #7fd6ff; } .tc-odd.r-gilded { --rc: #e8b54a; } .tc-odd.r-neon { --rc: #ff3fb4; } .tc-odd.r-prism { --rc: #ffd36a; }
+.tc-binder { display: grid; gap: 10px; } .tc-binder-row { display: grid; gap: 4px; } .tc-binder-who { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; } .tc-binder-cells { display: flex; gap: 6px; flex-wrap: wrap; }
+.tc-felt { padding: 10px; border-radius: 14px; background: radial-gradient(ellipse at 50% 40%, #1f3a2c, #0b1510); border: 1px solid #2d4f3d; box-shadow: inset 0 0 30px #0009; margin-bottom: 8px; }
+.tc-felt.t-floor { background: radial-gradient(ellipse at 50% 40%, #3a2d14, #120d07); border-color: #6b5326; } .tc-felt.t-high { background: radial-gradient(ellipse at 50% 40%, #3b1f4a, #0e0814); border-color: #7a3f8f; }
+.tc-felt-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; } .tc-score b { font-size: 1.2rem; font-family: var(--mono); }
+.tc-cols { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; } .tc-col { display: grid; gap: 4px; justify-items: center; padding: 4px; border-radius: 12px; } .tc-col.now { background: #ffd36a12; outline: 1px dashed #ffd36a66; }
+.tc-call { display: grid; justify-items: center; line-height: 1.1; } .tc-call b { font-family: var(--mono); text-transform: uppercase; letter-spacing: .1em; color: #ffd36a; }
+.tc-res { display: grid; grid-template-columns: auto auto auto; gap: 4px; align-items: baseline; justify-items: center; font-family: var(--mono); } .tc-res small { grid-column: 1 / -1; color: var(--muted); font-size: .6rem; }
+.tc-res.win b:first-child { color: var(--ok); } .tc-res.loss b:nth-child(3) { color: var(--danger); }
+.tc-col.win .tcard:last-child { box-shadow: 0 0 12px #6affc866; } .tc-col.loss .tcard.house { box-shadow: 0 0 12px #ff5a5a66; }
+.tc-prompt { margin: 4px 0; } .tc-end { font-weight: 700; }
+.tcard { grid-template-columns: 100%; } .tcard > * { min-width: 0; } .tc-btns .btn { white-space: normal; font-size: .72rem; padding: 4px 6px; line-height: 1.2; }
+@media (max-height: 500px) { .tc-felt .tc-art, .tc-felt .tc-rar { display: none; } .tc-felt .tcard.empty, .tc-felt .tcard.back { min-height: 64px; } .tc-felt .heart { font-size: 1.1rem; } .tc-felt .tc-backmark span:last-child { display: none; } .tc-felt { padding: 6px 8px; } .tc-felt-head { margin-bottom: 2px; } .tc-hand .tc-art { max-height: 58px; align-items: flex-start; } .tc-hand .tc-ab { display: none; } }
+@media (max-width: 900px), (max-height: 500px) { .tcard { width: 112px; } .tcard.mini { width: 92px; } .tcard.empty, .tcard.back { min-height: 118px; } .tc-cols { gap: 6px; } }
+@media (prefers-reduced-motion: reduce) { .tcard, .tcard .tc-shine, .tcard::after, .tc-packart, .tc-hitline { animation: none !important; } }
 .board-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .board-table th { text-align: left; font-family: var(--mono); font-size: .66rem; letter-spacing: .1em; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); }
 .board-table td { padding: 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
@@ -1548,6 +1599,11 @@ html.calm .btn:active, html.calm .door:active, html.calm .tab:active, html.calm 
 .news-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 12px 18px 0; }
 .news-card { display: grid; gap: 4px; align-content: start; padding: 10px 12px; border: 1px solid var(--line); background: var(--panel-2); }
 .news-ops { display: flex; justify-content: center; gap: 4px; }
+.news-ops-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; align-items: center; padding: 12px 18px 0; background: radial-gradient(40% 90% at 12% 70%, #ff5fa233, #0000 70%); }
+.news-op-star { margin: 0; display: grid; justify-items: center; text-align: center; } .news-op-star figcaption { display: grid; font-size: .82rem; } .news-op-star figcaption span { color: var(--sodium); }
+.news-grid.one { grid-template-columns: 1fr; padding: 0; }
+.news-cards { display: flex; justify-content: center; gap: 12px; padding: 14px 18px 0; flex-wrap: wrap; }
+@media (max-height: 500px) { .news-ops-row .hostess, .news-cards .tc-art { display: none; } .news-ops-row { grid-template-columns: 1fr; } .news-cards .tc-ab { display: none; } }
 .news-ring { display: flex; justify-content: center; align-items: end; gap: 0; height: 128px; background: linear-gradient(180deg, #0000 50%, #0009), url(bg/garrison_3.png) center 70% / cover; border: 1px solid var(--line); }
 .op-strip { image-rendering: pixelated; background-repeat: no-repeat; animation: hostess-loop 1.6s steps(3) infinite alternate; }
 .op-strip.flip { transform: scaleX(-1); }
@@ -1635,7 +1691,7 @@ const CELLS = 5, CELL_KEY = 'cinder-cell-slot';
 let cellSlot = (() => { try { const n = +localStorage.getItem(CELL_KEY); return n >= 0 && n < CELLS ? n : 0; } catch (e) { return 0; } })();
 const saveKey = (i = cellSlot) => (i ? `${SAVE_KEY}-s${i}` : SAVE_KEY);
 const oldSeason = (s) => !!(s && s.meta && (s.meta.season || 1) < E.SEASON);
-const NEWS_KEY = 'cinder-cell-news', NEWS_ID = 'afterhours'; // bump to show the popup again
+const NEWS_KEY = 'cinder-cell-news', NEWS_ID = 'reach'; // bump to show the popup again
 let newsPage = 0;
 let seasonFresh = false;
 const rng = Math.random;
@@ -1885,6 +1941,7 @@ function cloudSection() {
 
 // ---------- dev mode ----------
 const DEV_CODE = '444481', DEV_KEY = 'cinder-cell-dev';
+const CASH_CODE = '444482', CASH_AMOUNT = 10000; // adds credits to the current operative without dev mode, so the cell stays on the leaderboard
 let devOn = (() => { try { return localStorage.getItem(DEV_KEY) === '1'; } catch (e) { return false; } })();
 let auto = null, autoLast = { build: 'strength', target: 15, stopOnDeath: false, map: '' }, autoResult = null;
 function stopAuto(why) {
@@ -1995,7 +2052,7 @@ const myIdx = () => (isGuest() ? 1 : 0);
 const DOWNTIME = new Set(['drink', 'bet', 'stake', 'spin', 'invest', 'withdraw', 'shippart', 'shipcell', 'orbitgo', 'orbitact', 'orbitclose']);
 // The shuttle belongs to each player's own cell, so a friend in someone's room can't fly or fit it from here.
 const SHIP_ACTS = new Set(['shippart', 'shipcell', 'orbitarm', 'orbitgo', 'orbitact', 'orbitclose']);
-const LOCAL = new Set(['setname', 'mainmenu', 'cellgo', 'celldel', 'newspage', 'firstraid', 'takeover', 'autoaccept', 'autostim', 'featfilter', 'stimprompt', 'draftdrone', 'randomize', 'missiontab', 'markettab', 'chartab', 'continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm', 'cloudcopy', 'cloudload', 'cloudversions', 'cloudrestore', 'cloudkeep', 'devunlock', 'devoff', 'dev', 'autostart']);
+const LOCAL = new Set(['cardtab', 'setname', 'mainmenu', 'cellgo', 'celldel', 'newspage', 'firstraid', 'takeover', 'autoaccept', 'autostim', 'featfilter', 'stimprompt', 'draftdrone', 'randomize', 'missiontab', 'markettab', 'chartab', 'continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm', 'cloudcopy', 'cloudload', 'cloudversions', 'cloudrestore', 'cloudkeep', 'devunlock', 'devoff', 'dev', 'autostart']);
 function coopChip() {
   if (!net) return '';
   const who = net.peerName || (isHost() ? 'friend' : 'host');
@@ -2840,7 +2897,7 @@ function clinic() {
 }
 
 // Cheapest thing Resolve can buy right now (training rank or cell upgrade), for the tab badge.
-const canSpendResolve = () => { const m = state.meta; return Object.entries(D.TRAINING).some(([k, t]) => m.training[k] < t.max && m.resolve >= E.trainingCost(m.training[k])) || D.CELL.some((u) => { const n = u.levels[E.cellLevel(m, u.id)]; return n && m.resolve >= n.cost; }); };
+const canSpendResolve = () => { const m = state.meta; return Object.entries(D.TRAINING).some(([k]) => m.training[k] < E.trainingMax(m, k) && m.resolve >= E.trainingCost(m.training[k])) || D.CELL.some((u) => { const n = u.levels[E.cellLevel(m, u.id)]; return n && !(n.endgame && !E.endgameOpen(m)) && m.resolve >= n.cost; }); };
 
 function droneTab() {
   const c = state.char, m = state.meta, d = c.drone;
@@ -2865,16 +2922,16 @@ function character() {
   const skills = E.skillsOf(c).map((k) => `<div class="row i skill-row">${ico(`skill:${k}`)}<div><div class="name">${esc(D.SKILLS[k].name)} <span class="num muted" style="font-size:.8rem">cooldown ${E.skillCd(c, k)}</span></div><div class="desc">${esc(D.SKILLS[k].desc)}</div></div><span class="label">${esc(D.SKILLS[k].from)}</span></div>`).join('');
   const history = c.history.length ? c.history.map((h) => `<div><span>${esc(h.text)}</span></div>`).join('') : '<p class="muted">Nothing yet. Your choices in the field will show up here.</p>';
   const rows = Object.entries(D.TRAINING).map(([k, t]) => {
-    const lvl = m.training[k], cost = E.trainingCost(lvl), maxed = lvl >= t.max;
+    const cap = E.trainingMax(m, k), lvl = m.training[k], cost = E.trainingCost(lvl), maxed = lvl >= cap, more = !E.endgameOpen(m) && t.maxEnd && lvl >= t.max;
     return `<div class="row i">${ico(`train:${k}`)}<div><div class="name">${esc(t.label)} <span class="num muted" style="font-size:.8rem">+${t.per} ${t.stat} per rank</span></div>
-      <div class="desc">${esc(t.note)}</div><div class="pips ${t.max > 10 ? 'long' : ''}" style="--n:${t.max}" aria-label="rank ${lvl} of ${t.max}" title="Rank ${lvl} of ${t.max}">${Array.from({ length: t.max }, (_, i) => `<i class="${i < lvl ? 'on' : ''}"></i>`).join('')}</div></div>
-      ${maxed ? '<span class="label">mastered</span>' : `<button class="btn ${m.resolve >= cost ? 'primary' : ''}" data-a="train" data-v="${k}" aria-label="Train ${esc(t.label)}: ${cost} ${esc(S.meta)}" ${m.resolve < cost ? 'disabled' : ''}>${cost} ${esc(S.meta)}</button>`}</div>`;
+      <div class="desc">${esc(t.note)}</div><div class="pips ${cap > 10 ? 'long' : ''}" style="--n:${cap}" aria-label="rank ${lvl} of ${cap}" title="Rank ${lvl} of ${cap}">${Array.from({ length: cap }, (_, i) => `<i class="${i < lvl ? 'on' : ''}"></i>`).join('')}</div></div>
+      ${more ? '<span class="label" title="Free every district with one operative to reach Threat I: ten more ranks open.">more after Threat I</span>' : maxed ? '<span class="label">mastered</span>' : `<button class="btn ${m.resolve >= cost ? 'primary' : ''}" data-a="train" data-v="${k}" aria-label="Train ${esc(t.label)}: ${cost} ${esc(S.meta)}" ${m.resolve < cost ? 'disabled' : ''}>${cost} ${esc(S.meta)}</button>`}</div>`;
   }).join('');
   const cell = D.CELL.map((u) => {
-    const lv = E.cellLevel(m, u.id), now = lv ? u.levels[Math.min(lv, u.levels.length) - 1] : null, next = u.levels[lv];
+    const lv = E.cellLevel(m, u.id), now = lv ? u.levels[Math.min(lv, u.levels.length) - 1] : null, nextAny = u.levels[lv], gated = nextAny && nextAny.endgame && !E.endgameOpen(m), next = gated ? null : nextAny;
     const cellIco = ico(`cell:${u.id}`);
     const pips = u.levels.length > 1 ? `<div class="pips" style="--n:${u.levels.length}" aria-label="level ${lv} of ${u.levels.length}" title="Level ${lv} of ${u.levels.length}">${u.levels.map((_, i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('')}</div>` : '';
-    const text = next ? `${now ? `Now: ${now.desc} ` : ''}<span class="cell-next">${now ? 'Next: ' : ''}${esc(next.desc)}</span>` : esc(now.desc);
+    const text = next ? `${now ? `Now: ${now.desc} ` : ''}<span class="cell-next">${now ? 'Next: ' : ''}${esc(next.desc)}</span>` : gated ? `${now ? `Now: ${esc(now.desc)} ` : ''}<span class="muted">More levels open once an operative reaches Threat I.</span>` : esc(now.desc);
     return `<div class="row ${cellIco ? 'i' : ''} ${next ? '' : 'owned'}">${cellIco}<div><div class="name">${esc(u.name)}</div><div class="desc">${text}</div>${pips}</div>${next ? `<button class="btn ${m.resolve >= next.cost ? 'primary' : ''}" data-a="cell" data-v="${u.id}" aria-label="Buy ${esc(u.name)}: ${next.cost} ${esc(S.meta)}" ${m.resolve < next.cost ? 'disabled' : ''}>${next.cost} ${esc(S.meta)}</button>` : '<span class="label">maxed</span>'}</div>`;
   }).join('');
   const wall = m.fallen.length ? m.fallen.map((f) => `<div><span>${esc(f.name)} <span class="muted">\u00B7 Lv ${f.level}</span></span><span class="muted">${esc(E.sectorName(f.sector, f.map))}, ${esc(f.killer)}</span></div>`).join('') : '<p class="muted">No names yet. Keep it that way.</p>';
@@ -2943,7 +3000,7 @@ function gate() {
     : `<div class="deploy-go ${hurt && canHeal ? 'hurt' : ''}">${prep}${warn}${E.isCoop(state) ? `<span class="muted" style="font-size:.84rem">${state.guestReady ? `${esc(state.guestName || 'Your friend')} is ready.` : state.hostWants ? `Deploying as soon as ${esc(state.guestName || 'your friend')} is ready\u2026` : peerAuto ? `${esc(state.guestName || 'Your friend')} has auto-accept on: press Deploy and they\u2019ll follow.` : `Waiting for ${esc(state.guestName || 'your friend')} to press Ready.`}</span>` : ''}<span class="label">${ins.length > 1 ? 'Deploy \u00B7 pick where to start' : 'Deploy'}</span><div class="ins">${ins.map((n) => `<button class="btn big ${n === ins[ins.length - 1] ? 'primary' : ''}" data-a="deploy" data-v="${n}" ${E.isCoop(state) && !state.guestReady && !peerAuto ? 'disabled' : ''}><span class="ins-n">Sector ${n}</span> <span class="ins-name">${esc(E.sectorName(n, sel.id))}</span></button>`).join('')}</div>${ins.length === 1 ? '<span class="muted ins-hint">Beat a boss to start deeper next time.</span>' : ''}</div>`;
   return `<nav class="tabs pop-tabs">${tabBtn('deploy', 'Deploy')}${tabBtn('contracts', `Contracts ${(m.contracts || []).length}`)}</nav>
     ${tab === 'contracts' ? `<div class="contracts">${contracts || '<p class="muted">No jobs right now.</p>'}</div>` : `<div class="gate">
-      <div class="gate-maps"><div class="maps">${cards}</div>${locked.length ? `<p class="muted maps-locked">Locked: ${locked.map((mp) => `${esc(mp.name)} (clear ${Object.entries(mp.unlock).map(([id, n]) => `${esc(E.mapById(id).name)} ${n}`).join(', ')})`).join(', ')}</p>` : ''}</div>
+      <div class="gate-maps"><div class="maps">${cards}</div>${locked.length ? `<p class="muted maps-locked">Locked: ${locked.map((mp) => `${esc(mp.name)} (${mp.power ? 'free the other four' : `clear ${Object.entries(mp.unlock).map(([id, n]) => `${esc(E.mapById(id).name)} ${n}`).join(', ')}`})`).join(', ')}</p>` : ''}</div>
       <div class="gate-brief"><span class="label">${esc(sel.name)} \u00B7 what to expect</span><b class="mech-title">${esc(sel.mechanic.name)}</b> <span class="mech-line">${esc(sel.mechanic.desc)}</span>${traits.length ? `<div class="chips">${traits.map((x) => `<span class="chip">${esc(x)}</span>`).join('')}</div>` : ''}${threat}</div>
       ${go}
     </div>`}`;
@@ -3020,7 +3077,7 @@ function combatScreen() {
     <div class="actions ${mine ? '' : 'locked'}">
       <button class="btn primary twoline atk" data-a="act" data-v="shoot" title="${esc(E.weaponOf(c).name)}: ${st.atk} ATK, ${pct(E.critChance(st, e))} crit. Steady damage; cover halves it. You keep your distance, so you take ${Math.round(E.TUNE.shootGuard * 100)}% less damage this turn."><span class="bt">Shoot<span class="k" aria-hidden="true">A</span></span><span class="wpn">${esc(E.weaponOf(c).name)}</span><span class="bs"><b class="rng">${sr[0]}\u2013${sr[1]}</b> dmg${e.intent === 'guard' && !e.stun ? ' (cover)' : ''}</span></button>
       <button class="btn twoline atk ${D.MELEE_COUNTER[e.id] ? 'warn' : ''}" data-a="act" data-v="strike" title="${esc(E.meleeOf(c).name)}: ${st.atkM} ATK, ${pct(E.critChance(st, e, true))} crit. Hits harder than a shot but swingy, ignores cover, stops a repair, and your next attack hits ${Math.round(E.TUNE.momentum * 100)}% harder."><span class="bt">Strike<span class="k" aria-hidden="true">F</span></span><span class="wpn">${esc(E.meleeOf(c).name)}</span><span class="bs"><b class="rng">${mr[0]}\u2013${mr[1]}</b> dmg${D.MELEE_COUNTER[e.id] ? ' \u00B7 hits back!' : ''}</span></button>
-      <button class="btn twoline" data-a="act" data-v="defend" title="Take 40% less damage (about 60% less from a heavy strike) and steady your next shot."><span class="bt">Defend<span class="k" aria-hidden="true">D</span></span><span class="bs">${ventNow ? `Blocks the vent (\u2212${ventNow.me})${inc ? ` \u00b7 take ${inc.defMin}-${inc.phaseDefMax || inc.defMax}` : ''}` : inc ? `Take ${inc.defMin}-${inc.phaseDefMax || inc.defMax}${dot ? ` +${dot}` : ''}` : '40% less damage'}</span></button>
+      <button class="btn twoline" data-a="act" data-v="defend" title="Take 40% less damage (about 60% less from a heavy strike) and steady your next shot."><span class="bt">Defend<span class="k" aria-hidden="true">D</span></span><span class="bs">${ventNow ? `Blocks the vent (\u2212${ventNow.me})${inc ? ` \u00b7 take ${inc.defMin}-${inc.phaseDefMax || inc.defMax}` : ''}` : inc ? `Take ${inc.defMin}-${inc.phaseDefMax || inc.defMax}${dot ? ` +${dot}` : ''}` : 'Takes 60%'}</span></button>
       <button class="btn twoline" data-a="act" data-v="stim" title="${esc(D.ITEMS.stim.desc)}" ${c.items.stim ? '' : 'disabled'}><span class="bt">${ico('item:stim', 'sm')}Stim <span class="num">\u00D7${c.items.stim}</span><span class="k" aria-hidden="true">S</span></span><span class="bs">${esc(D.ITEMS.stim.short)}</span></button>
       <button class="btn twoline" data-a="act" data-v="run" ${E.canUse(state, 'run') ? '' : 'disabled'} title="Getting away drops ${Math.round(E.runShare(state) * 100)}% of unsecured credits and XP. Failing gives the enemy a free turn."><span class="bt">Run<span class="k" aria-hidden="true">R</span></span><span class="bs" title="Getting away drops ${Math.round(E.runShare(state) * 100)}% of unsecured credits and XP">${E.runBlocked(state) ? esc(E.runBlocked(state)) : `${pct(E.runChance(state))}, lose ${Math.round(E.runShare(state) * 100)}%`}</span></button>
     </div>
@@ -3037,15 +3094,16 @@ function mechanicChip(r) {
   if (m.id === 'vents') v = r.enemy ? (r.vent === 1 ? 'blast next turn' : `blast in ${r.vent} turns`) : 'every 3 turns';
   if (m.id === 'allies') v = `${r.allies}/2 with you`;
   if (m.id === 'snipers') v = `${Math.round(E.sniperChance(r) * 100)}% per turn`;
-  const hot = (m.id === 'vents' && r.enemy && r.vent === 1) || (m.id === 'alarm' && r.alert >= 3);
+  if (m.id === 'storm') v = r.enemy ? ((r.storm || 4) === 1 ? 'storm next turn' : `storm in ${r.storm || 4} turns`) : 'every 4 rounds';
+  const hot = (m.id === 'vents' && r.enemy && r.vent === 1) || (m.id === 'storm' && r.enemy && r.storm === 1) || (m.id === 'alarm' && r.alert >= 3);
   return `<span class="mech ${hot ? 'hot' : ''}" title="${esc(m.desc)}"><b>${esc(m.name)}</b> ${v}</span>`;
 }
 // The same, short enough for a phone's one row. The tap gives the rest.
 function mechanicBrief(r) {
   const m = E.mapById(r.map).mechanic;
-  const text = { alarm: `Alarm ${r.alert}/5`, vents: r.vent === 1 ? 'Vents next' : `Vents in ${r.vent}`, allies: `Allies ${r.allies}/2`, snipers: `Snipers ${Math.round(E.sniperChance(r) * 100)}%` }[m.id];
+  const text = { alarm: `Alarm ${r.alert}/5`, vents: r.vent === 1 ? 'Vents next' : `Vents in ${r.vent}`, allies: `Allies ${r.allies}/2`, snipers: `Snipers ${Math.round(E.sniperChance(r) * 100)}%`, storm: (r.storm || 4) === 1 ? 'Storm next' : `Storm in ${r.storm || 4}` }[m.id];
   if (!text) return '';
-  const hot = (m.id === 'vents' && r.vent === 1) || (m.id === 'alarm' && r.alert >= 3);
+  const hot = (m.id === 'vents' && r.vent === 1) || (m.id === 'storm' && r.storm === 1) || (m.id === 'alarm' && r.alert >= 3);
   return `<span class="chip ph ${hot ? 'bad' : ''}" data-tip="${esc(`${m.name}: ${m.desc}`)}">${text}</span>`;
 }
 function bulletinBox(r) {
@@ -3098,7 +3156,7 @@ function roomScreen() {
 function victoryScreen() {
   const o = state.outcome, c = state.char, r = state.run;
   return `<div class="columns"><section class="panel screen-mid">
-    ${o.liberated ? `<div class="liberated"><span class="label">District liberated</span><b>${esc(o.liberated)}</b><span>The Directorate has lost its grip here. Threat levels are now available under Missions.</span></div>` : ''}
+    ${o.liberated ? `<div class="liberated"><span class="label">District liberated</span><b>${esc(o.liberated)}</b><span>The Directorate has lost its grip here.${E.maxThreat(state) >= 1 ? ' Every district is free: Threat levels are open under Missions.' : ' Free every district to open Threat levels.'}</span></div>` : ''}
     <div class="killer">${o.id ? portraitImg({ id: o.id, name: o.enemy, portrait: o.portrait }, 'down') : ''}<div style="display:grid;gap:4px"><span class="label">${o.fled ? 'Target fled' : 'Target down'}</span><h2>${esc(o.enemy)}</h2></div></div>
     <dl class="kv"><dt>Credits</dt><dd style="color:var(--sodium)">+${o.credits}</dd><dt>XP</dt><dd>+${o.xp}</dd>
     ${o.levelUps.length ? `<dt>Level up</dt><dd class="ok-text">Now level ${o.levelUps[o.levelUps.length - 1]} \u00B7 +${o.levelUps.length} attribute point${o.levelUps.length > 1 ? 's' : ''}</dd>` : ''}
@@ -3132,7 +3190,7 @@ function afterAction() {
   }
   const feats = o.kind === 'fight' && o.feats && o.feats.length ? `<div class="aa-feats">${o.feats.slice(0, 2).map((p) => `<div class="aa-feat ${p.done ? 'done' : ''}" title="${esc(E.FEAT_DEFS[p.key].desc)}"><span class="num">${esc(p.name)} <b>${p.done ? 'Done' : `${p.count}/${p.next}`}</b></span>${featBar(p)}</div>`).join('')}</div>` : '';
   const lvl = o.kind === 'fight' && o.levelUps && o.levelUps.length ? `<span class="chip good">Level ${o.levelUps[o.levelUps.length - 1]}!</span>` : '';
-  return `${o.liberated ? `<div class="liberated"><span class="label">District liberated</span><b>${esc(o.liberated)}</b><span>Threat levels are now available under Missions.</span></div>` : ''}
+  return `${o.liberated ? `<div class="liberated"><span class="label">District liberated</span><b>${esc(o.liberated)}</b><span>${E.maxThreat(state) >= 1 ? 'Every district is free: Threat levels are open under Missions.' : 'Free every district to open Threat levels.'}</span></div>` : ''}
     <div class="aa"><div class="aa-main">${main} ${lvl}<span class="chips">${chips.map((t) => `<span class="chip ${/\u2212|alerted|exploded/.test(t) ? 'bad' : 'good'}">${esc(t)}</span>`).join('')}</span></div>
     <button class="tool" data-a="dismissresult" aria-label="Hide">\u00D7</button>${feats}</div>`;
 }
@@ -3221,41 +3279,49 @@ function sealedLabel(x) {
 // An operative's idle frames as a CSS strip: the first three, there and back, so it breathes rather than sways.
 const opStrip = (id, h, flip = false) => `<div class="op-strip ${flip ? 'flip' : ''}" role="img" aria-label="${esc(id)}" style="width:${h}px;height:${h}px;background-image:url(sprites/${id}/idle.png);background-size:${h * 9}px ${h}px;--end:-${h * 3}px"></div>`;
 function newsView() {
-  if (newsPage === 0) {
-    const ops = ['dealer', 'ghost'].map((id) => D.BACKGROUNDS.find((b) => b.id === id)).filter(Boolean);
-    return `<div class="modal-wrap news-wrap" data-a="closemodal"><div class="modal news" role="dialog" aria-modal="true" aria-label="What's new">
-    <div class="news-hero news-hero-ah"><div class="news-hero-text"><span class="label">New \u00b7 1 of 2</span><h2>After hours</h2><p>Two new operatives, a back room at the Lantern, and a ring in the barracks.</p></div></div>
-    <div class="news-girls">${D.LOUNGE.girls.map((g) => `<figure>${hostessFig(g, 150)}<figcaption><b>${esc(g.name)}</b><span>${esc(g.tag)}</span></figcaption></figure>`).join('')}
-      <div class="news-girls-text"><b>The E-Girl Room</b><span>Through the curtain at the back of the Lantern. From 350 credits a night (each visit costs 10% more) for a permanent mark on your operative: usually a good one, about one in three not.</span></div></div>
-    <div class="news-cards">
-      <div class="news-card"><div class="news-ops">${ops.map((b) => `<figure>${opStrip(b.sprite, 118)}<figcaption><b>${esc(b.name)}</b></figcaption></figure>`).join('')}</div>
-        <b>Two unique operatives</b><span>The Dealer flips cards for crits, bleeds and stolen credits. The Foreman\u2019s Ghost overhauls droids and shrugs off hits. ${ops.map((b) => `${esc(b.name)}: ${esc(b.unlock.text)}`).join(' ')}</span></div>
-      <div class="news-card"><div class="news-ring">${opStrip('dealer', 118)}${opStrip('ghost', 118, true)}</div>
-        <b>PvP in the barracks ring</b><span>Challenge your co-op partner. Pick one of three loadouts, everyone starts even, no stims or items. The winner takes one piece of the loser\u2019s contraband.</span></div>
-    </div>
-    <p class="muted small news-also">Also: Brask\u2019s foundry hands, the steel shutter and the crane\u2019s container are proper art now, and a few animated props turn up around the districts.</p>
-    <div class="btnrow news-go"><button class="btn" data-a="newsok">Skip</button><button class="btn primary big" data-a="newspage" data-v="1">Next: Season 2 recap</button></div>
-  </div></div>`;
-  }
-  const finale = [['ostrane', 'Garrison'], ['hale', 'Foundry'], ['venn', 'Detention'], ['imre', 'Lift Port']];
-  for (const [id] of finale) if (!sheetOf(id)) ensureArt(id); // their portraits fill in when the art arrives
-  const face = (id, where) => { const en = D.ENEMIES[id]; if (!en) return ''; const img = portraitImg({ id, name: en.name }, 'news-face'); return `<figure class="news-boss">${img || `<div class="news-face blank">${ico('room:boss', 'lg')}</div>`}<figcaption><b>${esc(en.name)}</b><span>${esc(where)} \u00b7 sector 20</span></figcaption></figure>`; };
   const item = (icon, title, text) => `<div class="news-item">${ico(icon, 'md')}<div><b>${title}</b><span>${text}</span></div></div>`;
-  return `<div class="modal-wrap news-wrap" data-a="closemodal"><div class="modal news" role="dialog" aria-modal="true" aria-label="What's new">
-    <div class="news-hero"><div class="news-hero-text"><span class="label">Season 2 \u00b7 2 of 2</span><h2>The deep districts</h2><p>Everyone starts fresh: new operatives, a new cell and a new leaderboard.</p></div></div>
+  if (newsPage === 0) {
+    const finale = [['rask', 'Sector 5'], ['broodqueen', 'Sector 10'], ['lancer', 'Sector 15'], ['saal', 'Sector 20']];
+    for (const [id] of finale) if (!sheetOf(id)) ensureArt(id); // their portraits fill in when the art arrives
+    const face = (id, where) => { const en = D.ENEMIES[id]; if (!en) return ''; const img = portraitImg({ id, name: en.name }, 'news-face'); return `<figure class="news-boss">${img || `<div class="news-face blank">${ico('room:boss', 'lg')}</div>`}<figcaption><b>${esc(en.name)}</b><span>${esc(where)}</span></figcaption></figure>`; };
+    return `<div class="modal-wrap news-wrap" data-a="closemodal"><div class="modal news" role="dialog" aria-modal="true" aria-label="What's new">
+    <div class="news-hero"><div class="news-hero-text"><span class="label">New \u00b7 1 of 3</span><h2>Halcyon Reach</h2><p>Up the lift, off-world: the penal colony where the yard\u2019s crates were going. The endgame district.</p></div></div>
     <div class="news-bosses">${finale.map(([id, w]) => face(id, w)).join('')}</div>
     <div class="news-grid">
-      ${item('room:boss', '9 new bosses, 20 sectors', 'Every district now runs to sector 20 with four bosses of its own. Nobody fights the same boss twice across districts.')}
-      ${item('room:elite', 'Districts that build on each other', 'The Foundry opens at Garrison sector 5, Detention after Garrison 10 and Foundry 5, the Lift Port after 15, 10 and 5. Each one starts harder than the last.')}
-      ${item('skill:smash', 'Stronger classes, a reason to Strike', 'Every background has a real edge now. Strike hits 25% harder and stops repairs; Shoot is the safe option.')}
-      ${item('perk:grudge', 'Tougher fights', 'Enemies take more hits, especially when you re-clear old ground, and bosses never run.')}
-      ${item('perk:chit', 'Credits are harder to come by', 'Deep rooms and strongboxes pay less. Contraband stacks to 3, and Marrow sells more room, up to 99.')}
-      ${item('room:locker', 'Late-game gear', 'The market follows how deep your operative has been and your threat level, with bench work up to +8.')}
-      ${item('train:spd', 'Co-op auto-accept', 'Follow your partner\u2019s votes, or both turn it on and watch the raid play itself.')}
-      ${item('room:rest', 'A new yard', 'An open square you can see whole, the Lantern casino, and a proper hideout.')}
+      ${item('room:elite', 'A fifth district, harder than the rest', 'Opens once an operative has freed the other four. Alien wildlife, colony wardens, spore storms every fourth round, and four new bosses.')}
+      ${item('room:boss', 'Threat levels come after', 'Threat I now opens only when one operative has freed all five districts, and each higher threat after freeing all five at the one below.')}
+      ${item('train:hp', 'More Resolve to spend', 'Reaching Threat I opens ten more ranks of every training and new levels of the cell upgrades.')}
+      ${item('train:atk', 'Drones go to rank 8', 'More ranks, spread out: the old top rank is now rank 7, and rank 8 is about 20% stronger. Your drones keep their strength.')}
     </div>
-    <div class="btnrow news-go"><button class="btn" data-a="newspage" data-v="0">Back</button><button class="btn primary big" data-a="newsok">Play</button></div>
+    <div class="btnrow news-go"><button class="btn" data-a="newsok">Skip</button><button class="btn primary big" data-a="newspage" data-v="1">Next: new faces</button></div>
   </div></div>`;
+  }
+  const girls = D.LOUNGE.girls.filter((g) => hostessArt[g.id]);
+  const vex = D.BACKGROUNDS.find((b) => b.id === 'vex'), medic = D.BACKGROUNDS.find((b) => b.id === 'medic'), vexGirl = girls.find((g) => g.id === 'vex');
+  const wrap = (page, hero, body, nav) => `<div class="modal-wrap news-wrap" data-a="closemodal"><div class="modal news" role="dialog" aria-modal="true" aria-label="What's new">
+    <div class="news-hero news-hero-ah"><div class="news-hero-text"><span class="label">New \u00b7 ${page} of 3</span>${hero}</div></div>${body}<div class="btnrow news-go">${nav}</div></div></div>`;
+  if (newsPage === 1) {
+    const lineup = girls.filter((g) => g.id !== 'vex');
+    return wrap(2, '<h2>New faces</h2><p>A new class, a girl who joins the cell, and more of the Lantern\u2019s night shift.</p>',
+      `<div class="news-ops-row">${vexGirl ? `<figure class="news-op-star">${hostessFig(vexGirl, 170)}<figcaption><b>Vex</b><span>Unique operative</span></figcaption></figure>` : ''}
+        <div class="news-grid one">
+          ${vex ? item('skill:intimidate', 'Vex joins the cell', `Her Blown Kiss charms the enemy, she\u2019s quick on her feet and she earns more per job. ${esc(vex.unlock.text)}`) : ''}
+          ${medic ? item('skill:barrier', 'Field Medic', 'A support class: shields for you and your partner, a team damage shot, Triage and Tag. Best in co-op, still fine solo.') : ''}
+          ${item('room:rest', 'The E-Girl Room', 'Three girls work each night, and the lineup changes. Pick one and she walks you out the back. From 350 credits, 10% more each visit; about one night in three goes badly, and a good night can clear an old bad mark.')}
+        </div></div>
+      ${lineup.length ? `<div class="news-girls">${lineup.slice(0, 5).map((g) => `<figure>${hostessFig(g, 110)}<figcaption><b>${esc(g.name)}</b><span>${esc(g.tag)}</span></figcaption></figure>`).join('')}</div>` : ''}`,
+      '<button class="btn" data-a="newspage" data-v="0">Back</button><button class="btn primary big" data-a="newspage" data-v="2">Next: Lantern Hearts</button>');
+  }
+  const show = ['vex:prism', 'pixie:neon', 'rook:gilded'].filter((k) => girls.some((g) => g.id === k.split(':')[0]));
+  return wrap(3, '<h2>Lantern Hearts</h2><p>A card game at the bar: collect the girls, build a deck, take the house\u2019s money.</p>',
+    `${show.length ? `<div class="news-cards">${show.map((k, i) => tcard(k, { cls: 'flip', style: `--i:${i}` })).join('')}</div>` : ''}
+    <div class="news-grid">
+      ${item('perk:chit', 'Six rarities', 'Paper up to Prism, about one card in a thousand. Three copies fuse into one a rarity up.')}
+      ${item('room:elite', 'Build a deck', 'Your six best go to the table. Each girl has her own play, and the house shows its three calls before you choose.')}
+      ${item('room:boss', 'Three tables', 'Back Booth, Main Floor, High Roller. A deck maxed for a table just edges the house there.')}
+      ${item('perk:siphon', 'Also new', 'Stronger, pricier implants; eight new contraband; riskier extraction near bosses, where guards may take contraband as a bribe.')}
+    </div>`,
+    '<button class="btn" data-a="newspage" data-v="1">Back</button><button class="btn primary big" data-a="newsok">Play</button>');
 }
 function modalView() {
   if (needName()) return nameView();
@@ -3269,6 +3335,7 @@ function modalView() {
     <div class="pop-head"><h2>Menu</h2><button class="tool close" data-a="closemodal" aria-label="Close">Close</button></div>
     <div class="menu-grid">${isGuest() ? '' : '<button class="btn primary" data-a="mainmenu">Main menu</button><button class="btn" data-a="modal" data-v="cells">Cells</button>'}<button class="btn" data-a="modal" data-v="manual">Manual</button><button class="btn" data-a="sound">${p.muted ? 'Sound off' : 'Sound on'}</button><button class="btn" data-a="modal" data-v="board">Leaderboard</button><button class="btn" data-a="modal" data-v="feats">Achievements</button><button class="btn" data-a="modal" data-v="codex">${codexLabel()}</button><button class="btn" data-a="modal" data-v="settings">Settings</button>${devOn && !isGuest() ? '<button class="btn" data-a="modal" data-v="dev">Dev</button>' : ''}</div></div></div>`;
   if (modal === 'cells') return cellsView();
+  if (modal === 'loungeres') return loungeResView();
   if (modal === 'board') return boardView();
   if (modal === 'feats') return featsView();
   if (modal === 'codex') return codexView();
@@ -3300,7 +3367,7 @@ function modalView() {
       <section><h3>Gear</h3><p>Six slots. Rarer gear rolls more bonuses; bosses drop Uniques. The market restocks each raid, and nobody buys old gear. Upgrade and reroll on the Gear tab.</p></section>
       <section><h3>Getting stronger</h3><p><b>Lost on death</b>: levels, gear, implants, contraband, ventures. <b>Kept</b>: Resolve, training, cell upgrades, achievements, and one heirloom with that upgrade.</p></section>
       <section><h3>After curfew</h3><p><b>Lantern</b>: one drink per raid. <b>E-Girl Room</b>: from 350 credits a night, 10% more each visit, for a permanent mark on this operative, usually good, about one in three bad; once per trip home. <b>Ring</b> (barracks, co-op only): duel your partner with a ready-made loadout; the winner takes one piece of the loser\u2019s contraband. <b>Wheel</b>: roulette. <b>Orbit</b>: shuttle fights for credits and permanent Marks. <b>Ventures</b>: invest for a return each raid.</p></section>
-      <section><h3>Threat and rewards</h3><p>Freeing a district opens Threat levels and reinforces the others. Sectors far below your level pay less, and a boss you\u2019ve beaten pays half XP.</p></section>
+      <section><h3>Threat and rewards</h3><p>Freeing a district reinforces the others. Free all five (Halcyon Reach last) to open Threat I, and every district again at each threat to open the next. Reaching Threat I also opens ten more training ranks and new cell levels. Sectors far below your level pay less, and a boss you\u2019ve beaten pays half XP.</p></section>
       <section><h3>Drones</h3><p>Every operative flies one drone, and you can switch type for free in town. It can\u2019t be shot down. Clearing a sector has a 10% chance of knocking it offline until you repair it in town. Spend Resolve on the Drone tab of the safehouse: ranks 3 and 5 add abilities, and ranks stay with your cell for every operative who picks that type.</p></section>
       <section><h3>Co-op</h3><p>Host from <b>Settings</b> and share the link. <b>Auto-accept</b> (top of the screen) makes your votes and ready-ups follow your partner; if you both turn it on, the raid plays itself at half speed. You keep your own operative. Vote on doors, pick your own loot, and press <b>E</b> by your partner to trade. At 0 HP you go down and can be revived. If one of you dies, the other must win or run; if both fall, it\u2019s a wipe.</p></section>
       <section><h3>Saves</h3><p>Your cell backs up to the cloud. Enter its code from <b>Settings</b> on any device. Anyone with the code can load it, so keep it private.</p></section>
@@ -3339,7 +3406,7 @@ function modalView() {
       <h3>Cloud save</h3>
       ${cloudSection()}
        <details class="dev-fold" ${devOn ? 'open' : ''}><summary class="muted small">Developer</summary>
-      ${devOn ? '<div class="set-row"><span>Dev mode is on.</span><button class="btn" data-a="modal" data-v="dev">Open</button></div>' : '<div class="set-row"><span class="btnrow" style="flex:1"><input id="dev-code" class="text" inputmode="numeric" maxlength="8" placeholder="Dev code" style="flex:1;min-width:100px"><button class="btn" data-a="devunlock">Enter</button></span></div>'}</details>
+      ${devOn ? '<div class="set-row"><span>Dev mode is on.</span><button class="btn" data-a="modal" data-v="dev">Open</button></div>' : ''}<div class="set-row"><span class="btnrow" style="flex:1"><input id="dev-code" class="text" inputmode="numeric" maxlength="8" placeholder="Dev code" style="flex:1;min-width:100px"><button class="btn" data-a="devunlock">Enter</button></span></div></details>
       <h3>Save by hand</h3>
       <div class="set-row"><span>Save code</span><button class="btn" data-a="savecode">Copy save code</button></div>
       <div class="set-row"><span class="btnrow" style="flex:1"><input id="load-code" class="text" placeholder="Paste a save code" style="flex:1;min-width:120px"><button class="btn" data-a="loadcode">Load</button></span></div>
@@ -3478,7 +3545,10 @@ function barView() {
 // The E-Girl Room: three hostesses, their idle loops played as CSS sprite strips once the art is in.
 let hostessArt = {};
 // The room opens once all three hostesses' art is in: no stand-ins on the live game.
-const loungeOpen = () => D.LOUNGE.girls.every((g) => hostessArt[g.id]);
+// The room opens once at least a night's worth of hostesses have their art in: no stand-ins on the live game.
+const loungeOpen = () => D.LOUNGE.girls.filter((g) => hostessArt[g.id]).length >= D.LOUNGE.tonight;
+const loungeLineup = () => E.loungeTonight(state, D.LOUNGE.girls.filter((g) => hostessArt[g.id]).map((g) => g.id));
+let loungeResult = null; // the result card after the walk out back
 fetch('downtime/hostesses/manifest.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : {})).then((m) => { hostessArt = m || {}; if (state) render(); }).catch(() => {});
 function hostessFig(g, h = 200) {
   const a = hostessArt[g.id];
@@ -3487,42 +3557,123 @@ function hostessFig(g, h = 200) {
   return `<div class="hostess" role="img" aria-label="${esc(g.name)}" style="width:${w}px;height:${h}px;background-image:url(downtime/hostesses/${g.id}.png);background-size:${w * n}px ${h}px;--end:-${w * n}px;--n:${n};animation-duration:${(n / (a.fps || 6)).toFixed(2)}s"></div>`;
 }
 // ---------- Lantern Hearts: the card table ----------
-// Every E-Girl whose art is in is a card. Rules in cards.js; this draws the collection, packs and a match against the house.
+// Every E-Girl whose art is in is a card. Rules in cards.js; this draws the tables, the deck, packs, the binder and a match.
 const cardIds = () => D.LOUNGE.girls.filter((g) => hostessArt[g.id]).map((g) => g.id);
-let lastPack = null;
-function tcard(key, { btn = '', cls = '', h = 112 } = {}) {
-  const k = CARDS.cardInfo(key), g = D.LOUNGE.girls.find((x) => x.id === k.girl) || { id: k.girl, name: k.name };
-  const st = Object.entries(CARDS.STATS).map(([id, n]) => `<span><i>${esc(n)}</i><b>${k.stats[id]}</b></span>`).join('');
-  return `<div class="tcard r-${k.rarity} ${cls}">${hostessArt[g.id] ? hostessFig(g, h) : ''}<div class="tc-name">${esc(k.name)}</div><div class="tc-rar">${esc(k.rarityName)}</div><div class="tc-stats">${st}</div>${btn}</div>`;
+let lastPack = null, cardTab = 'table';
+const gems = (r) => '<span class="tc-gem">' + '&#9670;'.repeat(r + 1) + '</span>';
+function tcard(key, { btn = '', cls = '', h = 86, cap = 5, call = null, count = 0, style = '' } = {}) {
+  const k = CARDS.cardInfo(key, cap), g = D.LOUNGE.girls.find((x) => x.id === k.girl) || { id: k.girl, name: k.name };
+  const st = Object.entries(CARDS.STATS).map(([id, n]) => `<span class="${call === id ? 'call' : ''}"><i>${esc(n)}</i><b>${k.stats[id]}</b></span>`).join('');
+  return `<div class="tcard r-${k.rarity} ${cls}" style="${style}"><div class="tc-art">${hostessArt[g.id] ? hostessFig(g, h) : ''}</div><div class="tc-shine"></div>
+    <div class="tc-top"><span class="tc-name">${esc(k.name)}</span>${gems(k.rank)}</div><div class="tc-rar">${esc(k.rarityName)}${k.capped ? ` <em>plays as ${esc(CARDS.RARITY[cap].name)}</em>` : ''}</div>
+    <div class="tc-stats">${st}</div>${k.ability ? `<div class="tc-ab"><b>${esc(k.ability.name)}</b> ${esc(k.ability.text)}</div>` : ''}${count > 1 ? `<span class="tc-count">\u00d7${count}</span>` : ''}${btn}</div>`;
 }
+const tback = (cls = '') => `<div class="tcard back ${cls}"><div class="tc-backmark"><span class="heart">&hearts;</span><span>Lantern<br>Hearts</span></div></div>`;
 function cardsView() {
-  const c = state.char, m = state.meta, ids = cardIds(), g = state.cardMatch, mine = CARDS.collection(m);
-  const intro = '<p class="muted">Collect the Lantern\u2019s girls as cards and play the house. Each round calls Charm, Sass or Style; play one card, higher number takes the round. Best of three wins your stake back doubled. Holo and Foil cards hit harder.</p>';
-  if (g) {
-    const stat = g.calls[Math.min(g.round, g.calls.length - 1)], wins = g.rounds.filter((r) => r.won > 0).length, losses = g.rounds.filter((r) => r.won < 0).length;
-    const rounds = g.rounds.map((r, i) => `<div class="tc-round ${r.won > 0 ? 'win' : r.won < 0 ? 'loss' : 'tie'}"><span class="label">Round ${i + 1} \u00b7 ${esc(CARDS.STATS[r.stat])}</span>${tcard(r.mine, { h: 70 })}<b class="tc-vs">${r.a} vs ${r.b}</b>${tcard(r.theirs, { h: 70, cls: 'house' })}</div>`).join('');
-    const hand = g.over ? '' : `<p><b>Round ${g.round + 1}: the house calls ${esc(CARDS.STATS[stat])}.</b> Pick a card.</p><div class="tc-hand">${g.hand.map((k, i) => tcard(k, { btn: `<button class="btn primary" data-a="cardpick" data-v="${i}">Play \u00b7 ${CARDS.cardInfo(k).stats[stat]}</button>` })).join('')}</div>`;
-    const end = g.over ? `<div class="notice ${g.result === 'won' ? 'good' : g.result === 'lost' ? 'lose' : ''}">${g.result === 'won' ? `You take the table: +${g.stake} credits.` : g.result === 'lost' ? `The house takes your ${g.stake}.` : 'A draw. Your stake comes back.'}</div><div class="btnrow"><button class="btn primary" data-a="cardclose">Back to the table</button></div>` : '';
-    return `<p class="muted">Stake ${cr(g.stake)} \u00b7 you ${wins}, the house ${losses}.</p>${rounds ? `<div class="tc-rounds">${rounds}</div>` : ''}${hand}${end}`;
-  }
-  const counts = {}; for (const k of mine) counts[k] = (counts[k] || 0) + 1;
-  const keys = Object.keys(counts).sort((a, b) => CARDS.RARITY.findIndex((r) => r.id === b.split(':')[1]) - CARDS.RARITY.findIndex((r) => r.id === a.split(':')[1]) || a.localeCompare(b));
-  const shelf = keys.length ? `<div class="tc-shelf">${keys.map((k) => tcard(k, { h: 90, btn: counts[k] > 1 ? `<span class="tc-count">\u00d7${counts[k]}</span>` : '' })).join('')}</div>` : '<p class="muted">No cards yet.</p>';
-  const pack = lastPack ? `<div class="tc-pack"><span class="label">Just opened</span><div class="tc-hand">${lastPack.map((k) => tcard(k, { h: 90, cls: 'fresh' })).join('')}</div></div>` : '';
-  const stakes = CARDS.STAKES.map((n) => `<button class="btn ${mine.length >= CARDS.HAND && c.credits >= n ? 'primary' : ''}" data-a="cardplay" data-v="${n}" ${mine.length < CARDS.HAND || c.credits < n ? 'disabled' : ''}>Play for ${cr(n)}</button>`).join('');
-  return `${intro}${pack}
-    <div class="btnrow">${!m.cardsFree ? '<button class="btn primary" data-a="cardfree">Free starter pack</button>' : ''}<button class="btn" data-a="cardpack" ${c.credits < CARDS.PACK_COST ? 'disabled' : ''}>Buy a pack \u00b7 ${cr(CARDS.PACK_COST)}</button></div>
-    <div class="btnrow">${stakes}</div>${mine.length < CARDS.HAND ? `<p class="muted small">You need ${CARDS.HAND} cards to play.</p>` : ''}
-    <h3>Your cards <span class="num muted" style="font-size:.9rem">${mine.length}${m.cardWins ? ` \u00b7 ${m.cardWins} wins` : ''}</span></h3>${shelf}`;
+  const c = state.char, m = state.meta, g = state.cardMatch;
+  if (g) return cardMatchView(g);
+  const mine = CARDS.collection(m), tabs = [['table', 'Tables'], ['deck', `Deck ${CARDS.deckOf(m).length}/${CARDS.DECK}`], ['packs', 'Packs'], ['binder', 'Binder']];
+  const nav = `<div class="tc-tabs">${tabs.map(([id, n]) => `<button class="btn small ${cardTab === id ? 'primary' : ''}" data-a="cardtab" data-v="${id}">${esc(n)}</button>`).join('')}</div>`;
+  const free = !m.cardsFree ? `<div class="notice good tc-free"><span>The dealer slides you a pack: your first one is on the house.</span><button class="btn primary" data-a="cardfree">Open the free pack</button></div>` : '';
+  const view = { table: cardTablesView, deck: cardDeckView, packs: cardPacksView, binder: cardBinderView }[cardTab] || cardTablesView;
+  return `${free}${nav}${view(c, m, mine)}`;
+}
+function cardTablesView(c, m, mine) {
+  const deck = CARDS.deckOf(m), ready = deck.length >= CARDS.HAND;
+  const rows = CARDS.TABLES.map((t) => {
+    const at = deck.filter((k) => CARDS.rankOf(k) >= t.cap).length, pow = CARDS.deckPower(m, t), cap = CARDS.RARITY[t.cap];
+    const edge = at >= CARDS.DECK ? '<b class="good-text">Maxed for this table: a slight edge on the house.</b>' : `The house has the edge until all ${CARDS.DECK} of your cards are ${esc(cap.name)} or better (${at}/${CARDS.DECK}).`;
+    const can = ready && c.credits >= t.stake;
+    return `<div class="tc-table t-${t.id}"><div class="tc-table-head"><h4>${esc(t.name)}</h4><span class="num">${cr(t.stake)}</span></div>
+      <p class="small muted">Cards play at up to ${gems(t.cap)} ${esc(cap.name)}. Win pays ${cr(t.stake * 2)}.</p>
+      <div class="tc-meter"><i style="width:${pow}%"></i></div><p class="small">${edge}</p>
+      <button class="btn ${can ? 'primary' : ''}" data-a="cardplay" data-v="${t.id}" ${can ? '' : 'disabled'}>Sit down \u00b7 ${cr(t.stake)}</button></div>`;
+  }).join('');
+  const how = `<details class="tc-how"><summary>How it plays</summary><p class="small">The house deals three of your deck\u2019s ${CARDS.DECK} cards and shows the three calls up front: Charm, Sass or Style. Each round you play one card face down against the house\u2019s; the higher number takes the round, best of three takes the pot. The crowd throws in 0 to ${CARDS.SPARK} for each card, every girl has her own play, and ties go to the house unless Vex is at the table. Plan the order: the house plans its own.</p></details>`;
+  return `${how}${!ready ? `<p class="muted">You need ${CARDS.HAND} cards to sit down.</p>` : ''}<div class="tc-tables">${rows}</div>
+    <p class="muted small">${m.cardWins ? `${m.cardWins} wins at the table` : 'No wins yet'}${m.cardBest ? ` \u00b7 best pot +${m.cardBest}` : ''}.</p>`;
+}
+function cardDeckView(c, m, mine) {
+  const deck = CARDS.deckOf(m), counts = {}; for (const k of mine) counts[k] = (counts[k] || 0) + 1;
+  const used = {}; for (const k of deck) used[k] = (used[k] || 0) + 1;
+  const slots = Array.from({ length: CARDS.DECK }, (_, i) => deck[i] ? tcard(deck[i], { h: 70, cls: 'mini', btn: `<button class="btn small" data-a="cardout" data-v="${deck[i]}">Take out</button>` }) : '<div class="tcard empty mini"><span>Empty</span></div>').join('');
+  const keys = Object.keys(counts).sort((a, b) => CARDS.rankOf(b) - CARDS.rankOf(a) || a.localeCompare(b));
+  const shelf = keys.map((k) => {
+    const free = counts[k] - (used[k] || 0), up = CARDS.RARITY[CARDS.rankOf(k) + 1];
+    const btns = `<div class="tc-btns">${free > 0 ? `<button class="btn small" data-a="cardin" data-v="${k}">Put in</button>` : '<span class="small muted">In deck</span>'}${counts[k] >= CARDS.FUSE && up ? `<button class="btn small primary" data-a="cardfuse" data-v="${k}">Fuse ${CARDS.FUSE} \u2192 ${esc(up.name)}</button>` : ''}</div>`;
+    return tcard(k, { h: 70, cls: 'mini', count: counts[k], btn: btns });
+  }).join('');
+  return `<p class="muted small">Your ${CARDS.DECK} best go to the table: each match deals three of them. ${CARDS.FUSE} copies of a card fuse into one a rarity up.</p>
+    <div class="btnrow"><button class="btn" data-a="cardbest">Best deck</button></div>
+    <span class="label">At the table</span><div class="tc-shelf deck">${slots}</div>
+    <span class="label">Your cards \u00b7 ${mine.length}</span>${keys.length ? `<div class="tc-shelf">${shelf}</div>` : '<p class="muted">No cards yet.</p>'}`;
+}
+function cardPacksView(c, m) {
+  const cost = CARDS.packCost(m), next = CARDS.packCost({ cardPacks: (m.cardPacks || 0) + 1 }), tot = CARDS.RARITY.reduce((t, r) => t + r.w, 0);
+  const odds = CARDS.RARITY.map((r, i) => `<span class="tc-odd r-${r.id}">${gems(i)} ${esc(r.name)} <b>${(100 * r.w / tot).toFixed(r.w / tot < 0.01 ? 1 : 0)}%</b></span>`).join('');
+  const best = lastPack ? Math.max(...lastPack.map(CARDS.rankOf)) : 0;
+  const reveal = lastPack ? `<div class="tc-reveal">${best >= 3 ? `<div class="tc-hitline r-${CARDS.RARITY[best].id}">${esc(CARDS.RARITY[best].name)} pull!</div>` : ''}<div class="tc-hand">${lastPack.map((k, i) => tcard(k, { cls: `flip${CARDS.rankOf(k) >= 3 ? ' hit' : ''}`, style: `--i:${i}` })).join('')}</div></div>` : '';
+  return `<div class="tc-packrow"><div class="tc-packart"><span class="heart">&hearts;</span><b>Lantern Hearts</b><span class="small">${CARDS.PACK_SIZE} cards</span></div>
+    <div><p>Every pack the cell buys costs 10% more than the last${cost >= CARDS.PACK_MAX ? '' : ` (up to ${cr(CARDS.PACK_MAX)})`}.</p>
+    <div class="btnrow"><button class="btn primary" data-a="cardpack" ${c.credits < cost ? 'disabled' : ''}>Buy a pack \u00b7 ${cr(cost)}</button></div>
+    <p class="small muted">${m.cardPacks || 0} bought${m.cardSpent ? ` \u00b7 ${cr(m.cardSpent)} spent` : ''}${cost < CARDS.PACK_MAX ? ` \u00b7 next one ${cr(next)}` : ''}</p></div></div>
+    ${reveal}<span class="label">Odds per card</span><div class="tc-odds">${odds}</div>`;
+}
+function cardBinderView(c, m) {
+  const ids = cardIds(), have = m.cards || {}, ever = (g, r) => CARDS.RARITY.slice(r).some((x) => have[CARDS.cardKey(g, x.id)]);
+  let got = 0;
+  const rows = ids.map((gid) => {
+    const girl = D.LOUNGE.girls.find((x) => x.id === gid);
+    const cells = CARDS.RARITY.map((r, i) => { const k = CARDS.cardKey(gid, r.id), n = have[k] || 0; if (n) got++; return n ? tcard(k, { h: 52, cls: 'tiny', count: n }) : `<div class="tcard tiny empty r-${r.id}"><span>${gems(i)}<br>${esc(r.name)}</span></div>`; }).join('');
+    const ab = CARDS.ABILITY[gid];
+    return `<div class="tc-binder-row"><div class="tc-binder-who"><b>${esc(girl.name)}</b>${ab ? `<span class="small muted">${esc(ab.name)}: ${esc(ab.text)}</span>` : ''}</div><div class="tc-binder-cells">${cells}</div></div>`;
+  }).join('');
+  return `<p class="muted small">Every girl in every printing. <b>${got}</b> of ${ids.length * CARDS.RARITY.length} found.</p><div class="tc-binder">${rows}</div>`;
+}
+function cardMatchView(g) {
+  const t = CARDS.TABLES.find((x) => x.id === g.table) || CARDS.TABLES[0], wins = g.rounds.filter((r) => r.won > 0).length, losses = g.rounds.filter((r) => r.won < 0).length;
+  const cols = g.calls.map((stat, i) => {
+    const r = g.rounds[i], now = !g.over && i === g.round, fl = i === g.rounds.length - 1 ? ' flip' : '';
+    const top = r ? tcard(r.theirs, { h: 56, cls: 'mini house' + fl, cap: g.cap, call: stat }) : tback('mini');
+    const bot = r ? tcard(r.mine, { h: 56, cls: 'mini' + fl, cap: g.cap, call: stat }) : `<div class="tcard mini empty ${now ? 'now' : ''}"><span>${now ? 'Your card' : ''}</span></div>`;
+    const res = r ? `<div class="tc-res ${r.won > 0 ? 'win' : 'loss'}"><b>${r.a}</b><span>vs</span><b>${r.b}</b><small>crowd +${r.spark ? r.spark[0] : 0} / +${r.spark ? r.spark[1] : 0}${!r.won ? '' : r.a === r.b ? ` \u00b7 ${r.won > 0 ? 'Vex takes the tie' : 'tie to the house'}` : ''}</small></div>` : '';
+    return `<div class="tc-col ${now ? 'now' : ''} ${r ? (r.won > 0 ? 'win' : 'loss') : ''}">${top}<div class="tc-call"><span class="small">Round ${i + 1}</span><b>${esc(CARDS.STATS[stat])}</b></div>${res}${bot}</div>`;
+  }).join('');
+  const stat = g.calls[Math.min(g.round, g.calls.length - 1)];
+  const hand = g.over ? '' : `<p class="tc-prompt">Round ${g.round + 1}: <b>${esc(CARDS.STATS[stat])}</b>. Next up: ${g.calls.slice(g.round + 1).map((x) => esc(CARDS.STATS[x])).join(', ') || 'nothing, this decides it'}.</p>
+    <div class="tc-hand">${g.hand.map((k, i) => tcard(k, { cap: g.cap, call: stat, btn: `<button class="btn primary" data-a="cardpick" data-v="${i}">Play \u00b7 ${CARDS.score(k, stat, g.round, g.cap, null, wins, losses)}</button>` })).join('')}</div>`;
+  const msg = g.result === 'won' ? `You take the pot: +${g.stake} credits.` : g.result === 'lost' ? `The house rakes in your ${g.stake}.` : 'A draw. Your stake comes back.';
+  const end = g.over ? `<div class="notice ${g.result === 'won' ? 'good' : g.result === 'lost' ? 'lose' : ''} tc-end">${msg}</div><div class="btnrow"><button class="btn primary" data-a="cardplay" data-v="${t.id}" ${state.char.credits < t.stake ? 'disabled' : ''}>Deal again \u00b7 ${cr(t.stake)}</button><button class="btn" data-a="cardclose">Leave the table</button></div>` : '';
+  return `<div class="tc-felt t-${t.id}"><div class="tc-felt-head"><span class="label">${esc(t.name)} \u00b7 stake ${cr(g.stake)}</span><span class="tc-score">You <b>${wins}</b> \u2013 <b>${losses}</b> House</span></div>
+    <div class="tc-cols">${cols}</div></div>${hand}${end}`;
+}
+// After a night is booked: the room closes, she walks you out the back in town, then the card says what happened.
+function walkOutBack(id, r) {
+  const g = D.LOUNGE.girls.find((x) => x.id === id) || {}, line = g.walk && g.walk.length ? g.walk[Math.floor(Math.random() * g.walk.length)] : '';
+  loungeResult = { ...r, girl: id };
+  modal = null;
+  town.escort(id, line, () => { modal = 'loungeres'; render(); });
+}
+function loungeResView() {
+  const r = loungeResult; if (!r) { modal = null; return ''; }
+  const g = D.LOUNGE.girls.find((x) => x.id === r.girl) || { name: r.name };
+  return `<div class="modal-wrap" data-a="closemodal"><div class="modal lounge-result ${r.bad ? 'bad' : 'good'}" role="dialog" aria-modal="true" aria-label="The night with ${esc(g.name)}">
+    <div class="pop-head"><div class="pop-title"><span class="label">Out back of the Lantern</span><h2>A night with ${esc(g.name)}</h2></div><button class="tool close" data-a="closemodal" aria-label="Close">Close</button></div>
+    <div class="lounge-res-body">${hostessArt[g.id] ? hostessFig(g, 180) : ''}<div><p>${esc(r.text)}</p><p class="${r.bad ? 'danger-text' : 'good-text'}"><b>${esc(E.favText(r.fx))}</b>${r.cured ? ` <span class="good-text">and ${esc(E.favText(r.cured))} back</span>` : ''}</p>
+    <p class="muted small">${r.bad ? 'Not every night goes well.' : 'She waves you off at the door.'} It stays with this operative.</p></div></div>
+    <div class="btnrow"><button class="btn primary" data-a="closemodal">Back to the yard</button></div></div></div>`;
 }
 function loungeView() {
   const c = state.char, L = D.LOUNGE, cost = E.loungeCost(state), last = c.booked && c.favLog && c.favLog[0], total = E.favText(c.fav);
+  const night = (state.meta.stats && state.meta.stats.raids) || 0, greet = (g) => (g.greet && g.greet.length ? g.greet[(night + g.id.length) % g.greet.length] : '');
+  const lineup = loungeLineup();
+  for (const g of lineup) if (!sheetOf(`girl_${g.id}`)) ensureArt(`girl_${g.id}`);
   const card = (g) => `<div class="hostess-card ${c.booked === g.id ? 'mine' : ''}">${hostessFig(g)}
-      <div class="name">${esc(g.name)} <span class="muted small">${esc(g.tag)}</span></div><p class="muted small">${esc(g.desc)}</p>
+      <div class="name">${esc(g.name)} <span class="muted small">${esc(g.tag)}</span></div>${greet(g) ? `<p class="small hostess-greet">${esc(greet(g))}</p>` : ''}<p class="muted small">${esc(g.desc)}</p>
       <button class="btn ${c.booked ? '' : 'primary'}" data-a="lounge" data-v="${g.id}" ${c.booked || c.credits < cost ? 'disabled' : ''}>${c.booked === g.id ? 'Tonight' : `Spend the night \u00b7 ${cr(cost)}`}</button></div>`;
-  return `<p class="muted">${cost} credits a night. Every night leaves a permanent mark on ${esc(c.name.split(' ')[0])}: usually a good one, about one in four not. One visit per trip home.</p>
+  return `<p class="muted">${cost} credits tonight (each night costs 10% more). Every night leaves a permanent mark on ${esc(c.name.split(' ')[0])}: usually a good one, about one in three not, and a good night sometimes clears an old bad one. One visit per trip home; who\u2019s working changes every night.</p>
     ${last ? `<div class="notice lounge-res ${last.bad ? 'bad' : 'good'}"><b>${esc(last.girl)}:</b> ${esc(last.text)} <b>${esc(E.favText(last.fx))}.</b></div>` : ''}
-    <div class="hostesses">${L.girls.map(card).join('')}</div>
+    <div class="hostesses">${lineup.map(card).join('')}</div>
     <p class="muted small">${total ? `Marks on this operative: <b>${esc(total)}</b>. They stay until this operative is gone.` : 'No marks yet.'}${c.booked ? ' The girls are booked until you\u2019ve been out on another raid.' : ''}</p>`;
 }
 // The barracks ring: a duel with your co-op partner. Every screen draws it from state.duel, which the host keeps.
@@ -3822,7 +3973,7 @@ function coachView(e, mine) {
   const done = m.coach || {};
   let k = null, text = '';
   if (e.stun > 0) return '';
-  if (e.intent === 'heavy' && !done.heavy) { k = 'heavy'; text = 'Heavy strike coming. Defend takes about a third of it.'; }
+  if (e.intent === 'heavy' && !done.heavy) { k = 'heavy'; text = 'Heavy strike coming. Defend cuts it to about 40%.'; }
   else if (e.intent === 'guard' && !done.guard) { k = 'guard'; text = 'It\u2019s in cover, so shots deal half. Strike ignores cover.'; }
   else if (e.tags.includes('droid') && state.char.items.ion > 0 && !done.droid) { k = 'droid'; text = 'A droid: an Ion Pulse stuns it.'; }
   else if (matchMedia('(pointer: coarse)').matches && !done.hold) { k = 'hold'; text = 'Hold any button to read what it does.'; }
@@ -4280,7 +4431,17 @@ function act(a, v, k) {
       if (!dr || !cost || home.meta.resolve < cost) { A.play('denied'); return; }
       home.meta.resolve -= cost; home.meta.droneRanks = { ...(home.meta.droneRanks || {}), [dr.type]: dr.rank + 1 }; save(); net.send({ t: 'act', a: 'droneupfree' }); net.send({ t: 'home', home: homeInfo() }); mirrorHome(); A.play('buy'); return;
     }
-    if (/^card(free|pack|play|pick|close)$/.test(a)) { hint('The card table plays from your own game. Leave the room to play.'); A.play('denied'); return; }
+    if (/^card(free|pack|play|pick|close|in|out|best|fuse)$/.test(a)) { hint('The card table plays from your own game. Leave the room to play.'); A.play('denied'); return; }
+    if (a === 'lounge') {
+      // The night runs on the host; the walk out back plays here, and the card shows what the host wrote down.
+      const g = D.LOUNGE.girls.find((x) => x.id === v) || {}, line = g.walk && g.walk.length ? g.walk[Math.floor(Math.random() * g.walk.length)] : '';
+      const before = JSON.stringify(state.char && state.char.favLog && state.char.favLog[0]);
+      net.send({ t: 'act', a, v, k }); A.play('click'); modal = null; render();
+      // Show the card once the host's copy of the night has arrived (it may land after a short walk, or none at all).
+      const show = (n) => { const last = state.char && state.char.favLog && state.char.favLog[0]; if (last && JSON.stringify(last) !== before) { loungeResult = { ...last, girl: v }; modal = 'loungeres'; render(); } else if (n < 50) setTimeout(() => show(n + 1), 100); else render(); };
+      town.escort(v, line, () => show(0));
+      return;
+    }
     if (a === 'recruit') { net.send({ t: 'recruit' }); state.coopFallen = null; state.guestSawDeath = true; A.play('click'); render(); return; } // straight to the new operative, without waiting on the host
     if (a === 'duel' && v === 'close') modal = null;
     if (a === 'pickmap') { toast = 'The host picks the target.'; A.play('denied'); render(); return; }
@@ -4345,7 +4506,8 @@ function applyAct(a, v, k) {
     }
     case 'cloudversions': if (!CLOUD_ON) break; fetch(`/save/${cloudCode()}/versions`, { cache: 'no-store' }).then((r) => r.json()).then((o) => { cloudVersions = o.versions || []; render(); }).catch(() => { toast = 'Couldn\u2019t reach the cloud.'; render(); }); sfx('click'); break;
     case 'cloudrestore': if (net) break; cloudPull(cloudCode(), +v).then((o) => { if (!o) return; adoptSave(o.data, o.rev); state.savedAt = Date.now(); modal = null; titleOpen = false; toast = 'That version is back.'; A.play('perk'); cloudDirty = true; cloudPush({ force: true }); render(); }).catch(() => { toast = 'Couldn\u2019t reach the cloud.'; render(); }); break;
-    case 'devunlock': if (((document.getElementById('dev-code') || {}).value || '').trim() === DEV_CODE) { devOn = true; try { localStorage.setItem(DEV_KEY, '1'); } catch (e) {} modal = 'dev'; sfx('perk'); } else { toast = 'That isn\u2019t it.'; sfx('denied'); } break;
+    case 'devunlock': if (((document.getElementById('dev-code') || {}).value || '').trim() === CASH_CODE) { if (state.char && !isGuest()) { state.char.credits += CASH_AMOUNT; toast = `+${CASH_AMOUNT.toLocaleString()} credits for ${state.char.name}.`; sfx('coin'); } else { toast = 'Make an operative first.'; sfx('denied'); } }
+      else if (((document.getElementById('dev-code') || {}).value || '').trim() === DEV_CODE) { devOn = true; try { localStorage.setItem(DEV_KEY, '1'); } catch (e) {} modal = 'dev'; sfx('perk'); } else { toast = 'That isn\u2019t it.'; sfx('denied'); } break;
     case 'devoff': devOn = false; try { localStorage.removeItem(DEV_KEY); } catch (e) {} modal = null; sfx('click'); break;
     case 'dev': if (devOn && !isGuest()) { applyDev(v, k); sfx('buy'); } break;
     case 'autostart': if (devOn && !isGuest()) startAuto(v); return;
@@ -4360,17 +4522,22 @@ function applyAct(a, v, k) {
     case 'coopleave': leaveCoop(); return;
     case 'coopready': state.guestReady = !state.guestReady; if (net) net.send({ t: 'ready', on: state.guestReady, auto: !!coopReadyAuto }); sfx('click'); break;
     case 'newspage': newsPage = +v; sfx('click'); break;
+    case 'cardtab': cardTab = v; lastPack = null; sfx('click'); break;
     case 'mainmenu': if (isGuest()) break; save(); modal = null; titleOpen = true; sfx('door'); break;
     case 'cellgo': ok = switchCell(+v); if (ok) sfx('door'); break;
     case 'celldel': if (cellDelArm !== +v) { cellDelArm = +v; sfx('click'); break; } cellDelArm = null; ok = deleteCell(+v); if (ok) { toast = `Cell ${+v + 1} erased.`; sfx('denied'); } break;
     case 'newsok': newsPage = 0; try { localStorage.setItem(NEWS_KEY, NEWS_ID); } catch (e) {} modal = null; sfx('click'); break;
     case 'modal': modal = v; if (v === 'board') loadBoard(); sfx('click'); break;
-    case 'cardfree': { const got = CARDS.freePack(state, cardIds(), rng); ok = !!got; if (got) { lastPack = got; sfx('perk'); } break; }
-    case 'cardpack': { const got = CARDS.buyPack(state, cardIds(), rng); ok = !!got; if (got) { lastPack = got; sfx('buy'); } break; }
-    case 'cardplay': { const g = CARDS.startMatch(state, +v, cardIds(), rng); ok = !!g; if (g) { lastPack = null; sfx('click'); } break; }
-    case 'cardpick': { const g = CARDS.playCard(state, +v, rng); ok = !!g; if (g) { const r = g.rounds[g.rounds.length - 1]; sfx(g.over ? (g.result === 'won' ? 'coin' : g.result === 'lost' ? 'denied' : 'click') : r.won > 0 ? 'perk' : r.won < 0 ? 'denied' : 'click'); } break; }
+    case 'cardfree': { const got = CARDS.freePack(state, cardIds(), rng); ok = !!got; if (got) { lastPack = got; cardTab = 'packs'; sfx('perk'); } break; }
+    case 'cardpack': { const got = CARDS.buyPack(state, cardIds(), rng); ok = !!got; if (got) { lastPack = got; sfx(got.some((k) => CARDS.rankOf(k) >= 3) ? 'coin' : 'buy'); } break; }
+    case 'cardplay': { if (state.cardMatch && state.cardMatch.over) CARDS.closeMatch(state); const g = CARDS.startMatch(state, v, cardIds(), rng); ok = !!g; if (g) { lastPack = null; sfx('click'); } break; }
+    case 'cardin': ok = !!CARDS.deckIn(state, v); sfx('click'); break;
+    case 'cardout': ok = !!CARDS.deckOut(state, v); sfx('click'); break;
+    case 'cardbest': CARDS.bestDeck(state); sfx('click'); break;
+    case 'cardfuse': { const up = CARDS.fuse(state, v); ok = !!up; if (up) { toast = `Fused into ${CARDS.cardInfo(up).name}, ${CARDS.cardInfo(up).rarityName}.`; sfx('perk'); } break; }
+    case 'cardpick': { const g = CARDS.playCard(state, +v); ok = !!g; if (g) { const r = g.rounds[g.rounds.length - 1]; sfx(g.over ? (g.result === 'won' ? 'coin' : g.result === 'lost' ? 'denied' : 'click') : r.won > 0 ? 'perk' : r.won < 0 ? 'denied' : 'click'); } break; }
     case 'cardclose': CARDS.closeMatch(state); break;
-    case 'lounge': { const r = E.visitLounge(state, v, rng); ok = !!r; if (r) { sfx(r.bad ? 'denied' : 'perk'); if (!actingAs) toast = `${r.name}: ${r.text}`; } break; }
+    case 'lounge': { const r = E.visitLounge(state, v, rng); ok = !!r; if (r) { sfx(r.bad ? 'denied' : 'perk'); if (!actingAs) walkOutBack(v, r); } break; }
     case 'duel': {
       if (v === 'challenge') ok = E.duelChallenge(state);
       else if (v === 'yes' || v === 'no') ok = E.duelAnswer(state, v === 'yes');
@@ -4592,7 +4759,7 @@ function applyLook() {
   if (!hasLayers() && !sheetOf('op_m') && !sheetOf('op_f')) return;
   const c = state.char, p = E.isCoop(state) ? E.charAt(state, 1 - myIdx()) : null;
   const wp = (ch) => [weaponLayer(E.baseOf(ch.gear.ranged)), weaponLayer(E.baseOf(ch.gear.melee))];
-  const key = JSON.stringify([c && [c.look, c.background, wp(c)], p && [p.look, p.background, wp(p)], !!sheetOf('dealer'), !!sheetOf('ghost')]);
+  const key = JSON.stringify([c && [c.look, c.background, wp(c)], p && [p.look, p.background, wp(p)], !!sheetOf('dealer'), !!sheetOf('ghost'), !!sheetOf('op_vex')]);
   if (key === lookKey) return;
   lookKey = key;
   const own = (ch) => { const b = ch && D.BACKGROUNDS.find((x) => x.id === ch.background); if (!b || !b.unique) return null; const sh = sheetOf(b.sprite); if (!sh) ensureArt(b.sprite); return sh || null; };
@@ -4610,7 +4777,7 @@ function artArrived(id) {
   const all = id === '*', ops = all || id.startsWith('op_'), drones = all || id.startsWith('drone_');
   if (drones) for (const k of D.DRONE_ORDER) setDroneArt(k, sheetOf(`drone_${k}`));
   if (ops) { setOpSheets(sheetOf('op_m'), sheetOf('op_f')); lookKey = ''; applyLook(); }
-  if (id === 'dealer' || id === 'ghost') { lookKey = ''; applyLook(); if (state.screen === 'create') { clearTimeout(artRenderTimer); artRenderTimer = setTimeout(render, 120); } return; }
+  if (id === 'dealer' || id === 'ghost' || id === 'op_vex') { lookKey = ''; applyLook(); if (state.screen === 'create') { clearTimeout(artRenderTimer); artRenderTimer = setTimeout(render, 120); } return; }
   if (!ops && !drones) { if (modal === 'news') { clearTimeout(artRenderTimer); artRenderTimer = setTimeout(render, 120); } return; }
   clearTimeout(artRenderTimer);
   // Only where a still of them is on show. Anywhere else a re-render could cut an animation short for nothing.
@@ -4683,7 +4850,7 @@ async function start(data) {
   delete state.events;
   lastBody = bodyOf(state);
   if (pulledToast) toast = pulledToast;
-  try { if (localStorage.getItem(NEWS_KEY) !== NEWS_ID && (seasonFresh || (state.meta && state.meta.operatives > 0)) && !(data && data.state) && !new URLSearchParams(location.search).get('join') && !navigator.webdriver) modal = 'news'; } catch (e) {}
+  try { if (localStorage.getItem(NEWS_KEY) !== NEWS_ID && !(data && data.state) && !new URLSearchParams(location.search).get('join') && !navigator.webdriver) modal = 'news'; } catch (e) {}
   cloudStart();
   if (state.screen === 'create' && !state.draft) state.draft = E.newDraft(state.meta, rng);
   titleOpen = !(data && data.state);

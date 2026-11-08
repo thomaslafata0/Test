@@ -9,21 +9,26 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   const check = (name, ok, extra = '') => { console.log(`${ok ? 'PASS' : 'FAIL'} ${name} ${extra}`); if (!ok) errors.push('FAIL ' + name); };
   for (const [p, n] of [[host, 'host'], [guest, 'guest']]) { p.on('pageerror', (e) => errors.push(`${n}: ${e.message} ${(e.stack || '').slice(0, 300)}`)); p.on('console', (m) => { if (['error', 'warning'].includes(m.type()) && !/WebSocket|net::|AudioContext/.test(m.text())) errors.push(`${n} console: ${m.text()}`); }); }
   await host.goto(URL);
-  await host.evaluate(async () => { const E = await import('./engine.js'), D = await import('./data.js'), rng = E.seededRng(21), s = E.newGame(rng); E.createChar(s, rng); s.char.credits = 1400; const id = D.PERKS[0].id; s.char.perks = [id]; s.char.perkN = { [id]: 2 }; s.meta.tips = { town: true, combat: true, route: true, loot: true, perk: true, gear: true }; s.notice = null; localStorage.setItem('cinder-cell-save-v1', JSON.stringify(s)); localStorage.setItem('cinder-cell-coop', JSON.stringify({ relay: '', name: 'Hosty' })); localStorage.setItem('cinder-cell-news', 'afterhours'); });
+  await host.evaluate(async () => { const E = await import('./engine.js'), D = await import('./data.js'), rng = E.seededRng(21), s = E.newGame(rng); E.createChar(s, rng); s.char.credits = 1400; const id = D.PERKS[0].id; s.char.perks = [id]; s.char.perkN = { [id]: 2 }; s.meta.tips = { town: true, combat: true, route: true, loot: true, perk: true, gear: true }; s.notice = null; localStorage.setItem('cinder-cell-save-v1', JSON.stringify(s)); localStorage.setItem('cinder-cell-coop', JSON.stringify({ relay: '', name: 'Hosty' })); localStorage.setItem('cinder-cell-news', 'reach'); });
   await host.reload(); await host.click('button[data-a="continue-title"]', { timeout: 3000 }).catch(() => {}); await host.waitForTimeout(800);
   await host.keyboard.press('Escape').catch(() => {});
   // The room, solo first. It only opens once the hostess art is installed.
   await host.click('.shortcuts button[data-v="bar"]'); await host.waitForTimeout(250);
   const room = await host.locator('.pop-tabs [data-v="lounge"]').count();
+  let pickH = null;
   console.log(room ? 'E-Girl Room open' : 'E-Girl Room hidden: no hostess art yet');
   if (room) {
   await host.click('.pop-tabs [data-v="lounge"]'); await host.waitForTimeout(300);
-  check('three hostesses', await host.locator('.hostess-card').count() === 3 && await host.locator('.hostess.ph').count() === 0);
-  await host.click('button[data-a="lounge"][data-v="vex"]'); await host.waitForTimeout(400);
+  check('three hostesses tonight', await host.locator('.hostess-card').count() === 3 && await host.locator('.hostess.ph').count() === 0);
+  pickH = await host.evaluate(() => document.querySelector('button[data-a="lounge"]').dataset.v);
+  await host.click(`button[data-a="lounge"][data-v="${pickH}"]`); await host.waitForTimeout(2500);
   const st = await host.evaluate(() => { const s = cinderGame.state(); return { cr: s.char.credits, fav: s.char.fav, booked: s.char.booked }; });
-  check('a night costs 350 and leaves a mark', st.cr === 1050 && st.booked === 'vex' && st.fav && Object.keys(st.fav).length, JSON.stringify(st));
-  check('the result shows, and the room is booked', await host.locator('.lounge-res').count() === 1 && await host.locator('button[data-a="lounge"]:not([disabled])').count() === 0);
+  check('a night costs 350 and leaves a mark', st.cr === 1050 && st.booked === pickH && st.fav && Object.keys(st.fav).length, JSON.stringify(st));
+  check('she walks you out and the result card shows', await host.locator('.lounge-result').count() === 1);
   await host.screenshot({ path: `${OUT}/lounge.png` });
+  await host.click('.lounge-result button[data-a="closemodal"]'); await host.waitForTimeout(200);
+  await host.click('.shortcuts button[data-v="bar"]'); await host.waitForTimeout(250); await host.click('.pop-tabs [data-v="lounge"]'); await host.waitForTimeout(300);
+  check('and the room is booked', await host.locator('.lounge-res').count() === 1 && await host.locator('button[data-a="lounge"]:not([disabled])').count() === 0);
   await host.keyboard.press('Escape'); await host.waitForTimeout(150);
   }
   // Solo, the ring explains itself.
@@ -46,10 +51,12 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   check('the host\u2019s menus don\u2019t flash the friend\u2019s screen', await guest.evaluate(() => globalThis.__mark === document.querySelector('#app .status')));
   // The friend's own night out runs on the host and lands on the friend's operative only.
   await guest.click('.shortcuts button[data-v="bar"]'); await guest.waitForTimeout(250); await guest.click('.pop-tabs [data-v="lounge"]'); await guest.waitForTimeout(300);
-  await guest.click('button[data-a="lounge"][data-v="rook"]'); await guest.waitForTimeout(700);
+  const pickG = await guest.evaluate(() => document.querySelector('button[data-a="lounge"]').dataset.v);
+  await guest.click(`button[data-a="lounge"][data-v="${pickG}"]`); await guest.waitForTimeout(2500);
   const gs = await host.evaluate(() => { const s = cinderGame.state(); return { cr: s.char2.credits, booked: s.char2.booked, me: s.char.booked }; });
-  check('the friend books Rook on their own credits', gs.cr === 350 && gs.booked === 'rook' && gs.me === 'vex', JSON.stringify(gs));
-  check('the friend sees their result', await guest.locator('.lounge-res').count() === 1);
+  check('the friend books a night on their own credits', gs.cr === 350 && gs.booked === pickG && gs.me === pickH, JSON.stringify(gs));
+  check('the friend sees their result card', await guest.locator('.lounge-result').count() === 1);
+  await guest.click('.lounge-result button[data-a="closemodal"]').catch(() => {});
   await guest.keyboard.press('Escape'); await guest.waitForTimeout(150);
   }
   // The duel. The friend plays it at phone size.
