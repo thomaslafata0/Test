@@ -8,7 +8,7 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   const p = await browser.newPage({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
   p.on('pageerror', (e) => errors.push(e.message));
   await p.goto(URL);
-  await p.evaluate(async () => { localStorage.clear(); localStorage.setItem('cinder-cell-news', 'contracts'); const E = await import('./engine.js'), D = await import('./data.js'), rng = E.seededRng(5), s = E.newGame(rng); E.createChar(s, rng); s.screen = 'town'; s.meta.tips = { town: true, combat: true, route: true };
+  await p.evaluate(async () => { localStorage.clear(); localStorage.setItem('cinder-cell-news', 'escape'); const E = await import('./engine.js'), D = await import('./data.js'), rng = E.seededRng(5), s = E.newGame(rng); E.createChar(s, rng); s.screen = 'town'; s.meta.tips = { town: true, combat: true, route: true };
     for (const m of D.MAPS) { const q = E.mapProgress(s.char, m.id); q.deepest = 20; q.best = { 0: 20 }; q.freed = true; } s.escape = { threat: 0, name: s.char.name }; localStorage.setItem('cinder-cell-save-v1', JSON.stringify(s)); });
   await p.reload(); await p.click('button[data-a="continue-title"]', { timeout: 3000 }).catch(() => {}); await p.waitForTimeout(1200);
   check('the escape screen shows at home', await p.locator('.escape-card').count() === 1);

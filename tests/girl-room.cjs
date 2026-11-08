@@ -8,7 +8,7 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   const p = await browser.newPage({ viewport: { width: 1100, height: 900 } });
   p.on('pageerror', (e) => errors.push(e.message));
   await p.goto(URL);
-  await p.evaluate(async () => { localStorage.clear(); localStorage.setItem('cinder-cell-news', 'contracts'); const E = await import('./engine.js'), rng = E.seededRng(7), s = E.newGame(rng); E.createChar(s, rng); s.char.credits = 5000; s.screen = 'town'; s.meta.tips = { town: true, combat: true, route: true }; localStorage.setItem('cinder-cell-save-v1', JSON.stringify(s)); });
+  await p.evaluate(async () => { localStorage.clear(); localStorage.setItem('cinder-cell-news', 'escape'); const E = await import('./engine.js'), rng = E.seededRng(7), s = E.newGame(rng); E.createChar(s, rng); s.char.credits = 5000; s.screen = 'town'; s.meta.tips = { town: true, combat: true, route: true }; localStorage.setItem('cinder-cell-save-v1', JSON.stringify(s)); });
   await p.reload(); await p.click('button[data-a="continue-title"]', { timeout: 3000 }).catch(() => {}); await p.waitForTimeout(1200);
   await p.click('.shortcuts button[data-v="lounge"]'); await p.waitForTimeout(300);
   await p.click('.pop-tabs [data-v="lounge"]'); await p.waitForTimeout(300);

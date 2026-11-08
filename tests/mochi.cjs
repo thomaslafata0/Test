@@ -8,7 +8,7 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   const p = await browser.newPage({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true });
   p.on('pageerror', (e) => errors.push(e.message));
   await p.goto(URL);
-  await p.evaluate(async () => { localStorage.clear(); localStorage.setItem('cinder-cell-news', 'contracts'); const E = await import('./engine.js'), rng = E.seededRng(4), s = E.newGame(rng); E.createChar(s, rng); s.screen = 'town'; s.meta.tips = { town: true, combat: true, route: true, loot: true, perk: true, gear: true }; localStorage.setItem('cinder-cell-save-v1', JSON.stringify(s)); });
+  await p.evaluate(async () => { localStorage.clear(); localStorage.setItem('cinder-cell-news', 'escape'); const E = await import('./engine.js'), rng = E.seededRng(4), s = E.newGame(rng); E.createChar(s, rng); s.screen = 'town'; s.meta.tips = { town: true, combat: true, route: true, loot: true, perk: true, gear: true }; localStorage.setItem('cinder-cell-save-v1', JSON.stringify(s)); });
   await p.reload(); await p.click('button[data-a="continue-title"]', { timeout: 3000 }).catch(() => {}); await p.waitForTimeout(800);
   check('Mochi starts locked', await p.evaluate(async () => { const E = await import('./engine.js'), D = await import('./data.js'); return !E.bgUnlocked(cinderGame.state().meta, D.BACKGROUNDS.find((b) => b.id === 'mochi')); }));
   await p.evaluate(() => { const i = document.createElement('input'); i.id = 'dev-code'; i.value = '444483'; i.hidden = true; document.body.appendChild(i); const b = document.createElement('button'); b.dataset.a = 'devunlock'; b.id = 'dv'; document.body.appendChild(b); });

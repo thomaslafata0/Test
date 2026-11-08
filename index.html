@@ -1644,7 +1644,7 @@ html.calm .btn:active, html.calm .door:active, html.calm .tab:active, html.calm 
 
 /* What's new */
 .news { max-width: 760px; padding: 0; overflow-x: hidden; max-height: calc(100dvh - 32px); overflow-y: auto; }
-.news-hero { position: relative; min-height: 170px; display: flex; align-items: flex-end; padding: 18px 22px; background: linear-gradient(180deg, #0b0e1100 30%, #0b0e11f2 100%), url(bg/port_8.png) center 40% / cover, url(bg/port_6.png) center 40% / cover; border-bottom: 1px solid var(--line); image-rendering: pixelated; }
+.news-hero { position: relative; min-height: 170px; display: flex; align-items: flex-end; padding: 18px 22px; background: linear-gradient(180deg, #0b0e1100 30%, #0b0e11f2 100%), url(bg/escape.png) center 40% / cover, url(bg/port_6.png) center 40% / cover; border-bottom: 1px solid var(--line); image-rendering: pixelated; }
 .news-hero h2 { margin: 2px 0 4px; font-size: 2rem; color: var(--sodium); text-shadow: 0 2px 10px #000; }
 .news-hero p { margin: 0; max-width: 46ch; text-shadow: 0 1px 6px #000; }
 .news-bosses { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 14px 18px 4px; }
@@ -1887,7 +1887,7 @@ const CELLS = 5, CELL_KEY = 'cinder-cell-slot';
 let cellSlot = (() => { try { const n = +localStorage.getItem(CELL_KEY); return n >= 0 && n < CELLS ? n : 0; } catch (e) { return 0; } })();
 const saveKey = (i = cellSlot) => (i ? `${SAVE_KEY}-s${i}` : SAVE_KEY);
 const oldSeason = (s) => !!(s && s.meta && (s.meta.season || 1) < E.SEASON);
-const NEWS_KEY = 'cinder-cell-news', NEWS_ID = 'contracts'; // bump to show the popup again
+const NEWS_KEY = 'cinder-cell-news', NEWS_ID = 'escape'; // bump to show the popup again
 let newsPage = 0;
 let seasonFresh = false;
 const rng = Math.random;
@@ -3960,22 +3960,21 @@ function newsView() {
   const wrap = (page, hero, body, nav) => `<div class="modal-wrap news-wrap" data-a="closemodal"><div class="modal news" role="dialog" aria-modal="true" aria-label="What's new">
     <div class="news-hero"><div class="news-hero-text"><span class="label">New \u00b7 ${page} of 2</span>${hero}</div></div>${body}<div class="btnrow news-go">${nav}</div></div></div>`;
   if (newsPage === 0) {
-    const sp = CT.spec('daily');
-    return wrap(1, '<h2>Contracts and Mutators</h2><p>A new reason to come back every day, and a harder way to play every district.</p>',
+    return wrap(1, '<h2>Escape the Cell</h2><p>Free all five districts with one operative and you get out. Then you go back in, harder.</p>',
       `<div class="news-grid">
-        ${item('room:bounty', 'Daily and weekly contracts', `Everyone plays the same raid with the same loaner operative and mutators, one attempt each, on its own leaderboard. Today: ${esc(clsName(sp.cls))}, ${sp.mutators.map(mutName).map(esc).join(' and ')}. Missions \u2192 Daily.`)}
-        ${item('room:elite', 'Mutators', 'Pick handicaps before a raid, like Hardened, Glass Jaw or One Way Out, for extra score and Resolve. Open once your cell frees a district.')}
-        ${item('room:boss', 'Season goals', 'A list of goals for the season that pay Resolve and cosmetics you can\u2019t buy. Missions \u2192 Season.')}
-        ${item('perk:loaded', 'Relics', 'Bosses sometimes offer a relic: one of a kind, and it changes how you play. Echo Chamber, Mirror Plate, Red Thirst, Loaded Die and four more.')}
+        ${item('room:boss', 'Threat levels', 'Escaping sends that operative back in one threat level higher: every district locks again, enemies hit far harder, and a higher threat scores more on the board. No going back down.')}
+        ${item('room:elite', 'Something new at every level', 'Threat I: Directorate Pursuers hunt you with net launchers, and the Manhunt bulletin. Threat II: veteran affixes on ordinary enemies. Higher still: kill teams and total war.')}
+        ${item('room:bench', 'Gear goes further', 'Each threat level lets Marrow work your gear two levels higher: +10 at Threat I, +12 at II, up to +18.')}
+        ${item('room:event', 'New rooms for every bulletin', 'Payday, Staff Party, Inspection Day, Lockdown and the rest each have their own battle rooms on every map.')}
       </div>`,
       '<button class="btn" data-a="newsok">Skip</button><button class="btn primary big" data-a="newspage" data-v="1">Next</button>');
   }
-  return wrap(2, '<h2>Mastery, the Hideout and more</h2><p>Every class levels up, and your credits finally have somewhere to go.</p>',
+  return wrap(2, '<h2>Club Velvet, friends and more</h2><p>A night out, someone to watch, and a town that looks the part.</p>',
     `<div class="news-grid">
-      ${item('skill:barrier', 'Class mastery', 'Each class levels up for the cell as you play it: more HP and damage, an extra stim, a mastery dye, and at level 2 a choice of two specialisations. Character \u2192 Record.')}
-      ${item('room:rest', 'The Hideout', 'Furnish the cell\u2019s basement, buy dyes for your operative\u2019s outfit, and card backs and felts for Velvet Hearts.')}
-      ${item('room:fight', 'New enemy moves', 'Garrison guards call for backup, Foundry crews fling molten slag, Detention wardens swing shackles, and Port spotters light flares for the snipers.')}
-      ${item('item:stim', 'First steps', 'New cells get a short checklist that pays Resolve as you learn the ropes. Fewer crashes on iOS, too.')}
+      ${item('perk:glassheart', 'Club Velvet', 'The girls have their own club in the bottom right of the square. Pick one on the dance floor and she takes you back to her own room. Velvet Hearts is at the card table.')}
+      ${item('gadget:scanner', 'Friends and spectating', 'Swap friend codes (Menu \u2192 Friends), see what your friends are up to, and watch their game live when you don\u2019t feel like playing.')}
+      ${item('room:fight', 'Every special looks the part', 'Grenades arc and explode, slag and acid splash, gas vents, claws rake, and enemies have new moves to show it.')}
+      ${item('skill:rally', 'Built for iPhone', 'Every menu is tighter on a phone held sideways: more on screen, bigger buttons. Your unlocked operatives now carry over to every cell.')}
     </div>`,
     '<button class="btn" data-a="newspage" data-v="0">Back</button><button class="btn primary big" data-a="newsok">Play</button>');
 }
