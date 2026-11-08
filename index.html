@@ -690,6 +690,20 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .name-gate { max-width: 460px; }
 .name-gate .set-row input { min-width: 0; }
 .name-edit { display: flex; gap: 6px; }
+.tcard { position: relative; display: grid; justify-items: center; gap: 2px; padding: 8px 8px 10px; border-radius: 10px; background: linear-gradient(160deg, #241a2c, #121018); border: 2px solid #6b5a78; min-width: 112px; }
+.tcard .hostess { margin-bottom: 2px; }
+.tcard.r-foil { border-color: #d9a53a; box-shadow: 0 0 10px #d9a53a55; }
+.tcard.r-holo { border-color: #ff6ad5; box-shadow: 0 0 14px #ff6ad588; background: linear-gradient(160deg, #3b1f4a, #142235 55%, #3a1838); }
+.tcard.house { opacity: .9; }
+.tcard.fresh { animation: tc-pop .5s ease-out; }
+@keyframes tc-pop { from { transform: scale(.7) rotate(-6deg); opacity: 0; } to { transform: none; opacity: 1; } }
+.tc-name { font-weight: 700; } .tc-rar { font-family: var(--mono); font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.tcard.r-holo .tc-rar { color: #ff9ae5; } .tcard.r-foil .tc-rar { color: #e9c06a; }
+.tc-stats { display: flex; gap: 8px; font-size: .78rem; } .tc-stats span { display: grid; justify-items: center; } .tc-stats i { font-style: normal; color: var(--muted); font-size: .66rem; } .tc-stats b { font-size: 1rem; }
+.tc-shelf, .tc-hand { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
+.tc-count { position: absolute; top: 6px; right: 8px; font-family: var(--mono); font-size: .8rem; color: var(--sodium); }
+.tc-rounds { display: grid; gap: 6px; margin: 6px 0; } .tc-round { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tc-round.win .tc-vs { color: var(--ok); } .tc-round.loss .tc-vs { color: var(--danger); } .tc-vs { font-family: var(--mono); }
 .board-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .board-table th { text-align: left; font-family: var(--mono); font-size: .66rem; letter-spacing: .1em; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); }
 .board-table td { padding: 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
@@ -1589,6 +1603,7 @@ html.calm .btn:active, html.calm .door:active, html.calm .tab:active, html.calm 
 <script type="module">
 import * as D from './data.js';
 import * as E from './engine.js';
+import * as CARDS from './cards.js';
 import { fallenLine, BOSS_MOVES } from './lore.js';
 import { portraitURL } from './portraits.js';
 import { ensureSheet as ensureArt, Stage, loadSheets, onArtChange, preferOpArt, sheetOf, sheetStill, setLookSheets, setCalm as setStageCalm } from './stage.js';
@@ -3246,7 +3261,7 @@ function modalView() {
   if (needName()) return nameView();
   if (!modal) return '';
   if (modal === 'lounge' && !loungeOpen()) modal = 'bar';
-  if (['bar', 'lounge', 'wheel', 'orbit', 'ventures'].includes(modal)) return downtimeView();
+  if (['bar', 'lounge', 'cards', 'wheel', 'orbit', 'ventures'].includes(modal)) return downtimeView();
   if (modal === 'duel') return duelView();
   const p = A.getPrefs();
   if (modal === 'news') return newsView();
@@ -3438,12 +3453,12 @@ function boardView() {
 }
 
 // ---------- Downtime screens ----------
-const DT_TITLES = { bar: ['The Lantern', 'Tenement basement \u00b7 after curfew'], lounge: ['E-Girl Room', 'Through the curtain at the back'], wheel: ['The Wheel', 'Back room of the Lantern'], orbit: ['Orbit', 'The cell\u2019s shuttle \u00b7 lift corridor'], ventures: ['Ventures', 'Sable\u2019s ledger'] };
+const DT_TITLES = { bar: ['The Lantern', 'Tenement basement \u00b7 after curfew'], lounge: ['E-Girl Room', 'Through the curtain at the back'], cards: ['Lantern Hearts', 'The card table by the bar'], wheel: ['The Wheel', 'Back room of the Lantern'], orbit: ['Orbit', 'The cell\u2019s shuttle \u00b7 lift corridor'], ventures: ['Ventures', 'Sable\u2019s ledger'] };
 function downtimeView() {
   const [title, where] = DT_TITLES[modal];
-  const body = modal === 'orbit' && isGuest() ? '<div class="notice">The shuttle stays with your own cell. Leave the room to fly it from your own game.</div>' : { bar: barView, lounge: loungeView, wheel: wheelView, orbit: orbitView, ventures: venturesView }[modal]();
+  const body = modal === 'orbit' && isGuest() ? '<div class="notice">The shuttle stays with your own cell. Leave the room to fly it from your own game.</div>' : { bar: barView, lounge: loungeView, cards: cardsView, wheel: wheelView, orbit: orbitView, ventures: venturesView }[modal]();
   return `<div class="modal-wrap" data-a="closemodal"><div class="modal popup wide dt dtm-${modal}" role="dialog" aria-modal="true" aria-label="${esc(title)}">
-    <div class="pop-head"><div class="pop-title"><span class="label">${esc(where)}</span><h2>${esc(title)}</h2></div><nav class="tabs pop-tabs head-tabs">${['bar', 'lounge', 'wheel', 'orbit', 'ventures'].filter((k) => k !== 'lounge' || loungeOpen()).map((k) => `<button class="tab" aria-selected="${modal === k}" data-a="modal" data-v="${k}">${esc(DT_TITLES[k][0])}</button>`).join('')}</nav><button class="tool" data-a="closemodal" aria-label="Close">Close</button></div>
+    <div class="pop-head"><div class="pop-title"><span class="label">${esc(where)}</span><h2>${esc(title)}</h2></div><nav class="tabs pop-tabs head-tabs">${['bar', 'lounge', 'cards', 'wheel', 'orbit', 'ventures'].filter((k) => (k !== 'lounge' || loungeOpen()) && (k !== 'cards' || cardIds().length)).map((k) => `<button class="tab" aria-selected="${modal === k}" data-a="modal" data-v="${k}">${esc(DT_TITLES[k][0])}</button>`).join('')}</nav><button class="tool" data-a="closemodal" aria-label="Close">Close</button></div>
     ${!E.inTown(state) ? '<p class="muted">Only between raids, and only in the yard.</p>' : body}
   </div></div>`;
 }
@@ -3470,6 +3485,35 @@ function hostessFig(g, h = 200) {
   if (!a) return `<div class="hostess ph ${g.id}" aria-hidden="true"><span>${esc(g.name[0])}</span></div>`;
   const w = Math.round(h * a.w / a.h), n = a.frames || 1;
   return `<div class="hostess" role="img" aria-label="${esc(g.name)}" style="width:${w}px;height:${h}px;background-image:url(downtime/hostesses/${g.id}.png);background-size:${w * n}px ${h}px;--end:-${w * n}px;--n:${n};animation-duration:${(n / (a.fps || 6)).toFixed(2)}s"></div>`;
+}
+// ---------- Lantern Hearts: the card table ----------
+// Every E-Girl whose art is in is a card. Rules in cards.js; this draws the collection, packs and a match against the house.
+const cardIds = () => D.LOUNGE.girls.filter((g) => hostessArt[g.id]).map((g) => g.id);
+let lastPack = null;
+function tcard(key, { btn = '', cls = '', h = 112 } = {}) {
+  const k = CARDS.cardInfo(key), g = D.LOUNGE.girls.find((x) => x.id === k.girl) || { id: k.girl, name: k.name };
+  const st = Object.entries(CARDS.STATS).map(([id, n]) => `<span><i>${esc(n)}</i><b>${k.stats[id]}</b></span>`).join('');
+  return `<div class="tcard r-${k.rarity} ${cls}">${hostessArt[g.id] ? hostessFig(g, h) : ''}<div class="tc-name">${esc(k.name)}</div><div class="tc-rar">${esc(k.rarityName)}</div><div class="tc-stats">${st}</div>${btn}</div>`;
+}
+function cardsView() {
+  const c = state.char, m = state.meta, ids = cardIds(), g = state.cardMatch, mine = CARDS.collection(m);
+  const intro = '<p class="muted">Collect the Lantern\u2019s girls as cards and play the house. Each round calls Charm, Sass or Style; play one card, higher number takes the round. Best of three wins your stake back doubled. Holo and Foil cards hit harder.</p>';
+  if (g) {
+    const stat = g.calls[Math.min(g.round, g.calls.length - 1)], wins = g.rounds.filter((r) => r.won > 0).length, losses = g.rounds.filter((r) => r.won < 0).length;
+    const rounds = g.rounds.map((r, i) => `<div class="tc-round ${r.won > 0 ? 'win' : r.won < 0 ? 'loss' : 'tie'}"><span class="label">Round ${i + 1} \u00b7 ${esc(CARDS.STATS[r.stat])}</span>${tcard(r.mine, { h: 70 })}<b class="tc-vs">${r.a} vs ${r.b}</b>${tcard(r.theirs, { h: 70, cls: 'house' })}</div>`).join('');
+    const hand = g.over ? '' : `<p><b>Round ${g.round + 1}: the house calls ${esc(CARDS.STATS[stat])}.</b> Pick a card.</p><div class="tc-hand">${g.hand.map((k, i) => tcard(k, { btn: `<button class="btn primary" data-a="cardpick" data-v="${i}">Play \u00b7 ${CARDS.cardInfo(k).stats[stat]}</button>` })).join('')}</div>`;
+    const end = g.over ? `<div class="notice ${g.result === 'won' ? 'good' : g.result === 'lost' ? 'lose' : ''}">${g.result === 'won' ? `You take the table: +${g.stake} credits.` : g.result === 'lost' ? `The house takes your ${g.stake}.` : 'A draw. Your stake comes back.'}</div><div class="btnrow"><button class="btn primary" data-a="cardclose">Back to the table</button></div>` : '';
+    return `<p class="muted">Stake ${cr(g.stake)} \u00b7 you ${wins}, the house ${losses}.</p>${rounds ? `<div class="tc-rounds">${rounds}</div>` : ''}${hand}${end}`;
+  }
+  const counts = {}; for (const k of mine) counts[k] = (counts[k] || 0) + 1;
+  const keys = Object.keys(counts).sort((a, b) => CARDS.RARITY.findIndex((r) => r.id === b.split(':')[1]) - CARDS.RARITY.findIndex((r) => r.id === a.split(':')[1]) || a.localeCompare(b));
+  const shelf = keys.length ? `<div class="tc-shelf">${keys.map((k) => tcard(k, { h: 90, btn: counts[k] > 1 ? `<span class="tc-count">\u00d7${counts[k]}</span>` : '' })).join('')}</div>` : '<p class="muted">No cards yet.</p>';
+  const pack = lastPack ? `<div class="tc-pack"><span class="label">Just opened</span><div class="tc-hand">${lastPack.map((k) => tcard(k, { h: 90, cls: 'fresh' })).join('')}</div></div>` : '';
+  const stakes = CARDS.STAKES.map((n) => `<button class="btn ${mine.length >= CARDS.HAND && c.credits >= n ? 'primary' : ''}" data-a="cardplay" data-v="${n}" ${mine.length < CARDS.HAND || c.credits < n ? 'disabled' : ''}>Play for ${cr(n)}</button>`).join('');
+  return `${intro}${pack}
+    <div class="btnrow">${!m.cardsFree ? '<button class="btn primary" data-a="cardfree">Free starter pack</button>' : ''}<button class="btn" data-a="cardpack" ${c.credits < CARDS.PACK_COST ? 'disabled' : ''}>Buy a pack \u00b7 ${cr(CARDS.PACK_COST)}</button></div>
+    <div class="btnrow">${stakes}</div>${mine.length < CARDS.HAND ? `<p class="muted small">You need ${CARDS.HAND} cards to play.</p>` : ''}
+    <h3>Your cards <span class="num muted" style="font-size:.9rem">${mine.length}${m.cardWins ? ` \u00b7 ${m.cardWins} wins` : ''}</span></h3>${shelf}`;
 }
 function loungeView() {
   const c = state.char, L = D.LOUNGE, cost = E.loungeCost(state), last = c.booked && c.favLog && c.favLog[0], total = E.favText(c.fav);
@@ -4236,6 +4280,7 @@ function act(a, v, k) {
       if (!dr || !cost || home.meta.resolve < cost) { A.play('denied'); return; }
       home.meta.resolve -= cost; home.meta.droneRanks = { ...(home.meta.droneRanks || {}), [dr.type]: dr.rank + 1 }; save(); net.send({ t: 'act', a: 'droneupfree' }); net.send({ t: 'home', home: homeInfo() }); mirrorHome(); A.play('buy'); return;
     }
+    if (/^card(free|pack|play|pick|close)$/.test(a)) { hint('The card table plays from your own game. Leave the room to play.'); A.play('denied'); return; }
     if (a === 'recruit') { net.send({ t: 'recruit' }); state.coopFallen = null; state.guestSawDeath = true; A.play('click'); render(); return; } // straight to the new operative, without waiting on the host
     if (a === 'duel' && v === 'close') modal = null;
     if (a === 'pickmap') { toast = 'The host picks the target.'; A.play('denied'); render(); return; }
@@ -4320,6 +4365,11 @@ function applyAct(a, v, k) {
     case 'celldel': if (cellDelArm !== +v) { cellDelArm = +v; sfx('click'); break; } cellDelArm = null; ok = deleteCell(+v); if (ok) { toast = `Cell ${+v + 1} erased.`; sfx('denied'); } break;
     case 'newsok': newsPage = 0; try { localStorage.setItem(NEWS_KEY, NEWS_ID); } catch (e) {} modal = null; sfx('click'); break;
     case 'modal': modal = v; if (v === 'board') loadBoard(); sfx('click'); break;
+    case 'cardfree': { const got = CARDS.freePack(state, cardIds(), rng); ok = !!got; if (got) { lastPack = got; sfx('perk'); } break; }
+    case 'cardpack': { const got = CARDS.buyPack(state, cardIds(), rng); ok = !!got; if (got) { lastPack = got; sfx('buy'); } break; }
+    case 'cardplay': { const g = CARDS.startMatch(state, +v, cardIds(), rng); ok = !!g; if (g) { lastPack = null; sfx('click'); } break; }
+    case 'cardpick': { const g = CARDS.playCard(state, +v, rng); ok = !!g; if (g) { const r = g.rounds[g.rounds.length - 1]; sfx(g.over ? (g.result === 'won' ? 'coin' : g.result === 'lost' ? 'denied' : 'click') : r.won > 0 ? 'perk' : r.won < 0 ? 'denied' : 'click'); } break; }
+    case 'cardclose': CARDS.closeMatch(state); break;
     case 'lounge': { const r = E.visitLounge(state, v, rng); ok = !!r; if (r) { sfx(r.bad ? 'denied' : 'perk'); if (!actingAs) toast = `${r.name}: ${r.text}`; } break; }
     case 'duel': {
       if (v === 'challenge') ok = E.duelChallenge(state);

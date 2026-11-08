@@ -1,0 +1,43 @@
+// Lantern Hearts: the free starter pack, buying a pack, a whole match against the house, and the table on a phone.
+const { chromium } = require('playwright');
+const URL = process.env.U || 'http://localhost:8765/index.html';
+const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OUT, { recursive: true });
+(async () => {
+  const browser = await chromium.launch(), errors = [];
+  const check = (name, ok, extra = '') => { console.log(`${ok ? 'PASS' : 'FAIL'} ${name} ${extra}`); if (!ok) errors.push('FAIL ' + name); };
+  const p = await browser.newPage({ viewport: { width: 1100, height: 900 } });
+  p.on('pageerror', (e) => errors.push(e.message));
+  await p.goto(URL);
+  await p.evaluate(async () => { localStorage.clear(); for (const k of ['afterhours', 'reach']) localStorage.setItem('cinder-cell-news', k); const E = await import('./engine.js'), rng = E.seededRng(4), s = E.newGame(rng); E.createChar(s, rng); s.char.credits = 500; s.screen = 'town'; s.meta.tips = { town: true, combat: true, route: true }; localStorage.setItem('cinder-cell-save-v1', JSON.stringify(s)); });
+  await p.reload(); await p.click('button[data-a="continue-title"]', { timeout: 3000 }).catch(() => {}); await p.waitForTimeout(900);
+  await p.click('.shortcuts button[data-v="bar"]'); await p.waitForTimeout(300);
+  const tab = p.locator('.pop-tabs [data-v="cards"]');
+  check('the card table is a Lantern tab', await tab.count() === 1);
+  await tab.click(); await p.waitForTimeout(300);
+  await p.click('button[data-a="cardfree"]'); await p.waitForTimeout(300);
+  const st = () => p.evaluate(() => { const s = cinderGame.state(); return { cr: s.char.credits, cards: Object.values(s.meta.cards || {}).reduce((a, b) => a + b, 0), free: s.meta.cardsFree, match: s.cardMatch }; });
+  let s = await st();
+  check('the starter pack is free: three cards', s.cards === 3 && s.cr === 500 && s.free, JSON.stringify(s));
+  await p.click('button[data-a="cardpack"]'); await p.waitForTimeout(300); s = await st();
+  check('a pack costs 60 for three more', s.cards === 6 && s.cr === 440, JSON.stringify(s));
+  check('the new cards show', await p.locator('.tc-pack .tcard').count() === 3);
+  await p.screenshot({ path: `${OUT}/cards-shelf.png` });
+  await p.click('button[data-a="cardplay"][data-v="75"]'); await p.waitForTimeout(300); s = await st();
+  check('a match takes the stake and deals three cards', s.cr === 365 && s.match && await p.locator('button[data-a="cardpick"]').count() === 3, JSON.stringify(s.match && s.match.hand));
+  await p.screenshot({ path: `${OUT}/cards-match.png` });
+  for (let i = 0; i < 3; i++) { const b = p.locator('button[data-a="cardpick"]').first(); if (!(await b.count())) break; await b.click(); await p.waitForTimeout(300); }
+  s = await st();
+  const paid = s.match && s.match.paid;
+  check('the match ends and pays by the result', s.match && s.match.over && s.cr === 365 + paid && [0, 75, 150].includes(paid), JSON.stringify({ result: s.match && s.match.result, paid, cr: s.cr }));
+  await p.screenshot({ path: `${OUT}/cards-result.png` });
+  await p.click('button[data-a="cardclose"]'); await p.waitForTimeout(250);
+  check('back to the table', !(await st()).match && await p.locator('button[data-a="cardplay"]').count() === 3);
+  await p.setViewportSize({ width: 844, height: 390 }); await p.waitForTimeout(300);
+  await p.click('button[data-a="cardplay"][data-v="25"]'); await p.waitForTimeout(300);
+  await p.screenshot({ path: `${OUT}/cards-phone.png` });
+  const fit = await p.evaluate(() => { const b = document.querySelector('button[data-a="cardpick"]'); if (!b) return false; b.scrollIntoView(); const r = b.getBoundingClientRect(); return r.right <= innerWidth && r.width > 20; });
+  check('phone: cards can be played', fit);
+  await browser.close();
+  console.log(errors.length ? errors.join('\n') + '\nFAILED' : 'ALL PASS');
+  process.exit(errors.length ? 1 : 0);
+})().catch((e) => { console.error(e); process.exit(1); });
