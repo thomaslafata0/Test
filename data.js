@@ -516,6 +516,11 @@ export const INTENTS = {
   heavy:  { label: 'Charging a heavy strike', tone: 'danger', tip: 'x2.2 damage. Defend to take about 40% of it.' },
   guard:  { label: 'Bracing behind cover',    tone: 'calm',   tip: 'Your attacks deal half. A free turn to heal or set up.' },
   repair: { label: 'Running self-repair',     tone: 'calm',   tip: 'Will restore 15% HP. Hit it hard now.' },
+  // District tactics: ordinary enemies in the first four districts sometimes use their district's move (engine MAP_TACTIC).
+  radio:  { label: 'Calling it in',           tone: 'warn',   tip: 'Calling for backup: raises the Alarm and it digs in (+10% HP, +1 DEF). A Strike knocks the radio away.' },
+  slag:   { label: 'Scooping molten slag',     tone: 'danger', tip: 'x1.3 damage and sets you Burning. Defend to take less and stay unburnt.' },
+  shackle:{ label: 'Swinging the shackles',    tone: 'warn',   tip: 'Leaves you Shaken for 2 turns (you deal 25% less). Defend to shrug it off.' },
+  flare:  { label: 'Lighting a flare',         tone: 'warn',   tip: 'Lights you up for the tower snipers: Exposed for 2 turns and a sniper shot next turn. Defend to stay in the dark.' },
   huff:   { label: 'Huffing its own supply',  tone: 'danger', tip: 'It\u2019s about to get high on its own gas: bigger, healed, +60% ATK and gassing you. Kill it now, or brace.' },
 };
 

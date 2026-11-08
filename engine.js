@@ -51,7 +51,7 @@ export const payDepth = (r) => 1.5 * Math.pow(effSector(r.sector, r.map), 0.65);
 export const hardAt = (sector) => HARD[hardTier(sector)];
 // In a raid the current sector sets the tier; in the yard, the deepest sector the cell has reached.
 export const hard = (s) => hardAt(s.run ? s.run.sector : (s.meta && s.meta.bestSector) || 0);
-export const TUNE = { relicOdds: 0.35, hpLin: 0.28, hpQuad: 0.003, atkLin: 0.14, atkQuad: 0.002, bossHp: 2.1, bossAtk: 1.4, enemyAtk: 1.8, enemyHp: 2.4, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 1.5, strAtk: 0.6, agiCrit: 0.05, agiDodge: 0.035, intOverload: 5, chaHesitate: 0.055, chaCredits: 0.05, wanted: 0.025, ambush: 1.5,
+export const TUNE = { tactic: 0.9, relicOdds: 0.35, hpLin: 0.28, hpQuad: 0.003, atkLin: 0.14, atkQuad: 0.002, bossHp: 2.1, bossAtk: 1.4, enemyAtk: 1.8, enemyHp: 2.4, statusRate: 1, smashStr: 1, aimed: 1.5, strHp: 1.5, strAtk: 0.6, agiCrit: 0.05, agiDodge: 0.035, intOverload: 5, chaHesitate: 0.055, chaCredits: 0.05, wanted: 0.025, ambush: 1.5,
   upgradeCost: 60, eliteGear: 0.3, shopLegendary: 0.06, cover: 0.5, agiAtk: 1.2,
   // Enemy strength in sectors 1-5. Nobody levels up during a raid, so a first raid has to be winnable on level-1 stats.
   earlyCurve: [1, 0.95, 0.88, 0.84, 0.85, 0.95, 0.95, 0.95, 0.95, 0.95],
@@ -1546,6 +1546,7 @@ export function makeEnemy(sector, boss, rng, mapId = 'garrison', threat = 0, rei
     intent: 'attack', lastIntent: null, stun: 0, shaken: false, st: {}, fresh: [], phase2: false,
   };
   if (base.huff && !boss) e.huff = true;
+  if (!boss && MAP_TACTIC[mapId]) e.intents = { ...e.intents, [MAP_TACTIC[mapId]]: TUNE.tactic };
   const mv = !boss && D.MAP_VARIANT_IDS.includes(id) && D.MAP_VARIANT[map.id];
   if (mv) {
     e.variant = map.id; // a different look, not a different name
@@ -1559,11 +1560,15 @@ export function makeEnemy(sector, boss, rng, mapId = 'garrison', threat = 0, rei
   return e;
 }
 
+// Each of the first four districts has a move its ordinary enemies use now and then (resolved in enemyTurn).
+export const MAP_TACTIC = { garrison: 'radio', foundry: 'slag', detention: 'shackle', port: 'flare' };
+const MAP_TACTIC_SET = new Set(Object.values(MAP_TACTIC));
 function rollIntent(e, rng, last) {
   const entries = Object.entries(e.intents).filter(([k, w]) => w > 0 &&
     !(k === 'heavy' && last === 'heavy') &&
     !(k === 'special' && last === 'special') &&
     !(k === 'guard' && last === 'guard') &&
+    !(MAP_TACTIC_SET.has(k) && MAP_TACTIC_SET.has(last)) &&
     !(k === 'repair' && e.hp > e.maxHp * 0.6));
   return entries.length ? pickWeighted(rng, entries) : 'attack';
 }
@@ -1836,6 +1841,7 @@ function playerActInner(s, act, rng, who) {
       log(s, `${wasReady ? 'Braced. ' : ''}${crit ? 'Critical! ' : ''}You strike ${e.name} with the ${meleeOf(c).name} for ${dmg}${guarded ? ', straight past their cover' : ''}.`, crit ? 'crit' : 'hit');
       if (c.background === 'ghost' && e.hp > 0 && e.def > 0 && (e.cracked || 0) < TUNE.ghostCrack) { e.def -= 1; e.cracked = (e.cracked || 0) + 1; log(s, `The loader arm cracks ${e.name}\u2019s armour: DEF \u22121.`, 'good'); }
       // A repair needs both hands: a hit up close stops it.
+      if (e.intent === 'radio' && e.stun === 0 && e.hp > 0) { e.intent = 'attack'; log(s, `You knock the radio out of ${e.name}\u2019s hand. Nobody\u2019s coming.`, 'good'); }
       if (e.intent === 'repair' && e.stun === 0 && e.hp > 0) { e.intent = 'attack'; log(s, `You knock the tools out of ${e.name}\u2019s hands. No repair this turn.`, 'good'); }
       meleeCounter(s, rng);
       break;
@@ -2170,7 +2176,8 @@ function envTurn(s, rng, enemyToo = true) {
       if (e.hp <= 0) return winFight(s, rng);
       checkPhase(s);
     }
-  } else if (mech === 'snipers' && rng() < sniperChance(r)) {
+  } else if (mech === 'snipers' && (r.flared || rng() < sniperChance(r))) {
+    r.flared = false; // a flare guarantees the next shot
     const dmg = r.defending ? 0 : Math.round(st.maxHp * 0.08 * (hasUnique(c, 'crawler') ? 0.5 : 1));
     c.hp -= dmg;
     fx(s, { who: 'env', type: 'sniper', dmg, blocked: r.defending });
@@ -2259,6 +2266,23 @@ function enemyTurn(s, rng) {
     fx(s, { who: 'enemy', type: 'guard' });
     log(s, `${e.name} ${e.suppressed ? 'stays pinned' : 'holds position'} behind cover.`, 'info');
     e.suppressed = false;
+  } else if (e.intent === 'radio') {
+    raiseAlarm(s, 1, `${e.name} gets through on the radio.`);
+    const add = Math.round(e.maxHp * 0.1); e.maxHp += add; e.hp += add; e.def += 1;
+    fx(s, { who: 'enemy', type: 'special', name: 'Calling it in', dmg: 0 });
+    log(s, `${e.name} digs in while backup is on the way: +${add} HP, +1 DEF.`, 'bad');
+  } else if (e.intent === 'slag') {
+    let dmg = mitigate(e.atk * 1.3 * (0.9 + rng() * 0.2) * outMult(e.st, r.pst), st.def);
+    if (r.defending) dmg = Math.max(1, Math.round(dmg * TUNE.defend));
+    dmg = soak(s, c, droneShield(c, dmg)); c.hp -= dmg;
+    const added = r.defending ? [] : addPlayerStatus(s, { burn: 2 }, rng);
+    fx(s, { who: 'enemy', type: 'special', name: 'Molten slag', dmg, blocked: r.defending, statuses: added });
+    log(s, `${e.name} flings molten slag for ${dmg}${r.defending ? ', mostly blocked' : ''}.${added.length ? ' You\u2019re Burning.' : ''}`, 'bad');
+  } else if (e.intent === 'shackle' || e.intent === 'flare') {
+    const shackle = e.intent === 'shackle', added = r.defending ? [] : addPlayerStatus(s, shackle ? { shaken: 2 } : { exposed: 2 }, rng);
+    if (!shackle && !r.defending) r.flared = true;
+    fx(s, { who: 'enemy', type: 'special', name: shackle ? 'Shackles' : 'Flare', dmg: 0, blocked: r.defending, statuses: added });
+    log(s, r.defending ? `${e.name} ${shackle ? 'swings the shackles' : 'pops a flare'}, but you\u2019re braced and out of the way.` : shackle ? `${e.name} catches you with the shackles. You\u2019re Shaken.` : `${e.name} lights you up with a flare. The towers can see you: Exposed.`, 'bad');
   } else if (e.intent === 'huff') {
     // High on its own supply: it swells, heals, hits harder and starts gassing you. Worth more if you still put it down.
     const was = e.maxHp;
