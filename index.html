@@ -2039,7 +2039,7 @@ function writeSave(s) {
   const now = Date.now();
   s.savedAt = changed ? now : a; if (c) c.savedAt = changed ? now : b;
   if (!changed) return;
-  try { localStorage.setItem(saveKey(), JSON.stringify(s)); lastBody = body; saveFailed = false; cloudTouched(); } catch (e) { saveFailed = true; }
+  if (storeItem(saveKey(), JSON.stringify(s))) { lastBody = body; saveFailed = false; cloudTouched(); } else saveFailed = true;
 }
 // The friend's own game (home) is the real save; what's on their screen in co-op is a mirror of the host's.
 function save() {
@@ -2053,7 +2053,25 @@ function save() {
 const PNAME_KEY = 'cinder-cell-player-set';
 const playerName = () => String(getCoopPrefs().name || '').trim();
 const cleanName = (v) => String(v || '').replace(/[^A-Za-z0-9 _.\-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 16);
-const needName = () => { try { return !localStorage.getItem(PNAME_KEY) && !navigator.webdriver; } catch (e) { return false; } };
+// Asked once: a name already saved counts (the flag can be lost when storage is full), and never twice in one session.
+let nameDone = false;
+const needName = () => {
+  if (nameDone || navigator.webdriver) return false;
+  try { if (localStorage.getItem(PNAME_KEY)) return !(nameDone = true); } catch (e) { return false; }
+  if (playerName().length >= 2) { nameDone = true; try { localStorage.setItem(PNAME_KEY, '1'); } catch (e) {} return false; }
+  return true;
+};
+// Full storage (old backups, a broken-save copy): clear what the game can live without so saves and settings stick.
+function freeStorage() {
+  let freed = 0;
+  try { for (const k of Object.keys(localStorage)) if (/-broken$|^cinder-cell-season1$|^cinder-cell-lastroom$/.test(k)) { localStorage.removeItem(k); freed++; } } catch (e) {}
+  return freed;
+}
+function storeItem(k, v) {
+  try { localStorage.setItem(k, v); return true; } catch (e) {}
+  if (!freeStorage()) return false;
+  try { localStorage.setItem(k, v); return true; } catch (e) { return false; }
+}
 let pendingJoin = null;
 function nameView() {
   return `<div class="modal-wrap"><div class="modal name-gate" role="dialog" aria-modal="true" aria-label="Player name">
@@ -4731,8 +4749,8 @@ function applyAct(a, v, k) {
     case 'setname': {
       const box = document.getElementById('player-name') || document.getElementById('coop-name'), name = cleanName(box && box.value);
       if (name.length < 2) { toast = 'Pick a name of 2 to 16 letters or numbers.'; break; }
-      setCoopPrefs({ name }); state.playerName = name;
-      try { localStorage.setItem(PNAME_KEY, '1'); } catch (e) {}
+      setCoopPrefs({ name }); state.playerName = name; nameDone = true;
+      storeItem(PNAME_KEY, '1');
       toast = `You\u2019re ${name}.`;
       if (pendingJoin) { const code = pendingJoin; pendingJoin = null; startCoop('guest', code, !getCoopPrefs().relay); }
       break;
