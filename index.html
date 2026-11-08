@@ -1736,7 +1736,7 @@ const CELLS = 5, CELL_KEY = 'cinder-cell-slot';
 let cellSlot = (() => { try { const n = +localStorage.getItem(CELL_KEY); return n >= 0 && n < CELLS ? n : 0; } catch (e) { return 0; } })();
 const saveKey = (i = cellSlot) => (i ? `${SAVE_KEY}-s${i}` : SAVE_KEY);
 const oldSeason = (s) => !!(s && s.meta && (s.meta.season || 1) < E.SEASON);
-const NEWS_KEY = 'cinder-cell-news', NEWS_ID = 'reach'; // bump to show the popup again
+const NEWS_KEY = 'cinder-cell-news', NEWS_ID = 'contracts'; // bump to show the popup again
 let newsPage = 0;
 let seasonFresh = false;
 const rng = Math.random;
@@ -3516,48 +3516,27 @@ function sealedLabel(x) {
 const opStrip = (id, h, flip = false) => `<div class="op-strip ${flip ? 'flip' : ''}" role="img" aria-label="${esc(id)}" style="width:${h}px;height:${h}px;background-image:url(sprites/${id}/idle.png);background-size:${h * 9}px ${h}px;--end:-${h * 3}px"></div>`;
 function newsView() {
   const item = (icon, title, text) => `<div class="news-item">${ico(icon, 'md')}<div><b>${title}</b><span>${text}</span></div></div>`;
-  if (newsPage === 0) {
-    const finale = [['rask', 'Sector 5'], ['broodqueen', 'Sector 10'], ['lancer', 'Sector 15'], ['saal', 'Sector 20']];
-    for (const [id] of finale) if (!sheetOf(id)) ensureArt(id); // their portraits fill in when the art arrives
-    const face = (id, where) => { const en = D.ENEMIES[id]; if (!en) return ''; const img = portraitImg({ id, name: en.name }, 'news-face'); return `<figure class="news-boss">${img || `<div class="news-face blank">${ico('room:boss', 'lg')}</div>`}<figcaption><b>${esc(en.name)}</b><span>${esc(where)}</span></figcaption></figure>`; };
-    return `<div class="modal-wrap news-wrap" data-a="closemodal"><div class="modal news" role="dialog" aria-modal="true" aria-label="What's new">
-    <div class="news-hero"><div class="news-hero-text"><span class="label">New \u00b7 1 of 3</span><h2>Halcyon Reach</h2><p>Up the lift, off-world: the penal colony where the yard\u2019s crates were going. The endgame district.</p></div></div>
-    <div class="news-bosses">${finale.map(([id, w]) => face(id, w)).join('')}</div>
-    <div class="news-grid">
-      ${item('room:elite', 'A fifth district, harder than the rest', 'Opens once an operative has freed the other four. Alien wildlife, colony wardens, spore storms every fourth round, and four new bosses.')}
-      ${item('room:boss', 'Threat levels come after', 'Threat I now opens only when one operative has freed all five districts, and each higher threat after freeing all five at the one below.')}
-      ${item('train:hp', 'More Resolve to spend', 'Reaching Threat I opens ten more ranks of every training and new levels of the cell upgrades.')}
-      ${item('train:atk', 'Drones go to rank 8', 'More ranks, spread out: the old top rank is now rank 7, and rank 8 is about 20% stronger. Your drones keep their strength.')}
-    </div>
-    <div class="btnrow news-go"><button class="btn" data-a="newsok">Skip</button><button class="btn primary big" data-a="newspage" data-v="1">Next: new faces</button></div>
-  </div></div>`;
-  }
-  const girls = D.LOUNGE.girls.filter((g) => hostessArt[g.id]);
-  const vex = D.BACKGROUNDS.find((b) => b.id === 'vex'), medic = D.BACKGROUNDS.find((b) => b.id === 'medic'), vexGirl = girls.find((g) => g.id === 'vex');
   const wrap = (page, hero, body, nav) => `<div class="modal-wrap news-wrap" data-a="closemodal"><div class="modal news" role="dialog" aria-modal="true" aria-label="What's new">
-    <div class="news-hero news-hero-ah"><div class="news-hero-text"><span class="label">New \u00b7 ${page} of 3</span>${hero}</div></div>${body}<div class="btnrow news-go">${nav}</div></div></div>`;
-  if (newsPage === 1) {
-    const lineup = girls.filter((g) => g.id !== 'vex');
-    return wrap(2, '<h2>New faces</h2><p>A new class, a girl who joins the cell, and more of the Lantern\u2019s night shift.</p>',
-      `<div class="news-ops-row">${vexGirl ? `<figure class="news-op-star">${hostessFig(vexGirl, 170)}<figcaption><b>Vex</b><span>Unique operative</span></figcaption></figure>` : ''}
-        <div class="news-grid one">
-          ${vex ? item('skill:intimidate', 'Vex joins the cell', `Her Blown Kiss charms the enemy, she\u2019s quick on her feet and she earns more per job. ${esc(vex.unlock.text)}`) : ''}
-          ${medic ? item('skill:barrier', 'Field Medic', 'A support class: shields for you and your partner, a team damage shot, Triage and Tag. Best in co-op, still fine solo.') : ''}
-          ${item('room:rest', 'The E-Girl Room', 'Three girls work each night, and the lineup changes. Pick one and she walks you out the back. From 350 credits, 10% more each visit; about one night in three goes badly, and a good night can clear an old bad mark.')}
-        </div></div>
-      ${lineup.length ? `<div class="news-girls">${lineup.slice(0, 5).map((g) => `<figure>${hostessFig(g, 110)}<figcaption><b>${esc(g.name)}</b><span>${esc(g.tag)}</span></figcaption></figure>`).join('')}</div>` : ''}`,
-      '<button class="btn" data-a="newspage" data-v="0">Back</button><button class="btn primary big" data-a="newspage" data-v="2">Next: Lantern Hearts</button>');
+    <div class="news-hero"><div class="news-hero-text"><span class="label">New · ${page} of 2</span>${hero}</div></div>${body}<div class="btnrow news-go">${nav}</div></div></div>`;
+  if (newsPage === 0) {
+    const sp = CT.spec('daily');
+    return wrap(1, '<h2>Contracts and Mutators</h2><p>A new reason to come back every day, and a harder way to play every district.</p>',
+      `<div class="news-grid">
+        ${item('room:bounty', 'Daily and weekly contracts', `Everyone plays the same raid with the same loaner operative and mutators, one attempt each, on its own leaderboard. Today: ${esc(clsName(sp.cls))}, ${sp.mutators.map(mutName).map(esc).join(' and ')}. Missions → Daily.`)}
+        ${item('room:elite', 'Mutators', 'Pick handicaps before a raid, like Hardened, Glass Jaw or One Way Out, for extra score and Resolve. Open once your cell frees a district.')}
+        ${item('room:boss', 'Season goals', 'A list of goals for the season that pay Resolve and cosmetics you can’t buy. Missions → Season.')}
+        ${item('perk:loaded', 'Relics', 'Bosses sometimes offer a relic: one of a kind, and it changes how you play. Echo Chamber, Mirror Plate, Red Thirst, Loaded Die and four more.')}
+      </div>`,
+      '<button class="btn" data-a="newsok">Skip</button><button class="btn primary big" data-a="newspage" data-v="1">Next</button>');
   }
-  const show = ['vex:prism', 'pixie:neon', 'rook:gilded'].filter((k) => girls.some((g) => g.id === k.split(':')[0]));
-  return wrap(3, '<h2>Lantern Hearts</h2><p>A card game at the bar: collect the girls, build a deck, take the house\u2019s money.</p>',
-    `${show.length ? `<div class="news-cards">${show.map((k, i) => tcard(k, { cls: 'flip', style: `--i:${i}` })).join('')}</div>` : ''}
-    <div class="news-grid">
-      ${item('perk:chit', 'Six rarities', 'Paper up to Prism, about one card in a thousand. Three copies fuse into one a rarity up.')}
-      ${item('room:elite', 'Build a deck', 'Your six best go to the table. Each girl has her own play, and the house shows its three calls before you choose.')}
-      ${item('room:boss', 'Three tables', 'Back Booth, Main Floor, High Roller. A deck maxed for a table just edges the house there.')}
-      ${item('perk:siphon', 'Also new', 'Stronger, pricier implants; eight new contraband; riskier extraction near bosses, where guards may take contraband as a bribe.')}
+  return wrap(2, '<h2>Mastery, the Hideout and more</h2><p>Every class levels up, and your credits finally have somewhere to go.</p>',
+    `<div class="news-grid">
+      ${item('skill:barrier', 'Class mastery', 'Each class levels up for the cell as you play it: more HP and damage, an extra stim, a mastery dye, and at level 2 a choice of two specialisations. Character → Record.')}
+      ${item('room:rest', 'The Hideout', 'Furnish the cell’s basement, buy dyes for your operative’s outfit, and card backs and felts for Lantern Hearts.')}
+      ${item('room:fight', 'New enemy moves', 'Garrison guards call for backup, Foundry crews fling molten slag, Detention wardens swing shackles, and Port spotters light flares for the snipers.')}
+      ${item('item:stim', 'First steps', 'New cells get a short checklist that pays Resolve as you learn the ropes. Fewer crashes on iOS, too.')}
     </div>`,
-    '<button class="btn" data-a="newspage" data-v="1">Back</button><button class="btn primary big" data-a="newsok">Play</button>');
+    '<button class="btn" data-a="newspage" data-v="0">Back</button><button class="btn primary big" data-a="newsok">Play</button>');
 }
 function modalView() {
   if (needName()) return nameView();

@@ -7,7 +7,7 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   const check = (name, ok, extra = '') => { console.log(`${ok ? 'PASS' : 'FAIL'} ${name} ${extra}`); if (!ok) errors.push('FAIL ' + name); };
   p.on('pageerror', (e) => errors.push(e.message));
   await p.goto(URL);
-  await p.evaluate(async () => { localStorage.clear(); const E = await import('./engine.js'), rng = E.seededRng(3), s = E.newGame(rng); E.createChar(s, rng); s.char.name = 'Coop Cass'; s.char.credits = 777; s.screen = 'town'; localStorage.setItem('cinder-cell-save-v1', JSON.stringify(s)); localStorage.setItem('cinder-cell-news', 'reach'); });
+  await p.evaluate(async () => { localStorage.clear(); const E = await import('./engine.js'), rng = E.seededRng(3), s = E.newGame(rng); E.createChar(s, rng); s.char.name = 'Coop Cass'; s.char.credits = 777; s.screen = 'town'; localStorage.setItem('cinder-cell-save-v1', JSON.stringify(s)); localStorage.setItem('cinder-cell-news', 'contracts'); });
   await p.reload(); await p.waitForTimeout(900);
   check('an old save is cell 1', /cell 1 of 5/i.test(await p.innerText('button[data-v="cells"]')));
   await p.click('.title-menu button[data-v="cells"]'); await p.waitForTimeout(250);
