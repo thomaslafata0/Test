@@ -371,7 +371,7 @@ export function mainStat(it) {
 export const itemName = (it) => `${baseOf(it).name}${it.level ? ` +${it.level}` : ''}`;
 export const itemPrice = (it) => Math.round(baseOf(it).cost * D.RARITY[it.rarity].price) + (it.premium || 0);
 export const sellValue = () => 0; // gear is never sold: the fence doesn't buy, he only sells
-export const canUpgrade = (it) => !!it && upgradeGain(it) > 0 && it.level < D.UPGRADE_MAX;
+export const canUpgrade = (it, t = 0) => !!it && upgradeGain(it) > 0 && it.level < upgradeMax(t);
 export const upgradeCost = (it) => Math.round(TUNE.upgradeCost * upgradeGain(it) * (it.level + 1) * D.RARITY[it.rarity].up);
 export const canReroll = (it) => !!it && it.bonuses.some((x) => !x.fixed);
 export const rerollCost = (it) => Math.round((40 + baseOf(it).cost * 0.15) * D.RARITY[it.rarity].up);
@@ -408,16 +408,16 @@ export function rollGear(rng, { slot = null, tierMin = 1, tierMax = 6, odds, fil
 }
 // Black Market rarity odds improve with the cell's deepest sector.
 export function shopOdds(meta, c = null) {
-  const b = (c ? opDepth(c) : meta.bestSector || 0) + 4 * (meta.threat || 0);
+  const b = c ? opDepth(c) : meta.bestSector || 0;
   const legendary = Math.min(TUNE.shopLegendary, 0.004 * b), elite = Math.min(0.16, 0.03 + 0.008 * b), rare = Math.min(0.32, 0.2 + 0.008 * b);
   return { common: 1 - legendary - elite - rare, rare, elite, legendary };
 }
-export const shopBand = (meta, c = null) => clamp(1 + Math.floor(((c ? opDepth(c) : meta.bestSector || 0) + 3 * (meta.threat || 0)) / 3), 1, 6);
+export const shopBand = (meta, c = null) => clamp(1 + Math.floor((c ? opDepth(c) : meta.bestSector || 0) / 3), 1, 6);
 // v5 shop scaling: the floor rises with the band (no more tier-1 junk at sector 12), and past sector 5 Marrow sells
 // pieces already worked on his bench (+1 per 5 sectors, up to +3), priced at 85% of what those upgrades would cost.
 export const shopFloor = (meta, c = null) => Math.max(1, shopBand(meta, c) - 2);
 // Past tier 6 the gear itself stops getting better, so Marrow's bench work keeps climbing: deeper ground and higher threat sell higher +levels.
-export const shopLevel = (meta, c = null) => clamp(Math.floor((c ? opDepth(c) : meta.bestSector || 0) / 5) + (meta.threat || 0), 0, D.UPGRADE_MAX - 1);
+export const shopLevel = (meta, c = null) => clamp(Math.floor((c ? opDepth(c) : meta.bestSector || 0) / 5), 0, upgradeMax(opThreat(c)) - 1);
 function benchWork(it, lvl) {
   let premium = 0;
   for (let i = 0; i < lvl && canUpgrade(it); i++) { premium += upgradeCost(it); it.level += 1; }
@@ -435,7 +435,7 @@ export function restockMarket(s, rng) {
 }
 // Gear dropped by an elite or boss in this sector.
 function rollLoot(s, rng, e) {
-  const c = s.char, r = s.run, eff = effSector(r.sector, r.map) + 3 * (r.threat || 0), band = clamp(Math.ceil(eff / 3), 1, 6);
+  const c = s.char, r = s.run, eff = effSector(r.sector, r.map) + THREAT_DEPTH * (r.threat || 0), band = clamp(Math.ceil(eff / 3), 1, 6);
   if (e.boss) {
     const u = D.BOSS_UNIQUE[e.id];
     if (u && !hasUnique(c, D.GEAR[u].unique)) return makeItem(u);
@@ -472,7 +472,7 @@ export function buyGear(s, idx, stash = false) {
 }
 export function upgradeItem(s, slot) {
   const c = s.char, it = gearIn(c, slot);
-  if (!canUpgrade(it)) return false;
+  if (!canUpgrade(it, opThreat(c))) return false;
   const cost = price(s, upgradeCost(it));
   if (c.credits < cost) return false;
   const hpBefore = stats(s).maxHp;
@@ -1193,7 +1193,13 @@ const outMult = (attackerSt, defenderSt) => (attackerSt.shaken ? 0.75 : 1) * (de
 // A district opens when this operative has cleared far enough into the earlier ones. A new operative starts again.
 export const mapUnlocked = (s, map) => Object.entries(map.unlock || {}).every(([id, n]) => !!s.char && ((s.char.maps || {})[id] || {}).deepest >= n);
 // How deep this operative has been anywhere, in Garrison-equivalent sectors (the shop and drops follow it).
-export const opDepth = (c) => Math.max(0, ...Object.entries((c && c.maps) || {}).map(([id, p]) => (p.deepest ? effSector(p.deepest, id) : 0)));
+export const opDepth = (c) => Math.max(0, ...Object.entries((c && c.maps) || {}).map(([id, p]) => (p.deepest ? effSector(p.deepest, id) : 0))) + THREAT_DEPTH * opThreat(c);
+// Threat levels: an operative who frees all five districts escapes, then goes back in one level higher. Their maps start over
+// from sector 1, but every sector counts as THREAT_DEPTH deeper per level (enemies, pay, the shop), so Garrison at Threat I
+// opens about where Halcyon Reach did. Lower levels stay shut for that operative; a new one starts at Standard.
+export const THREAT_DEPTH = 22;
+export const opThreat = (c) => (c && c.threat) || 0;
+export const upgradeMax = (t = 0) => D.UPGRADE_MAX + 2 * t; // Standard +8, Threat I +10, Threat II +12...
 export const opFreed = (c, mapId) => (((c && c.maps) || {})[mapId] || {}).deepest >= MAX_SECTOR;
 export function mapProgress(c, mapId) {
   if (!c.maps[mapId]) c.maps[mapId] = { insertions: [1], deepest: 0 };
@@ -1211,7 +1217,7 @@ const earnInsertion = (c, mapId, threat, sector) => { const list = insertionsAt(
 export function deploy(s, mapId, startSector, rng, opts = {}) {
   const map = mapById(mapId);
   if (!mapUnlocked(s, map)) return false;
-  s.meta.threat = Math.min(s.meta.threat || 0, maxThreat(s)); // threat levels belong to the operative who freed districts
+  s.meta.threat = s.run && s.run.contract ? 0 : opThreat(s.char); // the operative's own level: no going back down
   if (!insertionsAt(s.char, map.id, s.meta.threat || 0).includes(startSector)) startSector = 1;
   s.run = { startCredits: s.char.credits, map: map.id, sector: startSector, startSector, room: 0, choices: null, enemy: null, nextMod: null, sectorCredits: 0, kills: 0, bosses: 0, cleared: 0, elites: 0,
     alert: 0, allies: 0, vent: 3, turns: 0, threat: s.meta.threat || 0, perkOffer: null, ...freshBag(), cb: {}, actor: 0, acted: {}, round: 0, lastAttacker: 0 };
@@ -1231,7 +1237,7 @@ export function deploy(s, mapId, startSector, rng, opts = {}) {
     if (has(c, 'quarter') && c.items.stim < stats(s).carry) c.items.stim += 1;
     if (masteryOf(c.home || s.meta, c.background).level >= 4 && c.items.stim < stats(s).carry) c.items.stim += 1;
   });
-  s.run.bulletin = pickWeighted(rng, D.BULLETINS.map((b) => [b.id, b.weight]));
+  s.run.bulletin = pickWeighted(rng, D.BULLETINS.filter((b) => (b.minThreat || 0) <= (s.run.threat || 0)).map((b) => [b.id, b.weight]));
   refreshContracts(s, rng);
   s.log = [];
   s.notice = null;
@@ -1403,7 +1409,7 @@ export function enterRoom(s, idx, rng) {
     notes.push(isCoop(s) ? 'Something for each of you' : itemName(r.lootOffer));
     text = 'The locker\u2019s seal hisses open. Something good is racked inside.';
   } else if (kind === 'bench') {
-    const opts = D.SLOT_ORDER.map((sl) => gearIn(c, sl)).filter((it) => canUpgrade(it));
+    const opts = D.SLOT_ORDER.map((sl) => gearIn(c, sl)).filter((it) => canUpgrade(it, opThreat(c)));
     if (opts.length) { const it = pick(rng, opts); it.level += 1; notes.push(`${itemName(it)}`); text = 'Somebody left the lathe running. You make good use of it.'; }
     else { const cr = Math.round(randInt(rng, 7, 11) * payDepth(r) * creditMult(s)); c.credits += cr; r.sectorCredits += cr; notes.push(`+${cr} ${D.SETTING.cur}`); text = 'Nothing of yours needs work. You strip the bench for parts and sell them on.'; }
   } else if (kind === 'fence') {
@@ -1416,7 +1422,11 @@ export function enterRoom(s, idx, rng) {
 
 function startFight(s, rng, kind) {
   const r = s.run, mech = mechanicOf(r), c = s.char;
+  // Threat rules (D.THREAT[].rule): Pursuers from Threat I, veterans more often from III.
+  const hunt = kind !== 'boss' && r.threat >= 1 && rng() < (r.threat >= 5 ? 0.3 : 0.15) * (r.bulletin === 'manhunt' ? 2 : 1);
   if (kind === 'fight' && r.threat >= 4 && rng() < 0.35) kind = 'elite';
+  else if (kind === 'fight' && r.threat === 3 && rng() < 0.25) kind = 'elite';
+  if (hunt && kind === 'fight' && r.threat >= 3) kind = 'elite';
   if (kind === 'fight' && r.bulletin === 'inspection' && rng() < 0.3) kind = 'elite';
   if (kind === 'fight' && r.cond === 'hunters' && rng() < 0.25) kind = 'elite';
   if (kind === 'bounty') kind = 'elite';
@@ -1424,9 +1434,12 @@ function startFight(s, rng, kind) {
   // The level floor comes from the strongest operative still standing, not whichever player's vote opened the door:
   // in co-op that used to make the same boss tougher or softer depending on who clicked last.
   const teamLevel = Math.max(1, ...livingActors(s).map((i) => (charAt(s, i) || {}).level || 1), isCoop(s) ? 1 : (s.char.level || 1));
-  const e = makeEnemy(r.sector, boss, rng, r.map, r.threat, r.reinforced || 0, Math.max(0, teamLevel - 4));
-  if (!boss) applyQuirk(r, e, rng);
+  const e = makeEnemy(r.sector, boss, rng, r.map, r.threat, r.reinforced || 0, Math.max(0, teamLevel - 4), hunt && !boss ? 'pursuer' : null);
+  if (!boss && !hunt) applyQuirk(r, e, rng);
   if (kind === 'elite') makeElite(e, rng);
+  else if (!boss && r.threat >= 2 && rng() < 0.25) giveAffix(e, rng);
+  if (boss && r.threat >= 4) giveAffix(e, rng, ['armoured', 'regenerating', 'vampiric', 'relentless']);
+  if (r.bulletin === 'manhunt') e.cr = e.cr.map((v) => Math.round(v * 1.4));
   if (r.bulletin === 'payday') e.hp = e.maxHp = Math.round(e.maxHp * 1.1);
   if (mutOn(r, 'hardened')) e.hp = e.maxHp = Math.round(e.maxHp * 1.25);
   if (mutOn(r, 'vicious')) e.atk = Math.round(e.atk * 1.2);
@@ -1508,15 +1521,19 @@ function makeElite(e, rng) {
   e.hp = e.maxHp = Math.round(e.maxHp * 1.45);
   e.atk = Math.round(e.atk * 1.22); e.def += 1;
   e.cr = e.cr.map((v) => v * 2); e.xp = Math.round(e.xp * 1.5);
-  const affixes = Object.keys(D.AFFIXES).filter((a) => !(a === 'relentless' && !e.intents.special));
+  giveAffix(e, rng);
+}
+// A veteran's affix, on its own: elites always have one, and from Threat II ordinary enemies sometimes do.
+function giveAffix(e, rng, only = null) {
+  const affixes = (only || Object.keys(D.AFFIXES)).filter((a) => !(a === 'relentless' && !e.intents.special) && !(a === 'volatile' && e.boss));
   e.affix = pick(rng, affixes);
   if (e.affix === 'armoured') e.def += 4;
   if (e.affix === 'berserk') { e.atk = Math.round(e.atk * 1.25); e.hp = e.maxHp = Math.round(e.maxHp * 0.85); }
   if (e.affix === 'relentless') { e.intents = { ...e.intents }; delete e.intents.guard; e.intents.special = (e.intents.special || 0) * 2; }
 }
 
-export function makeEnemy(sector, boss, rng, mapId = 'garrison', threat = 0, reinforced = 0, floorLvl = 0) {
-  const map = mapById(mapId), eff = effSector(sector, mapId);
+export function makeEnemy(sector, boss, rng, mapId = 'garrison', threat = 0, reinforced = 0, floorLvl = 0, forceId = null) {
+  const map = mapById(mapId), eff = effSector(sector, mapId) + THREAT_DEPTH * threat;
   let id, lvl;
   if (boss) {
     const idx = sector / 5 - 1;
@@ -1527,6 +1544,7 @@ export function makeEnemy(sector, boss, rng, mapId = 'garrison', threat = 0, rei
     const pool = map.pool.filter(([, min]) => min <= sector).sort((a, b) => b[1] - a[1]).slice(0, 4);
     const [pid, min] = pickWeighted(rng, pool.map((p) => [p, 1 + p[1] * 0.3]));
     id = pid; lvl = eff - min;
+    if (forceId) id = forceId; // a Pursuer stands in for the regular, at the same level
   }
   // A strong operative re-clearing early ground still meets enemies that take a few hits.
   lvl = Math.max(lvl, floorLvl);
@@ -2278,6 +2296,10 @@ function enemyTurn(s, rng) {
     const added = r.defending ? [] : addPlayerStatus(s, { burn: 2 }, rng);
     fx(s, { who: 'enemy', type: 'special', name: 'Molten slag', dmg, blocked: r.defending, statuses: added });
     log(s, `${e.name} flings molten slag for ${dmg}${r.defending ? ', mostly blocked' : ''}.${added.length ? ' You\u2019re Burning.' : ''}`, 'bad');
+  } else if (e.intent === 'net') {
+    const added = r.defending ? [] : addPlayerStatus(s, { exposed: 2, shaken: 2 }, rng);
+    fx(s, { who: 'enemy', type: 'special', name: 'Net launcher', dmg: 0, blocked: r.defending, statuses: added });
+    log(s, r.defending ? `${e.name} fires a net. You roll clear.` : `${e.name} nets you. You\u2019re Exposed and Shaken.`, 'bad');
   } else if (e.intent === 'shackle' || e.intent === 'flare') {
     const shackle = e.intent === 'shackle', added = r.defending ? [] : addPlayerStatus(s, shackle ? { shaken: 2 } : { exposed: 2 }, rng);
     if (!shackle && !r.defending) r.flared = true;
@@ -2891,6 +2913,7 @@ function winFight(s, rng, fled = false) {
       out.liberated = mapById(r.map).name;
       log(s, `The ${out.liberated} is liberated.`, 'reward');
     }
+    if (r.sector >= MAX_SECTOR && !r.contract && r.threat === opThreat(c) && escapedAt(c)) { s.escape = { threat: r.threat, name: c.name, top: r.threat >= D.THREAT.length - 1 }; out.escaped = true; }
   }
   const contraband = !fled && (e.boss || rng() < (e.elite ? TUNE.eliteDrop : TUNE.fightDrop));
   // In co-op each player gets their own roll and makes their own choice.
@@ -3211,11 +3234,20 @@ export const extractXpLoss = (s) => Math.round((s.char.xpBank || 0) * leaveShare
 export const allLiberated = (s) => D.MAPS.every((m) => s.meta.liberated[m.id]);
 // Threat I opens once this operative has freed every district; each threat after that, once they've freed every district at the one below.
 export const freedAt = (c, mapId, t) => (t === 0 ? opFreed(c, mapId) : ((((c && c.maps) || {})[mapId] || {}).best || {})[t] >= MAX_SECTOR);
-export function maxThreat(s) {
-  if (!s.char) return 0;
-  let t = 0;
-  while (t < D.THREAT.length - 1 && D.MAPS.every((mp) => freedAt(s.char, mp.id, t))) t++;
-  return t;
+export const maxThreat = (s) => opThreat(s && s.char);
+// Every district freed at this operative's own threat level: they've escaped.
+export const escapedAt = (c, t = opThreat(c)) => !!c && D.MAPS.every((mp) => freedAt(c, mp.id, t));
+// Back in, one level higher: the districts lock again and every map starts over from sector 1. Best clears stay for the board.
+export function returnHigher(s) {
+  const c = s.char; if (!c || s.run || !escapedAt(c)) return false;
+  const t = opThreat(c); if (t >= D.THREAT.length - 1) return false;
+  c.threat = t + 1; c.escapes = (c.escapes || 0) + 1;
+  for (const p of Object.values(c.maps || {})) { p.best = p.best || { 0: p.deepest || 0 }; p.insertions = [1]; p.deepest = 0; p.freed = false; if (p.byThreat) p.byThreat = {}; }
+  c.deepest = 0;
+  s.meta.threat = c.threat; s.escape = null;
+  s.meta.bestThreat = Math.max(s.meta.bestThreat || 0, c.threat);
+  journal(s, `${c.name} walks back into the Cell at ${D.THREAT[c.threat].name}. Everything is locked again, and harder.`, 'reward');
+  return true;
 }
 // The endgame (more training and cell levels) opens for the whole cell once any operative reaches threat I.
 export const endgameOpen = (m) => !!(m && m.endgame);
@@ -3412,7 +3444,7 @@ export const loungeCost = (s) => Math.round(D.LOUNGE.cost * Math.pow(1 + D.LOUNG
 export function visitLounge(s, id, rng) {
   const c = s.char, girl = D.LOUNGE.girls.find((x) => x.id === id), cost = loungeCost(s);
   if (!girl || !inTown(s) || c.booked || c.credits < cost) return null;
-  // 65% a good night, 35% a bad one; within each, the outcomes keep their own weights.
+  // 55% a good night, 45% a bad one; within each, the outcomes keep their own weights.
   const bad = rng() < D.LOUNGE.badOdds, pool = girl.outcomes.filter((o) => !!o.bad === bad);
   let roll = rng() * pool.reduce((a, o) => a + o.w, 0), out = pool[0];
   for (const o of pool) { roll -= o.w; if (roll < 0) { out = o; break; } }

@@ -209,7 +209,7 @@ export const RARITY = {
   unique:    { name: 'Unique',    color: '#e8673a', mult: 1,    bonuses: 0, price: 1,   up: 1.6 },
 };
 export const RARITY_ORDER = ['common', 'rare', 'elite', 'legendary', 'unique'];
-export const UPGRADE_MAX = 8;      // +1 .. +8 (the late bench levels come with threat and the later districts)
+export const UPGRADE_MAX = 8;      // +1 .. +8 at Standard; each threat level adds 2 (E.upgradeMax): +10 at Threat I, +12 at II...
 export const UPGRADE_STEP = 0.08;  // main stat per upgrade level
 
 // Random bonuses. range [low, high] at tier 1; higher tiers roll up to +50% more. slots: which slots can roll it.
@@ -402,6 +402,8 @@ export const ENEMIES = {
     intents: { attack: 3, heavy: 2, guard: 1 }, line: 'A red dot settles on your chest from the catwalk above.' },
   interrogator: { name: 'Directorate Interrogator', tags: ['human'], hp: 26, atk: 9, def: 2, spd: 6, cr: [24, 34], xp: 13,
     intents: { attack: 3, heavy: 2, guard: 1 }, line: 'Grey coat, gloved hands. \u201CYou could make this easy.\u201D' },
+  pursuer: { name: 'Directorate Pursuer', tags: ['human', 'armored'], hp: 40, atk: 12, def: 5, spd: 7, cr: [30, 44], xp: 24,
+    intents: { attack: 4, heavy: 2, net: 2 }, line: 'Black and red, visor down, a net launcher on one arm. They sent someone for you specifically.' },
   shock:   { name: 'Shock Trooper', tags: ['human', 'armored'], hp: 36, atk: 11, def: 5, spd: 5, cr: [16, 24], xp: 15,
     intents: { attack: 4, heavy: 2, guard: 1 }, line: 'Black armour, no insignia. Shock troopers don\u2019t take prisoners.' },
   sentinel:{ name: 'Sentinel Droid', tags: ['droid', 'armored'], hp: 44, atk: 12, def: 6, spd: 4, cr: [18, 26], xp: 17,
@@ -519,6 +521,7 @@ export const INTENTS = {
   // District tactics: ordinary enemies in the first four districts sometimes use their district's move (engine MAP_TACTIC).
   radio:  { label: 'Calling it in',           tone: 'warn',   tip: 'Calling for backup: raises the Alarm and it digs in (+10% HP, +1 DEF). A Strike knocks the radio away.' },
   slag:   { label: 'Scooping molten slag',     tone: 'danger', tip: 'x1.3 damage and sets you Burning. Defend to take less and stay unburnt.' },
+  net:    { label: 'Aiming the net launcher', tone: 'warn',   tip: 'Nets you: Exposed and Shaken for 2 turns. Defend to roll out of it.' },
   shackle:{ label: 'Swinging the shackles',    tone: 'warn',   tip: 'Leaves you Shaken for 2 turns (you deal 25% less). Defend to shrug it off.' },
   flare:  { label: 'Lighting a flare',         tone: 'warn',   tip: 'Lights you up for the tower snipers: Exposed for 2 turns and a sniper shot next turn. Defend to stay in the dark.' },
   huff:   { label: 'Huffing its own supply',  tone: 'danger', tip: 'It\u2019s about to get high on its own gas: bigger, healed, +60% ATK and gassing you. Kill it now, or brace.' },
@@ -1041,12 +1044,15 @@ export const CONTRACTS = [
 
 // ---------- threat levels: unlocked by liberating maps (beating their sector 15 boss) ----------
 // Each level starts from sector 1: insertion points are earned separately at every threat level (E.insertionsAt).
+// Each level is a new climb: every district locks again, every sector counts 22 deeper, gear can go 2 levels higher,
+// and each brings its own rule on top of the ones below it (see E.startFight and the Manhunt bulletin).
 export const THREAT = [
-  { name: 'Standard',  desc: 'The Directorate as it is.' },
-  { name: 'Threat I',  desc: 'Enemies +12% HP and ATK. +15% credits.' },
-  { name: 'Threat II', desc: 'Enemies +24% HP and ATK. +30% credits. +1 Resolve per boss.' },
-  { name: 'Threat III',desc: 'Enemies +36% HP and ATK. +45% credits. +1 Resolve per boss and per 5 sectors.' },
-  { name: 'Threat IV', desc: 'Enemies +48% HP and ATK, elites everywhere. +60% credits. +2 Resolve per boss.' },
+  { name: 'Standard',  desc: 'The Directorate as it is.', rule: null, cap: 8 },
+  { name: 'Threat I',  desc: 'Enemies +12% HP and ATK. +15% credits.', rule: { name: 'Hunted', desc: 'Directorate Pursuers track you through every district. Their nets leave you Exposed and Shaken. The Manhunt bulletin can come up.' }, cap: 10 },
+  { name: 'Threat II', desc: 'Enemies +24% HP and ATK. +30% credits. +1 Resolve per boss.', rule: { name: 'Hardened ranks', desc: 'One ordinary enemy in four carries a veteran\u2019s affix (Armoured, Vampiric, Volatile...).' }, cap: 12 },
+  { name: 'Threat III',desc: 'Enemies +36% HP and ATK. +45% credits. +1 Resolve per boss and per 5 sectors.', rule: { name: 'Kill teams', desc: 'Veterans in one fight in four, and Pursuers come as veterans.' }, cap: 14 },
+  { name: 'Threat IV', desc: 'Enemies +48% HP and ATK, elites everywhere. +60% credits. +2 Resolve per boss.', rule: { name: 'Total war', desc: 'Veterans in one fight in three, and every boss carries an affix.' }, cap: 16 },
+  { name: 'Threat V',  desc: 'Enemies +60% HP and ATK. +75% credits. +2 Resolve per boss.', rule: { name: 'Black file', desc: 'Everything above, and Pursuers hunt in every sector. The board\u2019s top line.' }, cap: 18 },
 ];
 
 // ---------- quirks: random personalities for regular enemies (same sprites, different name, stats and habits) ----------
@@ -1108,6 +1114,7 @@ export const BULLETINS = [
   { id: 'inspection', name: 'Inspection Day',  weight: 1.5, desc: 'Everyone is on their best behaviour: no quirks and more veterans, but +20% XP.' },
   { id: 'budget',     name: 'Budget Cuts',     weight: 1.5, desc: 'Every droid is rusty, glitchy or outdated. Enemies \u22121 DEF.' },
   { id: 'lockdown',   name: 'Lockdown',        weight: 1.5, desc: 'Enemies +10% ATK, but +25% credits for the trouble.' },
+  { id: 'manhunt',    name: 'Manhunt',         weight: 1.5, minThreat: 1, desc: 'Your face is on every screen. Pursuers come twice as often, but everything pays +40% credits.' },
   { id: 'shift',      name: 'Shift Change',    weight: 1.5, desc: 'The first enemy in every sector is caught off guard.' },
 ];
 
@@ -1247,7 +1254,7 @@ export const BAR = {
 // and a permanent mark on that operative, usually good, sometimes not. One visit per trip home.
 // fx: hp, crit and dodge are fractions; atk, def and spd are flat; str, agi, int and cha are attribute points.
 export const LOUNGE = {
-  cost: 350, rise: 0.1, badOdds: 0.35, cure: 0.25, tonight: 3,
+  cost: 350, rise: 0.1, badOdds: 0.45, cure: 0.2, tonight: 3,
   girls: [
     { id: 'vex', name: 'Vex', tag: 'Goth \u00b7 bites', desc: 'Black and pink twin-tails, a cat-ear headset and a stare that could strip paint. Charges by the hour, judges by the minute.',
       greet: ['\u201cOh. You again. Fine, I\u2019m bored.\u201d', '\u201cYou look like you need biting.\u201d'], inside: ['\u201cDon\u2019t touch the setup. Sit.\u201d','\u201cMute the mic. Okay, now you can talk.\u201d'], walk: ['\u201cKeep up. Don\u2019t hold my hand like that, hold it like you mean it.\u201d', '\u201cOut back. Mind the puddle, it bites too.\u201d'],
