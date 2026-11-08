@@ -778,6 +778,13 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .goals { display: grid; gap: 6px; } .goal { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; }
 .goal.ready { border-color: var(--sodium); background: #e8973a14; } .goal.done { opacity: .6; } .goal-rw { display: grid; justify-items: end; gap: 4px; } .chip.cos { color: #ff9ae5; border-color: #ff6ad566; }
 .goal-bar { height: 5px; border-radius: 3px; background: #0006; margin: 4px 0 2px; overflow: hidden; } .goal-bar i { display: block; height: 100%; background: var(--sodium); }
+.guide { margin: 0 0 8px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: #e8973a0d; } .guide summary { cursor: pointer; display: flex; gap: 8px; align-items: baseline; } .guide summary .tool { margin-left: auto; }
+.guide ol { list-style: none; margin: 6px 0 2px; padding: 0; display: grid; gap: 3px; } .guide li { display: flex; gap: 8px; align-items: center; font-size: .85rem; } .guide li span { width: 14px; color: var(--muted); } .guide li b { flex: 1; font-weight: 500; }
+.guide li.ready span { color: var(--sodium); } .guide li.ready b { color: var(--fg, #eee); font-weight: 700; } .guide li.claimed { opacity: .55; } .guide li.claimed span { color: var(--ok); }
+.mastery { margin-bottom: 10px; } .mastery summary { cursor: pointer; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.mast-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; margin-top: 6px; } .mast { padding: 8px; border: 1px solid var(--line); border-radius: 8px; } .mast.mine { border-color: var(--sodium); }
+.mast-head { display: flex; justify-content: space-between; } .mast-lv { color: var(--sodium); letter-spacing: 1px; }
+.spec-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 6px; } .spec { display: grid; gap: 2px; text-align: left; padding: 5px 6px; border: 1px solid var(--line); border-radius: 6px; background: #0003; color: inherit; font: inherit; cursor: pointer; } .spec span { font-size: .7rem; color: var(--muted); } .spec.on { border-color: var(--sodium); background: #e8973a1c; }
 .cos-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px; }
 .cos-row { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; } .cos-row b { flex: 1; font-size: .88rem; } .cos-row .muted { flex: 1; }
 .wardrobe { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: start; } .wardrobe .cos-row { margin-bottom: 4px; }
@@ -1924,6 +1931,39 @@ function seasonView() {
   return `<p class="muted small">Season ${E.SEASON} goals for the whole cell. Progress counts from the start of the season; each pays once. Cosmetic rewards can\u2019t be bought.</p><div class="goals">${rows}</div>`;
 }
 
+// ---------- class mastery ----------
+function masteryView() {
+  const m = state.meta, c = state.char, guest = isGuest();
+  const rows = D.BACKGROUNDS.filter((b) => E.bgUnlocked(m, b) || (m.mastery || {})[b.id]).map((b) => {
+    const ms = E.masteryOf(m, b.id), pct = ms.next ? Math.round(100 * (ms.xp - ms.prev) / (ms.next - ms.prev)) : 100, sp = D.SPECS[b.id], pick = (m.specs || {})[b.id];
+    const specs = ms.level >= 2 && sp ? `<div class="spec-pick">${sp.map((x, i) => `<button class="spec ${pick === i ? 'on' : ''}" data-a="pickspec" data-v="${b.id}:${i}" ${guest || state.run ? 'disabled' : ''} aria-pressed="${pick === i}"><b>${esc(x.name)}</b><span>${esc(x.text)}</span></button>`).join('')}</div>` : '';
+    return `<div class="mast ${b.id === c.background ? 'mine' : ''}"><div class="mast-head"><b>${esc(b.name)}</b><span class="mast-lv">${'&#9733;'.repeat(ms.level)}${'&#9734;'.repeat(5 - ms.level)}</span></div>
+      <div class="goal-bar"><i style="width:${pct}%"></i></div><span class="muted small">${ms.next ? `${ms.xp} / ${ms.next} · next: ${esc(E.MASTERY_PERKS[ms.level])}` : 'Mastered'}</span>${specs}</div>`;
+  }).join('');
+  return `<details class="mastery" open><summary><span class="label">Class mastery</span> <span class="muted small">Sectors +1, bosses +3, a freed district +10. Shared by the cell.</span></summary><div class="mast-grid">${rows}</div></details>`;
+}
+
+// ---------- first steps ----------
+// A short checklist in the yard for new cells. Each step done pays 1 Resolve when claimed. Hidden once all are claimed or dismissed.
+const GUIDE = [
+  { id: 'sector', text: 'Clear your first sector', done: (m) => (m.bestSector || 0) >= 1 },
+  { id: 'resolve', text: 'Spend Resolve on training (Character)', done: (m) => Object.values(m.training || {}).some((v) => v > 0) || (m.cell || []).length > 0 },
+  { id: 'market', text: 'Buy gear at the Black Market', done: (m) => !!(m.guide && m.guide.market) },
+  { id: 'boss', text: 'Beat the boss in sector 5', done: (m) => (m.bestSector || 0) >= 5 },
+  { id: 'lantern', text: 'Drop into the Lantern after curfew', done: (m) => !!(m.guide && m.guide.lantern) },
+  { id: 'contract', text: 'Play a daily contract (Missions)', done: (m) => Object.keys(m.contractsDone || {}).length > 0 },
+  { id: 'freed', text: 'Free the Directorate Garrison', done: (m) => !!(m.liberated && m.liberated.garrison) },
+];
+function guideView() {
+  const m = state.meta, g = m.guide || {};
+  if (isGuest() || g.off || GUIDE.every((x) => (g.claimed || []).includes(x.id))) return '';
+  const rows = GUIDE.map((x) => {
+    const claimed = (g.claimed || []).includes(x.id), done = x.done(m);
+    return `<li class="${claimed ? 'claimed' : done ? 'ready' : ''}"><span>${claimed ? '&#10003;' : done ? '&#9733;' : '&#9675;'}</span><b>${esc(x.text)}</b>${done && !claimed ? `<button class="tool" data-a="guideclaim" data-v="${x.id}">+1 ${esc(S.meta)}</button>` : ''}</li>`;
+  }).join('');
+  return `<details class="guide" ${GUIDE.some((x) => x.done(m) && !(g.claimed || []).includes(x.id)) || !(g.claimed || []).length ? 'open' : ''}><summary><span class="label">First steps</span> <span class="muted small">${(g.claimed || []).length} / ${GUIDE.length}</span><button class="tool" data-a="guideoff" title="Hide the checklist">Hide</button></summary><ol>${rows}</ol></details>`;
+}
+
 // A short note over everything, for explanations that shouldn't disturb the screen behind them.
 let hintTimer = null;
 function hint(text) {
@@ -2725,7 +2765,7 @@ const popupBadge = (id) => {
 function townScreen() {
   return `<section class="panel town-panel">
     <div class="town-head"><h2>${esc(S.town)}</h2><p class="muted town-help"><span class="keys-only">WASD or tap to walk \u00B7 <b>E</b> to talk</span><span class="touch-only">Tap to walk \u00B7 tap someone to talk</span>${state.char.fed ? ' <span class="chip good">Fed: +5% XP</span>' : ''}</p></div>
-    <div class="town-side"><div class="town-info">${tip('town')}${state.popup ? '' : notice()}${townSpend()}${coopBar()}</div>
+    <div class="town-side"><div class="town-info">${tip('town')}${guideView()}${state.popup ? '' : notice()}${townSpend()}${coopBar()}</div>
     <nav class="shortcuts" aria-label="Town menus">${Object.entries(POPUPS).filter(([, p]) => !p.hidden).map(([id, p]) => `<button class="btn" data-a="popup" data-v="${id}">${esc(p.label)}${popupBadge(id)}</button>`).join('')}${downtimeBar()}</nav></div>
     <div id="town-slot"></div>
   </section>${townPopup()}${tradeView()}`;
@@ -3156,7 +3196,7 @@ function character() {
       </div>
     </div>
     ` : ''}
-    ${charTab === 'record' ? `<div class="two-col">
+    ${charTab === 'record' ? `${masteryView()}<div class="two-col">
       <div style="display:grid;gap:14px;align-content:start;min-width:0">
         <span class="label">Marks \u00B7 ${(c.marks || []).length} / 5 \u00B7 earned in orbit</span>${(c.marks || []).length ? `<div class="perk-list">${c.marks.map((id) => { const mk = D.MARKS[id]; return `<div class="perk-mini rare">${ico(`mark:${id}`, 'sm2')}<div><b>${esc(mk.name)}</b><span>${esc(mk.desc)}</span></div></div>`; }).join('')}</div>` : '<p class="muted">None yet. Fly the shuttle (Orbit, after curfew) on the harder runs.</p>'}
         ${c.fav && E.favText(c.fav) ? `<span class="label">Lantern nights \u00B7 ${(c.favLog || []).length ? esc(c.favLog.map((x) => x.girl).slice(0, 3).join(', ')) : ''}</span><p class="small">${esc(E.favText(c.fav))}</p>` : ''}
@@ -4167,10 +4207,14 @@ let coachKey = null;
 function coachView(e, mine) {
   coachKey = null;
   const m = state.meta;
-  if (isGuest() || !mine || stage.auto || E.isCoop(state) || m.operatives > 2) return '';
+  if (isGuest() || !mine || stage.auto || E.isCoop(state)) return '';
   const done = m.coach || {};
   let k = null, text = '';
   if (e.stun > 0) return '';
+  // The district moves are new to everyone, so they're explained once whatever the cell's experience.
+  const TACTIC = { radio: 'Calling for backup. A Strike knocks the radio away.', slag: 'Molten slag coming: Defend so it doesn\u2019t set you Burning.', shackle: 'Shackles: Defend or you\u2019ll be Shaken for 2 turns.', flare: 'A flare: Defend, or the tower snipers get a sure shot.' };
+  if (TACTIC[e.intent] && !done[e.intent]) { coachKey = e.intent; return `<div class="coach" role="status">${esc(TACTIC[e.intent])}</div>`; }
+  if (m.operatives > 2) return '';
   if (e.intent === 'heavy' && !done.heavy) { k = 'heavy'; text = 'Heavy strike coming. Defend cuts it to about 40%.'; }
   else if (e.intent === 'guard' && !done.guard) { k = 'guard'; text = 'It\u2019s in cover, so shots deal half. Strike ignores cover.'; }
   else if (e.tags.includes('droid') && state.char.items.ion > 0 && !done.droid) { k = 'droid'; text = 'A droid: an Ion Pulse stuns it.'; }
@@ -4724,6 +4768,9 @@ function applyAct(a, v, k) {
     case 'newspage': newsPage = +v; sfx('click'); break;
     case 'mutator': ok = E.toggleMutator(state, v); sfx('click'); break;
     case 'hidetab': state.hideTab = v; sfx('click'); break;
+    case 'guideclaim': { const x = GUIDE.find((q) => q.id === v), g = state.meta.guide = state.meta.guide || {}; g.claimed = g.claimed || []; ok = !!x && x.done(state.meta) && !g.claimed.includes(v); if (ok) { g.claimed.push(v); state.meta.resolve += 1; state.meta.totalResolve += 1; toast = `+1 ${S.meta}: ${x.text.toLowerCase()}.`; sfx('perk'); } break; }
+    case 'pickspec': { const [cls, i] = String(v).split(':'); ok = E.pickSpec(state, cls, +i); sfx('click'); break; }
+    case 'guideoff': (state.meta.guide = state.meta.guide || {}).off = true; sfx('click'); break;
     case 'claimgoal': { const gl = E.claimGoal(state, v); ok = !!gl; if (gl) { toast = `Season goal: ${rewardText(gl.reward)}.`; sfx('perk'); } break; }
     case 'buycos': { const [kind, id] = String(v).split(':'); ok = E.buyCosmetic(state, kind, id); if (ok) { if (kind === 'dye') E.wearDye(state, id); else E.useTableStyle(state, kind, id); sfx('buy'); } break; }
     case 'usecos': { const [kind, id] = String(v).split(':'); ok = E.useTableStyle(state, kind, id); sfx('click'); break; }
@@ -4735,7 +4782,7 @@ function applyAct(a, v, k) {
     case 'cellgo': ok = switchCell(+v); if (ok) sfx('door'); break;
     case 'celldel': if (cellDelArm !== +v) { cellDelArm = +v; sfx('click'); break; } cellDelArm = null; ok = deleteCell(+v); if (ok) { toast = `Cell ${+v + 1} erased.`; sfx('denied'); } break;
     case 'newsok': newsPage = 0; try { localStorage.setItem(NEWS_KEY, NEWS_ID); } catch (e) {} modal = null; sfx('click'); break;
-    case 'modal': modal = v; if (v === 'board') loadBoard(); sfx('click'); break;
+    case 'modal': modal = v; if (v === 'board') loadBoard(); if (v === 'bar' && state.meta) (state.meta.guide = state.meta.guide || {}).lantern = true; sfx('click'); break;
     case 'cardfree': { const got = CARDS.freePack(state, cardIds(), rng); ok = !!got; if (got) { lastPack = got; cardTab = 'packs'; sfx('perk'); } break; }
     case 'cardpack': { const got = CARDS.buyPack(state, cardIds(), rng); ok = !!got; if (got) { lastPack = got; sfx(got.some((k) => CARDS.rankOf(k) >= 3) ? 'coin' : 'buy'); } break; }
     case 'cardplay': { if (state.cardMatch && state.cardMatch.over) CARDS.closeMatch(state); const g = CARDS.startMatch(state, v, cardIds(), rng); ok = !!g; if (g) { lastPack = null; sfx('click'); } break; }
@@ -4822,7 +4869,7 @@ function applyAct(a, v, k) {
     case 'closepopup': state.popup = null; state.notice = null; state.compare = null; break;
     case 'compare': state.compare = +v; sfx('click'); break;
     case 'closecompare': state.compare = null; sfx('click'); break;
-    case 'buygear': ok = E.buyGear(state, +v, k === 'stash'); state.compare = null; break;
+    case 'buygear': ok = E.buyGear(state, +v, k === 'stash'); state.compare = null; if (ok) (state.meta.guide = state.meta.guide || {}).market = true; break;
     case 'lockupstore': ok = E.lockupStore(state, v); sfx(ok ? 'click' : 'denied'); break;
     case 'lockuptake': ok = E.lockupTake(state, +v, k); sfx(ok ? 'buy' : 'denied'); break;
     case 'lockupscrap': ok = E.lockupScrap(state, +v, k); sfx(ok ? 'click' : 'denied'); break;
