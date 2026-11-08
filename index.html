@@ -755,6 +755,18 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 @media (max-height: 500px) { .tc-felt .tc-art, .tc-felt .tc-rar { display: none; } .tc-felt .tcard.empty, .tc-felt .tcard.back { min-height: 64px; } .tc-felt .heart { font-size: 1.1rem; } .tc-felt .tc-backmark span:last-child { display: none; } .tc-felt { padding: 6px 8px; } .tc-felt-head { margin-bottom: 2px; } .tc-hand .tc-art { max-height: 58px; align-items: flex-start; } .tc-hand .tc-ab { display: none; } }
 @media (max-width: 900px), (max-height: 500px) { .tcard { width: 112px; } .tcard.mini { width: 92px; } .tcard.empty, .tcard.back { min-height: 118px; } .tc-cols { gap: 6px; } }
 @media (prefers-reduced-motion: reduce) { .tcard, .tcard .tc-shine, .tcard::after, .tc-packart, .tc-hitline { animation: none !important; } }
+.muts { margin-top: 10px; } .muts summary { cursor: pointer; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.mut-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; margin-top: 6px; }
+.mut { position: relative; display: grid; gap: 2px; text-align: left; padding: 6px 44px 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: #0003; color: inherit; font: inherit; cursor: pointer; }
+.mut span { font-size: .74rem; color: var(--muted); line-height: 1.25; } .mut i { position: absolute; top: 6px; right: 8px; font-style: normal; font-family: var(--mono); font-size: .74rem; color: var(--muted); }
+.mut.on { border-color: var(--sodium); background: #e8973a1c; } .mut.on i { color: var(--sodium); }
+.ct-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 8px; }
+.ct-card { padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: linear-gradient(160deg, #e8973a14, #0000 60%); display: grid; gap: 8px; align-content: start; }
+.ct-card.ct-weekly { background: linear-gradient(160deg, #c56aff1a, #0000 60%); }
+.ct-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; } .ct-head h4 { margin: 0; }
+.ct-spec { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; } .ct-spec span { display: grid; } .ct-spec i { font-style: normal; font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-family: var(--mono); } .ct-spec b { font-size: .88rem; }
+.ct-board { margin: 0; padding-left: 20px; font-size: .84rem; } .ct-board li { display: flex; gap: 8px; } .ct-board li span { flex: 1; } .ct-board i { font-style: normal; font-size: .72rem; }
+.ct-score { display: flex; gap: 12px; align-items: baseline; margin: 6px 0 10px; } .ct-score b { font-size: 2.2rem; color: var(--sodium); } .ct-score span { color: var(--muted); }
 .board-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .board-table th { text-align: left; font-family: var(--mono); font-size: .66rem; letter-spacing: .1em; color: var(--muted); padding: 4px 6px; border-bottom: 1px solid var(--line); }
 .board-table td { padding: 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
@@ -1660,6 +1672,7 @@ html.calm .btn:active, html.calm .door:active, html.calm .tab:active, html.calm 
 import * as D from './data.js';
 import * as E from './engine.js';
 import * as CARDS from './cards.js';
+import * as CT from './contracts.js';
 import { fallenLine, BOSS_MOVES } from './lore.js';
 import { portraitURL } from './portraits.js';
 import { ensureSheet as ensureArt, Stage, loadSheets, onArtChange, preferOpArt, sheetOf, sheetStill, setLookSheets, setCalm as setStageCalm } from './stage.js';
@@ -1719,7 +1732,7 @@ function crashBanner() {
 window.addEventListener('error', (ev) => { if (ev.error) { crashBanner(); reportBug('error', ev.error); } });
 window.addEventListener('unhandledrejection', (ev) => { if (!state) crashBanner(); reportBug('promise', ev.reason || new Error('rejected')); });
 // Sends a short crash or lock-up report to the game's own server: the error, the screen, solo or co-op. Nothing personal.
-const BUILD = '2026-11-08';
+const BUILD = '2026-11-09';
 let bugsSent = 0; const bugsSeen = new Set();
 function reportBug(kind, e) {
   try {
@@ -1729,6 +1742,98 @@ function reportBug(kind, e) {
     const st = typeof state !== 'undefined' && state;
     fetch('/bug', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind, msg, stack: String((e && e.stack) || '').slice(0, 1500), screen: (st && st.screen) || '', coop: st && st.coop ? (typeof isGuest === 'function' && isGuest() ? 'guest' : 'host') : 'solo', ver: BUILD, ua: navigator.userAgent.slice(0, 120) }) }).catch(() => {});
   } catch (x) {}
+}
+
+// Anonymous end-of-raid stats for balancing (class, district, depth, how it ended, what killed you). The rules queue them in state.runStats.
+function flushStats() {
+  try {
+    if (!state || !state.runStats || !state.runStats.length || isGuest()) return;
+    const rows = state.runStats.splice(0);
+    if (!/workers\.dev$/.test(location.hostname)) return;
+    for (const r of rows) fetch('/stat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...r, ver: BUILD }) }).catch(() => {});
+  } catch (x) {}
+}
+
+// Mutators on the Deploy tab: handicaps for extra score and Resolve. Locked until the cell frees a district.
+function mutView() {
+  if (!E.mutatorsOpen(state)) return '';
+  const pick = state.meta.mutPick || [], b = E.mutBonus(pick), guest = isGuest();
+  const chips = D.MUTATORS.map((x) => `<button class="mut ${pick.includes(x.id) ? 'on' : ''}" data-a="mutator" data-v="${x.id}" aria-pressed="${pick.includes(x.id)}" ${guest ? 'disabled' : ''} title="${esc(x.desc)}"><b>${esc(x.name)}</b><span>${esc(x.desc)}</span><i>+${Math.round(x.bonus * 100)}%</i></button>`).join('');
+  return `<details class="muts" ${pick.length ? 'open' : ''}><summary><span class="label">Mutators</span> ${pick.length ? `<b class="good-text">${pick.length} on \u00b7 +${Math.round(b * 100)}% score and ${esc(S.meta)}</b>` : '<span class="muted small">Optional handicaps for extra score and Resolve</span>'}</summary><div class="mut-grid">${chips}</div></details>`;
+}
+
+// ---------- Daily and weekly contracts ----------
+// The contract runs in its own state (the loaner, deployed; contracts.js). The cell's state waits in contractHome and comes back
+// when the raid ends, with the score posted to /contract/<id>. A reload mid-contract resumes it from CONTRACT_KEY.
+const CONTRACT_KEY = 'cinder-cell-contract', DEVICE_KEY = 'cinder-cell-device';
+let contractHome = null, contractResult = null, contractBoards = {};
+const deviceId = () => { try { let v = localStorage.getItem(DEVICE_KEY); if (!v) { v = Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(16).padStart(2, '0')).join(''); localStorage.setItem(DEVICE_KEY, v); } return v; } catch (e) { return 'nodevice0'; } };
+function contractBlock(kind) {
+  const sp = CT.spec(kind), m = state.meta, rec = (m.contractsDone || {})[sp.id];
+  if (isGuest() || E.isCoop(state)) return 'Contracts are solo: leave co-op to play one.';
+  if (!state.char || state.char.dead) return 'Make an operative first.';
+  if (state.run) return 'Finish your raid first.';
+  if (rec) return 'Already played.';
+  return '';
+}
+function startContract(kind) {
+  if (contractBlock(kind)) return false;
+  const sp = CT.spec(kind);
+  (state.meta.contractsDone = state.meta.contractsDone || {})[sp.id] = { kind, started: Date.now(), score: 0 };
+  state.popup = null; state.compare = null; state.lastResult = null; // the cell comes back to a clear yard
+  writeSave(state);
+  contractHome = state;
+  const { s } = CT.buildState(sp, playerName());
+  state = s; state.popup = null; modal = null;
+  writeSave(state);
+  return true;
+}
+// The raid is over (extracted, escaped or dead): score it, bring the cell back, pay out and post.
+function finishContract() {
+  const t = state.contractTally || { sectors: 0, bosses: 0, kills: 0, credits: 0, done: false, hpLeft: 0 }, ct = state.contract, sc = CT.score(t);
+  let home = contractHome; contractHome = null;
+  if (!home) { try { home = E.migrate(load(), rng); } catch (e) { home = null; } }
+  try { localStorage.removeItem(CONTRACT_KEY); } catch (e) {}
+  if (!home) return;
+  state = home;
+  const rec = (state.meta.contractsDone = state.meta.contractsDone || {});
+  rec[ct.id] = { kind: ct.kind, score: sc, done: !!t.done, at: Date.now() };
+  for (const id of Object.keys(rec)) if (Object.keys(rec).length > 30) delete rec[id]; // keep the last few weeks
+  if (t.done) { state.meta.resolve += ct.reward; state.meta.totalResolve += ct.reward; if (state.char) state.char.credits += ct.credits; }
+  contractResult = { ...ct, tally: t, score: sc };
+  modal = 'contractres'; lastBody = ''; writeSave(state);
+  if (BOARD_ON) fetch(`/contract/${ct.id}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: deviceId(), player: playerName(), cls: ct.cls, score: sc, sectors: t.sectors, bosses: t.bosses, kills: t.kills, done: !!t.done }) })
+    .then((r) => (r.ok ? r.json() : null)).then((o) => { if (o && contractResult) { contractResult.rank = o.rank; contractResult.total = o.total; delete contractBoards[ct.id]; render(); } }).catch(() => {});
+}
+function loadContractBoard(id) {
+  if (!BOARD_ON || contractBoards[id]) return;
+  contractBoards[id] = { loading: true };
+  fetch(`/contract/${id}`, { cache: 'no-store' }).then((r) => r.json()).then((o) => { contractBoards[id] = o; render(); }).catch(() => { contractBoards[id] = { failed: true }; });
+}
+const clsName = (id) => (D.BACKGROUNDS.find((b) => b.id === id) || { name: id }).name;
+const mutName = (id) => (D.MUTATORS.find((x) => x.id === id) || { name: id }).name;
+function untilText(t) { const ms = Math.max(0, t - Date.now()), h = Math.floor(ms / 36e5); return h >= 48 ? `${Math.floor(h / 24)} days` : h >= 1 ? `${h}h ${Math.floor((ms % 36e5) / 6e4)}m` : `${Math.max(1, Math.floor(ms / 6e4))}m`; }
+function contractsView() {
+  const cards = ['daily', 'weekly'].map((kind) => {
+    const sp = CT.spec(kind), rec = (state.meta.contractsDone || {})[sp.id], why = contractBlock(kind), b = contractBoards[sp.id];
+    loadContractBoard(sp.id);
+    const top = b && b.rows ? (b.rows.length ? `<ol class="ct-board">${b.rows.slice(0, 8).map((r) => `<li><span>${esc(r.player)}</span><b class="num">${r.score.toLocaleString()}</b>${r.done ? '<i class="good-text">done</i>' : ''}</li>`).join('')}</ol><p class="muted small">${b.total} played</p>` : '<p class="muted small">Nobody has played it yet.</p>') : b && b.failed ? '<p class="muted small">Board offline.</p>' : BOARD_ON ? '<p class="muted small">Loading the board\u2026</p>' : '';
+    const go = rec ? `<div class="notice ${rec.done ? 'good' : ''}">${rec.score ? `You scored <b>${rec.score.toLocaleString()}</b>${rec.done ? ', finished' : ''}.` : 'Your attempt is in progress or was abandoned.'}</div>` : `<button class="btn primary big" data-a="contractgo" data-v="${kind}" ${why ? 'disabled' : ''}>Take the contract</button>${why ? `<p class="muted small">${esc(why)}</p>` : ''}`;
+    return `<div class="ct-card ct-${kind}"><div class="ct-head"><h4>${esc(sp.name)}</h4><span class="muted small">new one in ${untilText(CT.endsAt(kind))}</span></div>
+      <div class="ct-spec"><span><i>District</i><b>${esc(D.MAPS.find((x) => x.id === sp.map).name)} 1\u2013${sp.end}</b></span><span><i>Loaner</i><b>${esc(clsName(sp.cls))}</b></span><span><i>Mutators</i><b>${sp.mutators.map(mutName).map(esc).join(', ')}</b></span><span><i>Finish</i><b>+${sp.reward} ${esc(S.meta)}, +${sp.credits} ${esc(S.cur)}</b></span></div>
+      ${go}${top}</div>`;
+  }).join('');
+  return `<p class="muted small">Everyone plays the same contract: same district, same loaner operative, same mutators. One attempt each. Your own operative and cell aren\u2019t touched; finishing pays your cell.</p><div class="ct-grid">${cards}</div>`;
+}
+function contractResView() {
+  const r = contractResult; if (!r) { modal = null; return ''; }
+  const t = r.tally;
+  return `<div class="modal-wrap" data-a="closemodal"><div class="modal ct-result" role="dialog" aria-modal="true" aria-label="Contract result">
+    <div class="pop-head"><div class="pop-title"><span class="label">${esc(r.kind === 'daily' ? 'Daily Contract' : 'Weekly Contract')}</span><h2>${t.done ? 'Contract complete' : t.how === 'died' ? 'The loaner didn\u2019t make it' : 'Contract abandoned'}</h2></div><button class="tool close" data-a="closemodal" aria-label="Close">Close</button></div>
+    <div class="ct-score"><b class="num">${r.score.toLocaleString()}</b><span>${r.rank ? `#${r.rank.toLocaleString()} of ${r.total.toLocaleString()}` : BOARD_ON ? 'Posting\u2026' : ''}</span></div>
+    <div class="ct-spec"><span><i>Sectors</i><b>${t.sectors} / ${r.end}</b></span><span><i>Bosses</i><b>${t.bosses}</b></span><span><i>Kills</i><b>${t.kills}</b></span><span><i>Credits</i><b>${Math.max(0, t.credits)}</b></span></div>
+    <p class="${t.done ? 'good-text' : 'muted'}">${t.done ? `Your cell gets +${r.reward} ${esc(S.meta)} and your operative +${r.credits} ${esc(S.cur)}.` : 'No payout this time. There\u2019s a new one tomorrow.'}</p>
+    <div class="btnrow"><button class="btn primary" data-a="closemodal">Back to the yard</button></div></div></div>`;
 }
 
 // A short note over everything, for explanations that shouldn't disturb the screen behind them.
@@ -1790,6 +1895,7 @@ function load() {
 let lastBody = '', saveFailed = false;
 const bodyOf = (s) => { const a = s.savedAt, c = s.char, b = c && c.savedAt; delete s.savedAt; if (c) delete c.savedAt; const t = JSON.stringify(s); if (a !== undefined) s.savedAt = a; if (c && b !== undefined) c.savedAt = b; return t; };
 function writeSave(s) {
+  if (s && s.contract) { try { localStorage.setItem(CONTRACT_KEY, JSON.stringify(s)); } catch (e) {} return; } // a contract's loaner never touches the cell's save
   const a = s.savedAt, c = s.char, b = c && c.savedAt;
   delete s.savedAt; if (c) delete c.savedAt;
   const body = JSON.stringify(s), changed = body !== lastBody;
@@ -2998,10 +3104,10 @@ function gate() {
   const gin = E.drinkOf(c), prep = `<div class="prep-sum" aria-label="What you're bringing"><span><b>${c.hp}/${st.maxHp}</b> HP</span><span><b>${c.items.stim}/${st.carry}</b> stims</span><span><b>${st.atk}</b> shoot \u00b7 <b>${st.atkM}</b> strike</span><span><b>${st.def}</b> DEF</span>${gin ? `<span>${esc(gin.name)}: ${esc(gin.effect)}</span>` : ''}</div>`;
   const go = isGuest() ? `<div class="deploy-go">${prep}${warn}<span class="muted">The host picks the target.</span><button class="btn big ${state.guestReady ? 'primary' : ''}" data-a="coopready" aria-pressed="${!!state.guestReady}">${state.guestReady ? 'Ready \u00B7 waiting for the host' : 'Ready for the raid'}</button></div>`
     : `<div class="deploy-go ${hurt && canHeal ? 'hurt' : ''}">${prep}${warn}${E.isCoop(state) ? `<span class="muted" style="font-size:.84rem">${state.guestReady ? `${esc(state.guestName || 'Your friend')} is ready.` : state.hostWants ? `Deploying as soon as ${esc(state.guestName || 'your friend')} is ready\u2026` : peerAuto ? `${esc(state.guestName || 'Your friend')} has auto-accept on: press Deploy and they\u2019ll follow.` : `Waiting for ${esc(state.guestName || 'your friend')} to press Ready.`}</span>` : ''}<span class="label">${ins.length > 1 ? 'Deploy \u00B7 pick where to start' : 'Deploy'}</span><div class="ins">${ins.map((n) => `<button class="btn big ${n === ins[ins.length - 1] ? 'primary' : ''}" data-a="deploy" data-v="${n}" ${E.isCoop(state) && !state.guestReady && !peerAuto ? 'disabled' : ''}><span class="ins-n">Sector ${n}</span> <span class="ins-name">${esc(E.sectorName(n, sel.id))}</span></button>`).join('')}</div>${ins.length === 1 ? '<span class="muted ins-hint">Beat a boss to start deeper next time.</span>' : ''}</div>`;
-  return `<nav class="tabs pop-tabs">${tabBtn('deploy', 'Deploy')}${tabBtn('contracts', `Contracts ${(m.contracts || []).length}`)}</nav>
-    ${tab === 'contracts' ? `<div class="contracts">${contracts || '<p class="muted">No jobs right now.</p>'}</div>` : `<div class="gate">
+  return `<nav class="tabs pop-tabs">${tabBtn('deploy', 'Deploy')}${tabBtn('daily', 'Daily')}${tabBtn('contracts', `Contracts ${(m.contracts || []).length}`)}</nav>
+    ${tab === 'daily' ? contractsView() : tab === 'contracts' ? `<div class="contracts">${contracts || '<p class="muted">No jobs right now.</p>'}</div>` : `<div class="gate">
       <div class="gate-maps"><div class="maps">${cards}</div>${locked.length ? `<p class="muted maps-locked">Locked: ${locked.map((mp) => `${esc(mp.name)} (${mp.power ? 'free the other four' : `clear ${Object.entries(mp.unlock).map(([id, n]) => `${esc(E.mapById(id).name)} ${n}`).join(', ')}`})`).join(', ')}</p>` : ''}</div>
-      <div class="gate-brief"><span class="label">${esc(sel.name)} \u00B7 what to expect</span><b class="mech-title">${esc(sel.mechanic.name)}</b> <span class="mech-line">${esc(sel.mechanic.desc)}</span>${traits.length ? `<div class="chips">${traits.map((x) => `<span class="chip">${esc(x)}</span>`).join('')}</div>` : ''}${threat}</div>
+      <div class="gate-brief"><span class="label">${esc(sel.name)} \u00B7 what to expect</span><b class="mech-title">${esc(sel.mechanic.name)}</b> <span class="mech-line">${esc(sel.mechanic.desc)}</span>${traits.length ? `<div class="chips">${traits.map((x) => `<span class="chip">${esc(x)}</span>`).join('')}</div>` : ''}${threat}${mutView()}</div>
       ${go}
     </div>`}`;
 }
@@ -3331,6 +3437,7 @@ function modalView() {
   if (modal === 'duel') return duelView();
   const p = A.getPrefs();
   if (modal === 'news') return newsView();
+  if (modal === 'contractres') return contractResView();
   if (modal === 'menu') return `<div class="modal-wrap" data-a="closemodal"><div class="modal menu-modal" role="dialog" aria-modal="true" aria-label="Menu">
     <div class="pop-head"><h2>Menu</h2><button class="tool close" data-a="closemodal" aria-label="Close">Close</button></div>
     <div class="menu-grid">${isGuest() ? '' : '<button class="btn primary" data-a="mainmenu">Main menu</button><button class="btn" data-a="modal" data-v="cells">Cells</button>'}<button class="btn" data-a="modal" data-v="manual">Manual</button><button class="btn" data-a="sound">${p.muted ? 'Sound off' : 'Sound on'}</button><button class="btn" data-a="modal" data-v="board">Leaderboard</button><button class="btn" data-a="modal" data-v="feats">Achievements</button><button class="btn" data-a="modal" data-v="codex">${codexLabel()}</button><button class="btn" data-a="modal" data-v="settings">Settings</button>${devOn && !isGuest() ? '<button class="btn" data-a="modal" data-v="dev">Dev</button>' : ''}</div></div></div>`;
@@ -3861,8 +3968,8 @@ function sectorClearScreen() {
     <div class="btnrow">
       <button class="btn primary big" data-a="deeper">Push to sector ${next}<span class="k" aria-hidden="true">1</span></button>
       ${(() => { const un = E.unsecuredNow(state), loss = E.extractLoss(state), rate = E.extractRate(r.sector), xpKeep = Math.round((c.xpBank || 0) * (1 - (un ? loss / un : rate))), fail = E.extractFailChance(state);
-        return `<button class="btn big twoline" data-a="extract"><span class="bt">${rate ? `Risky extract \u00B7 ${Math.round((1 - fail) * 100)}%` : 'Extract'}<span class="k" aria-hidden="true">2</span></span><span class="bs">Bank +${cr(un - loss)}, +${xpKeep} XP \u00b7 wallet ${cr(c.credits - loss)}</span></button>
-      ${rate ? `<button class="btn big twoline" data-a="extractsafe"><span class="bt">Safe extract \u00B7 always works<span class="k" aria-hidden="true">3</span></span><span class="bs">Bank nothing new \u00b7 wallet ${cr(c.credits - un)}</span></button>` : ''}`; })()}
+        return `<button class="btn big twoline" data-a="extract" ${E.extractAllowed(state) ? '' : 'disabled title="One Way Out: extract after a boss"'}><span class="bt">${rate ? `Risky extract \u00B7 ${Math.round((1 - fail) * 100)}%` : 'Extract'}<span class="k" aria-hidden="true">2</span></span><span class="bs">Bank +${cr(un - loss)}, +${xpKeep} XP \u00b7 wallet ${cr(c.credits - loss)}</span></button>
+      ${rate ? `<button class="btn big twoline" data-a="extractsafe" ${E.extractAllowed(state, true) ? '' : 'disabled title="Blackout: no safe extraction"'}><span class="bt">Safe extract \u00B7 always works<span class="k" aria-hidden="true">3</span></span><span class="bs">Bank nothing new \u00b7 wallet ${cr(c.credits - un)}</span></button>` : ''}`; })()}
     </div>
     ${exitVoteLine()}
     <p class="muted extract-note">${E.extractRate(r.sector) ? `<b>Risky</b> costs ${Math.round(E.leaveShare(state) * 100)}% of your unsecured haul and has a ${Math.round(E.extractFailChance(state) * 100)}% chance of failing, which forces you into sector ${next}. <b>Safe</b> always works, but you lose all ${cr(E.unsecuredNow(state))} and ${c.xpBank || 0} XP.` : 'Everything is secured, so leaving here costs nothing.'}</p>
@@ -4012,6 +4119,8 @@ function trapTab(ev) {
 }
 
 function render() {
+  flushStats();
+  if (state && state.contract && !state.run) finishContract();
   if (state && isHost() && state.guestReady && !state.char2) { state.guestReady = false; state.hostWants = null; } // no operative, nobody to be ready
   if (state && state.meta && !isGuest()) state.playerName = playerName(); // stamped on this device's leaderboard rows
   if (!appReadySent) { appReadySent = true; const r = appBridge('ready'); if (r) requestAnimationFrame(() => setTimeout(() => { try { r.postMessage(1); } catch (e) {} }, 80)); }
@@ -4322,7 +4431,7 @@ let busy = false, busySince = 0;
 // Last line of defence: nothing should hold the screen locked this long. If something does, unlock it and carry on.
 setInterval(() => {
   const app = document.getElementById('app'), locked = busy || (app && app.classList.contains('busy'));
-  if (!locked) { busySince = 0; return; }
+  if (!locked || document.hidden) { busySince = 0; return; } // a backgrounded app (iOS pauses animation frames) isn't stuck
   if (!busySince) { busySince = Date.now(); return; }
   if (Date.now() - busySince < 20000) return;
   console.warn('screen was locked for 20s: unlocking');
@@ -4522,6 +4631,8 @@ function applyAct(a, v, k) {
     case 'coopleave': leaveCoop(); return;
     case 'coopready': state.guestReady = !state.guestReady; if (net) net.send({ t: 'ready', on: state.guestReady, auto: !!coopReadyAuto }); sfx('click'); break;
     case 'newspage': newsPage = +v; sfx('click'); break;
+    case 'mutator': ok = E.toggleMutator(state, v); sfx('click'); break;
+    case 'contractgo': ok = startContract(v); if (ok) sfx('door'); else hint(contractBlock(v) || 'Not now.'); break;
     case 'cardtab': cardTab = v; lastPack = null; sfx('click'); break;
     case 'mainmenu': if (isGuest()) break; save(); modal = null; titleOpen = true; sfx('door'); break;
     case 'cellgo': ok = switchCell(+v); if (ok) sfx('door'); break;
@@ -4659,8 +4770,8 @@ function applyAct(a, v, k) {
     case 'event': E.resolveEvent(state, +v, rng, actingAs); break;
     case 'eventDone': if (state.screen !== 'event') break; state.lastResult = null; E.nextEncounter(state, rng); break;
     case 'deeper': if (E.isCoop(state) && net && net.peer && !E.voteExit(state, actingAs, 'deeper')) break; state.lastResult = null; E.pushDeeper(state, rng); break;
-    case 'extract': if (E.isCoop(state) && net && net.peer && !E.voteExit(state, actingAs, 'extract')) break; E.attemptExtract(state, rng); break;
-    case 'extractsafe': if (E.isCoop(state) && net && net.peer && !E.voteExit(state, actingAs, 'extractsafe')) break; E.safeExtract(state, rng); break;
+    case 'extract': if (!E.extractAllowed(state)) { hint(E.mutOn(state.run, 'oneway') ? 'One Way Out: you can only extract after a boss.' : 'You can\u2019t extract here.'); ok = false; break; } if (E.isCoop(state) && net && net.peer && !E.voteExit(state, actingAs, 'extract')) break; E.attemptExtract(state, rng); break;
+    case 'extractsafe': if (!E.extractAllowed(state, true)) { hint('Blackout: no safe extraction on this raid.'); ok = false; break; } if (E.isCoop(state) && net && net.peer && !E.voteExit(state, actingAs, 'extractsafe')) break; E.safeExtract(state, rng); break;
     case 'recruit': E.recruit(state, rng); if (!state.coopFallen || state.coopFallen.idx !== 1) state.coopFallen = null; break;
     case 'report': {
       const text = E.runReport(state);
@@ -4848,6 +4959,8 @@ async function start(data) {
   applyUi();
   state = E.migrate(saved, rng);
   delete state.events;
+  // A contract in progress when the app closed: carry on with it, the cell waiting behind it.
+  try { const raw = localStorage.getItem(CONTRACT_KEY); const cs = raw && JSON.parse(raw); if (cs && cs.contract && cs.run && !(data && data.state)) { contractHome = state; state = cs; } else if (raw) localStorage.removeItem(CONTRACT_KEY); } catch (e) {}
   lastBody = bodyOf(state);
   if (pulledToast) toast = pulledToast;
   try { if (localStorage.getItem(NEWS_KEY) !== NEWS_ID && !(data && data.state) && !new URLSearchParams(location.search).get('join') && !navigator.webdriver) modal = 'news'; } catch (e) {}

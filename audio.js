@@ -10,7 +10,7 @@ function save() { try { localStorage.setItem('cinder-cell-audio', JSON.stringify
 export const getPrefs = () => ({ ...prefs });
 
 function ensure() {
-  if (ctx) { if (ctx.state !== 'running') ctx.resume(); return ctx; }
+  if (ctx) { if (ctx.state !== 'running') ctx.resume().catch(() => {}); return ctx; } // iOS rejects resume() while the app is in the background
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) return null;
   ctx = new AC();
@@ -272,7 +272,7 @@ if (typeof document !== 'undefined' && typeof matchMedia === 'function') {
       for (const a of Object.values(music)) a.pause();
       if (ctx && ctx.state === 'running') ctx.suspend();
     } else {
-      if (ctx && ctx.state !== 'running') ctx.resume(); // iOS can leave it 'interrupted' after a call
+      if (ctx && ctx.state !== 'running') ctx.resume().catch(() => {}); // iOS can leave it 'interrupted' after a call
       startMusic();
     }
   });

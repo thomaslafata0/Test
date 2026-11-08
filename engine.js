@@ -777,7 +777,7 @@ export function statsOf(meta, c) {
   const hp = Math.round(B.hp * 1.25) + t.hp * D.TRAINING.hp.per + (c.level - 1) * 6 + Math.round(str * TUNE.strHp) + (c.background === 'foundry' ? 25 + 3 * (c.level - 1) : 0) + (TUNE.classHp[c.background] || 0) + (hasImp(c, 'pain') ? 40 : 0) + gearBonus(c, 'hp');
   const mk = markSum(c), drink = drinkOf(c) || {}, fb = featBuffs(meta), dAtk = (drink.atk || 0) + favOf(c, 'atk'), dCrit = (drink.crit || 0) + favOf(c, 'crit');
   return {
-    maxHp: Math.round(hp * (hasTrait(c, 'stalwart') ? 1.12 : 1) * (1 + pv(c, 'ironlung') / 100) * (1 + mk.hp + fb.hp) * (1 + (drink.hp || 0)) * Math.max(0.5, 1 + favOf(c, 'hp'))),
+    maxHp: Math.round(hp * (c.mut && c.mut.includes('glass') ? 0.75 : 1) * (hasTrait(c, 'stalwart') ? 1.12 : 1) * (1 + pv(c, 'ironlung') / 100) * (1 + mk.hp + fb.hp) * (1 + (drink.hp || 0)) * Math.max(0.5, 1 + favOf(c, 'hp'))),
     atk: common + rMain + dAtk + (w.type === 'heavy' ? Math.floor(str * TUNE.strAtk) : Math.floor(agi * TUNE.agiAtk)),
     atkM: common + mMain + dAtk + Math.floor(str * TUNE.strAtk),
     def: B.def + (c.background === 'foundry' ? 2 : 0) + t.def * D.TRAINING.def.per + Math.floor((c.level - 1) / 2) + def + gearBonus(c, 'def') + (hasImp(c, 'dermal') ? 5 : 0) + (has(c, 'lining') ? 2 : 0) + mk.def + pv(c, 'padding') + (drink.def || 0) + favOf(c, 'def'),
@@ -1000,7 +1000,7 @@ function droneWear(s, rng) {
 // The drone's move, straight after its operative's.
 function droneTurn(s, rng, who) {
   const r = s.run, e = r.enemy, c = s.char, st = stats(s), d = droneOf(c);
-  if (!d) return;
+  if (!d || mutOn(r, 'grounded')) return;
   const v = droneValue(d), name = D.DRONES[d.type].name, bank = r.droneBank || (r.droneBank = {});
   if (d.type === 'hornet') {
     const pow = Math.max(st.atk, st.atkM) * v / 100 * (droneHas(d, D.DRONE_AB.mid) && e.hp < e.maxHp * 0.3 ? 2 : 1) * TUNE.droneAtk;
@@ -1129,7 +1129,7 @@ export function creditMult(s) {
   const c = s.char, t = s.run ? s.run.threat : s.meta.threat || 0;
   const b = s.run ? s.run.bulletin : null;
   const cha = (1 + TUNE.chaCredits * (attr(c, 'cha') - 1)) * (c.background === 'preacher' ? 1.15 : c.background === 'vex' ? 1.1 : 1);
-  return cha * (has(c, 'fence') ? 1.25 : 1) * (1 + pv(c, 'chit') / 100) * (1 + gearBonus(c, 'credits') / 100) * (1 + 0.15 * t) * (1 + markSum(c).credits + featBuffs(s.meta).credits) * (1 + ((drinkOf(c) || {}).credits || 0)) * (b === 'payday' ? 1.3 : b === 'lockdown' ? 1.25 : 1) * condCredits(s.run);
+  return (mutOn(s.run, 'broke') ? 0.6 : 1) * cha * (has(c, 'fence') ? 1.25 : 1) * (1 + pv(c, 'chit') / 100) * (1 + gearBonus(c, 'credits') / 100) * (1 + 0.15 * t) * (1 + markSum(c).credits + featBuffs(s.meta).credits) * (1 + ((drinkOf(c) || {}).credits || 0)) * (b === 'payday' ? 1.3 : b === 'lockdown' ? 1.25 : 1) * condCredits(s.run);
 }
 const condCredits = (r) => (!r ? 1 : r.cond === 'toxic' ? 1.25 : r.cond === 'patrol' ? 1.3 : r.cond === 'lockdown' ? 1.2 : 1);
 export const condOf = (r) => D.SECTOR_CONDS.find((x) => x.id === (r && r.cond)) || D.SECTOR_CONDS[0];
@@ -1168,7 +1168,7 @@ export function insertionsAt(c, mapId, threat = 0) {
   return by[threat] || (by[threat] = [1]);
 }
 const earnInsertion = (c, mapId, threat, sector) => { const list = insertionsAt(c, mapId, threat); if (!list.includes(sector)) list.push(sector); };
-export function deploy(s, mapId, startSector, rng) {
+export function deploy(s, mapId, startSector, rng, opts = {}) {
   const map = mapById(mapId);
   if (!mapUnlocked(s, map)) return false;
   s.meta.threat = Math.min(s.meta.threat || 0, maxThreat(s)); // threat levels belong to the operative who freed districts
@@ -1176,9 +1176,12 @@ export function deploy(s, mapId, startSector, rng) {
   s.run = { startCredits: s.char.credits, map: map.id, sector: startSector, startSector, room: 0, choices: null, enemy: null, nextMod: null, sectorCredits: 0, kills: 0, bosses: 0, cleared: 0, elites: 0,
     alert: 0, allies: 0, vent: 3, turns: 0, threat: s.meta.threat || 0, perkOffer: null, ...freshBag(), cb: {}, actor: 0, acted: {}, round: 0, lastAttacker: 0 };
   if (isCoop(s)) s.run.cb[1] = freshBag();
+  s.run.mutators = opts.contract ? [...opts.contract.mutators] : mutatorsOpen(s) ? (s.meta.mutPick || []).filter((id) => D.MUTATORS.some((x) => x.id === id)) : [];
+  if (opts.contract) s.run.daily = { kind: opts.contract.kind, id: opts.contract.id, end: opts.contract.end, sectors: 0, bosses: 0, done: false };
+  forEachActor(s, (c) => { c.mut = s.run.mutators.length ? [...s.run.mutators] : undefined; });
   // Every district freed brings reinforcements to the ones still held.
   // Districts freed elsewhere stiffen the rest. The endgame map is built hard (power) and isn't reinforced on top.
-  s.run.reinforced = s.meta.liberated[map.id] || map.power ? 0 : Math.min(TUNE.reinforce.length - 1, Object.keys(s.meta.liberated).length);
+  s.run.reinforced = s.run.daily || s.meta.liberated[map.id] || map.power ? 0 : Math.min(TUNE.reinforce.length - 1, Object.keys(s.meta.liberated).length);
   s.meta.stats.raids += 1;
   forEachActor(s, (c) => {
     c.startCredits = c.credits; c.safeCredits = c.credits; c.xpBank = 0; c.payout = null;
@@ -1193,6 +1196,7 @@ export function deploy(s, mapId, startSector, rng) {
   s.notice = null;
   log(s, `You slip into the ${map.name}. ${sectorName(startSector, map.id)}.`, 'sys');
   if (s.run.reinforced && TUNE.reinforce[s.run.reinforced]) log(s, `The Directorate has reinforced this district: enemies +${Math.round((TUNE.reinforce[s.run.reinforced] || 0) * 100)}%, and they pay better.`, 'crit');
+  if (s.run.mutators.length) log(s, `Mutators: ${s.run.mutators.map((id) => D.MUTATORS.find((x) => x.id === id).name).join(', ')} (+${Math.round(mutBonus(s.run.mutators) * 100)}% score and ${D.SETTING.meta}).`, 'crit');
   const bl = bulletinOf(s.run);
   if (bl.id !== 'quiet') log(s, `Directorate bulletin: ${bl.name}. ${bl.desc}`, 'crit');
   beginSector(s, rng);
@@ -1200,6 +1204,16 @@ export function deploy(s, mapId, startSector, rng) {
 }
 
 export const mechanicOf = (r) => mapById(r.map).mechanic.id;
+// Mutators open once the cell has freed a district. mutOn: is this one active on the raid (or, for statsOf, on this operative).
+export const mutatorsOpen = (s) => Object.keys((s.meta && s.meta.liberated) || {}).length > 0;
+export const mutOn = (r, id) => !!(r && r.mutators && r.mutators.includes(id));
+export const mutBonus = (ids) => (ids || []).reduce((t, id) => t + ((D.MUTATORS.find((x) => x.id === id) || {}).bonus || 0), 0);
+export function toggleMutator(s, id) {
+  if (!mutatorsOpen(s) || !D.MUTATORS.some((x) => x.id === id) || s.run) return false;
+  const p = s.meta.mutPick || (s.meta.mutPick = []), i = p.indexOf(id);
+  if (i >= 0) p.splice(i, 1); else p.push(id);
+  return true;
+}
 export const bulletinOf = (r) => D.BULLETINS.find((b) => b.id === (r && r.bulletin)) || D.BULLETINS[0];
 export const quirkById = (id) => D.QUIRKS.find((q) => q.id === id);
 export const roomName = (mapId, kind) => kind === 'boss' ? 'Boss' : (mapById(mapId).roomNames[kind] || D.EXTRA_ROOM_NAMES[kind] || kind);
@@ -1373,6 +1387,8 @@ function startFight(s, rng, kind) {
   if (!boss) applyQuirk(r, e, rng);
   if (kind === 'elite') makeElite(e, rng);
   if (r.bulletin === 'payday') e.hp = e.maxHp = Math.round(e.maxHp * 1.1);
+  if (mutOn(r, 'hardened')) e.hp = e.maxHp = Math.round(e.maxHp * 1.25);
+  if (mutOn(r, 'vicious')) e.atk = Math.round(e.atk * 1.2);
   if (r.bulletin === 'lockdown') e.atk = Math.round(e.atk * 1.1);
   if (r.bulletin === 'budget') e.def = Math.max(0, e.def - 1);
   if (r.bulletin === 'inspection') e.xp = Math.round(e.xp * 1.2);
@@ -1629,6 +1645,7 @@ export function intimidateChance(s) {
 
 export const partnerDown = (s) => { const pc = isCoop(s) ? charAt(s, 1 - actorIdx(s)) : null; return pc && pc.downed > 0 ? pc : null; };
 export function canUse(s, act) {
+  if (act === 'stim' && mutOn(s.run, 'dry')) return false;
   if (act === 'revive') return !!partnerDown(s);
   if (act === 'run') return !runBlocked(s);
   if (['attack', 'shoot', 'strike', 'defend'].includes(act)) return true;
@@ -2939,7 +2956,7 @@ function resolveEventInner(s, index, rng) {
   s.eventResult = { success, check: !!opt.check, text: fxs.text, notes, label: opt.label };
 }
 
-function clearSector(s, rng = Math.random) {
+export function clearSector(s, rng = Math.random) {
   const r = s.run, c = s.char, map = mapById(r.map), m = s.meta;
   r.cleared = (r.cleared || 0) + 1; feat(s, 'sectors');
   const bonus = Math.round(6 * payDepth(r) * map.credits * creditMult(s) * payScale(c, r.sector));
@@ -2952,6 +2969,16 @@ function clearSector(s, rng = Math.random) {
   const res = pays ? 1 + (r.threat >= 3 && isBossSector(r.sector) ? 1 : 0) : 0;
   c.credits += bonus; ledger(s, 'sector bonus', bonus); feat(s, 'credits', bonus);
   m.resolve += res; m.totalResolve += res;
+  // Mutators: their bonus share of this sector's points goes on the operative's score, and of its Resolve into a bank that pays out whole points.
+  if (r.daily) { r.daily.sectors = Math.max(r.daily.sectors, r.sector - r.startSector + 1); if (isBossSector(r.sector)) r.daily.bosses += 1; if (r.sector >= r.daily.end) { r.daily.done = true; log(s, 'Contract complete. Turn it in.', 'reward'); } }
+  const mb = r.daily ? 0 : mutBonus(r.mutators);
+  if (mb > 0) {
+    // Each sector counts once per district and threat, at the best bonus it was ever cleared with, so replaying easy ground can't farm it.
+    forEachActor(s, (a) => { const k = a.career || (a.career = { raids: 0, kills: 0, bosses: 0 }), key = `${r.map}:${r.threat || 0}`, row = (k.mutB = k.mutB || {})[key] || (k.mutB[key] = []);
+      row[r.sector - 1] = Math.max(row[r.sector - 1] || 0, Math.round(mb * 100) / 100); });
+    r.mutRes = (r.mutRes || 0) + res * mb;
+    const whole = Math.floor(r.mutRes); if (whole > 0) { r.mutRes -= whole; m.resolve += whole; m.totalResolve += whole; log(s, `Mutators: +${whole} ${D.SETTING.meta}.`, 'reward'); }
+  }
   markBest(c, r.map, r.threat || 0, r.sector);
   prog.deepest = Math.max(prog.deepest, r.sector);
   c.deepest = Math.max(c.deepest, r.sector);
@@ -2967,7 +2994,10 @@ function clearSector(s, rng = Math.random) {
 
 // Two ways out between bosses. Risky keeps part of the haul but can fail, forcing you into the next sector. Safe always works and keeps nothing.
 export const extractFailChance = (s) => (s.run && extractRate(s.run.sector) > 0 ? TUNE.extractFails[(s.run.sector - 1) % 5] : 0);
+export const extractAllowed = (s, safe = false) => !!(s.run && s.run.daily && s.run.daily.done) || !(s.run && ((mutOn(s.run, 'oneway') && !isBossSector(s.run.sector)) || (safe && mutOn(s.run, 'blackout'))));
 export function attemptExtract(s, rng) {
+  if (!extractAllowed(s)) return false;
+  if (s.run.daily && s.run.daily.done) return safeExtract(s, rng); // a finished contract always gets its pickup
   if (rng() < extractFailChance(s)) {
     // A quarter of the time the guards who catch you settle for a bribe: one piece of contraband, and they look the other way.
     const bribe = [];
@@ -2983,9 +3013,10 @@ export function attemptExtract(s, rng) {
   endRun(s, 'extracted', rng);
   return true;
 }
-export function safeExtract(s, rng) { s.run.safeExit = true; endRun(s, 'extracted', rng); }
+export function safeExtract(s, rng) { if (!extractAllowed(s, true)) return false; s.run.safeExit = true; endRun(s, 'extracted', rng); }
 export function pushDeeper(s, rng) {
   const r = s.run;
+  if (r.daily && r.daily.done) return false; // the contract ends here: turn it in
   r.sector += 1;
   log(s, `You go deeper. ${sectorName(r.sector, r.map)}.`, 'sys');
   beginSector(s, rng);
@@ -3005,7 +3036,16 @@ export function careerProgress(c) {
   for (const [map, p] of Object.entries(c.maps || {})) for (const [threat, best] of Object.entries(p.best || { 0: p.deepest || 0 })) if (best > 0) out.push({ map, threat: +threat, best });
   return out;
 }
-export const careerScore = (c) => careerProgress(c).reduce((t, x) => t + groundWorth(x.best, x.threat), 0);
+export const careerScore = (c) => careerProgress(c).reduce((t, x) => t + groundWorth(x.best, x.threat), 0) + mutPoints(c);
+// Score from mutators: each sector's points times the best mutator bonus it was cleared with.
+export function mutPoints(c) {
+  let n = 0;
+  for (const [key, row] of Object.entries((c.career && c.career.mutB) || {})) {
+    const t = +key.split(':')[1] || 0;
+    row.forEach((b, i) => { if (b) n += (SECTOR_POINTS + ((i + 1) % 5 === 0 ? BOSS_POINTS : 0)) * b * (1 + THREAT_POINTS * t); });
+  }
+  return Math.round(n);
+}
 function careerRow(s, c, status, foe = null) {
   const m = s.meta, k = c.career || (c.career = { raids: 0, kills: 0, bosses: 0 }), progress = careerProgress(c), score = careerScore(c);
   if (m.dev || score <= 0) return ''; // cells touched by dev mode stay off the leaderboard
@@ -3072,6 +3112,8 @@ export function endRun(s, how, rngForRestock = Math.random) {
   if (vn) s.notice += ' ' + vn;
   // One orbit run per stay in town: coming home from a raid refuels the shuttle.
   for (const k of [s.char, s.char2]) if (k) k.orbitFlown = false;
+  runStat(s, how, r, c);
+  for (const k of [s.char, s.char2]) if (k) delete k.mut;
   s.run = null;
   s.screen = allLiberated(s) && !s.meta.endingSeen ? 'ending' : 'town';
   s.tab = 'clinic';
@@ -3199,9 +3241,22 @@ function reallyDie(s, foe) {
     return;
   }
   s.outcome = record;
+  runStat(s, 'died', r, c);
+  delete c.mut;
   s.run = null;
   s.screen = 'death';
   autoHeirloom(s);
+}
+// Anonymous balance stats, one row per finished raid (the page posts s.runStats to /stat and clears it). No names or ids.
+function runStat(s, how, r, c) {
+  try {
+    if (!r || !c || r.orbit) return;
+    if (r.daily) s.contractTally = { ...r.daily, kills: r.kills || 0, credits: c.credits - (r.startCredits || 0), hpLeft: how === 'died' ? 0 : Math.max(0, c.hp) / statsOf(s.meta, c).maxHp, how };
+    const e = r.enemy;
+    (s.runStats = s.runStats || []).push({ how, cls: c.background, map: r.map, sector: r.sector, threat: r.threat || 0, level: c.level, credits: c.credits,
+      killer: how === 'died' && e ? e.id : '', boss: !!(e && e.boss), coop: isCoop(s) ? 1 : 0, mut: (r.mutators || []).join(','), daily: r.daily ? r.daily.kind : '' });
+    if (s.runStats.length > 10) s.runStats.splice(0, s.runStats.length - 10);
+  } catch (x) {}
 }
 // The raid ends with one operative dead. During an action the operatives may be swapped, so playerAct finishes it once that has unwound.
 let acting = 0;

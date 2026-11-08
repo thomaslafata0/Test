@@ -181,6 +181,74 @@ export class Bugs {
   }
 }
 
+// Anonymous end-of-raid stats for balancing: class, district, how deep, how it ended, what killed you. No names, ids or saves.
+// GET /stat: totals by class and district plus the top killers; GET /stat?rows=1 adds the latest 300 rows.
+const STAT_KEEP = 50000, STAT_RATE = 30;
+export class Stats {
+  constructor(state) {
+    this.sql = state.storage.sql;
+    this.sql.exec('CREATE TABLE IF NOT EXISTS runs (at INTEGER NOT NULL, how TEXT, cls TEXT, map TEXT, sector INTEGER, threat INTEGER, level INTEGER, credits INTEGER, killer TEXT, boss INTEGER, coop INTEGER, mut TEXT, daily TEXT, ver TEXT)');
+    this.hits = new Map();
+  }
+  async fetch(request) {
+    const url = new URL(request.url);
+    if (request.method === 'GET') {
+      const days = Math.min(90, +(url.searchParams.get('days') || 14)), since = Date.now() - days * 864e5;
+      const q = (sql) => this.sql.exec(sql, since).toArray();
+      const out = {
+        days,
+        byClass: q('SELECT cls, COUNT(*) AS runs, ROUND(AVG(sector),1) AS avgSector, SUM(how = \'died\') AS deaths, ROUND(AVG(level),1) AS avgLevel, ROUND(AVG(credits)) AS avgCredits FROM runs WHERE at > ? GROUP BY cls ORDER BY runs DESC'),
+        byMap: q('SELECT map, threat, COUNT(*) AS runs, ROUND(AVG(sector),1) AS avgSector, SUM(how = \'died\') AS deaths FROM runs WHERE at > ? GROUP BY map, threat ORDER BY map, threat'),
+        killers: q('SELECT killer, boss, COUNT(*) AS kills FROM runs WHERE at > ? AND how = \'died\' GROUP BY killer ORDER BY kills DESC LIMIT 30'),
+        mutators: q('SELECT mut, COUNT(*) AS runs, ROUND(AVG(sector),1) AS avgSector, SUM(how = \'died\') AS deaths FROM runs WHERE at > ? AND mut != \'\' GROUP BY mut ORDER BY runs DESC LIMIT 30'),
+      };
+      if (url.searchParams.get('rows')) out.rows = q('SELECT * FROM runs WHERE at > ? ORDER BY at DESC LIMIT 300');
+      return json(out);
+    }
+    if (request.method !== 'POST') return json({ error: 'method' }, 405);
+    const ip = request.headers.get('CF-Connecting-IP') || 'local', now = Date.now(), m = this.hits.get(ip);
+    if (!m || now - m.t > 60000) { if (this.hits.size > 5000) this.hits.clear(); this.hits.set(ip, { t: now, n: 1 }); } else if (++m.n > STAT_RATE) return json({ error: 'slow down' }, 429);
+    const text = await request.text();
+    if (text.length > 2000) return json({ error: 'too big' }, 413);
+    let b; try { b = JSON.parse(text); } catch (e) { return json({ error: 'bad json' }, 400); }
+    const n = (v, max) => Math.max(0, Math.min(max, Math.round(+v || 0)));
+    const how = ['extracted', 'escaped', 'died'].includes(b.how) ? b.how : '';
+    if (!how) return json({ error: 'bad row' }, 400);
+    this.sql.exec('INSERT INTO runs (at, how, cls, map, sector, threat, level, credits, killer, boss, coop, mut, daily, ver) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      now, how, label(b.cls, 20), label(b.map, 20), n(b.sector, 99), n(b.threat, 20), n(b.level, 999), n(b.credits, 1e9), label(b.killer, 30), b.boss ? 1 : 0, b.coop ? 1 : 0, label(b.mut, 120), label(b.daily, 10), label(b.ver, 20));
+    if (Math.random() < 0.01) { const c = this.sql.exec('SELECT COUNT(*) AS n FROM runs').one().n; if (c > STAT_KEEP) this.sql.exec('DELETE FROM runs WHERE at IN (SELECT at FROM runs ORDER BY at ASC LIMIT ?)', c - STAT_KEEP); }
+    return json({ ok: true });
+  }
+}
+
+// Daily and weekly contract boards, one object per contract id (d20261109, w202646). One row per device: the first attempt counts.
+// GET: top 50 and the total. POST {id, player, cls, score, sectors, bosses, kills, done}.
+const CONTRACT_MAX = 15000;
+export class Contracts {
+  constructor(state) {
+    this.sql = state.storage.sql;
+    this.sql.exec('CREATE TABLE IF NOT EXISTS rows (id TEXT PRIMARY KEY, score INTEGER NOT NULL, at INTEGER NOT NULL, data TEXT NOT NULL)');
+    this.hits = new Map();
+  }
+  async fetch(request) {
+    const total = () => this.sql.exec('SELECT COUNT(*) AS n FROM rows').one().n;
+    if (request.method === 'GET') return json({ rows: this.sql.exec('SELECT score, at, data FROM rows ORDER BY score DESC, at ASC LIMIT 50').toArray().map((r) => ({ ...JSON.parse(r.data), score: r.score, when: r.at })), total: total() });
+    if (request.method !== 'POST') return json({ error: 'method' }, 405);
+    const ip = request.headers.get('CF-Connecting-IP') || 'local', now = Date.now(), m = this.hits.get(ip);
+    if (!m || now - m.t > 60000) { if (this.hits.size > 5000) this.hits.clear(); this.hits.set(ip, { t: now, n: 1 }); } else if (++m.n > 10) return json({ error: 'slow down' }, 429);
+    const text = await request.text();
+    if (text.length > 1000) return json({ error: 'too big' }, 413);
+    let b; try { b = JSON.parse(text); } catch (e) { return json({ error: 'bad json' }, 400); }
+    if (!/^[A-Za-z0-9_-]{6,64}$/.test(b.id || '')) return json({ error: 'bad row' }, 400);
+    const n = (v, max) => Math.max(0, Math.min(max, Math.round(+v || 0)));
+    const score = n(b.score, CONTRACT_MAX), row = { player: label(b.player, 16) || 'Someone', cls: label(b.cls, 20), sectors: n(b.sectors, 10), bosses: n(b.bosses, 2), kills: n(b.kills, 300), done: b.done ? 1 : 0 };
+    this.sql.exec('INSERT OR IGNORE INTO rows (id, score, at, data) VALUES (?, ?, ?, ?)', b.id, score, now, JSON.stringify(row));
+    const me = this.sql.exec('SELECT score, at FROM rows WHERE id = ?', b.id).one();
+    const rank = this.sql.exec('SELECT COUNT(*) AS n FROM rows WHERE score > ? OR (score = ? AND at < ?)', me.score, me.score, me.at).one().n + 1;
+    return json({ rank, total: total(), score: me.score });
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -189,6 +257,9 @@ export default {
       return new Response(JSON.stringify({ applinks: { details: [{ appIDs: ['39BW6948KL.com.thomaslafata.cindercell'], components: [{ '/': '/', '?': { join: '?*' }, comment: 'co-op invites' }] }] } }), { headers: { 'content-type': 'application/json', 'cache-control': 'max-age=3600' } });
     }
     if (url.pathname === '/bug') return env.BUGS.get(env.BUGS.idFromName('all')).fetch(request);
+    if (url.pathname === '/stat') return env.STATS.get(env.STATS.idFromName('all')).fetch(request);
+    const ct = url.pathname.match(/^\/contract\/(d\d{8}|w\d{6})$/);
+    if (ct) return env.CONTRACTS.get(env.CONTRACTS.idFromName(ct[1])).fetch(request);
     if (url.pathname === '/board') return env.BOARD.get(env.BOARD.idFromName('season2'))  // season 1's board is kept under 'global'
      .fetch(request);
     const sv = url.pathname.match(/^\/save\/([A-Z0-9]{12})(\/versions)?$/);

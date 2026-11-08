@@ -1097,6 +1097,18 @@ export const BULLETINS = [
   { id: 'shift',      name: 'Shift Change',    weight: 1.5, desc: 'The first enemy in every sector is caught off guard.' },
 ];
 
+// Mutators: handicaps an operative picks before a raid. Each adds its share to the score and Resolve earned on the raid.
+export const MUTATORS = [
+  { id: 'hardened', name: 'Hardened', bonus: 0.15, desc: 'Enemies have +25% HP.' },
+  { id: 'vicious', name: 'Vicious', bonus: 0.2, desc: 'Enemies hit 20% harder.' },
+  { id: 'glass', name: 'Glass Jaw', bonus: 0.2, desc: 'Your max HP is 25% lower.' },
+  { id: 'dry', name: 'Dry Run', bonus: 0.15, desc: 'No stims in fights.' },
+  { id: 'oneway', name: 'One Way Out', bonus: 0.2, desc: 'You can only extract after a boss.' },
+  { id: 'blackout', name: 'Blackout', bonus: 0.1, desc: 'No safe extraction: every pickup is a gamble.' },
+  { id: 'broke', name: 'Skint', bonus: 0.1, desc: 'Enemies carry 40% fewer credits.' },
+  { id: 'grounded', name: 'Grounded', bonus: 0.1, desc: 'Your drone stays home.' },
+];
+
 // ---------- Downtime: the after-curfew side of the yard ----------
 // Permanent marks an operative can earn in orbit. Five exist; an operative can hold all five.
 export const MARKS = {
