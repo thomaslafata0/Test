@@ -55,7 +55,8 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   await guest.click(`button[data-a="lounge"][data-v="${pickG}"]`); await guest.waitForTimeout(2500);
   const gs = await host.evaluate(() => { const s = cinderGame.state(); return { cr: s.char2.credits, booked: s.char2.booked, me: s.char.booked }; });
   check('the friend books a night on their own credits', gs.cr === 350 && gs.booked === pickG && gs.me === pickH, JSON.stringify(gs));
-  check('the friend sees their result card', await guest.locator('.lounge-result').count() === 1);
+  // She walks the friend out back first (a few seconds now the girls have town art), then the card shows.
+  check('the friend sees their result card', await guest.waitForSelector('.lounge-result', { timeout: 15000 }).then(() => true).catch(() => false));
   await guest.click('.lounge-result button[data-a="closemodal"]').catch(() => {});
   await guest.keyboard.press('Escape'); await guest.waitForTimeout(150);
   }
