@@ -1,23 +1,28 @@
 // Cinder Cell co-op relay: a Cloudflare Worker with one Durable Object per room code.
-// It holds at most two WebSocket connections (host and friend) and forwards every message from one to the other.
+// It holds at most two players (host and friend) and forwards every message from one to the other.
+// A spectator room (an 8-character code) also takes a few watchers: they get everything the host sends, and only the host hears them.
 // The same Worker serves the game's files as static assets; only /room/* reaches this code (see wrangler.toml).
 // Deploy from the repo root: `npx wrangler login` then `npx wrangler deploy`.
 
 const STALE_MS = 45000; // clients ping every 15 s, so this long without a word means the socket is dead
+const MAX_WATCHERS = 8;
 
 export class Room {
   constructor(state) {
     this.state = state;
     this.slots = new Map(); // role -> { ws, id, seen }
+    this.watchers = new Map(); // client id -> { ws, id, seen }
   }
   async fetch(request) {
     const url = new URL(request.url);
     if (request.headers.get('Upgrade') !== 'websocket') return new Response('expected websocket', { status: 426 });
-    const role = url.searchParams.get('role') === 'host' ? 'host' : 'guest';
+    const asked = url.searchParams.get('role');
+    const role = asked === 'host' ? 'host' : asked === 'watch' ? 'watch' : 'guest';
     const id = url.searchParams.get('id') || '';
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
     server.accept();
+    if (role === 'watch') { this.watch(server, id, (url.pathname.split('/').pop() || '').length); return new Response(null, { status: 101, webSocket: client }); }
     const cur = this.slots.get(role);
     // A live socket from another client holds the seat. The same client reconnecting, or a silent socket, gives it up.
     if (cur && cur.ws.readyState === 1 && cur.id !== id && Date.now() - cur.seen < STALE_MS) {
@@ -35,17 +40,116 @@ export class Room {
       slot.seen = Date.now();
       if (ev.data === 'ping') { server.send('pong'); return; }
       const o = other(); if (live(o)) o.ws.send(ev.data);
+      if (role === 'host') this.toWatchers(ev.data);
     });
     const bye = () => {
       if (this.slots.get(role) !== slot) return; // already replaced by a reconnect
       this.slots.delete(role);
       const o = other(); if (live(o)) o.ws.send(JSON.stringify({ t: 'peer-left', role }));
+      if (role === 'host') this.toWatchers(JSON.stringify({ t: 'peer-left', role }));
     };
     server.addEventListener('close', bye);
     server.addEventListener('error', bye);
     const o = other();
     if (live(o)) { o.ws.send(JSON.stringify({ t: 'peer-joined', role })); server.send(JSON.stringify({ t: 'peer-joined', role: otherRole })); }
+    if (role === 'host') this.toWatchers(JSON.stringify({ t: 'peer-joined', role }));
     return new Response(null, { status: 101, webSocket: client });
+  }
+  toWatchers(data) { for (const w of this.watchers.values()) if (w.ws.readyState === 1) { try { w.ws.send(data); } catch (e) {} } }
+  // A watcher hears the host, says only hello and heartbeats to the host, and never takes a player's seat.
+  // Only spectator rooms (8-character codes) take watchers, so nobody can sit in on a co-op room by guessing its 4-letter code.
+  watch(server, id, codeLen) {
+    const now = Date.now();
+    for (const [k, w] of this.watchers) if (w.ws.readyState !== 1 || now - w.seen > STALE_MS) this.watchers.delete(k);
+    if (codeLen < 8 || !id || (this.watchers.size >= MAX_WATCHERS && !this.watchers.has(id))) {
+      server.send(JSON.stringify({ t: 'room-full' }));
+      server.close(4009, 'room full');
+      return;
+    }
+    const cur = this.watchers.get(id), slot = { ws: server, id, seen: now };
+    this.watchers.set(id, slot);
+    if (cur) { try { cur.ws.close(4000, 'replaced'); } catch (e) {} }
+    const host = () => this.slots.get('host'), live = (s) => s && s.ws.readyState === 1;
+    server.addEventListener('message', (ev) => {
+      slot.seen = Date.now();
+      if (ev.data === 'ping') { server.send('pong'); return; }
+      if (typeof ev.data !== 'string' || ev.data.length > 2000) return;
+      const h = host(); if (live(h)) h.ws.send(ev.data);
+    });
+    const bye = () => {
+      if (this.watchers.get(id) !== slot) return;
+      this.watchers.delete(id);
+      const h = host(); if (live(h)) h.ws.send(JSON.stringify({ t: 'watch-left', id }));
+    };
+    server.addEventListener('close', bye);
+    server.addEventListener('error', bye);
+    if (live(host())) server.send(JSON.stringify({ t: 'peer-joined', role: 'host' }));
+  }
+}
+
+// Friends: who is online and what they're doing, for the friends list. One object holds it all in memory: nothing is written to
+// disk, and an entry is gone 90 s after the last word from that device. A device proves its friend code with the key it was made from.
+// POST { key, name, op, where, coop, open, room, watchers, want: [codes], watch: code } -> { code, friends: { CODE: entry | null }, asks }.
+// What's kept: the player name and what they're playing. A spectator room code only goes to friends who asked to watch.
+const PRES_TTL = 90000, PRES_ASK_MS = 60000, PRES_SEEN_ASK_MS = 600000, PRES_WANT = 50, PRES_RATE = 40, PRES_MAX_BODY = 4000;
+const FRIEND_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+export async function friendCodeOf(key) {
+  if (typeof key !== 'string' || !/^[0-9a-f]{32}$/.test(key)) return '';
+  const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`cinder-cell-friend:${key}`)));
+  return Array.from(hash.slice(0, 8), (b) => FRIEND_ALPHABET[b % 32]).join('');
+}
+const SCREENS = ['town', 'raid', 'menu', 'watching'];
+export class Presence {
+  constructor() {
+    this.seen = new Map();  // code -> entry
+    this.asks = new Map();  // code -> Map(from code -> { name, at }): watch requests not yet picked up
+    this.asked = new Map(); // code -> Map(from code -> at): who asked lately, and so may be told the spectator room
+    this.hits = new Map();
+    this.calls = 0;
+  }
+  prune(now) {
+    for (const [k, e] of this.seen) if (now - e.at > PRES_TTL) this.seen.delete(k);
+    for (const [map, ttl] of [[this.asks, PRES_ASK_MS], [this.asked, PRES_SEEN_ASK_MS]]) {
+      for (const [k, m] of map) { for (const [f, v] of m) if (now - (typeof v === 'number' ? v : v.at) > ttl) m.delete(f); if (!m.size) map.delete(k); }
+    }
+    for (const [k, h] of this.hits) if (now - h.t > 60000) this.hits.delete(k);
+  }
+  async fetch(request) {
+    if (request.method !== 'POST') return json({ error: 'method' }, 405);
+    const text = await request.text();
+    if (text.length > PRES_MAX_BODY) return json({ error: 'too big' }, 413);
+    let b; try { b = JSON.parse(text); } catch (e) { return json({ error: 'bad json' }, 400); }
+    const code = await friendCodeOf(b && b.key);
+    if (!code) return json({ error: 'bad key' }, 400);
+    const now = Date.now(), m = this.hits.get(code);
+    if (!m || now - m.t > 60000) this.hits.set(code, { t: now, n: 1 }); else if (++m.n > PRES_RATE) return json({ error: 'slow down' }, 429);
+    if (++this.calls % 50 === 0) this.prune(now);
+    const op = b.op && typeof b.op === 'object' ? { name: label(b.op.name, 40), cls: label(b.op.cls, 24), level: whole(b.op.level, 999) || 0 } : null;
+    const w = b.where && typeof b.where === 'object' ? b.where : {};
+    const where = { screen: SCREENS.includes(w.screen) ? w.screen : 'menu', map: label(w.map, 24), sector: whole(w.sector, 99) || 0 };
+    const room = typeof b.room === 'string' && /^[A-Z0-9]{8}$/.test(b.room) ? b.room : '';
+    const name = label(b.name, 16) || 'Someone';
+    if (b.off) this.seen.delete(code);
+    else this.seen.set(code, { name, op: op && op.name ? op : null, where, coop: ['host', 'guest'].includes(b.coop) ? b.coop : '', open: !!b.open, room, watchers: whole(b.watchers, 99) || 0, at: now });
+    // A watch request waits for the friend's next check-in.
+    const target = typeof b.watch === 'string' ? b.watch.toUpperCase() : '';
+    if (/^[A-Z0-9]{8}$/.test(target) && target !== code && !b.off) {
+      const q = this.asks.get(target) || new Map();
+      if (q.size < 10 || q.has(code)) { q.set(code, { name, at: now }); this.asks.set(target, q); }
+      const a = this.asked.get(target) || new Map();
+      if (a.size < 50 || a.has(code)) { a.set(code, now); this.asked.set(target, a); }
+    }
+    const friends = {};
+    const want = Array.isArray(b.want) ? [...new Set(b.want.filter((c) => typeof c === 'string' && /^[A-Z0-9]{8}$/.test(c)))].slice(0, PRES_WANT) : [];
+    for (const c of want) {
+      const e = this.seen.get(c);
+      if (!e || now - e.at > PRES_TTL) { friends[c] = null; continue; }
+      const mayWatch = e.open && e.room && (this.asked.get(c) || new Map()).has(code);
+      friends[c] = { name: e.name, op: e.op, where: e.where, coop: e.coop, open: e.open, watchers: e.watchers, room: mayWatch ? e.room : '', ago: Math.round((now - e.at) / 1000) };
+    }
+    const mine = this.asks.get(code), asks = mine ? [...mine].filter(([, v]) => now - v.at < PRES_ASK_MS).map(([from, v]) => ({ code: from, name: v.name })) : [];
+    this.asks.delete(code);
+    return json({ code, friends, asks });
   }
 }
 
@@ -257,6 +361,7 @@ export default {
       return new Response(JSON.stringify({ applinks: { details: [{ appIDs: ['39BW6948KL.com.thomaslafata.cindercell'], components: [{ '/': '/', '?': { join: '?*' }, comment: 'co-op invites' }] }] } }), { headers: { 'content-type': 'application/json', 'cache-control': 'max-age=3600' } });
     }
     if (url.pathname === '/bug') return env.BUGS.get(env.BUGS.idFromName('all')).fetch(request);
+    if (url.pathname === '/presence') return env.PRESENCE.get(env.PRESENCE.idFromName('all')).fetch(request);
     if (url.pathname === '/stat') return env.STATS.get(env.STATS.idFromName('all')).fetch(request);
     const ct = url.pathname.match(/^\/contract\/(d\d{8}|w\d{6})$/);
     if (ct) return env.CONTRACTS.get(env.CONTRACTS.idFromName(ct[1])).fetch(request);

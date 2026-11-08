@@ -637,6 +637,18 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .cell-info { display: grid; gap: 2px; min-width: 0; } .cell-info > div { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline; }
 .cell-btns { display: flex; gap: 6px; align-items: center; }
 @media (max-width: 560px) { .cell-row { grid-template-columns: 44px minmax(0, 1fr); } .cell-btns { grid-column: 1 / -1; justify-content: flex-end; } }
+/* Friends and spectating */
+.friends { display: grid; gap: 8px; }
+.friend-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); background: var(--panel-2); }
+.fr-info { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.fr-btns { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.fr-btns .btn, .friends-modal .btn { min-height: 40px; min-width: 64px; }
+.friends-modal .set-row { flex-wrap: wrap; }
+.friends-modal .friend-code { font-size: 1.1rem; letter-spacing: .06em; }
+.watch-banner { padding: 2px 10px; margin-bottom: 4px; } .watch-banner .btn { min-height: 40px; padding-block: 4px; }
+#app.watching .actions .btn, #app.watching .skills .btn, #app.watching .items .btn, #app.watching .shortcuts .btn { opacity: .55; }
+.watch-chip { white-space: nowrap; }
+@media (max-width: 560px) { .friend-row { grid-template-columns: minmax(0, 1fr); } }
 .duel-who { margin: 0; font-size: .85rem; color: var(--muted); }
 @media (orientation: landscape) and (max-height: 600px), (orientation: landscape) and (pointer: coarse) and (max-height: 820px) {
   .hostess-card { padding: 6px; } .hostess-card p { display: none; } .hostess, .hostess.ph { zoom: .62; }
@@ -1854,7 +1866,7 @@ import { droneIcon, setDroneArt, droneHiFrame } from './drones.js';
 import { TitleScene } from './titlefx.js';
 import { autoStep, autoFinish, loadDev, BUILDS } from './dev.js';
 import { Wheel, OrbitScene, loadDowntimeArt, artFor } from './downtime.js';
-import { Net, getCoopPrefs, setCoopPrefs, makeCode, getRoom, setRoom, getLastRoom, setLastRoom } from './net.js';
+import { Net, getCoopPrefs, setCoopPrefs, makeCode, getRoom, setRoom, getLastRoom, setLastRoom, clientId } from './net.js';
 // Inside the iPhone app the share sheet and vibration come from the app itself.
 const IN_APP = /CinderCellApp/.test(navigator.userAgent), appBridge = (n) => (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers[n]) || null;
 if (IN_APP) document.documentElement.classList.add('in-app');
@@ -1918,7 +1930,7 @@ function reportBug(kind, e) {
 // Anonymous end-of-raid stats for balancing (class, district, depth, how it ended, what killed you). The rules queue them in state.runStats.
 function flushStats() {
   try {
-    if (!state || !state.runStats || !state.runStats.length || isGuest()) return;
+    if (!state || !state.runStats || !state.runStats.length || isGuest() || watch) return;
     const rows = state.runStats.splice(0);
     if (!/workers\.dev$/.test(location.hostname)) return;
     for (const r of rows) fetch('/stat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...r, ver: BUILD }) }).catch(() => {});
@@ -2176,6 +2188,7 @@ function writeSave(s) {
 }
 // The friend's own game (home) is the real save; what's on their screen in co-op is a mirror of the host's.
 function save() {
+  if (watch) return; // the friend's game on screen isn't this device's to keep
   if (!isGuest()) { writeSave(state); flushBoard(); return; }
   if (home && !net.local) writeSave(home);
 }
@@ -2184,7 +2197,7 @@ function save() {
 // A unique operative opened in any cell on this device opens in every cell (and every new one).
 const UNLOCK_KEY = 'cinder-cell-unlocks';
 function syncUnlocks() {
-  if (!state || !state.meta || isGuest()) return;
+  if (!state || !state.meta || isGuest() || watch) return;
   let all = []; try { all = JSON.parse(localStorage.getItem(UNLOCK_KEY)) || []; } catch (e) {}
   const mine = D.BACKGROUNDS.filter((b) => b.unique && E.bgUnlocked(state.meta, b)).map((b) => b.id), merged = [...new Set([...all, ...mine])];
   if (merged.length !== all.length) { try { localStorage.setItem(UNLOCK_KEY, JSON.stringify(merged)); } catch (e) {} }
@@ -2230,7 +2243,7 @@ function nameView() {
 const BOARD_ON = typeof location !== 'undefined' && (location.hostname.endsWith('.workers.dev') || location.port === '8787');
 let globalBoard = null, boardSending = false, boardRetryAt = 0;
 async function flushBoard() {
-  if (!BOARD_ON || boardSending || isGuest() || Date.now() < boardRetryAt || !state || !state.meta || !(state.meta.boardOut || []).length) return;
+  if (!BOARD_ON || boardSending || isGuest() || watch || Date.now() < boardRetryAt || !state || !state.meta || !(state.meta.boardOut || []).length) return;
   boardSending = true;
   let sent = false;
   try {
@@ -2458,7 +2471,7 @@ const myIdx = () => (isGuest() ? 1 : 0);
 const DOWNTIME = new Set(['drink', 'bet', 'stake', 'spin', 'invest', 'withdraw', 'shippart', 'shipcell', 'orbitgo', 'orbitact', 'orbitclose']);
 // The shuttle belongs to each player's own cell, so a friend in someone's room can't fly or fit it from here.
 const SHIP_ACTS = new Set(['shippart', 'shipcell', 'orbitarm', 'orbitgo', 'orbitact', 'orbitclose']);
-const LOCAL = new Set(['cardtab', 'setname', 'mainmenu', 'cellgo', 'celldel', 'newspage', 'firstraid', 'takeover', 'autoaccept', 'autostim', 'featfilter', 'stimprompt', 'draftdrone', 'randomize', 'missiontab', 'markettab', 'chartab', 'continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm', 'cloudcopy', 'cloudload', 'cloudversions', 'cloudrestore', 'cloudkeep', 'devunlock', 'devoff', 'dev', 'autostart']);
+const LOCAL = new Set(['cardtab', 'setname', 'mainmenu', 'cellgo', 'celldel', 'newspage', 'firstraid', 'takeover', 'autoaccept', 'autostim', 'featfilter', 'stimprompt', 'draftdrone', 'randomize', 'missiontab', 'markettab', 'chartab', 'continue-title', 'newcell', 'step', 'look', 'savecode', 'loadcode', 'modal', 'closemodal', 'sound', 'setpref', 'tip', 'tab', 'popup', 'closepopup', 'gearslot', 'compare', 'closecompare', 'bg', 'attr', 'randname', 'begin', 'dismissresult', 'report', 'coophost', 'coopjoin', 'coopleave', 'coopready', 'coopinvite', 'coopresume', 'emote', 'givearm', 'orbitarm', 'cloudcopy', 'cloudload', 'cloudversions', 'cloudrestore', 'cloudkeep', 'devunlock', 'devoff', 'dev', 'autostart', 'friendadd', 'frienddel', 'friendcopy', 'watchallow', 'watch', 'watchleave']);
 function coopChip() {
   if (!net) return '';
   const who = net.peerName || (isHost() ? 'friend' : 'host');
@@ -2541,7 +2554,7 @@ function pumpInbox() {
   (async () => {
     while (inbox.length) {
       const m = inbox.shift();
-      try { if (m.t === 'fx') await playHostFx(m.ev); else applyHostState(m); } catch (e) { console.warn('host message failed', e); reportBug('host-msg', e); }
+      try { if (m.t === 'fx') await playHostFx(m.ev); else if (watch) applyWatchState(m); else applyHostState(m); } catch (e) { console.warn('host message failed', e); reportBug('host-msg', e); }
     }
     pumping = false;
   })();
@@ -2549,7 +2562,7 @@ function pumpInbox() {
 async function playHostFx(ev) {
   setAwaiting(false);
   while (busy) await new Promise((r) => setTimeout(r, 60));
-  if (!isGuest() || !ev || !ev.length || !state.run || state.screen !== 'combat' || !stage.el.isConnected) return;
+  if (!(isGuest() || watch) || !ev || !ev.length || !state.run || state.screen !== 'combat' || !stage.el.isConnected) return;
   busy = true; document.getElementById('app').classList.add('busy');
   try { await stage.play(ev); } finally { busy = false; document.getElementById('app').classList.remove('busy'); }
 }
@@ -2609,6 +2622,7 @@ function startCoop(role, code, local) {
   });
   // Moving around the yard: these skip the game state, so walking stays cheap.
   net.on('pos', (m) => {
+    if (spect && spect.watchers.size) spect.net.send({ ...m, t: 'mate' });
     if (m.gone) town.setPartner(null);
     else { town.setPartner(m); town.partner.menu = m.menu || null; }
     const w = document.getElementById('coop-where'); if (w) w.textContent = partnerWhere();
@@ -2681,6 +2695,7 @@ const inviteLink = () => (net ? `${location.origin}${location.pathname}?join=${n
 const inviteText = () => (appBridge('share') ? `Join my Cinder Cell raid (room ${net.code}): ${inviteLink()}` : inviteLink());
 // A plain statement of the connection whenever it isn't healthy, with what the host can do about it.
 function coopBanner() {
+  if (watch) return watchBanner();
   if (saveFailed) return '<div class="coop-banner bad" role="status">This browser refused the last save (private window or full storage?). Your progress may not be kept.</div>';
   if (!net) return '';
   if (!net.online && net.status !== 'connecting') return '<div class="coop-banner bad" role="status"><span>Connection lost. Reconnecting\u2026</span><button class="btn" data-a="coopleave">Leave</button></div>';
@@ -2696,6 +2711,259 @@ function joiningScreen() {
   return `<section class="panel" style="max-width:520px;margin:48px auto;display:grid;gap:12px"><span class="label">Co-op \u00B7 room ${esc(net.code)}</span><h2>Waiting for the host</h2>
     <p class="muted">${hostSynced ? `You\u2019re in the room with ${esc((home && home.char && home.char.name) || 'your operative')}. The host is on a raid, so you\u2019ll drop in as soon as they\u2019re back in the yard.` : 'You\u2019re in the room. The game appears as soon as the host is connected.'}</p><div><button class="btn" data-a="coopleave">Leave</button></div></section>`;
 }
+
+// ---------- friends and spectating ----------
+// A friend code belongs to this device. It's made from a random key kept next to the device id, and the server checks the key,
+// so nobody can post as someone else's code. The friends list lives on this device. Once this device has a friend code (the
+// Friends screen makes one), the game tells the server (Presence in coop/worker.js) every 30 s while it's on screen: the player
+// name, the operative, town or raid, and whether friends may watch. Nothing else, and never the account email.
+// Watching: the watcher asks through the server. The friend's game sees the ask on its next check-in, opens a spectator room
+// (an 8-letter code on the co-op relay) and sends its game there the way a co-op host does. Watchers see it as a co-op friend
+// would, but can't touch anything, and none of it is saved on their device.
+const FRIEND_KEY = 'cinder-cell-friend', FRIENDS_KEY = 'cinder-cell-friends', FRIEND_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', FRIENDS_MAX = 50;
+const PRESENCE_ON = BOARD_ON || !!globalThis.cinderPresenceTest; // tests/spectate.cjs answers /presence itself
+const PRES_EVERY = 30000, PRES_FAST = 3000, WATCH_ASK_MS = 45000, WATCH_SYNC_MS = 20000, WATCHER_STALE_MS = 35000, SPECT_IDLE_MS = 60000;
+const readJSON = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } };
+let friendMe = readJSON(FRIEND_KEY, {}); // { key, code, allow }
+let friends = readJSON(FRIENDS_KEY, []).filter((f) => f && /^[A-Z0-9]{8}$/.test(f.code)); // [{ code, name }]
+let friendStatus = {}, friendChecked = false; // code -> what the server last said (null: offline)
+let presLast = 0, presBusy = false, presFailed = false, friendDelArm = null;
+const storeFriendMe = () => storeItem(FRIEND_KEY, JSON.stringify(friendMe));
+const storeFriends = () => storeItem(FRIENDS_KEY, JSON.stringify(friends));
+const prettyFriend = (c) => (c ? `${c.slice(0, 4)}-${c.slice(4)}` : '');
+const allowWatch = () => friendMe.allow !== false;
+async function friendCodeOf(key) {
+  try {
+    const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`cinder-cell-friend:${key}`)));
+    return Array.from(hash.slice(0, 8), (b) => FRIEND_ALPHABET[b % 32]).join('');
+  } catch (e) { return ''; }
+}
+async function ensureFriendCode() {
+  if (friendMe.code && friendMe.key) return friendMe.code;
+  deviceId(); // the device id and the friend key sit side by side
+  const key = friendMe.key || Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
+  const code = await friendCodeOf(key);
+  if (!code) return '';
+  friendMe = { ...friendMe, key, code }; storeFriendMe();
+  return code;
+}
+const bgName = (c) => { const b = c && D.BACKGROUNDS.find((x) => x.id === c.background); return b ? b.name : ''; };
+// What a friend's list shows about this player. While watching someone, it says only that.
+function presenceWhere() {
+  if (watch) return { screen: 'watching' };
+  if (!state || !state.char || titleOpen) return { screen: 'menu' };
+  if (state.run) return { screen: 'raid', map: E.mapById(state.run.map).name, sector: state.run.sector };
+  return { screen: 'town' };
+}
+// A co-op friend's screen is the host's game, so only the host's game can be watched.
+const spectAllowed = () => allowWatch() && !watch && !isGuest();
+const canBeWatched = () => spectAllowed() && !!(state && state.char);
+async function presenceTick(force) {
+  if (!PRESENCE_ON || presBusy || !friendMe.code || !friendMe.key || !state) return;
+  if (!force && document.visibilityState !== 'visible') return;
+  const now = Date.now(), every = watch && !watch.net ? PRES_FAST : PRES_EVERY;
+  if (!force && now - presLast < every) return;
+  presBusy = true; presLast = now;
+  const c = state.char, asking = watch && !watch.net ? watch.code : '';
+  const body = { key: friendMe.key, name: playerName() || 'Someone', op: c && !watch ? { name: c.name, cls: bgName(c), level: c.level } : null, where: presenceWhere(),
+    coop: isHost() ? 'host' : isGuest() ? 'guest' : '', open: canBeWatched(), room: spect ? spect.code : '', watchers: spect ? spect.watchers.size : 0, want: friends.map((f) => f.code), watch: asking };
+  let o = null;
+  try {
+    const r = await fetch('/presence', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), cache: 'no-store' });
+    presFailed = !r.ok; if (r.ok) o = await r.json();
+  } catch (e) { presFailed = true; }
+  presBusy = false;
+  if (!o) { if (modal === 'friends' && !busy) render(); return; }
+  friendStatus = o.friends || {}; friendChecked = true;
+  let renamed = false;
+  for (const f of friends) { const e = friendStatus[f.code]; if (e && e.name && e.name !== f.name) { f.name = e.name; renamed = true; } }
+  if (renamed) storeFriends();
+  // Someone asked to watch: open the spectator room and say where it is straight away, not in 30 s.
+  if (o.asks && o.asks.length && canBeWatched()) { const fresh = !spect; openSpect(); if (fresh && spect) setTimeout(() => presenceTick(true), 50); }
+  if (watch && !watch.net) {
+    const e = friendStatus[watch.code];
+    if (e && e.room) connectWatch(e.room);
+    else if (e && !e.open) { leaveWatch(`${watch.name} isn\u2019t letting friends watch right now.`); return; }
+    else if (Date.now() - watch.asked > WATCH_ASK_MS) { leaveWatch(`${watch.name} didn\u2019t answer. They may be away from the game.`); return; }
+  }
+  if (modal === 'friends' && !busy) render();
+}
+
+// The watched side: a spectator room this game hosts, separate from any co-op room, with everyone watching in it.
+let spect = null; // { net, code, watchers: Map(id -> { name, seen }), quietSince, last }
+function openSpect() {
+  if (spect || !canBeWatched()) return;
+  const pre = getCoopPrefs(), code = makeCode() + makeCode();
+  const n = new Net({ role: 'host', code, relay: pre.relay, local: !pre.relay, name: playerName() || 'Someone' });
+  spect = { net: n, code, watchers: new Map(), quietSince: Date.now(), last: '' };
+  const mine = () => spect && spect.net === n;
+  const join = (m) => {
+    if (!mine() || !m || typeof m.id !== 'string' || !m.id) return;
+    const fresh = !spect.watchers.has(m.id);
+    spect.watchers.set(m.id, { name: cleanName(m.name) || 'Someone', seen: Date.now() });
+    if (!fresh) return;
+    spect.last = ''; town.resendMove(); sendWatch();
+    toast = `${spect.watchers.get(m.id).name} is watching your game.`;
+    if (!busy) render();
+  };
+  n.on('hello', join);
+  n.on('watch-beat', (m) => { const w = mine() && m && spect.watchers.get(m.id); if (w) w.seen = Date.now(); else join(m); });
+  n.on('watch-bye', (m) => dropWatcher(m && m.id));
+  n.on('watch-left', (m) => dropWatcher(m && m.id));
+}
+function dropWatcher(id) {
+  if (!spect || !spect.watchers.delete(id)) return;
+  if (!spect.watchers.size) spect.quietSince = Date.now();
+  if (!busy) render();
+}
+function closeSpect() {
+  if (!spect) return;
+  const s = spect; spect = null;
+  try { if (s.net.online) s.net.send({ t: 'watch-end' }); } catch (e) {}
+  s.net.close();
+  if (s.watchers.size && !busy) render();
+}
+// Watchers who went quiet are gone; an empty room closes after a minute.
+function spectPrune() {
+  if (!spect) return;
+  if (!spectAllowed()) { closeSpect(); return; }
+  const now = Date.now();
+  for (const [id, w] of spect.watchers) if (now - w.seen > WATCHER_STALE_MS) dropWatcher(id);
+  if (spect && !spect.watchers.size && now - spect.quietSince > SPECT_IDLE_MS) closeSpect();
+}
+// The game as watchers see it: the whole state, like a co-op friend gets, without this device's leaderboard rows and journal.
+// Sent after each redraw, and only when something changed.
+function sendWatch() {
+  if (!spect || !spect.watchers.size || watch || !state || !state.meta) return;
+  const copy = { ...state, meta: { ...state.meta, journal: undefined, board: undefined, boardOut: undefined, boardMine: undefined }, events: undefined, report: null, compare: null };
+  const s = JSON.stringify(copy);
+  if (s === spect.last) return;
+  spect.last = s;
+  spect.net.send({ t: 'state', s });
+}
+const watchChip = () => (spect && spect.watchers.size ? `<span class="chip watch-chip good" title="${esc([...spect.watchers.values()].map((w) => w.name).join(', '))} watching your game">${spect.watchers.size} watching</span>` : '');
+
+// The watching side. The watcher's own game waits in watch.saved, untouched and unsaved-over, until they leave.
+let watch = null; // { code, name, asked, net, saved, synced, tips, beat, connected }
+const WATCH_OK = new Set(['watchleave', 'watch', 'closemodal', 'sound', 'setpref', 'uipref', 'autostim', 'tip', 'scenenext', 'sceneskip', 'friendadd', 'frienddel', 'friendcopy', 'watchallow']);
+const WATCH_MODALS = new Set(['menu', 'manual', 'settings', 'friends']);
+const watchBlock = () => (net ? 'Leave the co-op room first.' : state && state.contract ? 'Finish your contract first.' : state && state.run ? 'Finish your raid first.' : '');
+function startWatch(code) {
+  const f = friends.find((x) => x.code === code);
+  if (!f || (watch && watch.code === code)) return false;
+  const why = watch ? '' : watchBlock();
+  if (why) { toast = why; return false; }
+  const saved = watch ? watch.saved : state;
+  if (watch) leaveWatch(null, true);
+  closeSpect();
+  if (!watch) writeSave(saved);
+  watch = { code, name: f.name || prettyFriend(code), asked: Date.now(), net: null, saved, synced: false, tips: { ...((saved.meta && saved.meta.tips) || {}) } };
+  inbox = []; modal = null; titleOpen = false;
+  presLast = 0; presenceTick(true);
+  return true;
+}
+function connectWatch(room) {
+  if (!watch || watch.net) return;
+  const pre = getCoopPrefs(), w = watch;
+  const n = w.net = new Net({ role: 'watch', code: room, relay: pre.relay, local: !pre.relay, name: playerName() || 'Someone', helloExtra: () => ({ id: clientId() }) });
+  w.connected = Date.now();
+  const mine = () => watch === w && w.net === n;
+  n.on('state', (m) => { if (mine()) { inbox.push(m); pumpInbox(); } });
+  n.on('fx', (m) => { if (mine()) { inbox.push(m); pumpInbox(); } });
+  n.on('pos', (m) => { if (mine()) town.setPuppet(m.gone ? null : m); });
+  n.on('mate', (m) => { if (mine()) { if (m.gone) town.setPartner(null); else town.setPartner(m); } });
+  n.on('watch-end', () => { if (mine()) leaveWatch(`${w.name} stopped sharing their game.`); });
+  n.on('room-full', () => { if (mine()) leaveWatch(`${w.name}\u2019s game has all the watchers it can take.`); });
+  n.on('status', () => { if (mine() && !busy) render(); });
+  w.beat = setInterval(() => {
+    if (!mine()) return;
+    if (n.online) n.send({ t: 'watch-beat', id: clientId() });
+    // The friend's game went away (closed, reloaded): give it half a minute to come back.
+    if (w.synced && !n.peer) { w.lostAt = w.lostAt || Date.now(); if (Date.now() - w.lostAt > 30000) { leaveWatch(`Lost ${w.name}\u2019s game.`); return; } } else w.lostAt = 0;
+    if (!w.synced && Date.now() - w.connected > WATCH_SYNC_MS) leaveWatch(`Couldn\u2019t reach ${w.name}\u2019s game.`);
+  }, 5000);
+}
+function leaveWatch(why, quiet) {
+  if (!watch) return;
+  const w = watch; watch = null;
+  clearInterval(w.beat);
+  if (w.net) { try { if (w.net.online) w.net.send({ t: 'watch-bye', id: clientId() }); } catch (e) {} w.net.close(); }
+  inbox = []; town.setPuppet(null); town.setPartner(null);
+  state = w.saved; lastHtml = ''; lookKey = ''; modal = null; stimPrompt = false;
+  if (why) toast = why;
+  presLast = 0;
+  if (!quiet) render();
+}
+// Each copy of the friend's game replaces the last. The watcher keeps their own dismissed tips; nothing here is ever saved.
+function applyWatchState(m) {
+  if (!watch) return;
+  const incoming = JSON.parse(m.s);
+  const prevRun = watch.synced && state && state.run, prevEnemy = prevRun && prevRun.enemy;
+  Object.assign(incoming.meta, { journal: [], board: [], boardOut: [], boardMine: [], tips: watch.tips });
+  state = incoming;
+  const nextRun = state.run;
+  if (prevRun && nextRun && stage.runRef === prevRun) stage.runRef = nextRun;
+  if (prevEnemy && nextRun && nextRun.enemy && stage.enemyRef === prevEnemy && prevEnemy.id === nextRun.enemy.id && prevRun.room === nextRun.room && prevRun.sector === nextRun.sector) stage.enemyRef = nextRun.enemy;
+  watch.synced = true; titleOpen = false;
+  render();
+}
+function watchBanner() {
+  const lost = watch.synced && watch.net && !watch.net.peer;
+  return `<div class="coop-banner watch-banner" role="status"><span>Watching <b>${esc(watch.name)}</b>${lost ? ' \u00B7 connection lost, waiting\u2026' : ''}</span><button class="btn" data-a="watchleave">Leave</button></div>`;
+}
+function watchWaitScreen() {
+  const n = esc(watch.name);
+  const msg = !watch.net ? `Asking ${n}\u2019s game to let you in. This can take up to half a minute.` : !watch.synced ? `Connecting to ${n}\u2019s game\u2026`
+    : state.screen === 'death' ? `${n}\u2019s operative has fallen. You\u2019ll see the next one as soon as they\u2019re made.` : `${n} is making a new operative.`;
+  return `<section class="panel watch-wait" style="max-width:520px;margin:32px auto;display:grid;gap:12px"><span class="label">Spectating</span><h2>Watching ${n}</h2>
+    <p class="muted">${msg}</p><div><button class="btn" data-a="watchleave">Leave</button></div></section>`;
+}
+function friendLine(f) {
+  const e = friendStatus[f.code];
+  if (!PRESENCE_ON) return '<span class="muted">Online status shows in the online game.</span>';
+  if (e === undefined) return `<span class="muted">${friendChecked ? 'Offline' : 'Checking\u2026'}</span>`;
+  if (!e) return '<span class="muted">Offline</span>';
+  const w = e.where || {}, where = w.screen === 'raid' ? `On a raid: ${esc(w.map || 'somewhere')}, sector ${w.sector || 1}` : w.screen === 'town' ? 'In town' : w.screen === 'watching' ? 'Watching a friend' : 'In the menus';
+  const op = e.op ? ` \u00B7 ${esc(e.op.name)}${e.op.cls ? `, ${esc(e.op.cls)}` : ''} Lv ${e.op.level}` : '';
+  return `<span class="good-text">${where}</span>${op}${e.coop === 'host' ? ' \u00B7 hosting co-op' : e.coop === 'guest' ? ' \u00B7 in a friend\u2019s co-op' : ''}${e.watchers ? ` \u00B7 ${e.watchers} watching` : ''}`;
+}
+const watchable = (e) => !!(e && e.open && e.op && ['town', 'raid'].includes((e.where || {}).screen) && e.coop !== 'guest');
+function friendsView() {
+  const me = friendMe.code, block = watch ? '' : watchBlock();
+  const row = (f) => {
+    const e = friendStatus[f.code], on = watch && watch.code === f.code;
+    const btn = on ? '<span class="chip good">Watching</span>' : watchable(e) ? `<button class="btn primary" data-a="watch" data-v="${f.code}" ${block ? `disabled title="${esc(block)}"` : ''}>Watch</button>` : '';
+    const del = `<button class="btn ${friendDelArm === f.code ? 'danger' : 'quiet'}" data-a="frienddel" data-v="${f.code}">${friendDelArm === f.code ? 'Tap again' : 'Remove'}</button>`;
+    return `<div class="friend-row"><div class="fr-info"><div><b>${esc(f.name || 'New friend')}</b> <span class="muted small num">${prettyFriend(f.code)}</span></div><div class="small">${friendLine(f)}</div></div><div class="fr-btns">${btn}${del}</div></div>`;
+  };
+  return `<div class="modal-wrap" data-a="closemodal"><div class="modal sheet friends-modal" role="dialog" aria-modal="true" aria-label="Friends">
+    <div class="pop-head"><h2>Friends</h2><button class="tool close" data-a="closemodal" aria-label="Close">Close</button></div>
+    <div class="settings">
+    ${watch ? `<div class="set-row"><span>Watching <b>${esc(watch.name)}</b></span><button class="btn" data-a="watchleave">Leave</button></div>` : ''}
+    <div class="set-row"><span>Your friend code</span><span class="btnrow"><b class="num friend-code">${me ? prettyFriend(me) : 'Making one\u2026'}</b><button class="btn" data-a="friendcopy" ${me ? '' : 'disabled'}>${appBridge('share') ? 'Share' : 'Copy'}</button></span></div>
+    <label class="set-row" for="friend-code"><span>Add a friend</span><span class="btnrow"><input id="friend-code" class="text" maxlength="9" placeholder="ABCD-EFGH" autocapitalize="characters" autocomplete="off" spellcheck="false" style="width:11ch;text-transform:uppercase"><button class="btn primary" data-a="friendadd">Add</button></span></label>
+    <div class="set-row"><span>Let friends watch my game</span><button class="btn" data-a="watchallow" aria-pressed="${allowWatch()}">${allowWatch() ? 'On' : 'Off'}</button></div>
+    ${spect && spect.watchers.size ? `<p class="small good-text">Watching you now: ${esc([...spect.watchers.values()].map((w) => w.name).join(', '))}</p>` : ''}
+    <h3>Your friends${friends.length ? ` (${friends.length})` : ''}</h3>
+    <div class="friends">${friends.length ? friends.map(row).join('') : '<p class="muted">No friends yet. Swap codes with someone and add theirs here.</p>'}</div>
+    ${presFailed && PRESENCE_ON ? '<p class="small danger-text">Couldn\u2019t reach the server. Trying again.</p>' : ''}
+    <p class="muted small">Friends see your player name, your operative and whether you\u2019re in town or on a raid. Anyone watching sees your game but can\u2019t touch it.</p>
+    </div></div></div>`;
+}
+function addFriend() {
+  const raw = ((document.getElementById('friend-code') || {}).value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (raw.length !== 8 || [...raw].some((ch) => !FRIEND_ALPHABET.includes(ch))) { toast = 'A friend code is 8 letters and numbers, like ABCD-EFGH.'; return false; }
+  if (raw === friendMe.code) { toast = 'That\u2019s your own code. Send it to a friend.'; return false; }
+  if (friends.some((f) => f.code === raw)) { toast = 'Already on your list.'; return false; }
+  if (friends.length >= FRIENDS_MAX) { toast = `Up to ${FRIENDS_MAX} friends.`; return false; }
+  friends.push({ code: raw, name: '' }); storeFriends();
+  toast = `Added ${prettyFriend(raw)}.`;
+  presLast = 0; setTimeout(() => presenceTick(true), 0);
+  return true;
+}
+setInterval(() => { presenceTick(false); spectPrune(); }, 1000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') presLast = 0; });
+if (location.hostname === 'localhost') globalThis.cinderFriends = { spect: () => spect, watch: () => watch, friends: () => friends, tick: () => presenceTick(true) }; // for tests/spectate.cjs
 
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const bar = (v, max, cls = '') => `<div class="bar ${cls} ${v / max < 0.3 ? 'low' : ''}"><i style="width:${Math.max(0, Math.min(100, (v / max) * 100))}%"></i></div>`;
@@ -2758,7 +3026,7 @@ function statusStrip() {
   const mateStat = mate ? (() => { const mx = E.statsOf(state.meta, mate).maxHp; return `<div class="stat hp mate-stat" title="${esc(mate.name)}: ${Math.max(0, mate.hp)} of ${mx} HP, ${mate.items.stim} stims"><span class="label">${esc(mate.name.split(' ')[0])}</span><span class="v">${mate.dead ? 'Dead' : mate.downed ? 'Down' : `${Math.max(0, mate.hp)} / ${mx}`} <span class="pm-stim">${ico('item:stim', 'sm')}\u00D7${mate.items.stim}</span></span>${bar(Math.max(0, mate.hp), mx)}</div>`; })() : '';
   return `<header class="status ${mate ? 'has-mate' : ''}">
     <div class="head-top"><div class="brand">${esc(S.title)}</div>${headerTools()}</div>
-    <div class="head-stats">${coopChip()}
+    <div class="head-stats">${coopChip()}${watchChip()}
     <div class="stat name-stat"><span class="label">Operative ${c.number} \u00B7 Lv ${c.level}</span><span class="v">${esc(c.name)}</span></div>
     <div class="stat hp"><span class="label">HP</span><span class="v">${Math.max(0, c.hp)} / ${st.maxHp}</span>${bar(c.hp, st.maxHp)}</div>
     ${mateStat}
@@ -3722,8 +3990,9 @@ function modalView() {
   if (modal === 'contractres') return contractResView();
   if (modal === 'menu') return `<div class="modal-wrap" data-a="closemodal"><div class="modal menu-modal" role="dialog" aria-modal="true" aria-label="Menu">
     <div class="pop-head"><h2>Menu</h2><button class="tool close" data-a="closemodal" aria-label="Close">Close</button></div>
-    <div class="menu-grid">${isGuest() ? '' : '<button class="btn primary" data-a="mainmenu">Main menu</button><button class="btn" data-a="modal" data-v="cells">Cells</button>'}<button class="btn" data-a="modal" data-v="manual">Manual</button><button class="btn" data-a="sound">${p.muted ? 'Sound off' : 'Sound on'}</button><button class="btn" data-a="modal" data-v="board">Leaderboard</button><button class="btn" data-a="modal" data-v="feats">Achievements</button><button class="btn" data-a="modal" data-v="codex">${codexLabel()}</button><button class="btn" data-a="modal" data-v="settings">Settings</button>${devOn && !isGuest() ? '<button class="btn" data-a="modal" data-v="dev">Dev</button>' : ''}</div></div></div>`;
+    <div class="menu-grid">${isGuest() ? '' : '<button class="btn primary" data-a="mainmenu">Main menu</button><button class="btn" data-a="modal" data-v="cells">Cells</button>'}<button class="btn" data-a="modal" data-v="manual">Manual</button><button class="btn" data-a="sound">${p.muted ? 'Sound off' : 'Sound on'}</button><button class="btn" data-a="modal" data-v="friends">Friends</button><button class="btn" data-a="modal" data-v="board">Leaderboard</button><button class="btn" data-a="modal" data-v="feats">Achievements</button><button class="btn" data-a="modal" data-v="codex">${codexLabel()}</button><button class="btn" data-a="modal" data-v="settings">Settings</button>${devOn && !isGuest() ? '<button class="btn" data-a="modal" data-v="dev">Dev</button>' : ''}</div></div></div>`;
   if (modal === 'cells') return cellsView();
+  if (modal === 'friends') return friendsView();
   if (modal === 'loungeres') return loungeResView();
   if (modal === 'girl') return girlView();
   if (modal === 'escape') return escapeView();
@@ -3761,6 +4030,7 @@ function modalView() {
       <section><h3>Threat and rewards</h3><p>Freeing a district reinforces the others. Free all five with one operative (Halcyon Reach last) and they escape the Cell, then go back in one threat level higher: every district locks again and starts from sector 1, enemies hit far harder, each level adds its own rule, and gear can be worked two levels further (+10 at Threat I, +12 at II...). There\u2019s no going back down: only a new operative starts at Standard. Reaching Threat I also opens ten more training ranks and new cell levels. Sectors far below your level pay less, and a boss you\u2019ve beaten pays half XP.</p></section>
       <section><h3>Drones</h3><p>Every operative flies one drone, and you can switch type for free in town. It can\u2019t be shot down. Clearing a sector has a 10% chance of knocking it offline until you repair it in town. Spend Resolve on the Drone tab of the safehouse: ranks 3 and 5 add abilities, and ranks stay with your cell for every operative who picks that type.</p></section>
       <section><h3>Co-op</h3><p>Host from <b>Settings</b> and share the link. <b>Auto-accept</b> (top of the screen) makes your votes and ready-ups follow your partner; if you both turn it on, the raid plays itself at half speed. You keep your own operative. Vote on doors, pick your own loot, and press <b>E</b> by your partner to trade. At 0 HP you go down and can be revived. If one of you dies, the other must win or run; if both fall, it\u2019s a wipe.</p></section>
+      <section><h3>Friends</h3><p>Open <b>Friends</b> from the Menu, share your friend code and add theirs. When a friend is playing, tap <b>Watch</b> to see their game live, town and fights; you can\u2019t touch anything, and <b>Leave</b> takes you back to yours. Turn off <b>Let friends watch</b> there to keep your game to yourself.</p></section>
       <section><h3>Saves</h3><p>Your cell backs up to the cloud. Enter its code from <b>Settings</b> on any device. Anyone with the code can load it, so keep it private.</p></section>
       <section><h3>Controls</h3><p class="keys"><span><b>WASD</b> walk</span><span><b>E</b> talk</span><span><b>M B C G</b> town menus</span><span><b>X</b> battle mode</span><span><b>O</b> settings</span><span><b>A</b> shoot</span><span><b>F</b> strike</span><span><b>D</b> defend</span><span><b>S</b> stim</span><span><b>R</b> run</span><span><b>Q W E T</b> skills</span><span><b>2 3 4</b> items</span><span><b>1 2</b> doors</span><span><b>Enter</b> continue</span><span><b>Esc</b> close</span></p></section>
     </div>` : `
@@ -3794,6 +4064,7 @@ function modalView() {
         <div class="set-row"><span>Host a game${state.char ? '' : ' (build an operative first)'}</span><button class="btn primary" data-a="coophost" ${state.char ? '' : 'disabled'}>Host</button></div>
         <label class="set-row" for="coop-code"><span>Join with a code</span><span class="btnrow"><input id="coop-code" class="text" maxlength="8" placeholder="CODE" style="width:7ch;text-transform:uppercase"><button class="btn" data-a="coopjoin">Join</button></span></label>
       </div>`}
+      <div class="set-row"><span>Friends and watching their games</span><button class="btn" data-a="modal" data-v="friends">Friends</button></div>
       <h3>Cloud save</h3>
       ${cloudSection()}
        <details class="dev-fold" ${devOn ? 'open' : ''}><summary class="muted small">Developer</summary>
@@ -4442,17 +4713,25 @@ function trapTab(ev) {
 function render() {
   flushStats();
   try { if (state && state.meta) { const night = (state.meta.stats && state.meta.stats.raids) || 0; town.setLineup(loungeLineup().map((g) => ({ id: g.id, name: g.name, greet: g.greet && g.greet.length ? g.greet[(night + g.id.length) % g.greet.length] : '' }))); } } catch (e) {}
-  if (state && state.contract && !state.run) finishContract();
+  if (state && state.contract && !state.run && !watch) finishContract();
   if (state && isHost() && state.guestReady && !state.char2) { state.guestReady = false; state.hostWants = null; } // no operative, nobody to be ready
-  if (state && state.meta && !isGuest()) state.playerName = playerName(); // stamped on this device's leaderboard rows
+  if (state && state.meta && !isGuest() && !watch) state.playerName = playerName(); // stamped on this device's leaderboard rows
   // The escape screen waits until the raid is over and the operative is home.
   if (state && state.escape && (!state.char || state.escape.name !== state.char.name)) state.escape = null;
-  if (state && state.escape && !state.run && state.screen === 'town' && !modal && !state.popup && !titleOpen && !isGuest()) modal = 'escape';
+  if (state && state.escape && !state.run && state.screen === 'town' && !modal && !state.popup && !titleOpen && !isGuest() && !watch) modal = 'escape';
   syncUnlocks();
   if (!appReadySent) { appReadySent = true; const r = appBridge('ready'); if (r) requestAnimationFrame(() => setTimeout(() => { try { r.postMessage(1); } catch (e) {} }, 80)); }
   if (isGuest() && (!hostSynced || (!state.char && home && home.char))) {
     lastHtml = '';
     document.getElementById('app').innerHTML = coopBanner() + joiningScreen() + modalView() + (toast ? `<div class="toast" role="status">${esc(toast)}</div>` : '');
+    toast = null;
+    return;
+  }
+  // Watching a friend: until their game arrives, and while they have no operative, a holding screen.
+  if (watch && (!watch.synced || !state.char || ['create', 'intro', 'death'].includes(state.screen))) {
+    lastHtml = ''; lastScreen = null;
+    document.getElementById('app').classList.remove('watching');
+    document.getElementById('app').innerHTML = watchWaitScreen() + modalView() + (toast ? `<div class="toast" role="status">${esc(toast)}</div>` : '');
     toast = null;
     return;
   }
@@ -4480,6 +4759,9 @@ function render() {
     if (state.screen === 'death') state.outcome = state.coopFallen.record;
     if (state.screen === 'create' && !state.draft) state.draft = localDraft || (localDraft = E.newDraft(state.meta, rng));
     if (!state.run && ['combat', 'victory', 'event', 'sectorClear', 'route', 'room', 'perk', 'loot'].includes(state.screen)) state.screen = 'town';
+  } else if (watch) {
+    // A watcher shows the friend's game as it is: no fixing it up here.
+    if (!state.run && ['combat', 'victory', 'event', 'sectorClear', 'route', 'room', 'perk', 'loot'].includes(state.screen)) state.screen = 'town';
   } else {
   // Recover from inconsistent saves instead of rendering a blank page.
   if (!state.char && !['intro', 'create'].includes(state.screen)) { state.screen = 'create'; if (!state.draft) state.draft = E.newDraft(state.meta, rng); }
@@ -4498,7 +4780,7 @@ function render() {
   if (state.sharedToast) { toast = state.sharedToast; state.sharedToast = null; A.play('buy'); if (isHost()) guestToast = toast; }
   if (state.contractDone) { toast = `Contract complete: ${state.contractDone}`; state.contractDone = null; A.play('perk'); if (isHost()) guestToast = toast; }
   if (state.featUnlocks && state.featUnlocks.length) { const u = state.featUnlocks; toast = `Achievement: ${u.slice(0, 2).map((x) => `${x.name} ${E.ROMAN[x.tier - 1]} (${x.text}${x.resolve ? `, +${x.resolve} ${S.meta}` : ''})`).join(' \u00B7 ')}${u.length > 2 ? ` and ${u.length - 2} more` : ''}`; state.featUnlocks = null; A.play('perk'); if (isHost()) guestToast = toast; }
-  if (!isGuest() && state.meta && !titleOpen) { const fresh = E.codexFresh(state); if (fresh.length) { const note = `Codex: ${fresh[0].title}${fresh.length > 1 ? ` and ${fresh.length - 1} more` : ''}`; toast = toast ? `${toast} \u00B7 ${note}` : note; A.play('perk'); if (isHost()) guestToast = toast; } }
+  if (!isGuest() && !watch && state.meta && !titleOpen) { const fresh = E.codexFresh(state); if (fresh.length) { const note = `Codex: ${fresh[0].title}${fresh.length > 1 ? ` and ${fresh.length - 1} more` : ''}`; toast = toast ? `${toast} \u00B7 ${note}` : note; A.play('perk'); if (isHost()) guestToast = toast; } }
   sceneSync();
   // Keep the page where it was: scroll positions of menus and the page, and the focused button, survive the rebuild.
   // Inside a shop or menu, a message floats instead of joining the page: anything inline pushes the buttons out from under the cursor.
@@ -4514,6 +4796,7 @@ function render() {
   const where = /id="coop-where">([^<]*)/.exec(html), bare = html.replace(/(id="coop-where">)[^<]*/, '$1');
   if (bare !== lastHtml || state.run || !app.firstElementChild) { app.innerHTML = html; lastHtml = bare; } // in a raid the stage needs every rebuild
   else if (where) { const w = document.getElementById('coop-where'); if (w && w.textContent !== where[1]) w.innerHTML = where[1]; }
+  app.classList.toggle('watching', !!watch);
   toast = null;
   mountTitle();
   animatePayout();
@@ -4550,7 +4833,7 @@ function render() {
     town.spawnShift = net ? (isGuest() ? 14 : -14) : 0;
     { const pc = net ? E.charAt(state, 1 - myIdx()) : null; if (town.partner) town.partner.name = pc ? pc.name.split(' ')[0] : (net && net.peerName) || ''; town.mateName = pc ? pc.name.split(' ')[0] : ''; }
     if (lastScreen !== 'town') town.spawnAt(['create', 'intro', 'death'].includes(lastScreen) || !lastScreen ? 'safehouse' : lastScreen === 'ending' ? 'safehouse' : 'terminal');
-    town.setBlocked(!!state.popup || !!modal || !!state.trade || !!(state.char && state.char.payout));
+    town.setBlocked(!!watch || !!state.popup || !!modal || !!state.trade || !!(state.char && state.char.payout));
   }
   if (state.screen !== 'town') state.popup = null;
   if (net && net.peer) {
@@ -4592,7 +4875,7 @@ function render() {
         const info = D.BOSS_INFO[r.enemy.id] || {};
         const scene = r.enemy.intro;
         const wait = res.artWait; res.artWait = null;
-        Promise.resolve(wait).then(() => stage.bossIntro({ name: r.enemy.name, epithet: info.epithet, line: r.enemy.line || (D.ENEMIES[r.enemy.id] || {}).line, lines: scene && scene.beats, onFull: () => { heard(); if (scene && scene.first && !isGuest()) { E.markSceneSeen(state, scene.key); save(); } }, label: `${map.name} \u00B7 Sector ${r.sector}` })).catch((e) => console.error('boss intro failed', e)).then(() => { heard(); busy = false; document.getElementById('app').classList.remove('busy'); scheduleAuto(); drainGuest(); });
+        Promise.resolve(wait).then(() => stage.bossIntro({ name: r.enemy.name, epithet: info.epithet, line: r.enemy.line || (D.ENEMIES[r.enemy.id] || {}).line, lines: scene && scene.beats, onFull: () => { heard(); if (scene && scene.first && !isGuest() && !watch) { E.markSceneSeen(state, scene.key); save(); } }, label: `${map.name} \u00B7 Sector ${r.sector}` })).catch((e) => console.error('boss intro failed', e)).then(() => { heard(); busy = false; document.getElementById('app').classList.remove('busy'); scheduleAuto(); drainGuest(); });
       }
     }
     // Any other fight whose art is still coming: no moves until it's in, or the wait runs out.
@@ -4606,6 +4889,7 @@ function render() {
   if (log) log.scrollTop = log.scrollHeight;
   save();
   broadcast();
+  sendWatch();
   scheduleAuto();
 }
 
@@ -4711,7 +4995,7 @@ function coopAutoTick() {
 }
 function coopAutoKick() { if (coopTimer || !coopAutoOn) return; coopTimer = setTimeout(coopAutoTick, bothAuto() ? 1600 : 900); }
 function scheduleAuto() {
-  if (autoTimer || stimPrompt || !stage.auto || busy || modal || titleOpen || !state || state.screen !== 'combat' || !state.run || !state.run.enemy) return;
+  if (autoTimer || watch || stimPrompt || !stage.auto || busy || modal || titleOpen || !state || state.screen !== 'combat' || !state.run || !state.run.enemy) return;
   autoTimer = setTimeout(() => {
     autoTimer = null;
     if (stage.auto && !busy && !modal && !titleOpen && state.screen === 'combat' && state.run && state.run.enemy && (!E.isCoop(state) || state.run.actor === myIdx()) && !autoStimPause() && !autoSafetyStop() && !autoElitePause()) fight(E.autoAction(state, autoOpts()), isGuest() ? 1 : 0);
@@ -4730,7 +5014,9 @@ const stage = new Stage();
 const town = new Town();
 town.onPartner = () => { if (state.screen !== 'town' || modal || state.popup || state.trade || !E.isCoop(state)) return; giveArm = null; state.popup = 'partner'; state.notice = null; render(); };
 town.onMove = (p) => {
-  if (!net || !net.peer || state.screen !== 'town' || !state.char) return;
+  if (state.screen !== 'town' || !state.char) return;
+  if (spect && spect.watchers.size && !watch) spect.net.send({ t: 'pos', ...p });
+  if (!net || !net.peer) return;
   townSent = true;
   net.send({ t: 'pos', ...p, menu: state.popup || null });
 };
@@ -4781,7 +5067,7 @@ function lastTurnChip() {
   return `<span class="chip ph bad last-turn" data-tip="${esc(lines.map((l) => l.text).join(' '))}">Last turn \u2212${lost}</span>`;
 }
 async function fight(v, who = 0) {
-  if (busy || awaitingHost || !state.run || !state.run.enemy) return;
+  if (watch || busy || awaitingHost || !state.run || !state.run.enemy) return;
   turnMark = { text: (state.log[state.log.length - 1] || {}).text || '', hp: state.char.hp };
   coachSeen();
   if (isGuest()) {
@@ -4807,6 +5093,7 @@ async function fight(v, who = 0) {
   delete state.events;
   // The friend sees the move as it happens, not after the host's animation.
   if (isHost() && net.peer) net.send({ t: 'fx', ev: events });
+  if (spect && spect.watchers.size) spect.net.send({ t: 'fx', ev: events });
   save();
   try { await stage.play(events); if (state.screen === 'death') await stage.fallHold(); } finally {
     busy = false;
@@ -4821,6 +5108,8 @@ async function fight(v, who = 0) {
 const BUY = new Set(['perkcap', 'droneswitch', 'droneup', 'droneupfree', 'dronerepair', 'dronepick', 'restock', 'respec', 'buygear', 'upgradegear', 'reroll', 'item', 'upgrade', 'implant', 'heal', 'train', 'cell', 'spend', 'equipheirloom']);
 function act(a, v, k) {
   A.unlock();
+  // Watching a friend: their game is on screen to look at only. Menus, the manual and this device's settings still open.
+  if (watch && !WATCH_OK.has(a) && !(a === 'modal' && WATCH_MODALS.has(v))) { hint('You\u2019re watching. Leave to play your own game.'); A.play('denied'); return; }
   if (a === 'autostop') { stopAuto(); return; }
   if (auto) return;
   if (a === 'scenenext') return sceneNext();
@@ -4961,6 +5250,12 @@ function applyAct(a, v, k) {
     case 'emote': { const t = EMOTES[+v]; if (t && net && net.peer) { net.send({ t: 'say', text: t }); town.speak('me', t, town.player.x, town.player.y); } sfx('click'); return; }
     case 'coopjoin': { setCoopPrefs({ name: (document.getElementById('coop-name') || {}).value || '', relay: ((document.getElementById('coop-relay') || {}).value || '').trim() }); const code = ((document.getElementById('coop-code') || {}).value || '').trim().toUpperCase(); if (code.length >= 4) startCoop('guest', code, !getCoopPrefs().relay); else toast = 'Enter the room code.'; break; }
     case 'coopleave': leaveCoop(); return;
+    case 'watch': startWatch(v); sfx('door'); break;
+    case 'watchleave': leaveWatch(); sfx('door'); return;
+    case 'watchallow': friendMe.allow = !allowWatch(); storeFriendMe(); if (!friendMe.allow) closeSpect(); presLast = 0; sfx('click'); break;
+    case 'friendadd': ok = addFriend(); sfx(ok ? 'click' : 'denied'); break;
+    case 'frienddel': if (friendDelArm !== v) { friendDelArm = v; sfx('click'); break; } friendDelArm = null; friends = friends.filter((f) => f.code !== v); storeFriends(); sfx('click'); break;
+    case 'friendcopy': if (friendMe.code) shareOrCopy(`Add me as a friend in Cinder Cell. My friend code: ${prettyFriend(friendMe.code)}`, 'Friend code copied.'); sfx('click'); break;
     case 'coopready': state.guestReady = !state.guestReady; if (net) net.send({ t: 'ready', on: state.guestReady, auto: !!coopReadyAuto }); sfx('click'); break;
     case 'newspage': newsPage = +v; sfx('click'); break;
     case 'mutator': ok = E.toggleMutator(state, v); sfx('click'); break;
@@ -4980,7 +5275,7 @@ function applyAct(a, v, k) {
     case 'cellgo': ok = switchCell(+v); if (ok) sfx('door'); break;
     case 'celldel': if (cellDelArm !== +v) { cellDelArm = +v; sfx('click'); break; } cellDelArm = null; ok = deleteCell(+v); if (ok) { toast = `Cell ${+v + 1} erased.`; sfx('denied'); } break;
     case 'newsok': newsPage = 0; try { localStorage.setItem(NEWS_KEY, NEWS_ID); } catch (e) {} modal = null; sfx('click'); break;
-    case 'modal': modal = v; if (v === 'board') loadBoard(); if (v === 'bar' && state.meta) (state.meta.guide = state.meta.guide || {}).lantern = true; sfx('click'); break;
+    case 'modal': modal = v; if (v === 'board') loadBoard(); if (v === 'friends') { friendDelArm = null; ensureFriendCode().then(() => { presLast = 0; presenceTick(true); if (modal === 'friends') render(); }); } if (v === 'bar' && state.meta) (state.meta.guide = state.meta.guide || {}).lantern = true; sfx('click'); break;
     case 'cardfree': { const got = CARDS.freePack(state, cardIds(), rng); ok = !!got; if (got) { lastPack = got; cardTab = 'packs'; sfx('perk'); } break; }
     case 'cardpack': { const got = CARDS.buyPack(state, cardIds(), rng); ok = !!got; if (got) { lastPack = got; sfx(got.some((k) => CARDS.rankOf(k) >= 3) ? 'coin' : 'buy'); } break; }
     case 'cardplay': { if (state.cardMatch && state.cardMatch.over) CARDS.closeMatch(state); const g = CARDS.startMatch(state, v, cardIds(), rng); ok = !!g; if (g) { lastPack = null; sfx('click'); } break; }
