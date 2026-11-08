@@ -31,7 +31,7 @@ export const PLACES = {
   depth: { yFar: 150, yNear: 384, far: 0.62, near: 1 },
   walk: {
     speed: 170, ySpeed: 0.8, near: 34, enter: 20,
-    area: [[222, 156], [300, 148], [410, 148], [490, 176], [530, 180], [548, 198], [578, 212], [478, 238], [470, 350], [604, 374], [604, 384], [118, 384], [122, 322], [160, 272], [168, 248], [192, 232], [192, 200], [200, 170]],
+    area: [[222, 156], [300, 148], [410, 148], [490, 176], [530, 180], [548, 198], [592, 226], [504, 252], [500, 352], [618, 376], [618, 384], [118, 384], [122, 322], [160, 272], [168, 248], [192, 232], [192, 200], [200, 170]],
     blocks: [],
   },
   // Checked in this order when tapped, so a box that overlaps another must come first.
@@ -44,7 +44,7 @@ export const PLACES = {
     { id: 'market', box: [28, 125, 188, 265], door: [172, 250], push: [-0.8, -0.5], sign: { x: 84, y: 118 } },
     { id: 'lantern', box: [0, 270, 140, 384], door: [122, 325], push: [-1, 0], sign: { x: 60, y: 246, text: 'The Lantern' } },
     // Club Velvet, bottom right of the square: the girls and the card table. Its facade is an overlay (town/street/club_ext.png).
-    { id: 'club', box: [478, 214, 688, 384], door: [566, 370], push: [0.4, -1], sign: { x: 548, y: 286, text: 'Club Velvet' } },
+    { id: 'club', box: [506, 240, 688, 384], door: [590, 374], push: [0.4, -1], sign: { x: 586, y: 262, text: 'Club Velvet' } },
   ],
   spots: [
     { id: 'holosign', x: 118, y: 160, r: 26, stand: [194, 222], prompt: 'read the sign', lines: ['MARROW\u2019S. OPEN. (The word CLOSED flickers underneath.)', 'The sign buzzes: NO REFUNDS. NO RECEIPTS. NO RUNNING.'] },
@@ -58,8 +58,8 @@ export const PLACES = {
   folk: [], // only people who belong to a building now
   patrol: { id: 'patrol', route: [[250, 200], [440, 190], [530, 300], [400, 360], [200, 340], [205, 260]], h: 140, lines: ['Papers.', 'Curfew\u2019s at dusk. Move along.', 'Keep walking, citizen.', 'Nothing to see. Keep moving.', 'Eyes down, citizen.', 'Did you hear something? No. You didn\u2019t.', 'This is a quiet yard. Keep it quiet.'] },
   lights: [
-    { x: 535, y: 305, r: 46, color: '#ff4fb8', kind: 'neon', a: 0.3 },
-    { x: 596, y: 352, r: 40, color: '#ff6ad5', kind: 'neon', a: 0.3 },
+    { x: 560, y: 322, r: 40, color: '#ff4fb8', kind: 'neon', a: 0.3 },
+    { x: 612, y: 362, r: 36, color: '#ff6ad5', kind: 'neon', a: 0.3 },
     { x: 344, y: 268, r: 30, color: '#ffb066', kind: 'lamp', a: 0.14 },
     { x: 118, y: 160, r: 40, color: '#4fe0d0', kind: 'neon', a: 0.2 },
     { x: 549, y: 222, r: 28, color: '#ffc27a', kind: 'lamp', a: 0.28 },
@@ -73,7 +73,7 @@ export const PLACES = {
   steam: [{ x: 344, y: 262, big: true }, { x: 88, y: 316 }],
   embers: null,
   // Painted pieces laid over the yard picture: the club's front and the vent grate (each skipped until its file loads).
-  overlays: [{ key: 'club_ext', x: 470, y: 200 }, { key: 'vent', x: 314, y: 246 }],
+  overlays: [{ key: 'club_ext', x: 506, y: 232, s: 0.84 }, { key: 'vent', x: 314, y: 246 }],
   puddles: [{ x: [270, 340], y: 300 }, { x: [430, 500], y: 345 }, { x: [230, 280], y: 230 }, { x: [500, 540], y: 250 }],
   // The E-Girl Room, through the curtain at the back of the Lantern: tonight's three girls stand at the slots; she walks you
   // out through the curtain on the right. Leaving by the left door goes back into the Lantern.
@@ -334,7 +334,7 @@ export class Town {
     loadImg(`${ART}${key}.png`).then((im) => { this.art[key] = im ? 'ok' : 'failed'; if (im) this.bake(key, im); });
   }
   bake(key, im) {
-    if (key === 'yard' && im) for (const o of PLACES.overlays || []) loadImg(`${ART}${o.key}.png`).then((ov) => { if (ov && this.baked.yard) { const g = this.baked.yard.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(ov, o.x, o.y); } });
+    if (key === 'yard' && im) for (const o of PLACES.overlays || []) loadImg(`${ART}${o.key}.png`).then((ov) => { if (ov && this.baked.yard) { const g = this.baked.yard.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(ov, o.x, o.y, Math.round(ov.width * (o.s || 1)), Math.round(ov.height * (o.s || 1))); } });
     const c = makeCanvas(VIEW_W, VIEW_H), g = c.getContext('2d');
     if (im) g.drawImage(im, 0, 0, VIEW_W, VIEW_H);
     else if (key === 'yard') paintYardPlaceholder(g);
