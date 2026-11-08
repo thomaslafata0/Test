@@ -21,7 +21,7 @@ export function getLastRoom() { try { return JSON.parse(localStorage.getItem('ci
 export function setLastRoom(r) { try { if (r) localStorage.setItem('cinder-cell-lastroom', JSON.stringify(r)); else localStorage.removeItem('cinder-cell-lastroom'); } catch (e) {} }
 export function setRoom(r) { try { if (r) sessionStorage.setItem(ROOM_KEY, JSON.stringify(r)); else sessionStorage.removeItem(ROOM_KEY); } catch (e) {} }
 // Identifies this tab to the relay, so a reconnect replaces its own stale socket instead of being refused as a third player.
-function clientId() {
+export function clientId() {
   try {
     let id = sessionStorage.getItem('cinder-cell-client');
     if (!id) { id = makeCode() + makeCode(); sessionStorage.setItem('cinder-cell-client', id); }
@@ -98,7 +98,8 @@ class WsTransport {
 }
 
 export class Net {
-  // role: 'host' | 'guest'. local: true for the two-tab transport.
+  // role: 'host' | 'guest' | 'watch'. A watcher only receives what the host sends (spectating; the relay takes several).
+  // local: true for the two-tab transport.
   // status: connecting | waiting (no partner yet) | connected | reconnecting | full | closed.
   constructor({ role, code, relay, local = false, name = '', helloExtra = null }) {
     this.role = role; this.code = code; this.name = name; this.local = local; this.helloExtra = helloExtra;
@@ -106,12 +107,14 @@ export class Net {
     this.peer = false; this.online = false; this.status = 'connecting';
     this.handlers = {};
     this.t = local ? new LocalTransport(code, role) : new WsTransport(relay, code, role);
-    this.t.onopen = () => { this.online = true; this.status = 'waiting'; this.emit('status'); if (role === 'guest') hello(); };
+    this.t.onopen = () => { this.online = true; this.status = 'waiting'; this.emit('status'); if (role !== 'host') hello(); };
     this.t.onlost = () => { this.online = false; this.peer = false; this.status = 'reconnecting'; this.emit('status'); };
     this.t.onmessage = (m) => {
       if (!m || !m.t) return;
+      // Watchers come and go without touching the host's partner: the host counts them from their own messages.
+      if ((m.t === 'peer-joined' || m.t === 'peer-left') && m.role === 'watch') return;
       if (m.t === 'room-full') { this.status = 'full'; this.close(); this.status = 'full'; this.emit('status'); this.emit('room-full'); return; }
-      if (m.t === 'peer-joined') { this.peer = true; this.status = 'connected'; this.emit('status'); if (role === 'guest') hello(); return; }
+      if (m.t === 'peer-joined') { this.peer = true; this.status = 'connected'; this.emit('status'); if (role !== 'host') hello(); return; }
       if (m.t === 'peer-left') { this.peer = false; this.status = 'waiting'; this.emit('status'); this.emit('peer-left'); return; }
       if (m.t === 'hello') this.peerName = m.name;
       // Anything from the other side means they're here (the two-tab transport has no relay to announce them).

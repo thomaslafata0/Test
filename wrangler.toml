@@ -4,7 +4,7 @@ compatibility_date = "2025-01-01"
 
 [assets]
 directory = "."
-run_worker_first = ["/room/*", "/save/*", "/board", "/bug", "/stat", "/contract/*", "/.well-known/*", "/apple-app-site-association"]
+run_worker_first = ["/room/*", "/save/*", "/board", "/bug", "/stat", "/presence", "/contract/*", "/.well-known/*", "/apple-app-site-association"]
 
 [[durable_objects.bindings]]
 name = "ROOMS"
@@ -50,3 +50,12 @@ class_name = "Contracts"
 [[migrations]]
 tag = "v5"
 new_sqlite_classes = ["Stats", "Contracts"]
+
+# Friends online and spectating requests. Kept in memory only (nothing is written), but the free plan still wants a SQLite class.
+[[durable_objects.bindings]]
+name = "PRESENCE"
+class_name = "Presence"
+
+[[migrations]]
+tag = "v6"
+new_sqlite_classes = ["Presence"]

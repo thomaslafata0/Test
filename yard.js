@@ -679,7 +679,7 @@ export class Town {
   update(dt) {
     const p = this.player;
     this.simT += dt;
-    if (this.interior) this.updateRoom(dt); else this.updateYard(dt);
+    if (this.puppet) this.followPuppet(dt); else if (this.interior) this.updateRoom(dt); else this.updateYard(dt);
     p.t += dt;
     this.updatePartner(dt);
     this.updateEscort(dt);
@@ -847,6 +847,21 @@ export class Town {
   }
   partnerSay(text, ms = 3200) { if (this.partner) this.partner.say = { text, until: performance.now() + ms }; }
   resendMove() { this.moveKey = ''; }
+  // Spectating: the player figure is the friend being watched, moved by what their game reports. null hands it back.
+  setPuppet(m) { this.puppet = m ? { x: m.x, y: m.y, dir: m.dir, moving: !!m.moving, scene: m.scene || 'town' } : null; }
+  followPuppet(dt) {
+    const q = this.puppet, p = this.player;
+    if (q.scene !== this.scene) {
+      if (q.scene !== 'town' && !PLACES.interiors[q.scene.slice(9)]) return;
+      this.setScene(q.scene); this.flash();
+      p.x = q.x; p.y = q.y; p.path = null; p.then = null; this.say = null; this.offer = null;
+    }
+    const dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy);
+    if (d > 320) { p.x = q.x; p.y = q.y; }
+    else if (d > 0.5) { const step = Math.min(d, Math.max(WALK.speed * 1.15, d * 6) * dt); p.x += (dx / d) * step; p.y += (dy / d) * step; }
+    if (q.dir) { p.dir = q.dir; if (q.dir === 'left' || q.dir === 'right') p.face = q.dir === 'left' ? -1 : 1; }
+    p.moving = q.moving || d > 1.5;
+  }
   // Glide toward the last reported spot, and report our own when it changes.
   updatePartner(dt) {
     const m = this.partner;
