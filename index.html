@@ -785,6 +785,11 @@ input.text:focus-visible { outline: 2px solid var(--sodium); outline-offset: 1px
 .mast-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; margin-top: 6px; } .mast { padding: 8px; border: 1px solid var(--line); border-radius: 8px; } .mast.mine { border-color: var(--sodium); }
 .mast-head { display: flex; justify-content: space-between; } .mast-lv { color: var(--sodium); letter-spacing: 1px; }
 .spec-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 6px; } .spec { display: grid; gap: 2px; text-align: left; padding: 5px 6px; border: 1px solid var(--line); border-radius: 6px; background: #0003; color: inherit; font: inherit; cursor: pointer; } .spec span { font-size: .7rem; color: var(--muted); } .spec.on { border-color: var(--sodium); background: #e8973a1c; }
+.girl-card { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; align-items: center; max-width: 620px; background: radial-gradient(80% 120% at 15% 80%, #ff4fb833, #0000 60%), var(--panel); border-color: #ff6ad588; }
+.girl-card-art { display: grid; place-items: end center; min-width: 120px; } .girl-card h2 { margin: 2px 0 6px; } .girl-card .hostess-greet { font-style: italic; color: #ffb3e6; }
+.modal.lounge-result.night { background: linear-gradient(90deg, #0b0612ee 0 52%, #0b061299), url(town/street/night.png) center / cover no-repeat, #120a18; border-color: #ff6ad588; image-rendering: pixelated; animation: night-in .9s ease-out; }
+@keyframes night-in { from { opacity: 0; filter: brightness(2.2) saturate(.4); } to { opacity: 1; filter: none; } }
+@media (max-width: 560px), (max-height: 500px) { .girl-card { grid-template-columns: 1fr; } .girl-card-art .hostess { height: 140px !important; width: auto !important; } }
 .cos-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px; }
 .cos-row { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; } .cos-row b { flex: 1; font-size: .88rem; } .cos-row .muted { flex: 1; }
 .wardrobe { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: start; } .wardrobe .cos-row { margin-bottom: 4px; }
@@ -1938,7 +1943,7 @@ function masteryView() {
     const ms = E.masteryOf(m, b.id), pct = ms.next ? Math.round(100 * (ms.xp - ms.prev) / (ms.next - ms.prev)) : 100, sp = D.SPECS[b.id], pick = (m.specs || {})[b.id];
     const specs = ms.level >= 2 && sp ? `<div class="spec-pick">${sp.map((x, i) => `<button class="spec ${pick === i ? 'on' : ''}" data-a="pickspec" data-v="${b.id}:${i}" ${guest || state.run ? 'disabled' : ''} aria-pressed="${pick === i}"><b>${esc(x.name)}</b><span>${esc(x.text)}</span></button>`).join('')}</div>` : '';
     return `<div class="mast ${b.id === c.background ? 'mine' : ''}"><div class="mast-head"><b>${esc(b.name)}</b><span class="mast-lv">${'&#9733;'.repeat(ms.level)}${'&#9734;'.repeat(5 - ms.level)}</span></div>
-      <div class="goal-bar"><i style="width:${pct}%"></i></div><span class="muted small">${ms.next ? `${ms.xp} / ${ms.next} · next: ${esc(E.MASTERY_PERKS[ms.level])}` : 'Mastered'}</span>${specs}</div>`;
+      <div class="goal-bar"><i style="width:${pct}%"></i></div><span class="muted small">${ms.next ? `${ms.xp} / ${ms.next} \u00b7 next: ${esc(E.MASTERY_PERKS[ms.level])}` : 'Mastered'}</span>${specs}</div>`;
   }).join('');
   return `<details class="mastery" open><summary><span class="label">Class mastery</span> <span class="muted small">Sectors +1, bosses +3, a freed district +10. Shared by the cell.</span></summary><div class="mast-grid">${rows}</div></details>`;
 }
@@ -3517,22 +3522,22 @@ const opStrip = (id, h, flip = false) => `<div class="op-strip ${flip ? 'flip' :
 function newsView() {
   const item = (icon, title, text) => `<div class="news-item">${ico(icon, 'md')}<div><b>${title}</b><span>${text}</span></div></div>`;
   const wrap = (page, hero, body, nav) => `<div class="modal-wrap news-wrap" data-a="closemodal"><div class="modal news" role="dialog" aria-modal="true" aria-label="What's new">
-    <div class="news-hero"><div class="news-hero-text"><span class="label">New · ${page} of 2</span>${hero}</div></div>${body}<div class="btnrow news-go">${nav}</div></div></div>`;
+    <div class="news-hero"><div class="news-hero-text"><span class="label">New \u00b7 ${page} of 2</span>${hero}</div></div>${body}<div class="btnrow news-go">${nav}</div></div></div>`;
   if (newsPage === 0) {
     const sp = CT.spec('daily');
     return wrap(1, '<h2>Contracts and Mutators</h2><p>A new reason to come back every day, and a harder way to play every district.</p>',
       `<div class="news-grid">
-        ${item('room:bounty', 'Daily and weekly contracts', `Everyone plays the same raid with the same loaner operative and mutators, one attempt each, on its own leaderboard. Today: ${esc(clsName(sp.cls))}, ${sp.mutators.map(mutName).map(esc).join(' and ')}. Missions → Daily.`)}
+        ${item('room:bounty', 'Daily and weekly contracts', `Everyone plays the same raid with the same loaner operative and mutators, one attempt each, on its own leaderboard. Today: ${esc(clsName(sp.cls))}, ${sp.mutators.map(mutName).map(esc).join(' and ')}. Missions \u2192 Daily.`)}
         ${item('room:elite', 'Mutators', 'Pick handicaps before a raid, like Hardened, Glass Jaw or One Way Out, for extra score and Resolve. Open once your cell frees a district.')}
-        ${item('room:boss', 'Season goals', 'A list of goals for the season that pay Resolve and cosmetics you can’t buy. Missions → Season.')}
+        ${item('room:boss', 'Season goals', 'A list of goals for the season that pay Resolve and cosmetics you can\u2019t buy. Missions \u2192 Season.')}
         ${item('perk:loaded', 'Relics', 'Bosses sometimes offer a relic: one of a kind, and it changes how you play. Echo Chamber, Mirror Plate, Red Thirst, Loaded Die and four more.')}
       </div>`,
       '<button class="btn" data-a="newsok">Skip</button><button class="btn primary big" data-a="newspage" data-v="1">Next</button>');
   }
   return wrap(2, '<h2>Mastery, the Hideout and more</h2><p>Every class levels up, and your credits finally have somewhere to go.</p>',
     `<div class="news-grid">
-      ${item('skill:barrier', 'Class mastery', 'Each class levels up for the cell as you play it: more HP and damage, an extra stim, a mastery dye, and at level 2 a choice of two specialisations. Character → Record.')}
-      ${item('room:rest', 'The Hideout', 'Furnish the cell’s basement, buy dyes for your operative’s outfit, and card backs and felts for Lantern Hearts.')}
+      ${item('skill:barrier', 'Class mastery', 'Each class levels up for the cell as you play it: more HP and damage, an extra stim, a mastery dye, and at level 2 a choice of two specialisations. Character \u2192 Record.')}
+      ${item('room:rest', 'The Hideout', 'Furnish the cell\u2019s basement, buy dyes for your operative\u2019s outfit, and card backs and felts for Lantern Hearts.')}
       ${item('room:fight', 'New enemy moves', 'Garrison guards call for backup, Foundry crews fling molten slag, Detention wardens swing shackles, and Port spotters light flares for the snipers.')}
       ${item('item:stim', 'First steps', 'New cells get a short checklist that pays Resolve as you learn the ropes. Fewer crashes on iOS, too.')}
     </div>`,
@@ -3552,6 +3557,7 @@ function modalView() {
     <div class="menu-grid">${isGuest() ? '' : '<button class="btn primary" data-a="mainmenu">Main menu</button><button class="btn" data-a="modal" data-v="cells">Cells</button>'}<button class="btn" data-a="modal" data-v="manual">Manual</button><button class="btn" data-a="sound">${p.muted ? 'Sound off' : 'Sound on'}</button><button class="btn" data-a="modal" data-v="board">Leaderboard</button><button class="btn" data-a="modal" data-v="feats">Achievements</button><button class="btn" data-a="modal" data-v="codex">${codexLabel()}</button><button class="btn" data-a="modal" data-v="settings">Settings</button>${devOn && !isGuest() ? '<button class="btn" data-a="modal" data-v="dev">Dev</button>' : ''}</div></div></div>`;
   if (modal === 'cells') return cellsView();
   if (modal === 'loungeres') return loungeResView();
+  if (modal === 'girl') return girlView();
   if (modal === 'board') return boardView();
   if (modal === 'feats') return featsView();
   if (modal === 'codex') return codexView();
@@ -3869,16 +3875,30 @@ function walkOutBack(id, r) {
   const g = D.LOUNGE.girls.find((x) => x.id === id) || {}, line = g.walk && g.walk.length ? g.walk[Math.floor(Math.random() * g.walk.length)] : '';
   loungeResult = { ...r, girl: id };
   modal = null;
-  town.escort(id, line, () => { modal = 'loungeres'; render(); });
+  // The modal closes first so the yard is live again (a covered yard skips the walk), then she takes your hand.
+  render();
+  setTimeout(() => town.escort(id, line, () => { modal = 'loungeres'; render(); }), 60);
 }
 function loungeResView() {
   const r = loungeResult; if (!r) { modal = null; return ''; }
   const g = D.LOUNGE.girls.find((x) => x.id === r.girl) || { name: r.name };
-  return `<div class="modal-wrap" data-a="closemodal"><div class="modal lounge-result ${r.bad ? 'bad' : 'good'}" role="dialog" aria-modal="true" aria-label="The night with ${esc(g.name)}">
+  return `<div class="modal-wrap night-wrap" data-a="closemodal"><div class="modal lounge-result night ${r.bad ? 'bad' : 'good'}" role="dialog" aria-modal="true" aria-label="The night with ${esc(g.name)}">
     <div class="pop-head"><div class="pop-title"><span class="label">Out back of the Lantern</span><h2>A night with ${esc(g.name)}</h2></div><button class="tool close" data-a="closemodal" aria-label="Close">Close</button></div>
     <div class="lounge-res-body">${hostessArt[g.id] ? hostessFig(g, 180) : ''}<div><p>${esc(r.text)}</p><p class="${r.bad ? 'danger-text' : 'good-text'}"><b>${esc(E.favText(r.fx))}</b>${r.cured ? ` <span class="good-text">and ${esc(E.favText(r.cured))} back</span>` : ''}</p>
     <p class="muted small">${r.bad ? 'Not every night goes well.' : 'She waves you off at the door.'} It stays with this operative.</p></div></div>
     <div class="btnrow"><button class="btn primary" data-a="closemodal">Back to the yard</button></div></div></div>`;
+}
+// Her card, when you walk up to her in the back room: who she is, what tonight costs, and the choice.
+function girlView() {
+  const g = D.LOUNGE.girls.find((x) => x.id === girlPick); if (!g || !state.char) { modal = null; return ''; }
+  const c = state.char, cost = E.loungeCost(state), night = (state.meta.stats && state.meta.stats.raids) || 0;
+  const greet = g.greet && g.greet.length ? g.greet[(night + g.id.length) % g.greet.length] : '';
+  const why = c.booked ? 'The girls are booked until you\u2019ve been out on another raid.' : c.credits < cost ? `She costs ${cr(cost)} tonight. You have ${cr(c.credits)}.` : '';
+  return `<div class="modal-wrap" data-a="closemodal"><div class="modal girl-card" role="dialog" aria-modal="true" aria-label="${esc(g.name)}">
+    <div class="girl-card-art">${hostessFig(g, 220)}</div>
+    <div class="girl-card-body"><span class="label">${esc(g.tag)}</span><h2>${esc(g.name)}</h2>${greet ? `<p class="hostess-greet">\u201c${esc(greet)}\u201d</p>` : ''}<p class="muted small">${esc(g.desc)}</p>
+      <p class="small">A night leaves a permanent mark on ${esc(c.name.split(' ')[0])}: usually good, about one in three not.</p>
+      <div class="btnrow"><button class="btn primary big" data-a="lounge" data-v="${g.id}" ${why ? 'disabled' : ''}>Spend the night \u00b7 ${cr(cost)}</button><button class="btn" data-a="closemodal">Not tonight</button></div>${why ? `<p class="muted small">${esc(why)}</p>` : ''}</div></div></div>`;
 }
 function loungeView() {
   const c = state.char, L = D.LOUNGE, cost = E.loungeCost(state), last = c.booked && c.favLog && c.favLog[0], total = E.favText(c.fav);
@@ -4234,6 +4254,7 @@ function trapTab(ev) {
 
 function render() {
   flushStats();
+  try { if (state && state.meta) { const night = (state.meta.stats && state.meta.stats.raids) || 0; town.setLineup(loungeLineup().map((g) => ({ id: g.id, name: g.name, greet: g.greet && g.greet.length ? g.greet[(night + g.id.length) % g.greet.length] : '' }))); } } catch (e) {}
   if (state && state.contract && !state.run) finishContract();
   if (state && isHost() && state.guestReady && !state.char2) { state.guestReady = false; state.hostWants = null; } // no operative, nobody to be ready
   if (state && state.meta && !isGuest()) state.playerName = playerName(); // stamped on this device's leaderboard rows
@@ -4521,6 +4542,10 @@ town.onMove = (p) => {
   townSent = true;
   net.send({ t: 'pos', ...p, menu: state.popup || null });
 };
+// The E-Girl Room behind the Lantern: walking up to a girl opens her card; the lineup follows the night (loungeLineup).
+let girlPick = null;
+town.onGirl = (id) => { if (state.screen !== 'town' || modal || state.popup) return; girlPick = id; modal = 'girl'; render(); };
+town.onBack = () => { for (const g of loungeLineup()) if (!sheetOf(`girl_${g.id}`)) ensureArt(`girl_${g.id}`); };
 globalThis.cinderTown = town; // handy for debugging in the console
 globalThis.cinderGame = { state: () => state, rng: () => rng, after: () => { save(); if (isHost()) broadcast(); render(); }, stage, juice, audio: A, death: deathReveal }; // for tests/coop-wipe.cjs, tests/juice.cjs
 let lastScreen = null, lastView = '', lastHtml = '';

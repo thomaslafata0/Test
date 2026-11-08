@@ -76,13 +76,16 @@ export const PLACES = {
   steam: [{ x: 560, y: 176, big: true }, { x: 88, y: 316 }],
   embers: { x: 646, y: 340 },
   puddles: [{ x: [270, 340], y: 300 }, { x: [430, 500], y: 345 }, { x: [230, 280], y: 230 }, { x: [500, 540], y: 250 }],
+  // The E-Girl Room, through the curtain at the back of the Lantern: tonight's three girls stand at the slots; she walks you
+  // out through the curtain on the right. Leaving by the left door goes back into the Lantern.
   room: { figure: 165, floor: { wall: 256, y0: 304, y1: 328 }, speed: 170, depth: 60, margin: 6 },
   interiors: {
     terminal: { npc: { id: 'dispatcher', x: 470, h: 156 }, spawn: 130, exit: [0, 62], lights: [{ x: 344, y: 70, r: 150, color: '#9fc4ff', kind: 'lamp' }, { x: 560, y: 150, r: 70, color: '#59c7ff', kind: 'neon' }] },
     market: { npc: { id: 'marrow', x: 480, h: 160 }, spawn: 130, exit: [0, 62], lights: [{ x: 330, y: 80, r: 130, color: '#ffb066', kind: 'lamp' }, { x: 580, y: 140, r: 70, color: '#ff3d7a', kind: 'neon' }] },
     clinic: { npc: { id: 'ilse', x: 470, h: 152 }, spawn: 130, exit: [0, 62], lights: [{ x: 350, y: 66, r: 150, color: '#c8ffe6', kind: 'lamp' }] },
     safehouse: { npc: { id: 'handler', x: 470, h: 158 }, spawn: 110, exit: [0, 62], lights: [{ x: 240, y: 130, r: 120, color: '#ffc27a', kind: 'fire' }, { x: 640, y: 215, r: 50, color: '#ff9a4a', kind: 'fire' }] },
-    lantern: { npc: { id: 'keg7', x: 545, h: 150 }, also: { id: 'croupier', x: 285, h: 156, opens: 'wheel' }, spawn: 110, exit: [0, 62], lights: [{ x: 300, y: 70, r: 150, color: '#ff8a3c', kind: 'fire' }, { x: 120, y: 60, r: 80, color: '#ff4a3a', kind: 'neon' }, { x: 560, y: 110, r: 110, color: '#ffc27a', kind: 'lamp' }] },
+    lantern: { back: { x: 405, to: 'lounge' }, npc: { id: 'keg7', x: 545, h: 150 }, also: { id: 'croupier', x: 285, h: 156, opens: 'wheel' }, spawn: 110, exit: [0, 62], lights: [{ x: 300, y: 70, r: 150, color: '#ff8a3c', kind: 'fire' }, { x: 120, y: 60, r: 80, color: '#ff4a3a', kind: 'neon' }, { x: 560, y: 110, r: 110, color: '#ffc27a', kind: 'lamp' }] },
+    lounge: { npc: null, girls: [215, 365, 515], spawn: 70, exit: [0, 50], curtain: 640, parent: 'lantern', lights: [{ x: 230, y: 90, r: 130, color: '#ff4fb8', kind: 'neon' }, { x: 520, y: 90, r: 130, color: '#b44fff', kind: 'neon' }, { x: 640, y: 200, r: 80, color: '#ff8ad8', kind: 'neon' }] },
   },
 };
 
@@ -307,7 +310,7 @@ export class Town {
   async loadArt() {
     this.sprites = { shadow: softBlack() };
     this.baked = {}; this.art = {};
-    for (const key of ['yard', 'int_terminal', 'int_market', 'int_clinic', 'int_safehouse', 'int_lantern']) {
+    for (const key of ['yard', 'int_terminal', 'int_market', 'int_clinic', 'int_safehouse', 'int_lantern', 'int_lounge']) {
       this.art[key] = 'loading';
       // A slow connection gets the placeholder after a few seconds; the real picture still replaces it when it arrives.
       setTimeout(() => { if (this.art[key] === 'loading') { this.art[key] = 'failed'; this.bake(key, null); } }, 4000);
@@ -404,13 +407,29 @@ export class Town {
     this.touched = true;
     this.setScene(`interior:${door.id}`);
     const p = this.player;
-    p.x = it.spawn; p.y = MID_Y; p.dir = 'right'; p.face = it.npc.x > it.spawn ? 1 : -1; p.path = null; p.then = null; this.say = null;
+    p.x = it.spawn; p.y = MID_Y; p.dir = 'right'; p.face = !it.npc || it.npc.x > it.spawn ? 1 : -1; p.path = null; p.then = null; this.say = null;
     for (const n of [it.npc, it.also]) if (n && NPC_ART[n.id]) ensureSheet(NPC_ART[n.id]);
     const shop = SHOPS[door.id];
     // Only the freight terminal opens its menu as you walk in; everywhere else you talk to the person inside.
     if (shop && shop.auto && this.onOpen) setTimeout(() => this.onOpen(shop.opens, door.id), 180);
   }
+  // Through the Lantern's back curtain into the E-Girl Room, and back out of it.
+  enterBack() {
+    const from = this.interior; if (!from || !from.back) return;
+    play('door'); this.flash(); this.touched = true;
+    this.setScene(`interior:${from.back.to}`);
+    const it = this.interior, p = this.player;
+    p.x = it.spawn; p.y = MID_Y; p.dir = 'right'; p.face = 1; p.path = null; p.then = null; this.say = null;
+    if (this.onBack) this.onBack(from.back.to);
+  }
   exit() {
+    const was = this.interior;
+    if (was && was.parent) {
+      play('door'); this.flash();
+      this.setScene(`interior:${was.parent}`);
+      const p = this.player, back = this.interior.back; p.x = back ? back.x : 120; p.y = MID_Y; p.dir = 'down'; p.face = -1; p.path = null; p.then = null; this.say = null;
+      return;
+    }
     play('door');
     this.flash();
     const d = this.lastDoor;
@@ -481,7 +500,9 @@ export class Town {
     const offer = (d, n) => { if (d < bd) { bd = d; best = n; } };
     if (m && this.onPartner && m.scene === this.scene && Math.abs(p.x - m.x) < 50 && Math.abs(p.y - m.y) < 40) offer(Math.hypot(p.x - m.x, p.y - m.y) * 0.2, { kind: 'partner', who: m }); // walking up to each other beats whatever is nearby
     if (it) {
-      if (Math.abs(p.x - it.npc.x) < 72) offer(Math.abs(p.x - it.npc.x) * 0.5, { kind: 'npc', id: it.npc.id, x: it.npc.x, y: it.npc.y || MID_Y, opens: SHOPS[this.interiorId].opens });
+      if (it.npc && Math.abs(p.x - it.npc.x) < 72) offer(Math.abs(p.x - it.npc.x) * 0.5, { kind: 'npc', id: it.npc.id, x: it.npc.x, y: it.npc.y || MID_Y, opens: SHOPS[this.interiorId].opens });
+      if (it.back && Math.abs(p.x - it.back.x) < 60) offer(Math.abs(p.x - it.back.x) * 0.6, { kind: 'back' });
+      if (it.girls) for (const g of this.girlsHere()) if (Math.abs(p.x - g.x) < 60) offer(Math.abs(p.x - g.x) * 0.5, { kind: 'girl', id: g.id, name: g.name, x: g.x, y: MID_Y });
       if (it.also && Math.abs(p.x - it.also.x) < 72) offer(Math.abs(p.x - it.also.x) * 0.5, { kind: 'npc', id: it.also.id, x: it.also.x, y: it.also.y || MID_Y, opens: it.also.opens, also: true });
       return best;
     }
@@ -510,6 +531,8 @@ export class Town {
   use(n) {
     if (n.kind === 'partner') { if (this.onPartner) this.onPartner(); play('click'); return; }
     if (n.kind === 'door') { this.enter(n.door); return; }
+    if (n.kind === 'back') { this.enterBack(); return; }
+    if (n.kind === 'girl') { const g = this.girlsHere().find((q) => q.id === n.id); if (g && g.greet) this.speak('girl', g.greet, g.x, MID_Y - ROOM.figure - 10, 3200); play('click'); if (this.onGirl) this.onGirl(n.id); return; }
     if (n.kind === 'npc') {
       this.speak(n.id, pick(INSIDE[n.id] || ['...']), n.x, n.y);
       if (this.onOpen) this.onOpen(n.opens, this.interiorId);
@@ -532,10 +555,11 @@ export class Town {
     const p = this.player, it = this.interior;
     this.keys.clear(); this.press = null;
     const side = p.x > VIEW_W / 2 ? -1 : 1;
-    this.led = { id: key, x: p.x + side * 60, y: p.y, face: -side, moving: false, t: 0, done, phase: 'meet' };
+    const slot = it && it.girls ? this.girlsHere().find((g) => g.id === id) : null;
+    this.led = { id: key, x: slot ? slot.x : p.x + side * 60, y: p.y, face: -side, moving: false, t: 0, done, phase: 'meet' };
     if (line) this.speak('girl', line, this.led.x, p.y - this.figureAt(p.y) - 10, 2600);
     // Out back: the far wall of the room, away from the street door; outside, the Lantern's own door.
-    const target = it ? [it.exit[0] < 1 ? VIEW_W - 50 : 50, FLOOR.y0 + 4] : [PLACES.buildings.find((b) => b.id === 'lantern').door[0], PLACES.buildings.find((b) => b.id === 'lantern').door[1]];
+    const target = it && it.curtain ? [it.curtain, FLOOR.y0 + 4] : it ? [it.exit[0] < 1 ? VIEW_W - 50 : 50, FLOOR.y0 + 4] : [PLACES.buildings.find((b) => b.id === 'lantern').door[0], PLACES.buildings.find((b) => b.id === 'lantern').door[1]];
     setTimeout(() => {
       if (!this.led) return;
       this.led.phase = 'walk';
@@ -558,6 +582,9 @@ export class Town {
     if (e.phase === 'meet' || d < 2) { e.moving = false; if (e.phase === 'meet') e.face = p.x < e.x ? -1 : 1; return; }
     const step = Math.min(d, 190 * dt); e.x += (dx / d) * step; e.y += (dy / d) * step; e.moving = true; if (Math.abs(dx) > 1) e.face = Math.sign(dx);
   }
+  // Tonight's girls, set by the page (setLineup): [{ id, name, greet }], placed on the room's slots.
+  setLineup(list) { this.lineup = list || []; }
+  girlsHere() { const it = this.interior; if (!it || !it.girls) return []; return (this.lineup || []).slice(0, it.girls.length).map((g, i) => ({ ...g, x: it.girls[i] })); }
   speak(who, text, x, y, ms = 2800) { this.say = { text, x, y, until: performance.now() + ms }; }
 
   // How tall someone stands at this y, right now.
@@ -570,8 +597,10 @@ export class Town {
     const beside = (f) => f.x + (p.x < f.x ? -34 : 34);
     if (m && this.onPartner && m.scene === this.scene && onFigure(m, this.figureAt(m.y))) { this.walkTo(beside(m), m.y, () => { if (m === this.partner && m.scene === this.scene) this.use({ kind: 'partner', who: m }); }); return; }
     if (it) {
-      const n = it.npc;
-      if (onFigure({ x: n.x, y: n.y || MID_Y }, n.h)) { this.walkTo(beside(n), MID_Y, () => this.use({ kind: 'npc', id: n.id, x: n.x, y: n.y || MID_Y, opens: SHOPS[this.interiorId].opens })); return; }
+      if (it.girls) for (const g of this.girlsHere()) if (onFigure({ x: g.x, y: MID_Y }, ROOM.figure)) { this.walkTo(beside(g), MID_Y, () => this.use({ kind: 'girl', id: g.id, name: g.name, x: g.x, y: MID_Y })); return; }
+      if (it.back && Math.abs(x - it.back.x) < 50 && y < MID_Y) { this.walkTo(it.back.x, MID_Y, () => this.enterBack()); return; }
+      const n = it.npc || { x: -999, h: 0 };
+      if (it.npc && onFigure({ x: n.x, y: n.y || MID_Y }, n.h)) { this.walkTo(beside(n), MID_Y, () => this.use({ kind: 'npc', id: n.id, x: n.x, y: n.y || MID_Y, opens: SHOPS[this.interiorId].opens })); return; }
       const o = it.also;
       if (o && (onFigure({ x: o.x, y: o.y || MID_Y }, o.h) || (Math.abs(x - o.x) < 90 && y < MID_Y))) { this.walkTo(beside(o), MID_Y, () => this.use({ kind: 'npc', id: o.id, x: o.x, y: o.y || MID_Y, opens: o.opens, also: true })); return; }
       if (this.offer) { this.offer = null; this.say = null; }
@@ -935,8 +964,9 @@ export class Town {
     list.length = 0;
     const add = (id, x, y, h, moving, dir, face, time, native) => { list.push({ id, x, y, h, moving, dir, face, t: time, native }); };
     const toward = (x, near, dflt) => (Math.abs(p.x - x) < near ? (p.x < x ? -1 : 1) : dflt);
-    if (it) { const n = it.npc; add(n.id, n.x, n.y || MID_Y - 8, n.h, false, 'down', toward(n.x, 9999, -1), t + 0.4, -1); if (it.also) add(it.also.id, it.also.x, it.also.y || MID_Y - 8, it.also.h, false, 'down', toward(it.also.x, 9999, -1), t + 1.1, -1); }
-    else {
+    if (it && it.girls) for (const g of this.girlsHere()) { if (this.led && this.led.id === `girl_${g.id}` && this.led.phase !== 'gone') continue; add(`girl_${g.id}`, g.x, MID_Y - 8, ROOM.figure * 0.96, false, 'down', toward(g.x, 9999, -1), t + g.x / 97, -1); }
+    if (it && it.npc) { const n = it.npc; add(n.id, n.x, n.y || MID_Y - 8, n.h, false, 'down', toward(n.x, 9999, -1), t + 0.4, -1); if (it.also) add(it.also.id, it.also.x, it.also.y || MID_Y - 8, it.also.h, false, 'down', toward(it.also.x, 9999, -1), t + 1.1, -1); }
+    else if (!it) {
       for (const f of this.folk) add(f.id, f.x, f.y, f.h * depthAt(f.y), f.moving, f.dir, f.moving ? f.face : toward(f.x, 150, f.face), f.t, -1);
       const gd = this.patrol;
       add('patrol', gd.x, gd.y, gd.h * depthAt(gd.y), gd.moving, gd.dir, gd.face, gd.t, -1);
@@ -1050,6 +1080,8 @@ export class Town {
     else if (n && n.kind === 'npc') text = `${E} \u00B7 talk to ${npcName(n.id)} (${n.also ? 'Wheel' : this.interiorId === 'lantern' ? 'Bar' : SHOPS[this.interiorId].label})`;
     else if (n && n.kind === 'folk') text = n.who.talk ? `${E} \u00B7 talk to the vendor` : `${E} \u00B7 talk`;
     else if (n && n.kind === 'spot') text = `${E} \u00B7 ${n.spot.prompt}`;
+    else if (n && n.kind === 'girl') text = `${E} \u00B7 talk to ${n.name}`;
+    else if (n && n.kind === 'back') text = `${E} \u00B7 through the curtain \u00B7 E-Girl Room`;
     else if (n && n.kind === 'door') { const sh = SHOPS[n.door.id]; text = `${E} \u00B7 go in \u00B7 ${sh.label}`; }
     else {
       act = false;
