@@ -2773,7 +2773,7 @@ function downtimeBar() {
   if (state.run) return '';
   const v = E.venturesTotal(state), left = E.marksLeft(state.char).length, d = E.drinkOf(state.char);
   const b = (id, label, note = '') => `<button class="btn quiet" data-a="modal" data-v="${id}">${label}${note ? ` <span class="muted">${esc(note)}</span>` : ''}</button>`;
-  return b('bar', 'Lantern', d ? d.name : '') + (loungeOpen() || cardIds().length ? b('lounge', 'Club Velvet') : '') + b('wheel', 'Wheel') + b('orbit', 'Orbit', state.orbit ? 'in flight' : left < 5 ? `${5 - left}/5` : '') + b('ventures', 'Ventures', v ? v.toLocaleString() : '');
+  return b('bar', 'Lantern', d ? d.name : '') + (loungeOpen() || cardIds().length ? b('lounge', 'Club Velvet') : '') + b('orbit', 'Orbit', state.orbit ? 'in flight' : left < 5 ? `${5 - left}/5` : '') + b('ventures', 'Ventures', v ? v.toLocaleString() : '');
 }
 const TIPS = {
   town: 'Walk into the freight terminal to pick a mission. The buttons below open every shop.',

@@ -17,7 +17,7 @@ const OUT = require('path').join(__dirname, 'shots'); require('fs').mkdirSync(OU
   // The friend gets the same Lantern, Wheel and Ventures as the host; the shuttle stays home.
   await guest.bringToFront(); await guest.waitForTimeout(500);
   const labels = await guest.evaluate(() => [...document.querySelectorAll('.shortcuts button')].map((b) => b.textContent.trim()));
-  for (const w of ['Lantern', 'Wheel', 'Orbit', 'Ventures']) check(`friend sees ${w}`, labels.some((x) => x.startsWith(w)), labels.join(','));
+  for (const w of ['Lantern', 'Orbit', 'Ventures']) check(`friend sees ${w}`, labels.some((x) => x.startsWith(w)), labels.join(','));
   const cr = async () => host.evaluate(() => { const s = JSON.parse(localStorage.getItem('cinder-cell-save-v1')); return { me: s.char.credits, friend: s.char2.credits, drink: s.char2.drink, hostDrink: s.char.drink, vent: s.char2.ventures }; });
   await host.evaluate(() => { const g = globalThis.cinderGame && cinderGame.state(); if (g && g.char2) { g.char2.credits = 800; } });
   await host.click('button[data-a="dismissresult"]', { timeout: 200 }).catch(() => {});

@@ -3251,7 +3251,7 @@ export function returnHigher(s) {
 }
 // The endgame (more training and cell levels) opens for the whole cell once any operative reaches threat I.
 export const endgameOpen = (m) => !!(m && m.endgame);
-function checkEndgame(s) { if (s.meta && !s.meta.endgame && maxThreat(s) >= 1) { s.meta.endgame = true; journal(s, 'Every district is free. The cell can train harder now: new training and cell levels are open.', 'reward'); } }
+function checkEndgame(s) { if (s.meta && !s.meta.endgame && (maxThreat(s) >= 1 || escapedAt(s.char))) { s.meta.endgame = true; journal(s, 'Every district is free. The cell can train harder now: new training and cell levels are open.', 'reward'); } }
 
 // ---------- contracts ----------
 // Credit payouts per contract type. Haul targets are themselves credit amounts, so they pay a small share.

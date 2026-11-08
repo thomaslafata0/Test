@@ -15,9 +15,9 @@ const reach = D.MAPS.find((m) => m.id === 'reach');
   ok('opens once the other four are free', E.mapUnlocked(s, reach));
   ok('no Threat I with four free', E.maxThreat(s) === 0);
   free(c, ['reach']);
-  ok('Threat I once all five are free', E.maxThreat(s) === 1);
+  ok('all five free: escaped, and back in at Threat I', E.escapedAt(c) && E.maxThreat(s) === 0 && E.returnHigher(s) && E.maxThreat(s) === 1);
   free(c, D.MAPS.map((m) => m.id), 1);
-  ok('Threat II once all five are free at Threat I', E.maxThreat(s) === 2); }
+  ok('all five free at Threat I: back in at Threat II', E.escapedAt(c) && E.returnHigher(s) && E.maxThreat(s) === 2); }
 // Endgame Resolve tiers.
 { const { s } = op(2); const m = s.meta; m.resolve = 9999; m.training.hp = 20;
   ok('training stops at 20 before the endgame', !E.train(s, 'hp'));

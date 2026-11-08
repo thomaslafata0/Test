@@ -39,7 +39,7 @@ export const PLACES = {
     { id: 'terminal', box: [258, 20, 445, 148], door: [355, 152], push: [0, -1], sign: { x: 355, y: 72 } },
     { id: 'barracks', box: [140, 75, 218, 150], door: [210, 168], push: [0, -1], sign: { x: 205, y: 84, text: 'Barracks', minor: true }, knock: { prompt: 'knock', action: 'barracks' } },
     { id: 'clinic', box: [480, 80, 610, 178], door: [518, 184], push: [0, -1], sign: { x: 525, y: 72 } },
-    { id: 'safehouse', box: [598, 140, 688, 232], door: [570, 210], push: [1, -0.3], sign: { x: 632, y: 172, text: 'Character\n& Resolve' } },
+    { id: 'safehouse', box: [598, 140, 688, 232], door: [575, 218], push: [1, -0.3], sign: { x: 632, y: 172, text: 'Character\n& Resolve' } },
     { id: 'tenement_b', box: [219, 118, 250, 150], door: [238, 160], push: [0, -1], knock: { prompt: 'knock', action: 'tenement_a' } },
     { id: 'market', box: [28, 125, 188, 265], door: [172, 250], push: [-0.8, -0.5], sign: { x: 84, y: 118 } },
     { id: 'lantern', box: [0, 270, 140, 384], door: [122, 325], push: [-1, 0], sign: { x: 60, y: 246, text: 'The Lantern' } },
@@ -53,10 +53,10 @@ export const PLACES = {
     { id: 'poster', x: 282, y: 118, r: 24, stand: [282, 156], prompt: 'read the poster', lines: ['\u201CPRODUCTIVITY IS LOYALTY.\u201D Someone has drawn a moustache on the Supervisor.', '\u201CREPORT UNUSUAL MOVEMENT.\u201D Below it, in marker: \u201Clike your bowels?\u201D', '\u201CCURFEW: DUSK.\u201D The word DUSK has been scratched out and replaced with NEVER.', 'A reward notice. The face is smudged. Could be anyone. Could be you.'] },
     { id: 'noticeboard', x: 425, y: 140, r: 22, stand: [428, 158], prompt: 'read the board (Missions)', open: 'missions' },
     { id: 'vending', x: 455, y: 128, r: 22, stand: [462, 172], prompt: 'use the vending terminal (1 cr)', action: 'vending' },
-    { id: 'tower', x: 648, y: 75, r: 58, stand: [590, 320], prompt: 'look up', lines: ['The water tower. The Directorate tested the water last month and nobody saw the results.', 'A kid has climbed it and painted a fist on the tank. Nobody has painted over it yet.'] },
+    { id: 'tower', x: 648, y: 75, r: 58, stand: [470, 280], prompt: 'look up', lines: ['The water tower. The Directorate tested the water last month and nobody saw the results.', 'A kid has climbed it and painted a fist on the tank. Nobody has painted over it yet.'] },
   ],
   folk: [], // only people who belong to a building now
-  patrol: { id: 'patrol', route: [[250, 200], [440, 190], [530, 300], [400, 360], [200, 340], [205, 260]], h: 140, lines: ['Papers.', 'Curfew\u2019s at dusk. Move along.', 'Keep walking, citizen.', 'Nothing to see. Keep moving.', 'Eyes down, citizen.', 'Did you hear something? No. You didn\u2019t.', 'This is a quiet yard. Keep it quiet.'] },
+  patrol: { id: 'patrol', route: [[250, 200], [440, 190], [460, 300], [400, 360], [200, 340], [205, 260]], h: 140, lines: ['Papers.', 'Curfew\u2019s at dusk. Move along.', 'Keep walking, citizen.', 'Nothing to see. Keep moving.', 'Eyes down, citizen.', 'Did you hear something? No. You didn\u2019t.', 'This is a quiet yard. Keep it quiet.'] },
   lights: [
     { x: 560, y: 322, r: 40, color: '#ff4fb8', kind: 'neon', a: 0.3 },
     { x: 612, y: 362, r: 36, color: '#ff6ad5', kind: 'neon', a: 0.3 },

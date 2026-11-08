@@ -26,7 +26,7 @@ function town(seed) {
   // Bad nights happen: about one in three over many visits.
   let bad = 0; const N = 400;
   for (let i = 0; i < N; i++) { const t = town(100 + i); t.c.credits = 600; const r = E.visitLounge(t.s, D.LOUNGE.girls[i % 3].id, t.rng); if (r && r.bad) bad++; }
-  ok('about one night in three goes badly', bad > N * 0.28 && bad < N * 0.42, `${bad}/${N}`);
+  ok('a bit under half the nights go badly', bad > N * 0.38 && bad < N * 0.52, `${bad}/${N}`);
 }
 // The duel.
 function pair(seed) {

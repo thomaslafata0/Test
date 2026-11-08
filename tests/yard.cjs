@@ -178,6 +178,7 @@ const openOf = { terminal: 'missions', market: 'market', clinic: 'clinic', safeh
       const seen = await page.evaluate(() => { const t = cinderTown; return { signs: t.signLayer.hidden, whole: t.fromPage(t.cv.getBoundingClientRect().right, t.cv.getBoundingClientRect().bottom).x >= 687, art: t.art[`int_${t.interiorId}`] }; });
       check(tag, `${d.id}: the room fits whole, signs away`, seen.signs && seen.whole && seen.art === 'ok', JSON.stringify(seen));
       if (d.id === 'clinic' || d.id === 'market') await page.screenshot({ path: `${OUT}/yard-${tag}-${d.id}.png` });
+      if (!it.npc) { await put(it.exit[1] + 30, 316); await hold(['ArrowLeft'], 15); await page.waitForTimeout(30); a = await T(); check(tag, `${d.id}: walking to the exit leaves`, a.scene === 'town', a.scene); continue; } // Club Velvet: the girls, no shopkeeper
       await tapStage(it.npc.x, 280); await run(); await page.waitForTimeout(40);
       a = await T(); const opened = async () => (d.id === 'lantern' ? (await page.locator('.dtm-bar').count()) > 0 : (await T()).popup === want);
       check(tag, `${d.id}: tapping the person opens the menu`, (await opened()) && !!a.say, JSON.stringify(a));
@@ -232,9 +233,9 @@ const openOf = { terminal: 'missions', market: 'market', clinic: 'clinic', safeh
       await page.keyboard.press('e'); await page.waitForTimeout(50);
       a = await T(); check(tag, `${f.id} speaks`, !!a.say, JSON.stringify(a));
     }
-    const pat = await page.evaluate(() => { const t = cinderTown, g = t.patrol; g.pause = 0; t.player.x = 130; t.player.y = 372; const xs = [], ys = []; for (let i = 0; i < 900; i++) { t.update(1 / 30); xs.push(g.x); ys.push(g.y); } const k = t.folk.find((f) => f.id === 'kid'); k.pause = 0; k.gx = k.x + 30; k.gy = k.y + 20; const kx = k.x, ky = k.y; for (let i = 0; i < 60; i++) t.update(1 / 30); return { wx: Math.max(...xs) - Math.min(...xs), wy: Math.max(...ys) - Math.min(...ys), kx: k.x - kx, ky: k.y - ky, inside: Y.walkable(g.x, g.y) }; });
+    const pat = await page.evaluate(() => { const t = cinderTown, g = t.patrol; g.pause = 0; t.player.x = 130; t.player.y = 372; const xs = [], ys = []; for (let i = 0; i < 900; i++) { t.update(1 / 30); xs.push(g.x); ys.push(g.y); } const k = t.folk.find((f) => f.id === 'kid') || { x: 0, y: 0, gx: 0, gy: 0 }; k.pause = 0; k.gx = k.x + 30; k.gy = k.y + 20; const kx = k.x, ky = k.y; for (let i = 0; i < 60; i++) t.update(1 / 30); return { wx: Math.max(...xs) - Math.min(...xs), wy: Math.max(...ys) - Math.min(...ys), kx: k.x - kx, ky: k.y - ky, inside: Y.walkable(g.x, g.y) }; });
     check(tag, 'patrol walks in 2D', pat.wx > 100 && pat.wy > 60 && pat.inside, JSON.stringify(pat));
-    check(tag, 'kid wanders in 2D', Math.abs(pat.kx) > 5 && Math.abs(pat.ky) > 5, JSON.stringify(pat));
+    // No townsfolk loiter in the square any more (only people who belong to a building), so there's no kid to watch wander.
 
     // ---------- a partner, faked: labels, marks ----------
     await home(); await put(330, 300);
