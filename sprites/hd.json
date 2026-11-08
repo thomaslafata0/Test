@@ -3334,8 +3334,8 @@
     "loop": false,
     "pad": 4,
     "tip": [
-     -65,
-     -202
+     -118,
+     -147
     ]
    },
    "charge": {
@@ -3442,5 +3442,93 @@
   "size": 256,
   "feetY": 242,
   "fig": 227
+ },
+ "broodqueen": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 27
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 27,
+    "tip": [
+     -62,
+     -92
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 39
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 63
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 27
+   },
+   "special": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 27
+   }
+  },
+  "size": 244,
+  "feetY": 160,
+  "fig": 128
+ },
+ "stalker": {
+  "anims": {
+   "idle": {
+    "frames": 9,
+    "fps": 6,
+    "loop": true,
+    "pad": 9
+   },
+   "attack": {
+    "frames": 9,
+    "fps": 11,
+    "loop": false,
+    "pad": 9,
+    "tip": [
+     -114,
+     -97
+    ]
+   },
+   "charge": {
+    "frames": 9,
+    "fps": 8,
+    "loop": true,
+    "pad": 9
+   },
+   "death": {
+    "frames": 9,
+    "fps": 10,
+    "loop": false,
+    "pad": 9
+   },
+   "hit": {
+    "frames": 9,
+    "fps": 14,
+    "loop": false,
+    "pad": 9
+   }
+  },
+  "size": 256,
+  "feetY": 246,
+  "fig": 238
  }
 }
